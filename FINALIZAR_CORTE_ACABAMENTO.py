@@ -1,0 +1,1458 @@
+# -*- coding: utf-8 -*-
+import os
+from datetime import datetime
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import customtkinter as ctk
+import tempfile
+import webbrowser
+
+# ---------- LOGO ----------
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
+
+# ---------- ACESSO PG ----------
+try:
+    from BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
+except Exception as err:
+    def get_conn():
+        raise RuntimeError("BANCO_DE_DADOS_PG indisponível: " + str(err))
+
+
+    def get_schema():
+        return "public"
+
+
+    def require_ready(essentials=None):
+        return False, "Módulo de acesso não disponível"
+
+
+# ============================== Utils ==============================
+def safe_int(v, default=0):
+    try:
+        if v is None: return default
+        s = str(v).strip()
+        if not s: return default
+        return int(float(s.replace(".", "").replace(",", ".")))
+    except Exception:
+        return default
+
+
+def parse_valor(s):
+    try:
+        s = (s or "").strip().replace("R$", "").replace(" ", "")
+        if not s: return 0.0
+        return float(s.replace(".", "").replace(",", "."))
+    except Exception:
+        return 0.0
+
+
+def fmt_moeda(v):
+    s = f"{float(v):,.2f}"
+    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {s}"
+
+
+# ============================== Tela ==============================
+class FinalizacaoCortes(ctk.CTkFrame):
+    tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+
+    def __init__(self, master, sistema=None):
+        super().__init__(master)
+        self.master = master
+        self.sistema = sistema
+        self.retorno_selecionado = None
+        self._prestador_id = None
+        self._prestador_nome = ""
+        self._tipo_servico = ""
+        self.mostrar_finalizados = False
+
+        # Atualiza cores baseado no tema atual - MESMO PADRÃO DO CADASTRO_DE_CORTE
+        self.obter_cores_por_tema()
+
+        # Variáveis para campos editáveis
+        self.entregues_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.copias_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.defeitos_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.faltantes_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+
+        # Dados originais
+        self.enviado_por_tam = {t: 0 for t in self.tamanhos}
+        self.valor_por_tam = {t: 0.0 for t in self.tamanhos}
+        self.pilotos_por_tam = {t: 0 for t in self.tamanhos}
+
+        self.pack(fill="both", expand=True)
+        self._build_ui()
+        self.carregar_retornos_pendentes()
+
+    # ----------------------------- THEME MANAGEMENT -----------------------------
+    def obter_cores_por_tema(self):
+        """Define cores de texto dinamicamente baseado no tema atual - MESMO PADRÃO DO CADASTRO_DE_CORTE"""
+        tema_atual = ctk.get_appearance_mode()
+
+        if tema_atual == "Dark":
+            self.cor_fundo = getattr(self.sistema, "cor_fundo", "#020617")
+            self.cor_primaria = getattr(self.sistema, "cor_primaria", "#1f2937")
+            self.cor_secundaria = getattr(self.sistema, "cor_secundaria", "#111827")
+            self.cor_texto = getattr(self.sistema, "cor_texto", "#e5e7eb")
+            self.cor_texto_entry = "#e5e7eb"
+            self.cor_placeholder = "#888888"
+            self.cor_borda = getattr(self.sistema, "cor_borda", "#273244")
+            self.cor_hover = getattr(self.sistema, "cor_hover", "#334155")
+        else:
+            self.cor_fundo = "#ffffff"
+            self.cor_primaria = "#3a7ebf"
+            self.cor_secundaria = "#f0f0f0"
+            self.cor_texto = "black"
+            self.cor_texto_entry = "black"
+            self.cor_placeholder = "#666666"
+            self.cor_borda = "#cccccc"
+            self.cor_hover = "#2e4a66"
+
+    def configurar_treeview_theme(self):
+        """Configura as cores da Treeview baseado no tema atual - MESMO ESTILO DO CADASTRO_DE_CORTE"""
+        self.style = ttk.Style()
+        self.style.theme_use('default')
+
+        tema_atual = ctk.get_appearance_mode()
+
+        if tema_atual == "Dark":
+            cor_fundo = self.cor_secundaria
+            cor_texto = self.cor_texto
+            cor_campo = self.cor_secundaria
+            cor_selecao = self.cor_primaria
+        else:
+            cor_fundo = "#f0f0f0"
+            cor_texto = "black"
+            cor_campo = "#f0f0f0"
+            cor_selecao = self.cor_primaria
+
+        self.style.configure("Custom.Treeview",
+                             background=cor_fundo,
+                             foreground=cor_texto,
+                             fieldbackground=cor_campo,
+                             borderwidth=0,
+                             highlightthickness=0,
+                             rowheight=25)
+
+        self.style.configure("Custom.Treeview.Heading",
+                             background=self.cor_primaria,
+                             foreground=self.cor_texto,
+                             relief="flat",
+                             borderwidth=1,
+                             font=('Arial', 10, 'bold'))
+
+        self.style.map('Custom.Treeview',
+                       background=[('selected', cor_selecao)],
+                       foreground=[('selected', "white")])
+
+    def _recolor_labels_frame(self, frame):
+        for widget in frame.winfo_children():
+            if isinstance(widget, ctk.CTkLabel):
+                widget.configure(text_color=self.cor_texto)
+            if hasattr(widget, "winfo_children"):
+                self._recolor_labels_frame(widget)
+
+    # ----------------------------- UI -----------------------------
+    def _build_ui(self):
+        # Atualiza cores antes de construir a UI
+        self.obter_cores_por_tema()
+
+        main = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        main.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Título + logo - MESMO ESTILO DO CADASTRO_DE_CORTE
+        head = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        head.pack(fill="x", pady=(0, 8))
+
+        ctk.CTkLabel(
+            head,
+            text="CONTROLE DE MÃO DE OBRA — Finalização de Cortes",
+            font=("Arial", 18, "bold"),
+            text_color=self.cor_texto
+        ).pack(side="left")
+
+        try:
+            from PIL import Image
+            if os.path.exists(LOGO_PATH):
+                img = Image.open(LOGO_PATH)
+                w, h = img.size
+                tw = 140
+                th = int(h * (tw / w))
+                self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
+                ctk.CTkLabel(head, image=self.logo_img, text="").pack(side="right")
+        except Exception:
+            pass
+
+        # Buscar retorno + filtro
+        busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        busca.pack(fill="x", pady=6)
+
+        ctk.CTkLabel(busca, text="Buscar Retorno:", width=120,
+                     text_color=self.cor_texto).pack(side="left", padx=(0, 6))
+
+        self.busca_entry = ctk.CTkEntry(busca, width=250,
+                                        placeholder_text="Ordem, código ou descrição",
+                                        fg_color=self.cor_secundaria,
+                                        border_color=self.cor_borda,
+                                        text_color=self.cor_texto_entry,
+                                        placeholder_text_color=self.cor_placeholder)
+        self.busca_entry.pack(side="left")
+        self.busca_entry.bind("<Return>", lambda e: self.carregar_retornos_pendentes())
+
+        ctk.CTkButton(busca, text="Buscar", width=90,
+                      command=self.carregar_retornos_pendentes,
+                      fg_color=self.cor_primaria,
+                      hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=8)
+
+        # Checkbox para mostrar finalizados
+        self.cb_mostrar_finalizados = ctk.CTkCheckBox(
+            busca,
+            text="Mostrar Finalizados",
+            command=self.toggle_visualizacao_finalizados,
+            text_color=self.cor_texto
+        )
+        self.cb_mostrar_finalizados.pack(side="left", padx=8)
+
+        # Prestador + Serviço
+        prest = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        prest.pack(fill="x", pady=(6, 8))
+
+        linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
+        linha.pack(fill="x", pady=(4, 2))
+
+        ctk.CTkLabel(linha, text="Prestador:", width=100,
+                     text_color=self.cor_texto).pack(side="left", padx=4)
+
+        self.prestador_entry = ctk.CTkEntry(linha, width=360,
+                                            fg_color=self.cor_secundaria,
+                                            border_color=self.cor_borda,
+                                            text_color=self.cor_texto_entry)
+        self.prestador_entry.pack(side="left", padx=4)
+        self.prestador_entry.configure(state="disabled")
+
+        ctk.CTkLabel(linha, text="Serviço:", width=80,
+                     text_color=self.cor_texto).pack(side="left", padx=(16, 4))
+
+        self.servico_entry = ctk.CTkEntry(linha, width=220,
+                                          fg_color=self.cor_secundaria,
+                                          border_color=self.cor_borda,
+                                          text_color=self.cor_texto_entry)
+        self.servico_entry.pack(side="left")
+        self.servico_entry.configure(state="disabled")
+
+        # Tabela de retornos pendentes - MESMO ESTILO DO CADASTRO_DE_CORTE
+        tabela_frame = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        tabela_frame.pack(fill="both", expand=True, pady=8)
+
+        cols = ["ID", "Ordem", "Código", "Descrição", "Prestador", "Data Entrada", "Status", "Qtd Peças"]
+
+        # Configurar estilo da Treeview
+        self.configurar_treeview_theme()
+
+        self.retornos_tree = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=7,
+                                          style="Custom.Treeview")
+        sb = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.retornos_tree.yview)
+        sb.pack(side="right", fill="y")
+        self.retornos_tree.configure(yscrollcommand=sb.set)
+        self.retornos_tree.pack(fill="both", expand=True)
+
+        for col in cols:
+            self.retornos_tree.heading(col, text=col)
+            w = 100 if col in ["ID", "Status"] else (90 if col == "Qtd Peças" else 140)
+            self.retornos_tree.column(col, width=w, anchor="center")
+
+        self.retornos_tree.bind("<<TreeviewSelect>>", self.on_retorno_selecionado)
+
+        # Configurar cores das linhas alternadas
+        if ctk.get_appearance_mode() == "Dark":
+            cor_linha_par = self.cor_fundo
+            cor_linha_impar = self.cor_secundaria
+        else:
+            cor_linha_par = "#ffffff"
+            cor_linha_impar = "#f0f0f0"
+
+        # Cores por status
+        try:
+            self.retornos_tree.tag_configure('status_conferencia', background='#FFF9C4', foreground='black')
+            self.retornos_tree.tag_configure('status_finalizado', background='#C8E6C9', foreground='black')
+            self.retornos_tree.tag_configure("oddrow", background=cor_linha_impar)
+            self.retornos_tree.tag_configure("evenrow", background=cor_linha_par)
+        except Exception:
+            pass
+
+        # Detalhes do corte
+        det = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        det.pack(fill="x", pady=6)
+
+        l1 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
+        l1.pack(fill="x", pady=2)
+
+        ctk.CTkLabel(l1, text="Entrada ID:", width=100,
+                     text_color=self.cor_texto).pack(side="left", padx=4)
+
+        self.entrada_id_entry = ctk.CTkEntry(l1, width=120,
+                                             fg_color=self.cor_secundaria,
+                                             border_color=self.cor_borda,
+                                             text_color=self.cor_texto_entry)
+        self.entrada_id_entry.pack(side="left", padx=4)
+        self.entrada_id_entry.configure(state="disabled")
+
+        ctk.CTkLabel(l1, text="Data Chegada:", width=100,
+                     text_color=self.cor_texto).pack(side="left", padx=4)
+
+        self.data_entrada_entry = ctk.CTkEntry(l1, width=180,
+                                               fg_color=self.cor_secundaria,
+                                               border_color=self.cor_borda,
+                                               text_color=self.cor_texto_entry)
+        self.data_entrada_entry.pack(side="left", padx=4)
+        self.data_entrada_entry.configure(state="disabled")
+
+        l2 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
+        l2.pack(fill="x", pady=2)
+
+        ctk.CTkLabel(l2, text="Código:", width=70,
+                     text_color=self.cor_texto).pack(side="left", padx=4)
+
+        self.codigo_entry = ctk.CTkEntry(l2, width=180,
+                                         fg_color=self.cor_secundaria,
+                                         border_color=self.cor_borda,
+                                         text_color=self.cor_texto_entry)
+        self.codigo_entry.pack(side="left", padx=4)
+        self.codigo_entry.configure(state="disabled")
+
+        ctk.CTkLabel(l2, text="Descrição:", width=80,
+                     text_color=self.cor_texto).pack(side="left", padx=4)
+
+        self.descricao_entry = ctk.CTkEntry(l2, width=380,
+                                            fg_color=self.cor_secundaria,
+                                            border_color=self.cor_borda,
+                                            text_color=self.cor_texto_entry)
+        self.descricao_entry.pack(side="left", padx=4)
+        self.descricao_entry.configure(state="disabled")
+
+        ctk.CTkLabel(l2, text="Nº Ordem:", width=80,
+                     text_color=self.cor_texto).pack(side="left", padx=4)
+
+        self.ordem_entry = ctk.CTkEntry(l2, width=120,
+                                        fg_color=self.cor_secundaria,
+                                        border_color=self.cor_borda,
+                                        text_color=self.cor_texto_entry)
+        self.ordem_entry.pack(side="left", padx=4)
+        self.ordem_entry.configure(state="disabled")
+
+        # Área central (grade e observações)
+        mid = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        mid.pack(fill="both", expand=True, pady=6)
+        mid.grid_columnconfigure(0, weight=3)
+        mid.grid_columnconfigure(1, weight=2)
+        mid.grid_rowconfigure(0, weight=1)
+
+        # Grade
+        left = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+
+        ctk.CTkLabel(left, text="Controle por Tamanho - Edite as quantidades",
+                     font=("Arial", 13, "bold"),
+                     text_color=self.cor_texto).pack(anchor="w", padx=4, pady=(4, 6))
+
+        header_g = ctk.CTkFrame(left, fg_color=self.cor_fundo)
+        header_g.pack(fill="x")
+
+        for h, w in [("Tam.", 60), ("Enviado", 80), ("Entregue", 90), ("Cópias", 80), ("Defeito", 80), ("Faltante", 80),
+                     ("Regulares", 120), ("Valor/Peça", 100), ("Subtotal", 110)]:
+            ctk.CTkLabel(header_g, text=h, width=w,
+                         text_color=self.cor_texto).pack(side="left", padx=2)
+
+        self.grade_widgets = {}
+        for tam in self.tamanhos:
+            row = ctk.CTkFrame(left, fg_color=self.cor_fundo)
+            row.pack(fill="x", pady=2)
+
+            ctk.CTkLabel(row, text=tam, width=60,
+                         text_color=self.cor_texto).pack(side="left", padx=2)
+
+            lbl_env = ctk.CTkLabel(row, text="0", width=80,
+                                   text_color=self.cor_texto)
+            lbl_env.pack(side="left", padx=2)
+
+            ent_ent = ctk.CTkEntry(row, width=90, textvariable=self.entregues_vars[tam],
+                                   fg_color=self.cor_secundaria,
+                                   border_color=self.cor_borda,
+                                   text_color=self.cor_texto_entry)
+            ent_ent.pack(side="left", padx=2)
+            ent_ent.bind("<KeyRelease>", self._recalcular_totais)
+
+            ent_cop = ctk.CTkEntry(
+                row, width=80,
+                textvariable=self.copias_vars[tam],
+                state="disabled",
+                takefocus=0,
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry
+            )
+            ent_cop.pack(side="left", padx=2)
+
+            ent_def = ctk.CTkEntry(row, width=80, textvariable=self.defeitos_vars[tam],
+                                   fg_color=self.cor_secundaria,
+                                   border_color=self.cor_borda,
+                                   text_color=self.cor_texto_entry)
+            ent_def.pack(side="left", padx=2)
+            ent_def.bind("<KeyRelease>", self._recalcular_totais)
+
+            ent_fal = ctk.CTkEntry(row, width=80, textvariable=self.faltantes_vars[tam],
+                                   fg_color=self.cor_secundaria,
+                                   border_color=self.cor_borda,
+                                   text_color=self.cor_texto_entry)
+            ent_fal.pack(side="left", padx=2)
+            ent_fal.bind("<KeyRelease>", self._recalcular_totais)
+
+            lbl_reg = ctk.CTkLabel(row, text="0", width=120,
+                                   text_color=self.cor_texto)
+            lbl_reg.pack(side="left", padx=2)
+
+            lbl_val = ctk.CTkLabel(row, text=fmt_moeda(0), width=100,
+                                   text_color=self.cor_texto)
+            lbl_val.pack(side="left", padx=2)
+
+            lbl_sub = ctk.CTkLabel(row, text=fmt_moeda(0), width=110,
+                                   text_color=self.cor_texto)
+            lbl_sub.pack(side="left", padx=2)
+
+            self.grade_widgets[tam] = {
+                "enviado": lbl_env,
+                "regulares": lbl_reg,
+                "valor": lbl_val,
+                "subtotal": lbl_sub
+            }
+
+        totais = ctk.CTkFrame(left, fg_color=self.cor_fundo)
+        totais.pack(fill="x", pady=(6, 8))
+
+        ctk.CTkLabel(totais, text="Total Entregue:", width=140,
+                     font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(side="left", padx=4)
+
+        self.lbl_total_entregue = ctk.CTkLabel(totais, text="0",
+                                               font=("Arial", 12, "bold"),
+                                               text_color=self.cor_texto)
+        self.lbl_total_entregue.pack(side="left", padx=4)
+
+        ctk.CTkLabel(totais, text="Cópias:", width=80,
+                     font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(side="left", padx=12)
+
+        self.lbl_total_copias = ctk.CTkLabel(totais, text="0",
+                                             font=("Arial", 12, "bold"),
+                                             text_color=self.cor_texto)
+        self.lbl_total_copias.pack(side="left", padx=4)
+
+        ctk.CTkLabel(totais, text="Defeito:", width=80,
+                     font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(side="left", padx=12)
+
+        self.lbl_total_defeito = ctk.CTkLabel(totais, text="0",
+                                              font=("Arial", 12, "bold"),
+                                              text_color=self.cor_texto)
+        self.lbl_total_defeito.pack(side="left", padx=4)
+
+        ctk.CTkLabel(totais, text="Faltante:", width=80,
+                     font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(side="left", padx=12)
+
+        self.lbl_total_faltante = ctk.CTkLabel(totais, text="0",
+                                               font=("Arial", 12, "bold"),
+                                               text_color=self.cor_texto)
+        self.lbl_total_faltante.pack(side="left", padx=4)
+
+        ctk.CTkLabel(totais, text="Regulares (pagas):", width=160,
+                     font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(side="left", padx=12)
+
+        self.lbl_total_regulares = ctk.CTkLabel(totais, text="0",
+                                                font=("Arial", 12, "bold"),
+                                                text_color=self.cor_texto)
+        self.lbl_total_regulares.pack(side="left", padx=4)
+
+        ctk.CTkLabel(totais, text="Valor Total a Pagar:", width=170,
+                     font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(side="left", padx=12)
+
+        self.lbl_valor_total = ctk.CTkLabel(totais, text=fmt_moeda(0),
+                                            font=("Arial", 12, "bold"),
+                                            text_color=self.cor_texto)
+        self.lbl_valor_total.pack(side="left", padx=4)
+
+        # --- Bonificação ---
+        self.bonif_final_var = tk.StringVar(value="sim")
+        bonif_frame = ctk.CTkFrame(left, fg_color=self.cor_fundo)
+        bonif_frame.pack(fill="x", pady=(0, 8))
+
+        ctk.CTkLabel(bonif_frame, text="Bonificação:", width=120,
+                     font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(side="left", padx=4)
+
+        ctk.CTkRadioButton(bonif_frame, text="Sim",
+                           variable=self.bonif_final_var, value="sim",
+                           text_color=self.cor_texto).pack(side="left", padx=(0, 8))
+
+        ctk.CTkRadioButton(bonif_frame, text="Não",
+                           variable=self.bonif_final_var, value="nao",
+                           text_color=self.cor_texto).pack(side="left")
+
+        botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
+        botoes.pack(fill="x", pady=(2, 8))
+
+        ctk.CTkButton(botoes, text="Finalizar Corte Completo", width=180,
+                      command=self.finalizar_completo,
+                      fg_color=self.cor_primaria,
+                      hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=4)
+
+        ctk.CTkButton(botoes, text="Salvar Baixa Parcial", width=150,
+                      command=self.salvar_baixa_parcial,
+                      fg_color=self.cor_primaria,
+                      hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=4)
+
+        ctk.CTkButton(botoes, text="Limpar", width=120,
+                      command=self.limpar_campos,
+                      fg_color=self.cor_secundaria,
+                      hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=4)
+
+        ctk.CTkButton(botoes, text="Imprimir Relatório", width=160,
+                      command=self.abrir_relatorio,
+                      fg_color=self.cor_primaria,
+                      hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=4)
+
+        # Observações
+        right = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
+        right.grid(row=0, column=1, sticky="nsew")
+
+        ctk.CTkLabel(right, text="Observações de Finalização:",
+                     font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(6, 2))
+
+        self.obs_finalizacao_txt = ctk.CTkTextbox(right, height=140,
+                                                  fg_color=self.cor_secundaria,
+                                                  border_color=self.cor_borda,
+                                                  text_color=self.cor_texto_entry)
+        self.obs_finalizacao_txt.pack(fill="both", expand=True, padx=6, pady=(0, 6))
+
+    # ----------------------------- Loaders -----------------------------
+    def toggle_visualizacao_finalizados(self):
+        self.mostrar_finalizados = self.cb_mostrar_finalizados.get()
+        self.carregar_retornos_pendentes()
+
+    def _set_search_path(self, cur, schema):
+        try:
+            cur.execute(f"SET LOCAL search_path = {schema};")
+        except Exception:
+            pass
+
+    def _cols(self, cur, schema, table_name):
+        cur.execute("""
+            SELECT column_name
+              FROM information_schema.columns
+             WHERE table_schema = %s
+               AND table_name   = %s
+        """, (schema, table_name))
+        return {r[0] for r in cur.fetchall()}
+
+    def carregar_retornos_pendentes(self):
+        try:
+            termo = (self.busca_entry.get() or "").strip()
+            self.retornos_tree.delete(*self.retornos_tree.get_children())
+
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            self._set_search_path(cur, schema)
+
+            # Descobre colunas existentes
+            cols_e = self._cols(cur, schema, "entrada_acabamento")
+            cols_c = self._cols(cur, schema, "controle_envio_cortes")
+
+            # Helper para escolher a primeira coluna existente
+            def pick(cols_set, candidates, default_sql):
+                for c in candidates:
+                    if c in cols_set:
+                        return c
+                return default_sql  # já com tipo SQL, ex.: "NULL::date" ou "''::text"
+
+            # Escolhas tolerantes a diferenças do banco
+            e_data_col = pick(cols_e, ["data_chegada", "data_entrada", "data"], "NULL::date")
+            # Quando vier como nome de coluna, prefixa com 'e.' e faz cast para date
+            e_data_sql = f"e.{e_data_col}::date" if "::" not in e_data_col and e_data_col != "NULL::date" else e_data_col
+
+            c_ordem_col = pick(cols_c, ["ordem_corte", "ordem", "numero_ordem"], "''::text")
+            c_codigo_col = pick(cols_c, ["codigo_corte", "codigo", "codigo_modelo"], "''::text")
+            c_desc_col = pick(cols_c, ["descricao_corte", "descricao", "descricao_modelo"], "''::text")
+            c_dest_col = pick(cols_c, ["destino", "costureira", "faccao"], "''::text")
+            c_status_col_exists = ("status" in cols_c)
+
+            base_sql = f"""
+                SELECT e.id,
+                       {('c.' + c_ordem_col) if '::' not in c_ordem_col else c_ordem_col} AS ordem_corte,
+                       {('c.' + c_codigo_col) if '::' not in c_codigo_col else c_codigo_col} AS codigo_corte,
+                       {('c.' + c_desc_col) if '::' not in c_desc_col else c_desc_col}   AS descricao_corte,
+                       {('c.' + c_dest_col) if '::' not in c_dest_col else c_dest_col}   AS destino,
+                       {e_data_sql} AS data_chegada,
+                       {("COALESCE(c.status,'')") if c_status_col_exists else "''::text"} AS status,
+                       COALESCE((
+                         SELECT SUM(COALESCE(quantidade,0) + COALESCE(quantidade_pilotos,0))
+                           FROM {schema}.envio_detalhes_tamanho edt
+                          WHERE edt.envio_id = c.id
+                       ),0) AS qtd_total
+                  FROM {schema}.entrada_acabamento e
+                  JOIN {schema}.controle_envio_cortes c ON e.envio_id = c.id
+            """
+
+            where = []
+            params = []
+
+            # Filtro por status somente se a coluna existir
+            if not self.mostrar_finalizados and c_status_col_exists:
+                where.append("c.status = 'Em Conferência'")
+
+            if termo:
+                like = f"%{termo}%"
+                # usa as colunas escolhidas; se alguma virou ''::text, o filtro nela será inócuo (sem erro)
+                where.append(f"(({('c.' + c_ordem_col) if '::' not in c_ordem_col else c_ordem_col}) ILIKE %s OR "
+                             f"({('c.' + c_codigo_col) if '::' not in c_codigo_col else c_codigo_col}) ILIKE %s OR "
+                             f"({('c.' + c_desc_col) if '::' not in c_desc_col else c_desc_col})   ILIKE %s)")
+                params.extend([like, like, like])
+
+            if where:
+                base_sql += " WHERE " + " AND ".join(where)
+
+            # Ordenação: usa a data se existir, senão cai para c.id (estável e sempre existente)
+            order_expr = (e_data_sql if e_data_sql != "NULL::date" else "c.id")
+            base_sql += f" ORDER BY {order_expr} DESC"
+            if not termo:
+                base_sql += " LIMIT 50"
+
+            cur.execute(base_sql, tuple(params))
+
+            # Configurar cores das linhas alternadas
+            if ctk.get_appearance_mode() == "Dark":
+                cor_linha_par = self.cor_fundo
+                cor_linha_impar = self.cor_secundaria
+            else:
+                cor_linha_par = "#ffffff"
+                cor_linha_impar = "#f0f0f0"
+
+            for i, row in enumerate(cur.fetchall()):
+                # row: (id, ordem, codigo, descricao, destino, data_chegada, status, qtd_total)
+                st = (row[6] or "").strip() if len(row) > 6 else ""
+                tag = ('status_conferencia',) if st == "Em Conferência" else (
+                    ('status_finalizado',) if st == "Finalizado" else ())
+
+                # Adicionar tag de linha alternada
+                row_tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+                if tag:
+                    tag = tag + (row_tag,)
+                else:
+                    tag = (row_tag,)
+
+                self.retornos_tree.insert("", "end", values=row, tags=tag)
+
+            conn.close()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao carregar retornos: {e}")
+
+    # ... (o restante dos métodos permanecem EXATAMENTE iguais, apenas o visual foi modificado)
+    # Todos os métodos de lógica, banco de dados, cálculos, etc. permanecem inalterados
+
+    def on_retorno_selecionado(self, _event=None):
+        sel = self.retornos_tree.selection()
+        if not sel: return
+        v = self.retornos_tree.item(sel[0], "values")
+
+        self.retorno_selecionado = {
+            "id": v[0], "ordem": v[1], "codigo": v[2], "descricao": v[3],
+            "prestador": v[4], "data_entrada": v[5], "status": v[6]
+        }
+
+        if self.retorno_selecionado["status"] == "Finalizado":
+            messagebox.showinfo("Aviso", "Corte já finalizado.")
+            self.limpar_campos()
+            return
+
+        self._tipo_servico = self._buscar_servico(self.retorno_selecionado["id"]) or ""
+        self._prestador_nome = self.retorno_selecionado["prestador"] or ""
+
+        self._preencher_header_retorno()
+        self._carregar_detalhes_retorno()
+
+    def _buscar_servico(self, entrada_id):
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            self._set_search_path(cur, schema)
+            cur.execute(f"""
+                SELECT c.servico
+                  FROM {schema}.controle_envio_cortes c
+                  JOIN {schema}.entrada_acabamento e ON e.envio_id = c.id
+                 WHERE e.id = %s
+                 LIMIT 1
+            """, (entrada_id,))
+            r = cur.fetchone()
+            conn.close()
+            return r[0] if r else ""
+        except Exception:
+            return ""
+
+    def _preencher_header_retorno(self):
+        self.prestador_entry.configure(state="normal")
+        self.prestador_entry.delete(0, tk.END)
+        self.prestador_entry.insert(0, self._prestador_nome or "")
+        self.prestador_entry.configure(state="disabled")
+
+        self.servico_entry.configure(state="normal")
+        self.servico_entry.delete(0, tk.END)
+        self.servico_entry.insert(0, self._tipo_servico or "")
+        self.servico_entry.configure(state="disabled")
+
+        self.entrada_id_entry.configure(state="normal")
+        self.entrada_id_entry.delete(0, tk.END)
+        self.entrada_id_entry.insert(0, self.retorno_selecionado["id"])
+        self.entrada_id_entry.configure(state="disabled")
+
+        self.codigo_entry.configure(state="normal")
+        self.codigo_entry.delete(0, tk.END)
+        self.codigo_entry.insert(0, self.retorno_selecionado["codigo"])
+        self.codigo_entry.configure(state="disabled")
+
+        self.descricao_entry.configure(state="normal")
+        self.descricao_entry.delete(0, tk.END)
+        self.descricao_entry.insert(0, self.retorno_selecionado["descricao"])
+        self.descricao_entry.configure(state="disabled")
+
+        self.ordem_entry.configure(state="normal")
+        self.ordem_entry.delete(0, tk.END)
+        self.ordem_entry.insert(0, self.retorno_selecionado["ordem"])
+        self.ordem_entry.configure(state="disabled")
+
+        self.data_entrada_entry.configure(state="normal")
+        self.data_entrada_entry.delete(0, tk.END)
+        self.data_entrada_entry.insert(0, self.retorno_selecionado["data_entrada"])
+        self.data_entrada_entry.configure(state="disabled")
+
+    def _carregar_detalhes_retorno(self):
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            self._set_search_path(cur, schema)
+
+            # Limpa dados prévios
+            for t in self.tamanhos:
+                self.entregues_vars[t].set(0)
+                self.copias_vars[t].set(0)
+                self.defeitos_vars[t].set(0)
+                self.faltantes_vars[t].set(0)
+                self.enviado_por_tam[t] = 0
+                self.valor_por_tam[t] = 0.0
+                self.pilotos_por_tam[t] = 0
+                self.grade_widgets[t]["enviado"].configure(text="0")
+                self.grade_widgets[t]["valor"].configure(text=fmt_moeda(0))
+                self.grade_widgets[t]["regulares"].configure(text="0")
+                self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(0))
+
+            # Busca dados do envio original
+            cur.execute(f"""
+                SELECT tamanho, quantidade, quantidade_pilotos, valor_peca
+                  FROM {schema}.envio_detalhes_tamanho
+                 WHERE envio_id = (
+                        SELECT envio_id
+                          FROM {schema}.entrada_acabamento
+                         WHERE id = %s
+                 )
+            """, (self.retorno_selecionado["id"],))
+
+            for tamanho, quantidade, pilotos, valor in cur.fetchall():
+                if tamanho in self.tamanhos:
+                    total_enviado = safe_int(quantidade) + safe_int(pilotos)
+                    self.enviado_por_tam[tamanho] = total_enviado
+                    self.valor_por_tam[tamanho] = float(valor or 0)
+                    self.pilotos_por_tam[tamanho] = safe_int(pilotos)
+                    self.grade_widgets[tamanho]["enviado"].configure(text=str(total_enviado))
+                    self.grade_widgets[tamanho]["valor"].configure(text=fmt_moeda(valor or 0))
+
+            # Busca dados do retorno (entrada) para preencher valores atuais
+            cur.execute(f"""
+                SELECT tamanho, quantidade_entregue, quantidade_copias,
+                       quantidade_defeito, quantidade_faltante
+                  FROM {schema}.retorno_detalhes_tamanho
+                 WHERE retorno_id = %s
+            """, (self.retorno_selecionado["id"],))
+
+            for tamanho, entregue, copias, defeito, faltante in cur.fetchall():
+                if tamanho in self.tamanhos:
+                    self.entregues_vars[tamanho].set(entregue or 0)
+                    self.copias_vars[tamanho].set(copias or 0)
+                    self.defeitos_vars[tamanho].set(defeito or 0)
+                    self.faltantes_vars[tamanho].set(faltante or 0)
+
+            conn.close()
+            self._recalcular_totais()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao carregar detalhes: {e}")
+
+    def _recalcular_totais(self, _event=None):
+        total_entregue = 0
+        total_copias = 0
+        total_defeito = 0
+        total_faltante = 0
+        total_regulares = 0
+        valor_total = 0.0
+
+        for t in self.tamanhos:
+            enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
+            entregue = safe_int(self.entregues_vars[t].get())
+            copias = safe_int(self.copias_vars[t].get())
+            defeito = safe_int(self.defeitos_vars[t].get())
+            faltante = safe_int(self.faltantes_vars[t].get())
+
+            # Não exceder enviado
+            if entregue + defeito + faltante > enviado:
+                max_possivel = max(0, enviado - defeito - faltante)
+                self.entregues_vars[t].set(min(entregue, max_possivel))
+                entregue = safe_int(self.entregues_vars[t].get())
+
+            # Cópias não excedem entregue
+            if copias > entregue:
+                self.copias_vars[t].set(min(copias, entregue))
+                copias = safe_int(self.copias_vars[t].get())
+
+            reg = max(0, entregue - copias - defeito)
+            subtotal = reg * float(self.valor_por_tam[t])
+
+            self.grade_widgets[t]["regulares"].configure(text=str(reg))
+            self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(subtotal))
+
+            total_entregue += entregue
+            total_copias += copias
+            total_defeito += defeito
+            total_faltante += faltante
+            total_regulares += reg
+            valor_total += subtotal
+
+        self.lbl_total_entregue.configure(text=str(total_entregue))
+        self.lbl_total_copias.configure(text=str(total_copias))
+        self.lbl_total_defeito.configure(text=str(total_defeito))
+
+        # Se houver defeito, força "Não" na bonificação
+        try:
+            if total_defeito > 0:
+                self.bonif_final_var.set("nao")
+        except Exception:
+            pass
+
+        self.lbl_total_faltante.configure(text=str(total_faltante))
+        self.lbl_total_regulares.configure(text=str(total_regulares))
+        self.lbl_valor_total.configure(text=fmt_moeda(valor_total))
+
+    # ----------------------------- Relatório -----------------------------
+    def abrir_relatorio(self):
+        if not self.retorno_selecionado:
+            messagebox.showwarning("Aviso", "Selecione um retorno primeiro!")
+            return
+
+        dados = self._coletar_dados_relatorio()
+        html = self._gerar_html_relatorio(dados)
+
+        win = ctk.CTkToplevel(self)
+        win.title("Relatório de Finalização")
+        win.geometry("900x650")
+
+        header = ctk.CTkFrame(win)
+        header.pack(fill="x", padx=10, pady=(10, 6))
+        ctk.CTkLabel(header, text="RELATÓRIO DE FINALIZAÇÃO", font=("Arial", 18, "bold")).pack(side="left")
+
+        prev = ctk.CTkTextbox(win, font=("Consolas", 12))
+        prev.pack(fill="both", expand=True, padx=10, pady=6)
+
+        preview_txt = []
+        preview_txt.append(f"Prestador : {dados['prestador']}")
+        preview_txt.append(f"Serviço   : {dados['servico']}")
+        preview_txt.append(f"Ordem     : {dados['ordem']}  |  Código: {dados['codigo']}")
+        preview_txt.append(f"Descrição : {dados['descricao']}")
+        preview_txt.append(f"Entrada   : {dados['data_entrada']}  |  Emissão: {dados['emissao']}")
+        preview_txt.append("-" * 90)
+        preview_txt.append(
+            f"{'Tam.':<5}{'Enviado':>9}{'Entregue':>11}{'Cópias':>8}{'Defeito':>9}{'Faltante':>10}{'Regulares':>11}{'Vlr/Pç':>10}{'Subtotal':>12}")
+        preview_txt.append("-" * 90)
+        for r in dados["linhas"]:
+            preview_txt.append(
+                f"{r['tam']:<5}{r['enviado']:>9}{r['entregue']:>11}{r['copias']:>8}{r['defeito']:>9}{r['faltante']:>10}{r['regulares']:>11}{r['valor_peca']:>10}{r['subtotal']:>12}")
+        preview_txt.append("-" * 90)
+        tt = dados["totais"]
+        preview_txt.append(
+            f"{'Totais:':<5}{'':>9}{tt['entregue']:>11}{tt['copias']:>8}{tt['defeito']:>9}{tt['faltante']:>10}{tt['regulares']:>11}{'':>10}{tt['valor_total']:>12}"
+        )
+        if dados["obs"]:
+            preview_txt.append("\nObservações:\n" + dados["obs"])
+
+        prev.insert("1.0", "\n".join(preview_txt))
+        prev.configure(state="disabled")
+
+        barra = ctk.CTkFrame(win, fg_color="transparent")
+        barra.pack(fill="x", padx=10, pady=(6, 10))
+
+        def _imprimir():
+            self._imprimir_html(html)
+
+        def _abrir_nav():
+            try:
+                path = self._salvar_html_temporario(html, auto_open=True, imprimir=False)
+                if path:
+                    messagebox.showinfo("Prévia",
+                                        "Relatório aberto no navegador.\nUse o comando Imprimir (Ctrl+P) para PDF.")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao abrir no navegador: {e}")
+
+        def _salvar_html():
+            try:
+                file = filedialog.asksaveasfilename(defaultextension=".html",
+                                                    filetypes=[("HTML", "*.html")],
+                                                    title="Salvar Relatório (HTML)")
+                if not file:
+                    return
+                with open(file, "w", encoding="utf-8") as f:
+                    f.write(html)
+                messagebox.showinfo("Sucesso", "Relatório salvo!")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao salvar: {e}")
+
+        ctk.CTkButton(barra, text="Imprimir", width=120, command=_imprimir).pack(side="left", padx=4)
+        ctk.CTkButton(barra, text="Abrir no Navegador", width=160, command=_abrir_nav).pack(side="left", padx=4)
+        ctk.CTkButton(barra, text="Salvar HTML", width=140, command=_salvar_html).pack(side="left", padx=4)
+
+    def _coletar_dados_relatorio(self):
+        d = {
+            "prestador": self._prestador_nome or "",
+            "servico": self._tipo_servico or "",
+            "ordem": (self.ordem_entry.get() or "").strip(),
+            "codigo": (self.codigo_entry.get() or "").strip(),
+            "descricao": (self.descricao_entry.get() or "").strip(),
+            "data_entrada": (self.data_entrada_entry.get() or "").strip(),
+            "emissao": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "linhas": [],
+            "totais": {},
+            "obs": (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip(),
+            "logo": LOGO_PATH if os.path.exists(LOGO_PATH) else None
+        }
+
+        total_entregue = total_copias = total_defeito = total_faltante = total_regulares = 0
+        total_valor = 0.0
+
+        for t in self.tamanhos:
+            enviado = safe_int(self.enviado_por_tam.get(t, 0))
+            entregue = safe_int(self.entregues_vars[t].get())
+            copias = safe_int(self.copias_vars[t].get())
+            defeito = safe_int(self.defeitos_vars[t].get())
+            faltante = safe_int(self.faltantes_vars[t].get())
+
+            reg = max(0, entregue - copias - defeito)
+            valor_peca = float(self.valor_por_tam.get(t, 0.0))
+            subtotal = reg * valor_peca
+
+            total_entregue += entregue
+            total_copias += copias
+            total_defeito += defeito
+            total_faltante += faltante
+            total_regulares += reg
+            total_valor += subtotal
+
+            d["linhas"].append({
+                "tam": t,
+                "enviado": enviado,
+                "entregue": entregue,
+                "copias": copias,
+                "defeito": defeito,
+                "faltante": faltante,
+                "regulares": reg,
+                "valor_peca": f"{valor_peca:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                "subtotal": f"{subtotal:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            })
+
+        d["totais"] = {
+            "entregue": total_entregue,
+            "copias": total_copias,
+            "defeito": total_defeito,
+            "faltante": total_faltante,
+            "regulares": total_regulares,
+            "valor_total": f"{total_valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+        }
+        return d
+
+    def _gerar_html_relatorio(self, d):
+        logo_html = f'<img src="file:///{d["logo"].replace("\\\\", "/")}" style="height:70px;">' if d["logo"] else ""
+        linhas_html = []
+        for r in d["linhas"]:
+            linhas_html.append(f"""
+                <tr>
+                  <td>{r['tam']}</td>
+                  <td style="text-align:right">{r['enviado']}</td>
+                  <td style="text-align:right">{r['entregue']}</td>
+                  <td style="text-align:right">{r['copias']}</td>
+                  <td style="text-align:right">{r['defeito']}</td>
+                  <td style="text-align:right">{r['faltante']}</td>
+                  <td style="text-align:right">{r['regulares']}</td>
+                  <td style="text-align:right">{r['valor_peca']}</td>
+                  <td style="text-align:right">{r['subtotal']}</td>
+                </tr>
+            """)
+        obs_html = f"<h3>Observações</h3><pre>{(d['obs'] or '').replace('<', '&lt;').replace('>', '&gt;')}</pre>" if d[
+            "obs"] else ""
+
+        return f"""<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Relatório de Finalização</title>
+<style>
+  *{{box-sizing:border-box}} body{{font-family:Arial, Helvetica, sans-serif; margin:20px}}
+  .topo{{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}}
+  h1{{font-size:20px; margin:0}}
+  .grid-info{{margin:10px 0; font-size:14px}}
+  table{{width:100%; border-collapse:collapse; font-size:13px}}
+  th, td{{border:1px solid #444; padding:6px}}
+  th{{background:#f1f1f1; text-align:center}}
+  .totais{{text-align:right; font-weight:bold; margin-top:10px; font-size:14px}}
+  @media print{{ .no-print{{display:none}} }}
+</style>
+</head>
+<body>
+  <div class="topo">
+    <div>{logo_html}</div>
+    <div style="text-align:right">
+      <h1>RELATÓRIO DE FINALIZAÇÃO</h1>
+      <div>Emissão: {d['emissao']}</div>
+    </div>
+  </div>
+
+  <div class="grid-info">
+    <div><b>Prestador:</b> {d['prestador']}</div>
+    <div><b>Serviço:</b> {d['servico']}</div>
+    <div><b>Ordem:</b> {d['ordem']} &nbsp;&nbsp; <b>Código:</b> {d['codigo']}</div>
+    <div><b>Descrição:</b> {d['descricao']}</div>
+    <div><b>Data de Entrada:</b> {d['data_entrada']}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tam.</th><th>Enviado</th><th>Entregue</th><th>Cópias</th><th>Defeito</th><th>Faltante</th><th>Regulares</th><th>Valor/Peça</th><th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {''.join(linhas_html)}
+    </tbody>
+  </table>
+
+  <div class="totais">
+    Totais — Entregue: {d['totais']['entregue']} |
+    Cópias: {d['totais']['copias']} |
+    Defeito: {d['totais']['defeito']} |
+    Faltante: {d['totais']['faltante']} |
+    Regulares: {d['totais']['regulares']} |
+    Valor Total: R$ {d['totais']['valor_total']}
+  </div>
+
+  {obs_html}
+
+  <div class="no-print" style="margin-top:12px; font-size:12px; color:#666">Dica: Ctrl+P para imprimir ou salvar como PDF.</div>
+</body>
+</html>"""
+
+    def _imprimir_html(self, html):
+        try:
+            self._salvar_html_temporario(html, auto_open=False, imprimir=True)
+            messagebox.showinfo("Impressão", "Relatório enviado para impressão (ou aberto para imprimir).")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao imprimir: {e}")
+
+    def _salvar_html_temporario(self, html, auto_open=False, imprimir=False):
+        fd, path = tempfile.mkstemp(prefix="relatorio_finalizacao_", suffix=".html")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(html)
+        if auto_open:
+            try:
+                webbrowser.open(f"file:///{path.replace('\\', '/')}")
+            except Exception:
+                pass
+        if imprimir:
+            try:
+                os.startfile(path, "print")  # Windows
+            except Exception:
+                webbrowser.open(f"file:///{path.replace('\\', '/')}")
+        return path
+
+    # ----------------------------- Ações de Banco -----------------------------
+    def finalizar_completo(self):
+        if not self.retorno_selecionado:
+            messagebox.showwarning("Aviso", "Selecione um retorno primeiro!")
+            return
+
+        total_faltante = safe_int(self.lbl_total_faltante.cget("text"))
+        total_defeito = safe_int(self.lbl_total_defeito.cget("text"))
+        if total_faltante > 0 or total_defeito > 0:
+            if not messagebox.askyesno(
+                    "Confirmar",
+                    f"Há {total_faltante} peças faltantes e {total_defeito} com defeito.\n"
+                    "Deseja realmente finalizar o corte completo?"
+            ):
+                return
+
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            self._set_search_path(cur, schema)
+
+            bonif_flag = 1 if getattr(self, 'bonif_final_var', None) and self.bonif_final_var.get() == 'sim' else 0
+
+            # Atualiza status
+            cur.execute(f"""
+                UPDATE {schema}.controle_envio_cortes
+                   SET status = 'Finalizado'
+                 WHERE id = (SELECT envio_id FROM {schema}.entrada_acabamento WHERE id = %s)
+            """, (self.retorno_selecionado["id"],))
+
+            cur.execute(f"""
+                UPDATE {schema}.historico_de_servico
+                   SET status = 'Finalizado'
+                 WHERE envio_id = (SELECT envio_id FROM {schema}.entrada_acabamento WHERE id = %s)
+            """, (self.retorno_selecionado["id"],))
+
+            # Observações
+            obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
+            if obs_finalizacao:
+                cur.execute(f"""
+                    UPDATE {schema}.entrada_acabamento
+                       SET observacoes_finalizacao = %s
+                     WHERE id = %s
+                """, (obs_finalizacao, self.retorno_selecionado["id"]))
+
+            # Descobrir colunas (para campos opcionais)
+            cols_c = self._cols(cur, schema, "controle_envio_cortes")
+            cols_e = self._cols(cur, schema, "entrada_acabamento")
+
+            def pick(alias, table_alias, candidates, default_sql):
+                pool = cols_c if table_alias == "c" else cols_e
+                for cnd in candidates:
+                    if cnd in pool:
+                        return f"{table_alias}.{cnd} AS {alias}"
+                return f"{default_sql} AS {alias}"
+
+            select_parts = [
+                "c.id AS corte_id",
+                "e.id AS entrada_id",
+                pick("codigo", "c", ["codigo", "codigo_corte", "codigo_modelo"], "''"),
+                pick("descricao", "c", ["descricao", "descricao_corte", "descricao_modelo"], "''"),
+                pick("costureira", "c", ["costureira", "faccao", "destino"], "''"),
+                pick("data_envio", "c", ["data_envio", "dt_envio", "data"], "NULL"),
+                pick("data_chegada", "e", ["data_chegada", "dt_chegada"], "NULL"),
+                pick("qtd_enviada", "c", ["quantidade_total", "total_pecas", "qtd_enviada"], "0"),
+                pick("observacao", "e", ["observacoes_finalizacao", "observacao"], "''"),
+                pick("valor_peca", "c", ["valor_peca", "vlr_peca"], "0.00"),
+                pick("bonificacao", "c", ["bonificacao", "bonus", "bonific"], "1"),
+                pick("qtd_pp", "c", ["qtd_pp", "pp"], "0"),
+                pick("qtd_p", "c", ["qtd_p", "p"], "0"),
+                pick("qtd_m", "c", ["qtd_m", "m"], "0"),
+                pick("qtd_g", "c", ["qtd_g", "g"], "0"),
+                pick("qtd_gg", "c", ["qtd_gg", "gg"], "0"),
+                pick("qtd_g1", "c", ["qtd_g1", "g1"], "0"),
+                pick("qtd_g2", "c", ["qtd_g2", "g2"], "0"),
+                pick("qtd_g3", "c", ["qtd_g3", "g3"], "0"),
+            ]
+
+            cur.execute(f"""
+                SELECT {", ".join(select_parts)}
+                  FROM {schema}.controle_envio_cortes c
+                  JOIN {schema}.entrada_acabamento e ON e.envio_id = c.id
+                 WHERE e.id = %s
+            """, (self.retorno_selecionado["id"],))
+            row = cur.fetchone()
+
+            if row:
+                (
+                    corte_id, entrada_id, codigo, descricao, costureira,
+                    data_envio, data_chegada, qtd_enviada, observacao,
+                    valor_peca, _bonif_ignore,
+                    qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3
+                ) = row
+
+                data_conferencia = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                cur.execute(f"""
+                    INSERT INTO {schema}.cortes_finalizados (
+                        corte_id, entrada_id, codigo, descricao, costureira,
+                        data_envio, data_chegada, qtd_enviada, observacao,
+                        status, data_conferencia, valor_peca, bonificacao,
+                        qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3,
+                        qtd_defeito_pp, qtd_defeito_p, qtd_defeito_m, qtd_defeito_g,
+                        qtd_defeito_gg, qtd_defeito_g1, qtd_defeito_g2, qtd_defeito_g3
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s,%s,%s,%s,%s,%s,%s,
+                            0,0,0,0,0,0,0,0)
+                    ON CONFLICT (entrada_id) DO UPDATE SET
+                        status = EXCLUDED.status,
+                        data_conferencia = EXCLUDED.data_conferencia,
+                        valor_peca = EXCLUDED.valor_peca,
+                        bonificacao = EXCLUDED.bonificacao
+                """, (
+                    corte_id, entrada_id, codigo, descricao, costureira,
+                    data_envio, data_chegada, safe_int(qtd_enviada), observacao,
+                    "Finalizado", data_conferencia, float(valor_peca or 0), bonif_flag,
+                    safe_int(qtd_pp), safe_int(qtd_p), safe_int(qtd_m), safe_int(qtd_g),
+                    safe_int(qtd_gg), safe_int(qtd_g1), safe_int(qtd_g2), safe_int(qtd_g3)
+                ))
+
+            conn.commit()
+            conn.close()
+
+            messagebox.showinfo("Sucesso", "Corte finalizado com sucesso!")
+            self.limpar_campos()
+            self.carregar_retornos_pendentes()
+
+        except Exception as e:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            messagebox.showerror("Erro", f"Falha ao finalizar corte: {e}")
+
+    def salvar_baixa_parcial(self):
+        if not self.retorno_selecionado:
+            messagebox.showwarning("Aviso", "Selecione um retorno primeiro!")
+            return
+
+        # Validação
+        for t in self.tamanhos:
+            enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
+            entregue = safe_int(self.entregues_vars[t].get())
+            copias = safe_int(self.copias_vars[t].get())
+            defeito = safe_int(self.defeitos_vars[t].get())
+            faltante = safe_int(self.faltantes_vars[t].get())
+
+            if entregue + defeito + faltante > enviado:
+                messagebox.showwarning(
+                    "Aviso",
+                    f"Inconsistência em {t}: Entregue {entregue} + Defeito {defeito} + Faltante {faltante} > Enviado {enviado}"
+                )
+                return
+
+            if copias > entregue:
+                messagebox.showwarning("Aviso", f"Cópias não podem exceder Entregue ({t})")
+                return
+
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            self._set_search_path(cur, schema)
+
+            bonif_flag = 1 if getattr(self, 'bonif_final_var', None) and self.bonif_final_var.get() == 'sim' else 0
+
+            # Atualiza detalhes por tamanho
+            for t in self.tamanhos:
+                entregue = safe_int(self.entregues_vars[t].get())
+                copias = safe_int(self.copias_vars[t].get())
+                defeito = safe_int(self.defeitos_vars[t].get())
+                faltante = safe_int(self.faltantes_vars[t].get())
+
+                # UPSERT em retorno_detalhes_tamanho
+                cur.execute(f"""
+                    INSERT INTO {schema}.retorno_detalhes_tamanho
+                        (retorno_id, tamanho, quantidade_entregue, quantidade_copias,
+                         quantidade_defeito, quantidade_faltante)
+                    VALUES (%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (retorno_id, tamanho) DO UPDATE SET
+                        quantidade_entregue = EXCLUDED.quantidade_entregue,
+                        quantidade_copias   = EXCLUDED.quantidade_copias,
+                        quantidade_defeito  = EXCLUDED.quantidade_defeito,
+                        quantidade_faltante = EXCLUDED.quantidade_faltante
+                """, (self.retorno_selecionado["id"], t, entregue, copias, defeito, faltante))
+
+            # Observações (append com quebra de linha)
+            obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
+            if obs_finalizacao:
+                cur.execute(f"""
+                    UPDATE {schema}.entrada_acabamento
+                       SET observacoes_finalizacao =
+                           COALESCE(observacoes_finalizacao, '') ||
+                           CASE WHEN COALESCE(observacoes_finalizacao,'') = '' THEN %s ELSE %s END
+                     WHERE id = %s
+                """, ("\n" + obs_finalizacao, "\n" + obs_finalizacao, self.retorno_selecionado["id"]))
+
+            # Base para cortes_finalizados
+            cols_c = self._cols(cur, schema, "controle_envio_cortes")
+            cols_e = self._cols(cur, schema, "entrada_acabamento")
+
+            def pick(alias, table_alias, candidates, default_sql):
+                pool = cols_c if table_alias == "c" else cols_e
+                for cnd in candidates:
+                    if cnd in pool:
+                        return f"{table_alias}.{cnd} AS {alias}"
+                return f"{default_sql} AS {alias}"
+
+            select_parts = [
+                "c.id AS corte_id",
+                "e.id AS entrada_id",
+                pick("codigo", "c", ["codigo", "codigo_corte", "codigo_modelo"], "''"),
+                pick("descricao", "c", ["descricao", "descricao_corte", "descricao_modelo"], "''"),
+                pick("costureira", "c", ["costureira", "faccao", "destino"], "''"),
+                pick("data_envio", "c", ["data_envio", "dt_envio", "data"], "NULL"),
+                pick("data_chegada", "e", ["data_chegada", "dt_chegada"], "NULL"),
+                pick("qtd_enviada", "c", ["quantidade_total", "total_pecas", "qtd_enviada"], "0"),
+                pick("observacao", "e", ["observacoes_finalizacao", "observacao"], "''"),
+                pick("valor_peca", "c", ["valor_peca", "vlr_peca"], "0.00"),
+                pick("bonificacao", "c", ["bonificacao", "bonus", "bonific"], "1"),
+                pick("qtd_pp", "c", ["qtd_pp", "pp"], "0"),
+                pick("qtd_p", "c", ["qtd_p", "p"], "0"),
+                pick("qtd_m", "c", ["qtd_m", "m"], "0"),
+                pick("qtd_g", "c", ["qtd_g", "g"], "0"),
+                pick("qtd_gg", "c", ["qtd_gg", "gg"], "0"),
+                pick("qtd_g1", "c", ["qtd_g1", "g1"], "0"),
+                pick("qtd_g2", "c", ["qtd_g2", "g2"], "0"),
+                pick("qtd_g3", "c", ["qtd_g3", "g3"], "0"),
+            ]
+
+            cur.execute(f"""
+                SELECT {", ".join(select_parts)}
+                  FROM {schema}.controle_envio_cortes c
+                  JOIN {schema}.entrada_acabamento e ON e.envio_id = c.id
+                 WHERE e.id = %s
+            """, (self.retorno_selecionado["id"],))
+            base = cur.fetchone()
+
+            # UPSERT em cortes_finalizados
+            total_defeitos = sum(safe_int(self.defeitos_vars[t].get()) for t in self.tamanhos)
+            total_faltante_lbl = safe_int(self.lbl_total_faltante.cget("text"))
+            novo_status = "Finalizado" if (total_defeitos == 0 and total_faltante_lbl == 0) else "Parcial"
+
+            if base:
+                (
+                    corte_id, entrada_id, codigo, descricao, costureira,
+                    data_envio, data_chegada, qtd_enviada, observacao,
+                    valor_peca, _bonif_ignore,
+                    qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3
+                ) = base
+
+                cur.execute(f"""
+                    INSERT INTO {schema}.cortes_finalizados (
+                        corte_id, entrada_id, codigo, descricao, costureira,
+                        data_envio, data_chegada, qtd_enviada, observacao,
+                        status, data_conferencia, valor_peca, bonificacao,
+                        qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (entrada_id) DO UPDATE SET
+                        status = EXCLUDED.status,
+                        data_conferencia = EXCLUDED.data_conferencia,
+                        valor_peca = EXCLUDED.valor_peca,
+                        bonificacao = EXCLUDED.bonificacao,
+                        codigo = EXCLUDED.codigo,
+                        descricao = EXCLUDED.descricao,
+                        costureira = EXCLUDED.costureira
+                """, (
+                    corte_id, entrada_id, codigo, descricao, costureira,
+                    data_envio, data_chegada, safe_int(qtd_enviada), observacao,
+                    novo_status, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    float(valor_peca or 0), bonif_flag,
+                    safe_int(qtd_pp), safe_int(qtd_p), safe_int(qtd_m), safe_int(qtd_g),
+                    safe_int(qtd_gg), safe_int(qtd_g1), safe_int(qtd_g2), safe_int(qtd_g3)
+                ))
+
+                # Atualiza defeitos por tamanho em cortes_finalizados
+                cur.execute(f"""
+                    UPDATE {schema}.cortes_finalizados
+                       SET qtd_defeito_pp = %s, qtd_defeito_p = %s, qtd_defeito_m = %s, qtd_defeito_g = %s,
+                           qtd_defeito_gg = %s, qtd_defeito_g1 = %s, qtd_defeito_g2 = %s, qtd_defeito_g3 = %s
+                     WHERE entrada_id = %s
+                """, (
+                    safe_int(self.defeitos_vars["PP"].get()), safe_int(self.defeitos_vars["P"].get()),
+                    safe_int(self.defeitos_vars["M"].get()), safe_int(self.defeitos_vars["G"].get()),
+                    safe_int(self.defeitos_vars["GG"].get()), safe_int(self.defeitos_vars["G1"].get()),
+                    safe_int(self.defeitos_vars["G2"].get()), safe_int(self.defeitos_vars["G3"].get()),
+                    self.retorno_selecionado["id"]
+                ))
+
+            conn.commit()
+            conn.close()
+
+            if novo_status == "Parcial":
+                messagebox.showinfo(
+                    "Baixa Parcial",
+                    f"Baixa parcial salva com sucesso!\n"
+                    f"Restam {total_faltante_lbl} peças faltantes e {total_defeitos} com defeito para conferência futura."
+                )
+            else:
+                messagebox.showinfo("Sucesso", "Todos os itens foram finalizados!")
+
+            self.limpar_campos()
+            self.carregar_retornos_pendentes()
+
+        except Exception as e:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            messagebox.showerror("Erro", f"Falha ao salvar baixa parcial: {e}")
+
+    def limpar_campos(self):
+        self.retorno_selecionado = None
+        self._prestador_id = None
+        self._prestador_nome = ""
+        self._tipo_servico = ""
+
+        for entry in [self.prestador_entry, self.servico_entry, self.entrada_id_entry,
+                      self.codigo_entry, self.descricao_entry, self.ordem_entry, self.data_entrada_entry]:
+            entry.configure(state="normal")
+            entry.delete(0, tk.END)
+            entry.configure(state="disabled")
+
+        for t in self.tamanhos:
+            self.entregues_vars[t].set(0)
+            self.copias_vars[t].set(0)
+            self.defeitos_vars[t].set(0)
+            self.faltantes_vars[t].set(0)
+            self.grade_widgets[t]["enviado"].configure(text="0")
+            self.grade_widgets[t]["valor"].configure(text=fmt_moeda(0))
+            self.grade_widgets[t]["regulares"].configure(text="0")
+            self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(0))
+
+        self.lbl_total_entregue.configure(text="0")
+        self.lbl_total_copias.configure(text="0")
+        self.lbl_total_defeito.configure(text="0")
+        self.lbl_total_faltante.configure(text="0")
+        self.lbl_total_regulares.configure(text="0")
+        self.lbl_valor_total.configure(text=fmt_moeda(0))
+        self.obs_finalizacao_txt.delete("1.0", tk.END)
+
+
+# ============================== Executar ==============================
+if __name__ == "__main__":
+    # Verificação simplificada - remove o parâmetro da chamada
+    ok, msg = require_ready()
+
+    if not ok:
+        messagebox.showwarning("Banco de Dados", f"Problema ao conectar ao PostgreSQL:\n{msg}")
+
+    root = ctk.CTk()
+    root.title("Finalização de Cortes - Controle de Mão de Obra")
+    root.geometry("1400x900")
+    app = FinalizacaoCortes(root)
+    root.mainloop()

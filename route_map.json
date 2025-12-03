@@ -1,0 +1,164 @@
+{
+  "Dashboard": {
+    "file": "DASHBOARD.py",
+    "class": "DashboardPage"
+  },
+  
+  "Entrada de Estoque": {
+    "file": "ENTRADA_ESTOQUE.py",
+    "class": "EntradaEstoqueApp"
+  },
+
+  "Saída de Estoque": {
+    "file": "SAIDA_ESTOQUE.py",
+    "class": "SaidaEstoquePage"
+  },
+
+  "Relatórios": {
+    "file": "RELATORIO_ESTOQUE.py",
+    "class": "AdvancedStockReport"
+  },
+
+  "Cadastrar Modelo": {
+    "file": "CADASTRAR_MODELO.py",
+    "class": "CadastrarModeloPage"
+  },
+
+  "Imprimir Ficha Técnica": {
+    "file": "IMPRIMIR_FICHAS_TECNICAS.py",
+    "class": "FichaTecnicaApp"
+  },
+
+  "Nova Ordem": {
+    "file": "NOVA_ORDEM.py",
+    "class": "OrdemCorte"
+  },
+
+  "Cadastrar Corte": {
+    "file": "CADASTRO_DE_CORTE.py",
+    "class": "CadastroOrdemCorte"
+  },
+
+  "Consultar Ordens": {
+    "file": "CONSULTAR_ORDENS.py",
+    "class": "ConsultarOrdensPage"
+  },
+
+  "Cadastro de Facções": {
+  "file": "CADASTRO_FACCOES.py",
+  "class": "CadastroFaccoesView"
+  },
+
+  "Pesquisar Serviço": {
+    "file": "CONSULTAR_SERVICOS.py",
+    "class": "PesquisaServicosPage"
+  },
+
+  "Controle de Mão de Obra": {
+    "file": "CONTROLE_ENVIO_CORTES.py",
+    "class": "EnvioCortes"
+  },
+
+  "Registro Acabamento": {
+    "file": "CONTROLE_RETORNO_CORTE.py",
+    "class": "RetornoCorteControlPage"
+  },
+
+  "Finalizar Corte / Acabamento": {
+    "file": "FINALIZAR_CORTE_ACABAMENTO.PY",
+    "class": "FinalizacaoCortes"
+  },
+
+  "Pagamento de Serviços": {
+    "file": "PAGAMENTO_SERVICOS.py",
+    "class": "PagamentoServicosPage"
+  },
+
+  "Custo Produto": {
+    "file": "PRECIFICACAO_PRODUTO.py",
+    "class": "PrecificacaoProdutoPage"
+  },
+
+  "Folha Pagamento": {
+    "file": "FOLHA_PAGAMENTO_SERVICOS.py",
+    "class": "FolhaPagamentoServicosPage"
+  },
+
+  "Fechamento Mensal": {
+    "file": "FECHAMENTO_MENSAL.py",
+    "class": "FechamentoMensalPage"
+  },
+
+  "Contas a Pagar": {
+    "file": "CONTAS_A_PAGAR.py",
+    "class": "ContasAPagarPage"
+  },
+
+  "Adiantamento": {
+    "file": "ADIANTAMENTO_PAGE.py",
+    "class": "PagamentoAdiantamentoPage"
+  },
+
+  "Adiantamentos Pendentes": {
+    "file": "ADIANTAMENTO_PENDENTE.py",
+    "class": "AdiantamentosPendentesPage"
+  },
+
+  "Produção": {
+    "file": "RELATORIO_ENVIO_DETALHADO.py",
+    "class": "RelatorioEnvioDetalhado"
+  },
+
+  "Serviços Externos": {
+    "file": "RELATORIO_SERVICOS_EXTERNOS.py",
+    "class": "RelatorioServicosExternosPage"
+  },
+
+  "Modelos Produzidos": {
+  "file": "RELATORIO_MODELOS_PRODUZIDOS.py",
+  "class": "RelatorioModelosProduzidosPage"
+  },
+
+  "Acabamento": {
+  "file": "RELATORIO_ACABAMENTO.py",
+  "class": "RelatorioAcabamentoPage"
+  },
+
+  "Usuários": {
+    "file": "USUARIOS.py",
+    "class": "UsuariosPage"
+  },
+  "Backup": {
+    "file": "BACKUP.py",
+    "class": "BackupPage"
+  },
+  "Temas": {
+    "file": "TEMAS.py",
+    "class": "TemasPage"
+  },
+
+  "Interna": {
+    "file": "PRODUCAO_INTERNA.py",
+    "class": "ProducaoInternaPage"
+  },
+  "Enviados": {
+    "file": "PRODUCAO_ENVIADOS.py",
+    "class": "ProducaoEnviadosPage"
+  },
+  "Retorno": {
+    "file": "PRODUCAO_RETORNO.py",
+    "class": "ProducaoRetornoPage"
+  },
+  "Finalizados": {
+    "file": "PRODUCAO_FINALIZADOS.py",
+    "class": "ProducaoFinalizadosPage"
+  },
+  "Gerenciar": {
+    "file": "BANCO_DADOS_FABRICA.py",
+    "class": "BancoDadosFabricaApp"
+  },
+  "RELATORIOS": {
+    "file": "RELATORIO_ENVIO_DETALHADO.py",
+    "class": "RelatorioEnvioDetalhado"
+  }
+}
