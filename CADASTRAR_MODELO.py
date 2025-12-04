@@ -557,19 +557,30 @@ class CadastroModelosApp(ctk.CTkFrame):
             return False
 
     def _auto_message(self, texto: str, duracao: int = 2000):
-        """Exibe mensagem automática temporária."""
+        """Exibe mensagem automática temporária, legível em temas claros e escuros."""
         parent = self.master.winfo_toplevel()
+
+        # Cores vindas do sistema/tema
+        cor_primaria = getattr(self.sistema, 'cor_primaria', '#2C3E50')
+        cor_fundo = getattr(self.sistema, 'cor_fundo', '#F5F5F5')
+        cor_destaque = getattr(self.sistema, 'cor_destaque', '#00BFFF')
+
+        # Usa a função de contraste do módulo TEMAS
+        cor_texto = get_contraste_texto(cor_primaria)
+
         popup = ctk.CTkToplevel(parent)
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
-        popup.configure(fg_color=getattr(self.sistema, 'cor_primaria', '#2C3E50'))
+
+        # Fundo externo acompanha o fundo geral da aplicação
+        popup.configure(fg_color=cor_fundo)
 
         frame = ctk.CTkFrame(
             popup,
-            fg_color=getattr(self.sistema, 'cor_primaria', '#2C3E50'),
+            fg_color=cor_primaria,
             corner_radius=10,
             border_width=2,
-            border_color=getattr(self.sistema, 'cor_destaque', '#00BFFF'),
+            border_color=cor_destaque,
         )
         frame.pack(padx=2, pady=2)
 
@@ -577,11 +588,11 @@ class CadastroModelosApp(ctk.CTkFrame):
             frame,
             text=texto,
             font=("Arial", 13, "bold"),
-            text_color="white",
-            bg_color=getattr(self.sistema, 'cor_primaria', '#2C3E50'),
+            text_color=cor_texto,  # <<< AGORA USA COR EM CONTRASTE
         )
         label.pack(padx=20, pady=10)
 
+        # Centraliza na tela
         popup.update_idletasks()
         tela_largura = parent.winfo_screenwidth()
         tela_altura = parent.winfo_screenheight()
@@ -590,6 +601,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         x = (tela_largura // 2) - (popup_largura // 2)
         y = (tela_altura // 2) - (popup_altura // 2)
         popup.geometry(f"+{x}+{y}")
+
         popup.after(duracao, popup.destroy)
 
     # =================== MÉTODOS DE CONFIGURAÇÃO DE UI ===================
@@ -2343,14 +2355,21 @@ class CadastroModelosApp(ctk.CTkFrame):
     def carregar_cadastro(self, codigo):
         """Carrega um cadastro existente do banco de dados para EDIÇÃO."""
         try:
-            print(f"🔍 Carregando modelo {codigo} para EDIÇÃO...")
+            # Garante que sempre vamos trabalhar com STRING
+            codigo_str = str(codigo).strip()
+            if not codigo_str:
+                messagebox.showwarning("Aviso", "Código inválido para carregar o cadastro!")
+                return
+
+            print(f"🔍 Carregando modelo {codigo_str} para EDIÇÃO... "
+                  f"(tipo original: {type(codigo).__name__})")
 
             schema = db.get_schema()
 
             # Buscar cabeçalho
             hdr = db.fetch_one(
                 f"SELECT * FROM {schema}.cadastro_modelos_cabecalho WHERE codigo=%s",
-                (codigo,)
+                (codigo_str,)
             )
 
             if not hdr:
@@ -2372,19 +2391,30 @@ class CadastroModelosApp(ctk.CTkFrame):
             self.dificuldade_var.set(hdr.get("dificuldade", "Médio"))
             self.pronto_prod_var.set(1 if hdr.get("pronto_producao") else 0)
 
+            # Custo total, se existir na tabela
+            if "custo_total" in hdr:
+                try:
+                    self.custo_entry.configure(state="normal")
+                    self.custo_entry.delete(0, tk.END)
+                    self.custo_entry.insert(0, formatar_para_exibicao(hdr.get("custo_total", 0)))
+                    self.custo_entry.configure(state="readonly")
+                except Exception as e:
+                    print(f"⚠️ Erro ao aplicar custo_total no entry: {e}")
+
             # Configurar grade disponível
             grade_str = hdr.get("grade_disponivel", "")
             if grade_str:
                 tamanhos_grade = [t.strip() for t in grade_str.split(",")]
                 for tamanho in self.tamanhos:
-                    if tamanho in tamanhos_grade:
-                        self.grade_vars[tamanho].set(1)
+                    self.grade_vars[tamanho].set(1 if tamanho in tamanhos_grade else 0)
 
             # Carregar tecidos
             tecidos_db = db.fetch_all(
-                f"SELECT * FROM {schema}.cadastro_modelos_tecidos WHERE codigo_modelo=%s ORDER BY id",
-                (codigo,)
+                f"SELECT * FROM {schema}.cadastro_modelos_tecidos "
+                f"WHERE codigo_modelo=%s ORDER BY id",
+                (codigo_str,)
             )
+            self.tecidos.clear()
             for tecido in tecidos_db:
                 self.tecidos.append({
                     "Código": tecido.get("codigo_tecido", ""),
@@ -2399,9 +2429,11 @@ class CadastroModelosApp(ctk.CTkFrame):
 
             # Carregar aviamentos
             aviamentos_db = db.fetch_all(
-                f"SELECT * FROM {schema}.cadastro_modelos_aviamentos WHERE codigo_modelo=%s ORDER BY id",
-                (codigo,)
+                f"SELECT * FROM {schema}.cadastro_modelos_aviamentos "
+                f"WHERE codigo_modelo=%s ORDER BY id",
+                (codigo_str,)
             )
+            self.aviamentos.clear()
             for aviamento in aviamentos_db:
                 self.aviamentos.append({
                     "Código": aviamento.get("codigo_aviamento", ""),
@@ -2415,9 +2447,11 @@ class CadastroModelosApp(ctk.CTkFrame):
 
             # Carregar outros serviços
             outros_db = db.fetch_all(
-                f"SELECT * FROM {schema}.cadastro_modelos_outros_servicos WHERE codigo_modelo=%s ORDER BY id",
-                (codigo,)
+                f"SELECT * FROM {schema}.cadastro_modelos_outros_servicos "
+                f"WHERE codigo_modelo=%s ORDER BY id",
+                (codigo_str,)
             )
+            self.outros.clear()
             for outro in outros_db:
                 self.outros.append({
                     "Código": outro.get("codigo_servico", ""),
@@ -2429,19 +2463,19 @@ class CadastroModelosApp(ctk.CTkFrame):
                     "valor_total": formatar_para_exibicao(outro.get("valor_total", 0))
                 })
 
-            # Atualizar tabelas
+            # Atualizar tabelas e totais
             self.atualizar_tabela_tecidos()
             self.atualizar_tabela_aviamentos()
             self.atualizar_tabela_outros()
             self.atualizar_totais()
 
             # Carregar imagens
-            self.carregar_imagens_de_pastas(codigo)
+            self.carregar_imagens_de_pastas(codigo_str)
 
-            self._auto_message(f"✅ Modelo '{codigo}' carregado para EDIÇÃO!", duracao=2000)
-            self.cadastro_carregado_codigo = codigo
+            self._auto_message(f"✅ Modelo '{codigo_str}' carregado para EDIÇÃO!", duracao=2000)
+            self.cadastro_carregado_codigo = codigo_str
 
-            print(f"🎯 Modelo {codigo} pronto para EDIÇÃO - pode adicionar/remover itens e salvar para ATUALIZAR")
+            print(f"🎯 Modelo {codigo_str} pronto para EDIÇÃO - pode adicionar/remover itens e salvar para ATUALIZAR")
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao carregar cadastro:\n{e}")
@@ -3670,34 +3704,30 @@ class CadastroModelosApp(ctk.CTkFrame):
         Exibe um diálogo simples para entrada de texto que respeita o tema atual.
         Centraliza a janela de diálogo na tela e retorna a string digitada ou None.
         """
-        # Prepare a mutable container to capture the resultado da entrada
         resultado = {"value": None}
 
-        # Criar janela de diálogo usando CTkToplevel para herdar o tema do sistema
+        # Janela do diálogo
         dialog = ctk.CTkToplevel(master=self.root)
         dialog.transient(self.root)
         dialog.grab_set()
-        # Definir título e impedir redimensionamento
         dialog.title(titulo)
         dialog.resizable(False, False)
 
-        # Dimensões padrão do diálogo
+        # Dimensões padrão e centralização
         largura = 450
         altura = 170
-        # Centralizar na tela
         centralizar_janela(dialog, largura, altura)
 
-        # Cores base do sistema para ajustar texto e botões
+        # Cores do tema
         cor_fundo = getattr(self.sistema, "cor_fundo", "#FFFFFF")
-        cor_texto = getattr(self.sistema, "cor_texto", "#000000")
         cor_sucesso = getattr(self.sistema, "cor_sucesso", "#28A745")
-        cor_destaque = getattr(self.sistema, "cor_destaque", "#6C757D")
+        cor_destaque = getattr(self.sistema, "cor_destaque", "#FFC107")
 
-        # Container principal com fundo adaptado
+        # Frame principal
         main_frame = ctk.CTkFrame(dialog, fg_color=cor_fundo)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # Texto explicativo
+        # Label
         label = ctk.CTkLabel(
             main_frame,
             text=mensagem,
@@ -3711,7 +3741,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         entry = ctk.CTkEntry(main_frame, width=400)
         entry.pack(fill="x", pady=(0, 15))
 
-        # Funções internas para lidar com OK/Cancel
+        # Funções dos botões
         def confirmar():
             resultado["value"] = entry.get()
             dialog.destroy()
@@ -3720,7 +3750,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             resultado["value"] = None
             dialog.destroy()
 
-        # Botões OK e Cancel
+        # Botões
         btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         btn_frame.pack()
 
@@ -3746,16 +3776,28 @@ class CadastroModelosApp(ctk.CTkFrame):
         )
         btn_cancel.pack(side="left", padx=5)
 
-        # Focar no campo de entrada
-        entry.focus_set()
-        # Aceitar Enter para confirmar e Escape para cancelar
-        entry.bind("<Return>", lambda event: confirmar())
-        entry.bind("<KP_Enter>", lambda event: confirmar())
-        entry.bind("<Escape>", lambda event: cancelar())
+        # === FOCO AUTOMÁTICO NO CAMPO DE ENTRADA ===
+        def focar_entry():
+            try:
+                entry.focus_force()
+                entry.icursor(0)
+            except Exception:
+                pass
 
-        # Esperar fechamento da janela
+        # chama depois da janela aparecer
+        dialog.after(50, focar_entry)
+        dialog.bind("<Visibility>", lambda e: focar_entry())
+
+        # Atalhos de teclado funcionando mesmo se o foco não estiver no entry
+        dialog.bind("<Return>", lambda e: confirmar())
+        dialog.bind("<KP_Enter>", lambda e: confirmar())
+        dialog.bind("<Escape>", lambda e: cancelar())
+
+        dialog.lift()
+        dialog.focus_force()
+
+        # Espera fechar
         dialog.wait_window()
-        # Retornar valor (pode ser None)
         return resultado["value"]
 
     def _aplicar_tema_local(self):
