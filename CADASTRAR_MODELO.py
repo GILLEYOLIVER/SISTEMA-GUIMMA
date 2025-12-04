@@ -4020,4 +4020,3 @@ if __name__ == "__main__":
 
 
     sistema.root.mainloop()
-    #ATUAL#
