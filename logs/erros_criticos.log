@@ -1,0 +1,4 @@
+2025-11-23 18:53:47 | ERROR    | OPERA_SYSTEM | [SISTEMA] [BACKUP] Erro no pg_dump (porta 5432): pg_dump: error: could not translate host name "." to address: nodename nor servname provided, or not known
+NoneType: None
+2025-11-23 18:53:56 | ERROR    | OPERA_SYSTEM | [SISTEMA] [BACKUP] Erro no pg_dump (porta 5432): pg_dump: error: could not translate host name "." to address: nodename nor servname provided, or not known
+NoneType: None
