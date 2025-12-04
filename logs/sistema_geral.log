@@ -182,3 +182,5 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 204: character maps to <undefined>
 2025-12-04 14:24:24 | INFO     | OPERA_SYSTEM | [SISTEMA] Execução SQL finalizada
+2025-12-04 15:51:43 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2025-12-04 15:51:43 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada

@@ -889,7 +889,8 @@ class DashboardPage(ctk.CTkFrame):
                 self.lbl_info_grafico = ctk.CTkLabel(
                     self.grafico_container,
                     text="Selecione um item na tabela",
-                    text_color="#FF6B6B"
+                    text_color="#FF6B6B",
+                    font=ctk.CTkFont(size=11)  # 🔹 fonte um pouco menor
                 )
                 self.lbl_info_grafico.pack(side="bottom", pady=(0, 6))
             except Exception as e:
@@ -907,56 +908,6 @@ class DashboardPage(ctk.CTkFrame):
                 font=("Arial", 12)
             )
             fallback_label.pack(expand=True)
-
-    def atualizar_grafico_dashboard(self):
-        """Atualiza o gráfico geral do dashboard."""
-        if not getattr(self, "ax_grafico", None):
-            return
-
-        try:
-            fazer = self._contar_em_andamento_db()
-            concluido = self._contar_finalizados_db()
-            total = fazer + concluido
-
-            self.ax_grafico.clear()
-
-            if total > 0:
-                wedges, texts, autotexts = self.ax_grafico.pie(
-                    [fazer, concluido],
-                    labels=["A Fazer", "Concluído"],
-                    autopct='%1.1f%%',
-                    startangle=90,
-                    colors=[self.cor_alerta, self.cor_sucesso],
-                    wedgeprops={'width': 0.4},
-                    pctdistance=1.35,
-                    labeldistance=1.1
-                )
-                for t in texts + autotexts:
-                    t.set_color(self.cor_texto)
-                    t.set_fontsize(10)
-                msg = f"{concluido} de {total} concluídos ({(concluido / total) * 100:.1f}%)"
-            else:
-                self.ax_grafico.pie(
-                    [1],
-                    labels=["Sem dados"],
-                    startangle=90,
-                    colors=[self.cor_borda],
-                    wedgeprops={'width': 0.4},
-                    labeldistance=1.1
-                )
-                msg = "Sem dados disponíveis"
-
-            self.ax_grafico.axis('equal')
-            try:
-                self.fig_grafico.tight_layout(pad=1.2)
-            except Exception:
-                pass
-            self.canvas_grafico.draw()
-
-            if hasattr(self, "lbl_info_grafico"):
-                self.lbl_info_grafico.configure(text=msg)
-        except Exception as e:
-            print(f"Erro ao atualizar gráfico dashboard: {e}")
 
     def atualizar_grafico_tempo_modelo(self):
         """Mostra progresso temporal real da ordem selecionada."""
@@ -993,7 +944,13 @@ class DashboardPage(ctk.CTkFrame):
 
             dias_estimados = _to_float(dias_txt)
             horas_estimadas = _to_float(horas_txt)
-            total_horas = max((dias_estimados * 24.0) + horas_estimadas, 0.0)
+
+            # Se tiver horas preenchidas e o dia for apenas fração (<1),
+            # usa só as horas para não duplicar o tempo.
+            if horas_estimadas > 0 and dias_estimados < 1:
+                total_horas = max(horas_estimadas, 0.0)
+            else:
+                total_horas = max((dias_estimados * 24.0) + horas_estimadas, 0.0)
 
             inicio = _to_datetime_any(data_txt) or datetime.now()
             agora = datetime.now()
@@ -1017,6 +974,7 @@ class DashboardPage(ctk.CTkFrame):
                     t.set_color(self.cor_texto)
                     t.set_fontsize(10)
                 msg = f"{descricao} ({codigo}) — Corte pronto para envio"
+
             elif total_horas <= 0:
                 self.ax_grafico.pie(
                     [1],
@@ -1027,8 +985,10 @@ class DashboardPage(ctk.CTkFrame):
                     labeldistance=1.1
                 )
                 msg = "Informe dias/horas estimados para ver o progresso"
+
             else:
                 restante_horas = max(total_horas - decorrido_horas, 0.0)
+
                 valores_pizza = [max(decorrido_horas, 0.01)]
                 labels = ["Concluído"]
                 cores = [self.cor_destaque]
@@ -1075,10 +1035,43 @@ class DashboardPage(ctk.CTkFrame):
 
                 perc_concluido = (decorrido_horas / total_horas) * 100 if total_horas else 0
                 perc_restante = max((restante_horas / total_horas) * 100, 0) if total_horas else 0
+
+                # Concluído: abaixo de 1h vira minutos
+                if decorrido_horas < 1:
+                    if decorrido_horas <= 0:
+                        decorrido_str = "0min"
+                    else:
+                        dec_min = int(round(decorrido_horas * 60))
+                        if dec_min >= 60:
+                            decorrido_str = "1h"
+                        else:
+                            decorrido_str = f"{dec_min}min"
+                else:
+                    decorrido_str = f"{decorrido_horas:.1f}h"
+
+                # Restante: abaixo de 1h vira minutos
+                if restante_horas < 1:
+                    if restante_horas <= 0:
+                        restante_str = "0min"
+                    else:
+                        rest_min = int(round(restante_horas * 60))
+                        if rest_min >= 60:
+                            restante_str = "1h"
+                        else:
+                            restante_str = f"{rest_min}min"
+                else:
+                    restante_str = f"{restante_horas:.1f}h"
+
+                # 🔹 Abreviação mais curta para caber dentro do menu
+                descricao_curta = descricao
+                if len(descricao_curta) > 32:
+                    descricao_curta = descricao_curta[:29].rstrip() + "..."
+
+                # 🔹 Quebra em 2 linhas para não ser cortado horizontalmente
                 msg = (
-                    f"{descricao} ({codigo}) — "
-                    f"Concluído {decorrido_horas:.1f}h ({perc_concluido:.1f}%) | "
-                    f"Restante {restante_horas:.1f}h ({perc_restante:.1f}%)"
+                    f"{descricao_curta} ({codigo})\n"
+                    f"Concluído {decorrido_str} ({perc_concluido:.1f}%) | "
+                    f"Restante {restante_str} ({perc_restante:.1f}%)"
                 )
 
             self.ax_grafico.axis('equal')
