@@ -2,3 +2,25 @@
 NoneType: None
 2025-11-23 18:53:56 | ERROR    | OPERA_SYSTEM | [SISTEMA] [BACKUP] Erro no pg_dump (porta 5432): pg_dump: error: could not translate host name "." to address: nodename nor servname provided, or not known
 NoneType: None
+2025-12-04 14:23:41 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro grave em SQL
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\BANCO_DADOS_FABRICA.py", line 976, in executar_sql
+    self.cursor.execute(comando)
+  File "C:\Users\User\Desktop\sistema\.venv\Lib\site-packages\psycopg2\extras.py", line 236, in execute
+    return super().execute(query, vars)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 12, in encode
+    return codecs.charmap_encode(input,errors,encoding_table)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 204: character maps to <undefined>
+2025-12-04 14:24:19 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro grave em SQL
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\BANCO_DADOS_FABRICA.py", line 976, in executar_sql
+    self.cursor.execute(comando)
+  File "C:\Users\User\Desktop\sistema\.venv\Lib\site-packages\psycopg2\extras.py", line 236, in execute
+    return super().execute(query, vars)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 12, in encode
+    return codecs.charmap_encode(input,errors,encoding_table)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 204: character maps to <undefined>

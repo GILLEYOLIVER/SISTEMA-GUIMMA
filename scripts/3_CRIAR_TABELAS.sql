@@ -1476,6 +1476,73 @@ CREATE INDEX IF NOT EXISTS idx_usuario_temas_usuario ON opera.usuario_temas_pers
 CREATE INDEX IF NOT EXISTS idx_usuario_temas_nome ON opera.usuario_temas_personalizados (nome_tema);
 
 -- ================================================================
+-- [TABELA 48] ORDEM DE CORTE - PREFERÊNCIAS DE GRADE POR USUÁRIO
+-- ================================================================
+CREATE TABLE IF NOT EXISTS opera.ordem_grade_preferencias (
+    id            SERIAL PRIMARY KEY,
+    usuario_id    INTEGER NOT NULL
+                  REFERENCES opera.usuarios(id)
+                  ON DELETE CASCADE,
+    nome          VARCHAR(100) NOT NULL,
+    porcent_1     NUMERIC(12,4) DEFAULT 0,
+    porcent_2     NUMERIC(12,4) DEFAULT 0,
+    porcent_3     NUMERIC(12,4) DEFAULT 0,
+    porcent_4     NUMERIC(12,4) DEFAULT 0,
+    porcent_5     NUMERIC(12,4) DEFAULT 0,
+    porcent_6     NUMERIC(12,4) DEFAULT 0,
+    porcent_7     NUMERIC(12,4) DEFAULT 0,
+    porcent_8     NUMERIC(12,4) DEFAULT 0,
+    criado_em     TIMESTAMP DEFAULT NOW(),
+    atualizado_em TIMESTAMP DEFAULT NOW(),
+    UNIQUE (usuario_id, nome)
+);
+
+-- ================================================================
+-- ÍNDICES DA TABELA 48
+-- ================================================================
+
+-- Índice para busca por usuário
+CREATE INDEX IF NOT EXISTS idx_ordem_grade_pref_usuario
+ON opera.ordem_grade_preferencias (usuario_id);
+
+-- Índice para busca por nome
+CREATE INDEX IF NOT EXISTS idx_ordem_grade_pref_nome
+ON opera.ordem_grade_preferencias (nome);
+
+-- Índice composto para buscas frequentes
+CREATE INDEX IF NOT EXISTS idx_ordem_grade_pref_usuario_nome
+ON opera.ordem_grade_preferencias (usuario_id, nome);
+
+-- Índice para ordenação por data de criação
+CREATE INDEX IF NOT EXISTS idx_ordem_grade_pref_criado_em
+ON opera.ordem_grade_preferencias (criado_em DESC);
+
+-- Índice para ordenação por data de atualização
+CREATE INDEX IF NOT EXISTS idx_ordem_grade_pref_atualizado_em
+ON opera.ordem_grade_preferencias (atualizado_em DESC);
+
+-- ================================================================
+-- COMENTÁRIOS DA TABELA 48
+-- ================================================================
+COMMENT ON TABLE opera.ordem_grade_preferencias IS
+'TABELA 48 - ORDEM DE CORTE: Preferências de grade por usuário. Armazena configurações de porcentagens de corte salvas por cada usuário.';
+
+COMMENT ON COLUMN opera.ordem_grade_preferencias.id IS 'Identificador único da preferência';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.usuario_id IS 'ID do usuário que criou a preferência (FK para usuarios.id)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.nome IS 'Nome descritivo da preferência (ex: "Grade Verão 2024", "Padrão Camisetas")';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.porcent_1 IS 'Porcentagem para tamanho PP (0-100)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.porcent_2 IS 'Porcentagem para tamanho P (0-100)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.porcent_3 IS 'Porcentagem para tamanho M (0-100)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.porcent_4 IS 'Porcentagem para tamanho G (0-100)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.porcent_5 IS 'Porcentagem para tamanho GG (0-100)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.porcent_6 IS 'Porcentagem para tamanho G1 (0-100)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.porcent_7 IS 'Porcentagem para tamanho G2 (0-100)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.porcent_8 IS 'Porcentagem para tamanho G3 (0-100)';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.criado_em IS 'Data e hora de criação do registro';
+COMMENT ON COLUMN opera.ordem_grade_preferencias.atualizado_em IS 'Data e hora da última atualização';
+
+
+-- ================================================================
 -- [SISTEMA DE AUDITORIA - LOGS DE ATIVIDADES]
 -- ================================================================
 

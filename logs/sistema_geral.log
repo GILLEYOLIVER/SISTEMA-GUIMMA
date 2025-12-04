@@ -153,3 +153,32 @@ NoneType: None
 2025-12-04 10:13:40 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
 2025-12-04 10:14:41 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
 2025-12-04 10:17:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2025-12-04 10:40:07 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2025-12-04 14:23:12 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2025-12-04 14:23:12 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2025-12-04 14:23:14 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2025-12-04 14:23:41 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro grave em SQL
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\BANCO_DADOS_FABRICA.py", line 976, in executar_sql
+    self.cursor.execute(comando)
+  File "C:\Users\User\Desktop\sistema\.venv\Lib\site-packages\psycopg2\extras.py", line 236, in execute
+    return super().execute(query, vars)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 12, in encode
+    return codecs.charmap_encode(input,errors,encoding_table)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 204: character maps to <undefined>
+2025-12-04 14:23:43 | INFO     | OPERA_SYSTEM | [SISTEMA] Execução SQL finalizada
+2025-12-04 14:23:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2025-12-04 14:24:19 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro grave em SQL
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\BANCO_DADOS_FABRICA.py", line 976, in executar_sql
+    self.cursor.execute(comando)
+  File "C:\Users\User\Desktop\sistema\.venv\Lib\site-packages\psycopg2\extras.py", line 236, in execute
+    return super().execute(query, vars)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 12, in encode
+    return codecs.charmap_encode(input,errors,encoding_table)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 204: character maps to <undefined>
+2025-12-04 14:24:24 | INFO     | OPERA_SYSTEM | [SISTEMA] Execução SQL finalizada
