@@ -615,6 +615,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         cor_texto = getattr(self.sistema, 'cor_texto', '#000000')
         cor_primaria = getattr(self.sistema, 'cor_primaria', '#007BFF')
         cor_borda = getattr(self.sistema, 'cor_borda', '#CED4DA')
+        cor_secundaria = getattr(self.sistema, 'cor_secundaria', '#E0E0E0')
 
         # Configuração de layout - MAIS COMPACTO
         self.grid_rowconfigure(0, weight=1)
@@ -626,9 +627,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         main_frame.grid_rowconfigure(0, weight=1)
         main_frame.grid_columnconfigure(0, weight=1)
 
-        # Criar abas - MAIS COMPACTO
+        # Criar abas (CTkTabview)
         self.tabview = ctk.CTkTabview(main_frame, fg_color=cor_fundo)
         self.tabview.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)  # Reduzir padding
+
+        # 🔹 Aplica estilo nas abas (ativa + hover)
+        self._configurar_estilo_abas()
 
         # Criar as abas - TODAS com cor_fundo
         self.tab_principal = self.tabview.add("Principal")
@@ -646,6 +650,91 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         # Botões de ação fixos na parte inferior - MAIS COMPACTOS
         self._create_action_buttons(main_frame)
+
+    def _configurar_estilo_abas(self, notebook=None):
+        """
+        Deixa as abas bem destacadas, principalmente em tema claro.
+
+        - Se 'notebook' não for passado, tenta usar self.tabview ou self.notebook.
+        - Para CTkTabview: usa cores do tema (cor_selecao/cor_primaria) nas abas.
+        - Para ttk.Notebook: aplica o estilo 'Opera.TNotebook'.
+        """
+        # Cores do tema
+        cor_fundo = getattr(self.sistema, "cor_fundo", "#FFFFFF")
+        cor_secundaria = getattr(self.sistema, "cor_secundaria", "#E0E0E0")
+        cor_primaria = getattr(self.sistema, "cor_primaria", "#007BFF")
+        cor_texto = getattr(self.sistema, "cor_texto", "#000000")
+        cor_selecao = getattr(self.sistema, "cor_selecao", cor_primaria)
+
+        # Descobrir automaticamente o controle de abas, se não foi passado
+        if notebook is None:
+            if hasattr(self, "tabview") and self.tabview is not None:
+                notebook = self.tabview
+            elif hasattr(self, "notebook") and self.notebook is not None:
+                notebook = self.notebook
+            else:
+                return  # não há abas para configurar
+
+        # --------- Cores de aba (normal x ativa) ----------
+        # Aba ativa: usa cor_selecao, mas se for muito clara escurece duas vezes
+        cor_aba_ativa = cor_selecao
+        if not is_dark_color(cor_aba_ativa):
+            cor_aba_ativa = ajustar_hover(ajustar_hover(cor_aba_ativa))
+
+        # Abas normais: cinza suave (diferente do fundo)
+        cor_aba_normal = cor_secundaria
+        # Efeito hover nas abas
+        cor_aba_hover = ajustar_hover(cor_aba_normal)
+
+        # ================== CASO 1: CTkTabview ==================
+        import customtkinter as ctk  # já está importado no arquivo, aqui só usamos o nome
+
+        if isinstance(notebook, ctk.CTkTabview):
+            notebook.configure(
+                fg_color=cor_fundo,
+                text_color=cor_texto,
+                segmented_button_fg_color=cor_aba_normal,
+                segmented_button_selected_color=cor_aba_ativa,
+                segmented_button_selected_hover_color=ajustar_hover(cor_aba_ativa),
+                segmented_button_unselected_color=cor_aba_normal,
+                segmented_button_unselected_hover_color=cor_aba_hover,
+            )
+            return
+
+        # ================== CASO 2: ttk.Notebook ==================
+        if isinstance(notebook, ttk.Notebook):
+            style = ttk.Style(notebook)
+
+            fg_normal = cor_texto
+            fg_ativo = get_contraste_texto(cor_aba_ativa)
+
+            style.configure(
+                "Opera.TNotebook",
+                background=cor_fundo,
+                borderwidth=0,
+                tabmargins=(0, 0, 0, 0),
+            )
+
+            style.configure(
+                "Opera.TNotebook.Tab",
+                padding=(10, 4),
+                background=cor_aba_normal,
+                foreground=fg_normal,
+                font=("Arial", 11, "bold"),
+            )
+
+            style.map(
+                "Opera.TNotebook.Tab",
+                background=[
+                    ("selected", cor_aba_ativa),
+                    ("active", cor_aba_hover),
+                ],
+                foreground=[
+                    ("selected", fg_ativo),
+                ],
+            )
+
+            notebook.configure(style="Opera.TNotebook")
 
     def _create_principal_tab(self):
         """Cria a aba principal priorizando espaço para imagens grandes."""
@@ -2608,15 +2697,29 @@ class CadastroModelosApp(ctk.CTkFrame):
     def adicionar_tecido(self, prefill=None):
         """Adiciona um tecido ao cadastro. Aceita 'prefill' vindo da pesquisa."""
         prefill = prefill or {}
+
+        # Cores do tema (garante contraste em temas claros e escuros)
+        cor_fundo = getattr(self.sistema, 'cor_fundo', '#F5F5F5')
+        cor_primaria = getattr(self.sistema, 'cor_primaria', '#007BFF')
+        cor_texto = getattr(self.sistema, 'cor_texto', '#000000')
+        cor_sucesso = getattr(self.sistema, 'cor_sucesso', '#28A745')
+        cor_destaque = getattr(self.sistema, 'cor_destaque', '#6C757D')
+
+        # Hovers ajustados automaticamente para a cor base
+        hover_primaria = ajustar_hover(cor_primaria)
+        hover_sucesso = ajustar_hover(cor_sucesso)
+        hover_destaque = ajustar_hover(cor_destaque)
+
         dialog = ctk.CTkToplevel(master=self.root)
         dialog.transient(self.root)
         dialog.grab_set()
         centralizar_janela(dialog, 450, 550)
         dialog.title("Adicionar Tecido")
         dialog.resizable(False, False)
+        dialog.configure(fg_color=cor_fundo)
 
         # Frame principal
-        main_frame = ctk.CTkFrame(dialog)
+        main_frame = ctk.CTkFrame(dialog, fg_color=cor_fundo)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         campos = [
@@ -2633,7 +2736,12 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         # Preencher valores iniciais (exceto Metros/Peça)
         for i, (rotulo, default) in enumerate(campos):
-            label = ctk.CTkLabel(main_frame, text=rotulo + ":", font=("Arial", 12, "bold"))
+            label = ctk.CTkLabel(
+                main_frame,
+                text=rotulo + ":",
+                font=("Arial", 12, "bold"),
+                text_color=cor_texto,  # usa cor de texto do tema
+            )
             label.grid(row=i, column=0, padx=10, pady=8, sticky="e")
 
             entry = ctk.CTkEntry(main_frame, font=("Arial", 12), width=250)
@@ -2648,7 +2756,10 @@ class CadastroModelosApp(ctk.CTkFrame):
             if rotulo == "valor_total":
                 entry.configure(state="readonly", fg_color="#f0f0f0")
             elif rotulo in ["Metros/Peça", "Valor Metro"]:
-                entry.configure(validate="key", validatecommand=(dialog.register(validar_entrada_monetaria), "%P"))
+                entry.configure(
+                    validate="key",
+                    validatecommand=(dialog.register(validar_entrada_monetaria), "%P"),
+                )
 
             entry.grid(row=i, column=1, padx=10, pady=8, sticky="w")
             entries[rotulo] = entry
@@ -2682,16 +2793,25 @@ class CadastroModelosApp(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.grid(row=len(campos) + 1, column=0, columnspan=2, pady=20)
 
-        ctk.CTkButton(button_frame, text="↻ Calcular Total", command=calcular_total,
-                      fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
-                      hover_color=getattr(self.sistema, 'cor_hover', '#0056b3'),
-                      text_color="white",
-                      font=("Arial", 11, "bold"),
-                      width=120, height=35).pack(side="left", padx=10)
+        ctk.CTkButton(
+            button_frame,
+            text="↻ Calcular Total",
+            command=calcular_total,
+            fg_color=cor_primaria,
+            hover_color=hover_primaria,
+            text_color=get_contraste_texto(cor_primaria),  # contraste dinâmico
+            font=("Arial", 11, "bold"),
+            width=120,
+            height=35,
+        ).pack(side="left", padx=10)
 
         def salvar():
             if not calcular_total():
-                messagebox.showwarning("Atenção", "Erro no cálculo do total. Verifique os valores.", parent=dialog)
+                messagebox.showwarning(
+                    "Atenção",
+                    "Erro no cálculo do total. Verifique os valores.",
+                    parent=dialog,
+                )
                 return
 
             codigo = entries["Código"].get().strip()
@@ -2699,17 +2819,29 @@ class CadastroModelosApp(ctk.CTkFrame):
             metros = entries["Metros/Peça"].get().strip()
 
             if not codigo:
-                messagebox.showwarning("Atenção", "O campo Código é obrigatório.", parent=dialog)
+                messagebox.showwarning(
+                    "Atenção",
+                    "O campo Código é obrigatório.",
+                    parent=dialog,
+                )
                 entries["Código"].focus_set()
                 return
 
             if not descricao:
-                messagebox.showwarning("Atenção", "O campo Descrição é obrigatório.", parent=dialog)
+                messagebox.showwarning(
+                    "Atenção",
+                    "O campo Descrição é obrigatório.",
+                    parent=dialog,
+                )
                 entries["Descrição"].focus_set()
                 return
 
             if not metros or formatar_valor(metros) == 0:
-                messagebox.showwarning("Atenção", "Informe a quantidade de metros/peça.", parent=dialog)
+                messagebox.showwarning(
+                    "Atenção",
+                    "Informe a quantidade de metros/peça.",
+                    parent=dialog,
+                )
                 entries["Metros/Peça"].focus_set()
                 return
 
@@ -2734,19 +2866,29 @@ class CadastroModelosApp(ctk.CTkFrame):
         def cancelar():
             dialog.destroy()
 
-        ctk.CTkButton(button_frame, text="💾 Salvar", command=salvar,
-                      fg_color=getattr(self.sistema, 'cor_sucesso', '#28A745'),
-                      hover_color="#218838",
-                      text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
-                      font=("Arial", 12, "bold"),
-                      width=100, height=35).pack(side="left", padx=5)
+        ctk.CTkButton(
+            button_frame,
+            text="💾 Salvar",
+            command=salvar,
+            fg_color=cor_sucesso,
+            hover_color=hover_sucesso,
+            text_color=get_contraste_texto(cor_sucesso),
+            font=("Arial", 12, "bold"),
+            width=100,
+            height=35,
+        ).pack(side="left", padx=5)
 
-        ctk.CTkButton(button_frame, text="❌ Cancelar", command=cancelar,
-                      fg_color=getattr(self.sistema, 'cor_destaque', '#6C757D'),
-                      hover_color="#5a6268",
-                      text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
-                      font=("Arial", 12),
-                      width=100, height=35).pack(side="left", padx=5)
+        ctk.CTkButton(
+            button_frame,
+            text="❌ Cancelar",
+            command=cancelar,
+            fg_color=cor_destaque,
+            hover_color=hover_destaque,
+            text_color=get_contraste_texto(cor_destaque),
+            font=("Arial", 12),
+            width=100,
+            height=35,
+        ).pack(side="left", padx=5)
 
         if not entries["Código"].get().strip():
             entries["Código"].focus_set()
@@ -2816,14 +2958,27 @@ class CadastroModelosApp(ctk.CTkFrame):
     def adicionar_aviamento(self, prefill=None):
         """Adiciona um aviamento ao cadastro. Aceita 'prefill' vindo da pesquisa."""
         prefill = prefill or {}
+
+        # Cores do tema
+        cor_fundo = getattr(self.sistema, 'cor_fundo', '#F5F5F5')
+        cor_primaria = getattr(self.sistema, 'cor_primaria', '#007BFF')
+        cor_texto = getattr(self.sistema, 'cor_texto', '#000000')
+        cor_sucesso = getattr(self.sistema, 'cor_sucesso', '#28A745')
+        cor_destaque = getattr(self.sistema, 'cor_destaque', '#6C757D')
+
+        hover_primaria = ajustar_hover(cor_primaria)
+        hover_sucesso = ajustar_hover(cor_sucesso)
+        hover_destaque = ajustar_hover(cor_destaque)
+
         dialog = ctk.CTkToplevel(master=self.root)
         dialog.transient(self.root)
         dialog.grab_set()
         centralizar_janela(dialog, 450, 500)
         dialog.title("Adicionar Aviamento")
         dialog.resizable(False, False)
+        dialog.configure(fg_color=cor_fundo)
 
-        main_frame = ctk.CTkFrame(dialog)
+        main_frame = ctk.CTkFrame(dialog, fg_color=cor_fundo)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         campos = [
@@ -2837,28 +2992,35 @@ class CadastroModelosApp(ctk.CTkFrame):
         ]
         entries = {}
 
+        # Construção dos campos
         for i, (rotulo, default) in enumerate(campos):
-            label = ctk.CTkLabel(main_frame, text=rotulo + ":", font=("Arial", 12, "bold"))
+            label = ctk.CTkLabel(
+                main_frame,
+                text=rotulo + ":",
+                font=("Arial", 12, "bold"),
+                text_color=cor_texto,
+            )
             label.grid(row=i, column=0, padx=10, pady=8, sticky="e")
 
             entry = ctk.CTkEntry(main_frame, font=("Arial", 12), width=250)
 
-            if rotulo == "Quantidade":
-                inicial = ""
-            else:
-                inicial = prefill.get(rotulo, default)
+            inicial = prefill.get(rotulo, default)
 
             entry.insert(0, inicial)
 
             if rotulo == "valor_total":
                 entry.configure(state="readonly", fg_color="#f0f0f0")
             elif rotulo in ["Quantidade", "Valor Unidade"]:
-                entry.configure(validate="key", validatecommand=(dialog.register(validar_entrada_monetaria), "%P"))
+                entry.configure(
+                    validate="key",
+                    validatecommand=(dialog.register(validar_entrada_monetaria), "%P"),
+                )
 
             entry.grid(row=i, column=1, padx=10, pady=8, sticky="w")
             entries[rotulo] = entry
 
         def calcular_total(event=None):
+            """Calcula o total = quantidade * valor_unidade."""
             try:
                 quantidade_texto = entries["Quantidade"].get().strip()
                 valor_unidade_texto = entries["Valor Unidade"].get().strip()
@@ -2883,19 +3045,29 @@ class CadastroModelosApp(ctk.CTkFrame):
         entries["Quantidade"].bind("<KeyRelease>", calcular_total)
         entries["Valor Unidade"].bind("<KeyRelease>", calcular_total)
 
+        # Botões
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.grid(row=len(campos) + 1, column=0, columnspan=2, pady=20)
 
-        ctk.CTkButton(button_frame, text="↻ Calcular Total", command=calcular_total,
-                      fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
-                      hover_color=getattr(self.sistema, 'cor_hover', '#0056b3'),
-                      text_color="white",
-                      font=("Arial", 11, "bold"),
-                      width=120, height=35).pack(side="left", padx=10)
+        ctk.CTkButton(
+            button_frame,
+            text="↻ Calcular Total",
+            command=calcular_total,
+            fg_color=cor_primaria,
+            hover_color=hover_primaria,
+            text_color=get_contraste_texto(cor_primaria),
+            font=("Arial", 11, "bold"),
+            width=120,
+            height=35,
+        ).pack(side="left", padx=10)
 
         def salvar():
             if not calcular_total():
-                messagebox.showwarning("Atenção", "Erro no cálculo do total. Verifique os valores.", parent=dialog)
+                messagebox.showwarning(
+                    "Atenção",
+                    "Erro no cálculo do total. Verifique os valores.",
+                    parent=dialog,
+                )
                 return
 
             codigo = entries["Código"].get().strip()
@@ -2903,17 +3075,29 @@ class CadastroModelosApp(ctk.CTkFrame):
             quantidade = entries["Quantidade"].get().strip()
 
             if not codigo:
-                messagebox.showwarning("Atenção", "O campo Código é obrigatório.", parent=dialog)
+                messagebox.showwarning(
+                    "Atenção",
+                    "O campo Código é obrigatório.",
+                    parent=dialog,
+                )
                 entries["Código"].focus_set()
                 return
 
             if not descricao:
-                messagebox.showwarning("Atenção", "O campo Descrição é obrigatório.", parent=dialog)
+                messagebox.showwarning(
+                    "Atenção",
+                    "O campo Descrição é obrigatório.",
+                    parent=dialog,
+                )
                 entries["Descrição"].focus_set()
                 return
 
             if not quantidade or formatar_valor(quantidade) == 0:
-                messagebox.showwarning("Atenção", "Informe a quantidade.", parent=dialog)
+                messagebox.showwarning(
+                    "Atenção",
+                    "Informe a quantidade.",
+                    parent=dialog,
+                )
                 entries["Quantidade"].focus_set()
                 return
 
@@ -2922,7 +3106,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                 "Descrição": descricao,
                 "Cor": entries["Cor"].get().strip(),
                 "Fornecedor": entries["Fornecedor"].get().strip(),
-                "Quantidade": quantidade,
+                "Quantidade": entries["Quantidade"].get().strip(),
                 "Valor Unidade": entries["Valor Unidade"].get().strip(),
                 "valor_total": entries["valor_total"].get().strip(),
             }
@@ -2937,20 +3121,31 @@ class CadastroModelosApp(ctk.CTkFrame):
         def cancelar():
             dialog.destroy()
 
-        ctk.CTkButton(button_frame, text="💾 Salvar", command=salvar,
-                      fg_color=getattr(self.sistema, 'cor_sucesso', '#28A745'),
-                      hover_color="#218838",
-                      text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
-                      font=("Arial", 12, "bold"),
-                      width=100, height=35).pack(side="left", padx=5)
+        ctk.CTkButton(
+            button_frame,
+            text="💾 Salvar",
+            command=salvar,
+            fg_color=cor_sucesso,
+            hover_color=hover_sucesso,
+            text_color=get_contraste_texto(cor_sucesso),
+            font=("Arial", 12, "bold"),
+            width=100,
+            height=35,
+        ).pack(side="left", padx=5)
 
-        ctk.CTkButton(button_frame, text="❌ Cancelar", command=cancelar,
-                      fg_color=getattr(self.sistema, 'cor_destaque', '#6C757D'),
-                      hover_color="#5a6268",
-                      text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
-                      font=("Arial", 12),
-                      width=100, height=35).pack(side="left", padx=5)
+        ctk.CTkButton(
+            button_frame,
+            text="❌ Cancelar",
+            command=cancelar,
+            fg_color=cor_destaque,
+            hover_color=hover_destaque,
+            text_color=get_contraste_texto(cor_destaque),
+            font=("Arial", 12),
+            width=100,
+            height=35,
+        ).pack(side="left", padx=5)
 
+        # Foco inicial
         if not entries["Código"].get().strip():
             entries["Código"].focus_set()
         elif not entries["Quantidade"].get().strip():
@@ -2977,43 +3172,88 @@ class CadastroModelosApp(ctk.CTkFrame):
     def adicionar_outro(self, prefill=None):
         """Adiciona um item/serviço à lista de outros."""
         prefill = prefill or {}
+
+        # Cores do tema
+        cor_fundo = getattr(self.sistema, 'cor_fundo', '#F5F5F5')
+        cor_primaria = getattr(self.sistema, 'cor_primaria', '#007BFF')
+        cor_texto = getattr(self.sistema, 'cor_texto', '#000000')
+        cor_sucesso = getattr(self.sistema, 'cor_sucesso', '#28A745')
+        cor_destaque = getattr(self.sistema, 'cor_destaque', '#6C757D')
+
+        hover_primaria = ajustar_hover(cor_primaria)
+        hover_sucesso = ajustar_hover(cor_sucesso)
+        hover_destaque = ajustar_hover(cor_destaque)
+
         dlg = ctk.CTkToplevel(self.root)
         dlg.transient(self.root)
         dlg.grab_set()
         dlg.title("Adicionar Outro (Serviço/Item)")
         centralizar_janela(dlg, 420, 520)
+        dlg.configure(fg_color=cor_fundo)
+        dlg.resizable(False, False)
+
+        main_frame = ctk.CTkFrame(dlg, fg_color=cor_fundo)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         campos = [
-            ("Código", ""), ("Descrição", ""), ("Cor", ""), ("Fornecedor", ""),
-            ("Unid.", "un"), ("Quantidade", "0"), ("Preço", "0,00"), ("valor_total", "0,00")
+            ("Código", ""),
+            ("Descrição", ""),
+            ("Cor", ""),
+            ("Fornecedor", ""),
+            ("Unid.", "un"),
+            ("Quantidade", "0"),
+            ("Preço", "0,00"),
+            ("valor_total", "0,00"),
         ]
         entries = {}
 
         def _pf(rot):
-            alts = {
-                "Código": ["codigo"], "Descrição": ["descricao"], "Cor": ["cor"],
-                "Fornecedor": ["fornecedor"], "Unid.": ["unidade", "unid"],
-                "Quantidade": ["quantidade", "qtd"], "Preço": ["preco", "valor", "valor_unitario"],
-                "valor_total": ["total", "valor_total"]
+            # tenta pegar do prefill, aceitando tanto chaves com acento
+            # quanto nomes de coluna do banco
+            if rot in prefill:
+                return prefill.get(rot)
+            m = {
+                "Código": ["codigo", "código"],
+                "Descrição": ["descricao", "descrição"],
+                "Cor": ["cor"],
+                "Fornecedor": ["fornecedor"],
+                "Unid.": ["unidade", "unid"],
+                "Quantidade": ["quantidade", "qtd"],
+                "Preço": ["preco", "preço", "valor"],
+                "valor_total": ["total", "valor_total"],
             }
-            if rot in prefill and prefill[rot]: return prefill[rot]
-            for a in alts.get(rot, []):
-                if a in prefill and prefill[a]: return prefill[a]
-            return ""
+            if rot in m:
+                for k in m[rot]:
+                    if k in prefill:
+                        return prefill[k]
+            return None
 
+        # Construção dos campos
         for i, (rot, default) in enumerate(campos):
-            ctk.CTkLabel(dlg, text=rot + ":", font=("Arial", 12)).grid(row=i, column=0, padx=10, pady=5, sticky="e")
-            e = ctk.CTkEntry(dlg, font=("Arial", 12), width=220)
+            ctk.CTkLabel(
+                main_frame,
+                text=rot + ":",
+                font=("Arial", 12, "bold"),
+                text_color=cor_texto,
+            ).grid(row=i, column=0, padx=10, pady=5, sticky="e")
+
+            e = ctk.CTkEntry(main_frame, font=("Arial", 12), width=250)
             val = _pf(rot) or default
             e.insert(0, val)
+
             if rot in ("Quantidade", "Preço"):
-                e.configure(validate="key", validatecommand=(dlg.register(validar_entrada_monetaria), "%P"))
+                e.configure(
+                    validate="key",
+                    validatecommand=(dlg.register(validar_entrada_monetaria), "%P"),
+                )
             if rot == "valor_total":
-                e.configure(state="readonly")
+                e.configure(state="readonly", fg_color="#f0f0f0")
+
             e.grid(row=i, column=1, padx=10, pady=5, sticky="w")
             entries[rot] = e
 
         def calcular_total():
+            """Calcula total = quantidade * preço."""
             try:
                 qtd = formatar_valor(entries["Quantidade"].get())
                 preco = formatar_valor(entries["Preço"].get())
@@ -3023,29 +3263,110 @@ class CadastroModelosApp(ctk.CTkFrame):
                 entries["valor_total"].insert(0, formatar_para_exibicao(total))
                 entries["valor_total"].configure(state="readonly")
                 return True
-            except Exception:
+            except Exception as e:
+                print(f"Erro ao calcular total (outros): {e}")
                 return False
 
-        ctk.CTkButton(dlg, text="Calcular Total", command=calcular_total,
-                      fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF')).grid(
-            row=len(campos), column=0, columnspan=2, pady=10)
+        # Atualiza total ao digitar
+        entries["Quantidade"].bind("<KeyRelease>", lambda e: calcular_total())
+        entries["Preço"].bind("<KeyRelease>", lambda e: calcular_total())
+
+        # Botões
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.grid(row=len(campos) + 1, column=0, columnspan=2, pady=20)
+
+        ctk.CTkButton(
+            button_frame,
+            text="↻ Calcular Total",
+            command=calcular_total,
+            fg_color=cor_primaria,
+            hover_color=hover_primaria,
+            text_color=get_contraste_texto(cor_primaria),
+            font=("Arial", 11, "bold"),
+            width=130,
+            height=35,
+        ).pack(side="left", padx=5)
 
         def salvar():
             if not calcular_total():
-                messagebox.showwarning("Atenção", "Erro no cálculo do total.", parent=dlg)
+                messagebox.showwarning(
+                    "Atenção",
+                    "Erro no cálculo do total.",
+                    parent=dlg,
+                )
                 return
-            item = {r: entries[r].get() for r, _ in campos}
-            self.outros.append(item)
+
+            codigo = entries["Código"].get().strip()
+            descricao = entries["Descrição"].get().strip()
+            if not codigo:
+                messagebox.showwarning(
+                    "Atenção",
+                    "O campo Código é obrigatório.",
+                    parent=dlg,
+                )
+                entries["Código"].focus_set()
+                return
+            if not descricao:
+                messagebox.showwarning(
+                    "Atenção",
+                    "O campo Descrição é obrigatório.",
+                    parent=dlg,
+                )
+                entries["Descrição"].focus_set()
+                return
+
+            outro = {
+                "Código": entries["Código"].get().strip(),
+                "Descrição": entries["Descrição"].get().strip(),
+                "Cor": entries["Cor"].get().strip(),
+                "Fornecedor": entries["Fornecedor"].get().strip(),
+                "Unid.": entries["Unid."].get().strip(),
+                "Quantidade": entries["Quantidade"].get().strip(),
+                "Preço": entries["Preço"].get().strip(),
+                "valor_total": entries["valor_total"].get().strip(),
+            }
+
+            self.outros.append(outro)
             self.atualizar_tabela_outros()
             self.atualizar_totais()
+
+            self._auto_message(f"Item/serviço {outro['Código']} adicionado com sucesso!")
             dlg.destroy()
 
-        rod = ctk.CTkFrame(dlg, fg_color="transparent")
-        rod.grid(row=len(campos) + 1, column=0, columnspan=2, pady=8)
-        ctk.CTkButton(rod, text="Salvar", command=salvar,
-                      fg_color=getattr(self.sistema, 'cor_sucesso', '#28A745')).pack(side="left", padx=10)
-        ctk.CTkButton(rod, text="Cancelar", command=dlg.destroy,
-                      fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107')).pack(side="left", padx=10)
+        def cancelar():
+            dlg.destroy()
+
+        ctk.CTkButton(
+            button_frame,
+            text="Salvar",
+            command=salvar,
+            fg_color=cor_sucesso,
+            hover_color=hover_sucesso,
+            text_color=get_contraste_texto(cor_sucesso),
+            font=("Arial", 12, "bold"),
+            width=100,
+            height=35,
+        ).pack(side="left", padx=5)
+
+        ctk.CTkButton(
+            button_frame,
+            text="Cancelar",
+            command=cancelar,
+            fg_color=cor_destaque,
+            hover_color=hover_destaque,
+            text_color=get_contraste_texto(cor_destaque),
+            font=("Arial", 12),
+            width=110,
+            height=35,
+        ).pack(side="left", padx=5)
+
+        # Foco inicial
+        if not entries["Código"].get().strip():
+            entries["Código"].focus_set()
+        elif not entries["Quantidade"].get().strip():
+            entries["Quantidade"].focus_set()
+        else:
+            entries["Preço"].focus_set()
 
         calcular_total()
         dlg.wait_window()
@@ -3280,17 +3601,31 @@ class CadastroModelosApp(ctk.CTkFrame):
         jan = ctk.CTkToplevel(master=self.root)
         jan.transient(self.root)
         jan.grab_set()
+
+        # Cores do tema para esta janela de resultados
+        cor_fundo = getattr(self.sistema, 'cor_fundo', '#F5F5F5')
+        cor_primaria = getattr(self.sistema, 'cor_primaria', '#007BFF')
+        cor_texto = getattr(self.sistema, 'cor_texto', '#000000')
+        cor_sucesso = getattr(self.sistema, 'cor_sucesso', '#28A745')
+        cor_destaque = getattr(self.sistema, 'cor_destaque', '#6C757D')
+
+        hover_sucesso = ajustar_hover(cor_sucesso)
+        hover_destaque = ajustar_hover(cor_destaque)
+
         centralizar_janela(jan, 1200, 600)
         jan.title(f"Resultados da Pesquisa - {titulo}")
         jan.resizable(True, True)
+        jan.configure(fg_color=cor_fundo)
 
-        main_frame = ctk.CTkFrame(jan)
+        main_frame = ctk.CTkFrame(jan, fg_color=cor_fundo)
         main_frame.pack(fill="both", expand=True, padx=15, pady=15)
 
-        title_label = ctk.CTkLabel(main_frame,
-                                   text=f"Resultados da Pesquisa - {titulo}",
-                                   font=("Arial", 16, "bold"),
-                                   text_color=getattr(self.sistema, 'cor_primaria', '#007BFF'))
+        title_label = ctk.CTkLabel(
+            main_frame,
+            text=f"Resultados da Pesquisa - {titulo}",
+            font=("Arial", 16, "bold"),
+            text_color=cor_texto  # contraste com fundo da janela
+        )
         title_label.pack(pady=(0, 15))
 
         table_frame = ctk.CTkFrame(main_frame)
@@ -3351,11 +3686,11 @@ class CadastroModelosApp(ctk.CTkFrame):
                         else:
                             valor_str = str(valor).replace(',', '.')
                             valor_num = float(valor_str)
-                        valores_formatados.append(formatar_para_exibicao(valor_num))
+                        valores_formatados.append(str(valor_num))
                     except (ValueError, TypeError):
                         valores_formatados.append(str(valor))
                 else:
-                    valores_formatados.append(str(valor))
+                    valores_formatados.append(str(valor) if valor is not None else "")
 
             tabela.insert("", "end", values=valores_formatados)
 
@@ -3402,8 +3737,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                             if isinstance(valor_real, (int, float)):
                                 valor_num = valor_real
                             else:
-                                valor_str = str(valor_real).replace('R$', '').replace(' ', '').replace('.', '').replace(
-                                    ',', '.')
+                                valor_str = str(valor_real).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
                                 valor_num = float(valor_str)
                             valor_real = formatar_para_exibicao(valor_num)
                         except (ValueError, TypeError):
@@ -3435,67 +3769,58 @@ class CadastroModelosApp(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.pack(pady=10)
 
-        btn_adicionar = ctk.CTkButton(button_frame,
-                                      text="➕ Adicionar Selecionado",
-                                      command=on_escolher_e_abrir,
-                                      fg_color=getattr(self.sistema, 'cor_sucesso', '#28A745'),
-                                      hover_color="#218838",
-                                      text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
-                                      font=("Arial", 12, "bold"),
-                                      width=200,
-                                      height=40)
+        btn_adicionar = ctk.CTkButton(
+            button_frame,
+            text="➕ Adicionar Selecionado",
+            command=on_escolher_e_abrir,
+            fg_color=cor_sucesso,
+            hover_color=hover_sucesso,
+            text_color=get_contraste_texto(cor_sucesso),
+            font=("Arial", 12, "bold"),
+            width=200,
+            height=40,
+        )
         btn_adicionar.pack(side="left", padx=10)
 
-        btn_fechar = ctk.CTkButton(button_frame,
-                                   text="❌ Fechar",
-                                   command=jan.destroy,
-                                   fg_color=getattr(self.sistema, 'cor_destaque', '#6C757D'),
-                                   hover_color="#5a6268",
-                                   text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
-                                   font=("Arial", 12),
-                                   width=120,
-                                   height=40)
+        btn_fechar = ctk.CTkButton(
+            button_frame,
+            text="❌ Fechar",
+            command=jan.destroy,
+            fg_color=cor_destaque,
+            hover_color=hover_destaque,
+            text_color=get_contraste_texto(cor_destaque),
+            font=("Arial", 12),
+            width=120,
+            height=40,
+        )
         btn_fechar.pack(side="left", padx=10)
 
         if rows:
             info_text = f"📊 {len(rows)} resultado(s) encontrado(s). "
             info_text += "Duplo-clique em qualquer linha para adicionar rapidamente."
 
-            info_label = ctk.CTkLabel(main_frame,
-                                      text=info_text,
-                                      font=("Arial", 11),
-                                      text_color=getattr(self.sistema, 'cor_primaria', '#007BFF'))
+            info_label = ctk.CTkLabel(
+                main_frame,
+                text=info_text,
+                font=("Arial", 11),
+                text_color=cor_texto,  # usa cor de texto do tema
+            )
             info_label.pack(pady=(10, 0))
+
+        dica_label = ctk.CTkLabel(
+            main_frame,
+            text="💡 Dica: Use as setas para navegar e Enter ou duplo-clique para selecionar",
+            font=("Arial", 9),
+            text_color=get_contraste_texto(getattr(self.sistema, "cor_secundaria", "#E0E0E0")),
+        )
+        dica_label.pack(pady=(5, 0))
 
         def _on_double_click(event):
             region = tabela.identify("region", event.x, event.y)
             if region == "cell":
                 on_escolher_e_abrir()
 
-        def _on_enter(event):
-            on_escolher_e_abrir()
-
-        def _on_key_press(event):
-            if event.keysym in ['Up', 'Down']:
-                return
-            elif event.keysym == 'Return':
-                on_escolher_e_abrir()
-
         tabela.bind("<Double-1>", _on_double_click)
-        tabela.bind("<Return>", _on_enter)
-        tabela.bind("<KeyPress>", _on_key_press)
-
-        if tabela.get_children():
-            primeira_linha = tabela.get_children()[0]
-            tabela.focus(primeira_linha)
-            tabela.selection_set(primeira_linha)
-            tabela.see(primeira_linha)
-
-        dica_label = ctk.CTkLabel(main_frame,
-                                  text="💡 Dica: Use as setas para navegar e Enter ou duplo-clique para selecionar",
-                                  font=("Arial", 9),
-                                  text_color=get_contraste_texto(getattr(self.sistema, "cor_secundaria", "#E0E0E0")))
-        dica_label.pack(pady=(5, 0))
 
         def _on_closing():
             jan.destroy()
