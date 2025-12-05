@@ -543,6 +543,7 @@ class DashboardPage(ctk.CTkFrame):
         self.tree_and.bind("<Double-1>", lambda e: self.atualizar_grafico_tempo_modelo())
 
         self.after(100, self._ajustar_colunas_conteudo)
+        self._aplicar_estilo_treeviews()
 
     def _ajustar_colunas_conteudo(self):
         """Ajusta automaticamente a largura das colunas do Treeview com base no conteúdo."""
@@ -1365,6 +1366,91 @@ class DashboardPage(ctk.CTkFrame):
                 print(f"✅ Tabela {tabela} existe")
             else:
                 print(f"❌ Tabela {tabela} NÃO existe")
+
+    def _aplicar_estilo_treeviews(self):
+        """
+        Estilo das Treeviews do Dashboard:
+        - Cabeçalho SEMPRE com fundo escuro e texto claro.
+        - Linhas com bom contraste em tema claro/escuro.
+        - Seleção com fundo forte e texto claro (visível em tema claro).
+        """
+        try:
+            style = ttk.Style()
+
+            # Garante um tema que respeita cores de cabeçalho
+            try:
+                style.theme_use("clam")
+            except Exception:
+                pass
+
+            # -------- CABEÇALHO (TÍTULOS) – FUNDO ESCURO / LETRAS CLARAS --------
+            cab_bg = self.cor_cabecalho_fundo  # já definido no __init__ (#2C3E50)
+            cab_fg = self.cor_cabecalho_texto  # já definido no __init__ (#FFFFFF)
+
+            # -------- CORPO DA TABELA (LINHAS) --------
+            if is_dark_color(self.cor_fundo):
+                linhas_bg = "#111827"  # bem escuro
+                linhas_fg = "#E5E7EB"  # bem claro
+            else:
+                linhas_bg = self.cor_linhas_fundo  # normalmente #FFFFFF
+                linhas_fg = self.cor_linhas_texto  # normalmente #000000
+
+            # Cor da seleção (linha marcada)
+            selecao_bg = ajustar_hover(self.cor_destaque)
+            selecao_fg = get_contraste_texto(selecao_bg)
+
+            # -------- ESTILO PRINCIPAL DA TREEVIEW --------
+            style.configure(
+                "OperaDashboard.Treeview",
+                background=linhas_bg,
+                foreground=linhas_fg,
+                fieldbackground=linhas_bg,
+                rowheight=22,
+                borderwidth=0,
+                relief="flat",
+            )
+
+            style.map(
+                "OperaDashboard.Treeview",
+                background=[
+                    ("selected", selecao_bg),
+                    ("!selected", linhas_bg),
+                ],
+                foreground=[
+                    ("selected", selecao_fg),
+                    ("!selected", linhas_fg),
+                ],
+            )
+
+            # -------- ESTILO DO CABEÇALHO (TÍTULOS DAS COLUNAS) --------
+            style.configure(
+                "OperaDashboard.Treeview.Heading",
+                background=cab_bg,
+                foreground=cab_fg,
+                font=("Arial", 11, "bold"),
+                relief="flat",
+            )
+
+            style.map(
+                "OperaDashboard.Treeview.Heading",
+                background=[
+                    ("active", ajustar_hover(cab_bg)),
+                    ("!active", cab_bg),
+                ],
+                foreground=[
+                    ("active", cab_fg),
+                    ("!active", cab_fg),
+                ],
+            )
+
+            # Aplica o estilo específico nas Treeviews do dashboard
+            for tree in (getattr(self, "tree_est", None),
+                         getattr(self, "tree_and", None)):
+                if tree is not None:
+                    tree.configure(style="OperaDashboard.Treeview")
+
+        except Exception as e:
+            print(f"⚠️ Erro ao aplicar estilo nas Treeviews do Dashboard: {e}")
 
 
 # ===================== Teste isolado =====================
