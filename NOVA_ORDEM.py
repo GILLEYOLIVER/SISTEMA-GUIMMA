@@ -1682,10 +1682,17 @@ class OrdemCorte(ctk.CTkFrame):
             _exec_write(query, tuple(params))
 
             log_data = {col: val for col, val in zip(insert_cols, params)}
-            logger.info(f"✅ Ordem de corte salva: {log_data}")
+            logger.info(f"✅ Ordem de corte salva com sucesso: {log_data}")
 
             messagebox.showinfo("Sucesso", "Ordem de corte salva com sucesso!")
-            self.previsualizar_impressao()
+
+            deseja_imprimir = messagebox.askyesno(
+                "Imprimir ordem",
+                "Deseja imprimir ordem agora?"
+            )
+            if deseja_imprimir:
+                self.previsualizar_impressao()
+
             self.limpar_campos()
 
         except Exception as e:

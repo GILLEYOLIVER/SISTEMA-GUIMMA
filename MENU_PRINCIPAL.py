@@ -633,10 +633,11 @@ class OperaMenuApp(ctk.CTk):
     }
 
     # Estrutura do menu
+    # Estrutura do menu
     MENU_ESTRUTURA = {
         "Dashboard": ["Dashboard"],
         "MODELOS": ["Cadastrar Modelo", "Imprimir Ficha Técnica"],
-        "ORDENS DE CORTE": ["Nova Ordem"],
+        "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
         "FACÇÕES": ["Cadastro de Facções", "Pesquisar Serviço"],
@@ -663,6 +664,7 @@ class OperaMenuApp(ctk.CTk):
         },
         "ORDENS DE CORTE": {
             "Nova Ordem": "ORDEM_CORTE.png",
+            "Ordens de Corte Impressão": "IMPRESSORA.png",
         },
         "REGISTRO DE CORTE": {
             "Cadastrar Corte": "CADASTRO_CORTE.png",
@@ -719,6 +721,7 @@ class OperaMenuApp(ctk.CTk):
         "Cadastrar Modelo": "cadastro_modelos",
         "Imprimir Ficha Técnica": "ficha_tecnica",
         "Nova Ordem": "ordem_corte",
+        "Ordens de Corte Impressão": "ordem_corte_impressao",
         "Cadastrar Corte": "cadastro_corte",
         "Consultar Ordens": "consultar_ordens",
         "Entrada de Estoque": "estoque_entrada",
@@ -746,6 +749,7 @@ class OperaMenuApp(ctk.CTk):
         "Backup": "config_backup",
         "Temas": "config_temas",
         "Gerenciar": "banco_dados",
+
     }
 
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):

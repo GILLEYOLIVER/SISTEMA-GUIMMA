@@ -34,6 +34,11 @@
     "class": "OrdemCorte"
   },
 
+   "Ordens de Corte Impressão": {
+    "file": "ORDENS_CORTE_IMPRESSAO.py",
+    "class": "OrdensCorteImpressao"
+  },
+
   "Cadastrar Corte": {
     "file": "CADASTRO_DE_CORTE.py",
     "class": "CadastroOrdemCorte"
