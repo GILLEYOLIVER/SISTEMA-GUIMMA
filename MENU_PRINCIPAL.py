@@ -16,7 +16,6 @@ from datetime import datetime
 from tkinter import messagebox
 from PIL import Image, ImageTk
 from tkinter import messagebox, ttk
-
 from PIL import Image
 import customtkinter as ctk
 from TEMAS import TemasPage, is_dark_color
