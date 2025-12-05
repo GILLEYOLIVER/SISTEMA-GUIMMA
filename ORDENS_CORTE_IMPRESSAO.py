@@ -1,17 +1,22 @@
-# ORDENS_CORTE_IMPRESSAO.py
-# Página de listagem e impressão de Ordens de Corte
-# Usa o mesmo padrão de banco e temas da NOVA_ORDEM.py
+# -*- coding: utf-8 -*-
+"""
+ORDENS_CORTE_IMPRESSAO.py
+Página de listagem e impressão de Ordens de Corte
+Usa o mesmo padrão de banco, temas e estilo da NOVA_ORDEM.py
+"""
 
 import os
 import logging
 from datetime import datetime
-
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk, messagebox
-
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from NOVA_ORDEM import OrdemCorte
+import json
+from datetime import date, datetime
+
 
 # ===================== Configuração de logger =====================
 logger = logging.getLogger(__name__)
@@ -107,9 +112,9 @@ def _exec_write(query: str, params=()):
 
 class OrdensCorteImpressao(ctk.CTkFrame):
     """
-    Página: ORDENS DE CORTE IMPRESSÃO
-    Lista todas as ordens da tabela ordem_corte_ficha e permite reimprimir.
-    Integra com o sistema de temas do MENU_PRINCIPAL (mesmo padrão da NOVA_ORDEM.py).
+    Página: ORDENS DE CORTE – IMPRESSÃO
+    Lista todas as ordens da tabela ordem_corte_ficha e permite reimprimir
+    com pré-visualização interna.
     """
 
     def __init__(self, master, *args, **kwargs):
@@ -455,7 +460,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             fg_color=self.cor_imprimir,
             hover_color=self.cor_hover,
             text_color="white",
-            width=200,
+            width=220,
         )
         btn_imprimir.grid(row=0, column=1, padx=8, pady=4, sticky="e")
 
@@ -496,7 +501,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             self.tree.delete(item)
 
     def _on_double_click(self, event=None):
-        # Duplo clique também imprime
+        # Duplo clique também abre a pré-visualização
         self.imprimir_selecionada()
 
     def _fechar(self):
@@ -555,63 +560,169 @@ class OrdensCorteImpressao(ctk.CTkFrame):
 
         total = 0
         for row in rows:
-            dados = dict(zip(self._logical_cols, row))
+            dados = dict(zip(self._select_cols, row))
+            # Recria o dicionário no padrão _logical_cols
+            dados_log = {}
+            for lcol, scol in zip(self._logical_cols, self._select_cols):
+                dados_log[lcol] = dados.get(scol, "")
 
             # Formatar data
-            if "data_final" in dados and isinstance(dados["data_final"], datetime):
-                dados["data_final"] = dados["data_final"].strftime("%d/%m/%Y")
+            if "data_final" in dados_log and isinstance(dados_log["data_final"], datetime):
+                dados_log["data_final"] = dados_log["data_final"].strftime("%d/%m/%Y")
 
             # Formatar boolean
-            if "impresso" in dados:
-                val = dados["impresso"]
+            if "impresso" in dados_log:
+                val = dados_log["impresso"]
                 if val is None:
                     txt_imp = "Não"
                 elif isinstance(val, bool):
                     txt_imp = "Sim" if val else "Não"
                 else:
                     txt_imp = str(val)
-                dados["impresso"] = txt_imp
+                dados_log["impresso"] = txt_imp
 
-            values = [dados.get(col, "") for col in self._logical_cols]
-            iid = dados.get("id", None)
+            values = [dados_log.get(col, "") for col in self._logical_cols]
+            iid = dados_log.get("id", None)
             self.tree.insert("", "end", iid=str(iid) if iid is not None else None, values=values)
             total += 1
 
         self.lbl_total.configure(text=f"{total} ordens encontradas")
 
     # ----------------------------------------------------------
-    #   Impressão
+    #   Impressão / Pré-visualização
     # ----------------------------------------------------------
     def imprimir_selecionada(self):
-        selecionado = self.tree.selection()
-        if not selecionado:
-            messagebox.showwarning("Impressão", "Selecione uma ordem na lista para imprimir.")
-            return
-
-        iid = selecionado[0]
+        """Imprime a ordem selecionada usando o MESMO layout de PDF da NOVA_ORDEM."""
         try:
-            ordem_id = int(iid)
-        except ValueError:
-            ordem_id = None
+            item = self.tree.focus()
+            if not item:
+                messagebox.showwarning("Seleção necessária", "Selecione uma ordem na lista para imprimir.")
+                return
 
-        # Recuperar dados da linha já carregada na árvore
-        item = self.tree.item(iid)
-        valores = item.get("values", [])
+            valores = self.tree.item(item, "values")
+            if not valores:
+                messagebox.showerror("Erro", "Não foi possível obter os dados da linha selecionada.")
+                return
 
-        if not valores:
-            messagebox.showerror("Erro", "Não foi possível obter os dados da ordem selecionada.")
-            return
+            # Supondo que a 1ª coluna é o ID da ordem (como montamos o TreeView)
+            try:
+                ordem_id = int(valores[0])
+            except Exception:
+                messagebox.showerror("Erro", "ID da ordem inválido na tabela.")
+                return
 
-        dados = {}
-        for idx, col in enumerate(self._logical_cols):
-            if idx < len(valores):
-                dados[col] = valores[idx]
+            dados = self._buscar_dados_ordem_completos(ordem_id)
+            if not dados:
+                messagebox.showerror("Erro", "Não foi possível carregar os dados completos da ordem.")
+                return
 
-        # Garantir alguns campos básicos
-        dados.setdefault("id", ordem_id)
-        dados.setdefault("codigo", f"ORDEM_{ordem_id or ''}")
-        dados.setdefault("descricao", "")
+            # Abre uma janelinha de confirmação (opcional, mas útil)
+            if not messagebox.askyesno(
+                    "Imprimir Ordem",
+                    f"Deseja imprimir a ordem {dados.get('codigo', dados.get('codigo_modelo', ''))} "
+                    f"no layout padrão de Ordem de Corte?"
+            ):
+                return
 
+            self._imprimir_com_layout_nova_ordem(dados)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao preparar impressão da ordem:\n{e}")
+
+    def _abrir_preview_ordem(self, dados: dict):
+        """
+        Abre uma janela interna (CTkToplevel) para pré-visualizar
+        a ordem de corte antes de gerar o PDF.
+        """
+        top = ctk.CTkToplevel(self)
+        top.title(f"Pré-visualização da Ordem – {dados.get('codigo', '')}")
+        top.geometry("700x400")
+        top.transient(self.winfo_toplevel())
+        top.grab_set()
+
+        frame = ctk.CTkFrame(top, fg_color=self.cor_fundo)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Título
+        lbl_titulo = ctk.CTkLabel(
+            frame,
+            text="ORDEM DE CORTE – PRÉ-VISUALIZAÇÃO",
+            font=("Arial", 18, "bold"),
+            text_color=self.cor_texto,
+        )
+        lbl_titulo.pack(anchor="w", pady=(0, 10))
+
+        # Bloco de informações
+        bloco = ctk.CTkFrame(frame, fg_color=self.cor_primaria, corner_radius=10)
+        bloco.pack(fill="x", pady=(0, 10))
+
+        # Linhas de texto
+        info_textos = []
+
+        info_textos.append(f"Código: {dados.get('codigo', '')}")
+        info_textos.append(f"Descrição: {dados.get('descricao', '')}")
+
+        if "data_final" in dados and dados.get("data_final"):
+            info_textos.append(f"Data final: {dados.get('data_final')}")
+
+        if "quantidade" in dados and dados.get("quantidade"):
+            info_textos.append(f"Quantidade: {dados.get('quantidade')}")
+
+        if "impresso" in dados and dados.get("impresso") not in ("", None):
+            info_textos.append(f"Impresso?: {dados.get('impresso')}")
+
+        for txt in info_textos:
+            lbl = ctk.CTkLabel(
+                bloco,
+                text=txt,
+                font=("Arial", 13),
+                text_color=self.cor_texto,
+                anchor="w",
+                justify="left",
+            )
+            lbl.pack(fill="x", padx=10, pady=2)
+
+        # Rodapé com botões
+        rodape = ctk.CTkFrame(frame, fg_color=self.cor_fundo)
+        rodape.pack(fill="x", pady=(10, 0))
+        rodape.grid_columnconfigure(0, weight=1)
+        rodape.grid_columnconfigure(2, weight=0)
+
+        lbl_hint = ctk.CTkLabel(
+            rodape,
+            text="Conferir os dados acima. Clique em 'Gerar PDF' para criar o arquivo de impressão.",
+            font=("Arial", 11),
+            text_color=self.cor_texto,
+        )
+        lbl_hint.grid(row=0, column=0, sticky="w", padx=2, pady=4)
+
+        btn_gerar = ctk.CTkButton(
+            rodape,
+            text="Gerar PDF (não abre navegador)",
+            fg_color=self.cor_imprimir,
+            hover_color=self.cor_hover,
+            text_color="white",
+            command=lambda: self._gerar_pdf_e_marcar_impresso(dados, top),
+            width=220,
+        )
+        btn_gerar.grid(row=0, column=1, padx=8, pady=4, sticky="e")
+
+        btn_fechar = ctk.CTkButton(
+            rodape,
+            text="Fechar",
+            fg_color=self.cor_alerta,
+            hover_color=self.cor_hover,
+            text_color="white",
+            command=top.destroy,
+            width=130,
+        )
+        btn_fechar.grid(row=0, column=2, padx=0, pady=4, sticky="e")
+
+    def _gerar_pdf_e_marcar_impresso(self, dados: dict, janela_preview=None):
+        """
+        Gera o PDF da ordem e marca como impressa (se existir coluna),
+        mas NÃO abre o navegador/visualizador. Apenas avisa o caminho.
+        """
         try:
             caminho_pdf = self._gerar_pdf_ordem(dados)
         except Exception as e:
@@ -619,27 +730,226 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             messagebox.showerror("Erro", f"Falha ao gerar PDF da ordem:\n{e}")
             return
 
-        # Abrir PDF
-        try:
-            os.startfile(caminho_pdf)  # Windows
-        except AttributeError:
-            try:
-                os.system(f"open '{caminho_pdf}'")  # macOS
-            except Exception:
-                os.system(f"xdg-open '{caminho_pdf}'")  # Linux
-
-        # Se existir coluna de impresso, marcar como TRUE
-        if self.col_impresso and self.col_id and ordem_id is not None:
+        # Atualiza coluna 'impresso' no banco, se existir
+        ordem_id = dados.get("id")
+        if self.col_impresso and self.col_id and ordem_id not in (None, ""):
             try:
                 _exec_write(
                     f"UPDATE ordem_corte_ficha SET {self.col_impresso} = TRUE WHERE {self.col_id} = %s",
-                    (ordem_id,),
+                    (int(ordem_id),),
                 )
             except Exception as e:
                 logger.error(f"Falha ao marcar ordem como impressa: {e}")
-            # Recarregar lista se o filtro "não impressas" estiver ativo
-            if self.var_apenas_nao_impressas.get():
-                self.atualizar_lista()
+
+        # Se o filtro de "não impressas" estiver ativo, recarrega a lista
+        if self.var_apenas_nao_impressas.get():
+            self.atualizar_lista()
+
+        # Fecha a janela de pré-visualização, se ainda estiver aberta
+        if janela_preview is not None:
+            try:
+                janela_preview.destroy()
+            except Exception:
+                pass
+
+        messagebox.showinfo(
+            "PDF gerado",
+            f"PDF da ordem foi gerado com sucesso em:\n\n{caminho_pdf}\n\n"
+            "Ele não foi aberto automaticamente.\n"
+            "Você pode abrir esse arquivo diretamente pela pasta de ordens."
+        )
+
+    def _buscar_dados_ordem_completos(self, ordem_id: int):
+        """
+        Busca TODOS os dados relevantes da tabela ordem_corte_ficha para montar
+        o PDF com o mesmo layout da NOVA_ORDEM.
+        """
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+
+            cur.execute(f"SET LOCAL search_path = {schema}")
+
+            # Pegamos todas as colunas para ter liberdade de montar o dicionário
+            cur.execute("SELECT * FROM ordem_corte_ficha WHERE id = %s", (ordem_id,))
+            row = cur.fetchone()
+            if not row:
+                return None
+
+            colnames = [desc[0] for desc in cur.description]
+            dados = {nome: valor for nome, valor in zip(colnames, row)}
+
+            cur.close()
+            conn.close()
+            return dados
+
+        except Exception as e:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            messagebox.showerror("Erro", f"Erro ao buscar dados da ordem:\n{e}")
+            return None
+
+    def _imprimir_com_layout_nova_ordem(self, dados: dict):
+        """
+        Usa a classe OrdemCorte de NOVA_ORDEM.py para gerar o PDF
+        com o MESMO layout de impressão, preenchendo os campos a partir
+        dos dados salvos em ordem_corte_ficha.
+        """
+        try:
+            # Janela oculta só para gerar o PDF
+            dummy = ctk.CTk()
+            dummy.withdraw()
+
+            # Passa o mesmo 'sistema' para manter o tema
+            oc = OrdemCorte(dummy, sistema=getattr(self, "sistema", None))
+
+            # ---------- CAMPOS BÁSICOS ----------
+            # CÓDIGO / MODELO
+            codigo = (
+                    dados.get("codigo_modelo")
+                    or dados.get("codigo")
+                    or ""
+            )
+            descricao = (
+                    dados.get("descricao_modelo")
+                    or dados.get("descricao")
+                    or dados.get("modelo")
+                    or ""
+            )
+
+            oc.codigo_entry.delete(0, "end")
+            oc.codigo_entry.insert(0, str(codigo))
+
+            oc.modelo_entry.delete(0, "end")
+            oc.modelo_entry.insert(0, str(descricao))
+
+            # CORTADOR / AUXILIAR
+            cortador = dados.get("cortador") or dados.get("nome_cortador") or ""
+            auxiliar = dados.get("auxiliar") or dados.get("nome_auxiliar") or ""
+
+            oc.cortador_entry.delete(0, "end")
+            oc.cortador_entry.insert(0, str(cortador))
+
+            oc.auxiliar_entry.delete(0, "end")
+            oc.auxiliar_entry.insert(0, str(auxiliar))
+
+            # DATA FINAL
+            data_final = dados.get("data_final")
+            if isinstance(data_final, (date, datetime)):
+                data_str = data_final.strftime("%d/%m/%Y")
+            elif data_final:
+                # Se veio como string, só garante o formato legível
+                data_str = str(data_final)
+            else:
+                data_str = ""
+
+            oc.data_final_entry.delete(0, "end")
+            oc.data_final_entry.insert(0, data_str)
+
+            # ---------- QUANTIDADE / PRAZOS ----------
+            quantidade = (
+                    dados.get("quantidade_desejada")
+                    or dados.get("quantidade")
+                    or dados.get("total_pecas")
+                    or 0
+            )
+
+            oc.quantidade_entry.delete(0, "end")
+            oc.quantidade_entry.insert(0, str(int(quantidade) if quantidade else ""))
+
+            # dias_estimados + horas_estimadas (podem ter sido gravados separadamente)
+            dias_estimados = dados.get("dias_estimados") or 0
+            horas_estimadas = dados.get("horas_estimadas") or 0
+
+            # Se o sistema gravou o total em dias (float) e não separou, tenta decompor
+            if dias_estimados and not horas_estimadas:
+                try:
+                    total_dias = float(dias_estimados)
+                    dias_int = int(total_dias)
+                    horas_float = (total_dias - dias_int) * 24
+                    horas_estimadas = round(horas_float, 2)
+                    dias_estimados = dias_int
+                except Exception:
+                    pass
+
+            oc.dias_estimados_entry.delete(0, "end")
+            if dias_estimados:
+                oc.dias_estimados_entry.insert(0, str(int(dias_estimados)))
+
+            oc.horas_estimadas_entry.delete(0, "end")
+            if horas_estimadas:
+                # Se for algo tipo 1.5, mostra 1.5 mesmo
+                try:
+                    h = float(horas_estimadas)
+                    if h.is_integer():
+                        oc.horas_estimadas_entry.insert(0, str(int(h)))
+                    else:
+                        oc.horas_estimadas_entry.insert(0, f"{h:.2f}")
+                except Exception:
+                    oc.horas_estimadas_entry.insert(0, str(horas_estimadas))
+
+            # ---------- PORCENTAGENS / GRADE ----------
+            porcentagens_raw = (
+                    dados.get("porcentagens")
+                    or dados.get("grade_json")
+                    or dados.get("grade")
+            )
+
+            if porcentagens_raw:
+                try:
+                    if isinstance(porcentagens_raw, str):
+                        porcentagens = json.loads(porcentagens_raw)
+                    else:
+                        porcentagens = dict(porcentagens_raw)
+                except Exception:
+                    porcentagens = {}
+            else:
+                porcentagens = {}
+
+            for i in range(1, 8 + 1):
+                campo = oc.campos_grade.get(f"porcent_{i}")
+                if not campo:
+                    continue
+                valor = (
+                        porcentagens.get(f"porcent_{i}")
+                        or porcentagens.get(str(i))
+                        or 0
+                )
+                campo.delete(0, "end")
+                try:
+                    # Usa a mesma lógica de formatação da página
+                    valor_formatado = oc.formatar_para_inteiro_se_possivel(valor)
+                    campo.insert(0, valor_formatado)
+                except Exception:
+                    campo.insert(0, str(valor))
+
+            # CONSUMO PEÇA
+            consumo_peca = dados.get("consumo_peca") or dados.get("consumo")
+            if consumo_peca is not None:
+                campo_consumo = oc.campos_grade.get("consumo_peca")
+                if campo_consumo:
+                    campo_consumo.delete(0, "end")
+                    try:
+                        num = float(consumo_peca)
+                        if num.is_integer():
+                            campo_consumo.insert(0, str(int(num)))
+                        else:
+                            # Você já ajustou para aceitar vírgula, então converte:
+                            campo_consumo.insert(0, str(num).replace(".", ","))
+                    except Exception:
+                        campo_consumo.insert(0, str(consumo_peca))
+
+            # ---------- GERAR PDF EXATAMENTE COMO NA NOVA_ORDEM ----------
+            oc.previsualizar_impressao()
+
+            # Fecha a janela fantasma
+            dummy.destroy()
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao gerar PDF no layout da Nova Ordem:\n{e}")
 
     def _gerar_pdf_ordem(self, dados: dict) -> str:
         """
@@ -687,7 +997,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
 
         # Informações principais
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(margem_esq, y, f"Código: ")
+        c.drawString(margem_esq, y, "Código:")
         c.setFont("Helvetica", 11)
         c.drawString(margem_esq + 60, y, str(dados.get("codigo", "")))
         y -= 18
@@ -698,14 +1008,14 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         c.drawString(margem_esq + 70, y, str(dados.get("descricao", "")))
         y -= 18
 
-        if "data_final" in dados:
+        if "data_final" in dados and dados.get("data_final"):
             c.setFont("Helvetica-Bold", 11)
             c.drawString(margem_esq, y, "Data Final:")
             c.setFont("Helvetica", 11)
             c.drawString(margem_esq + 70, y, str(dados.get("data_final", "")))
             y -= 18
 
-        if "quantidade" in dados:
+        if "quantidade" in dados and dados.get("quantidade"):
             c.setFont("Helvetica-Bold", 11)
             c.drawString(margem_esq, y, "Quantidade:")
             c.setFont("Helvetica", 11)
@@ -726,7 +1036,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
 
 
 # -----------------------------------------------------------------
-#  Teste local
+#  Teste local (opcional)
 # -----------------------------------------------------------------
 if __name__ == "__main__":
     ctk.set_appearance_mode("light")
