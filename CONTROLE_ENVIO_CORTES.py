@@ -160,41 +160,41 @@ class EnvioCortes(ctk.CTkFrame):
     def _build_ui(self):
         # Frame principal com tema
         main = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        main.pack(fill="both", expand=True, padx=8, pady=4)  # Reduzir padding
+        main.pack(fill="both", expand=True, padx=8, pady=4)
 
-        # Cabeçalho + logo - COM TEMA - ALTURA REDUZIDA
-        header = ctk.CTkFrame(main, fg_color=self.cor_fundo, height=40)  # Altura fixa menor
-        header.pack(fill="x", pady=(0, 2))  # Padding vertical reduzido
+        # Cabeçalho + logo
+        header = ctk.CTkFrame(main, fg_color=self.cor_fundo, height=40)
+        header.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(
             header,
             text="CONTROLE DE MÃO DE OBRA — Envio de Cortes",
-            font=("Arial", 14, "bold"),  # Fonte menor
+            font=("Arial", 14, "bold"),
             text_color=self.cor_texto
         ).pack(side="left", padx=(0, 6))
 
         if PIL_OK and os.path.exists(LOGO_PATH):
             img = Image.open(LOGO_PATH)
             w, h = img.size
-            tw = 90  # Logo ainda menor
+            tw = 90
             th = int(h * (tw / w))
             self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
             ctk.CTkLabel(header, image=self.logo_img, text="").pack(side="right")
 
-        # Linha: Buscar Corte - COM TEMA
+        # =========== SEÇÃO 1: BUSCA DE CORTE ===========
         l_busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        l_busca.pack(fill="x", pady=2)  # Padding reduzido
+        l_busca.pack(fill="x", pady=2)
 
         ctk.CTkLabel(
             l_busca,
             text="Buscar Corte:",
-            width=100,  # Largura reduzida
+            width=100,
             text_color=self.cor_texto
         ).pack(side="left", padx=(0, 4))
 
         self.busca_entry = ctk.CTkEntry(
             l_busca,
-            width=280,  # Reduzir largura
+            width=280,
             placeholder_text="Número, código ou descrição",
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
@@ -207,21 +207,21 @@ class EnvioCortes(ctk.CTkFrame):
         ctk.CTkButton(
             l_busca,
             text="Buscar",
-            width=80,  # Botão menor
+            width=80,
             command=self.buscar_cortes,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
         ).pack(side="left", padx=4)
 
-        # Costureira + Serviço + Dados bancários - COM TEMA - COMPACTADO
+        # =========== SEÇÃO 2: DADOS DO PRESTADOR ===========
         prest = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        prest.pack(fill="x", pady=2)  # Padding reduzido
+        prest.pack(fill="x", pady=2)
 
         linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        linha.pack(fill="x", pady=(2, 1))  # Padding muito reduzido
+        linha.pack(fill="x", pady=(2, 1))
 
-        # ========= Filtro de serviço REMOVIDO da UI =========
+        # Filtro de serviço oculto
         hidden = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
         hidden.pack_forget()
         self.filtro_servico_cb = ctk.CTkComboBox(
@@ -239,19 +239,18 @@ class EnvioCortes(ctk.CTkFrame):
             dropdown_hover_color=self.cor_hover
         )
         self.filtro_servico_cb.set("Todos")
-        # ====================================================
 
+        # Costureira
         ctk.CTkLabel(
             linha,
             text="Costureira:",
-            width=80,  # Largura reduzida
+            width=80,
             text_color=self.cor_texto
         ).pack(side="left", padx=(2, 4))
 
-        # Combobox de costureira - COM TEMA
         self.prestador_busca_cb = ctk.CTkComboBox(
             linha,
-            width=350,  # Reduzir largura
+            width=350,
             values=["Digite para buscar..."],
             state="normal",
             command=self._on_prestador_change,
@@ -276,17 +275,17 @@ class EnvioCortes(ctk.CTkFrame):
             lambda e: self._on_prestador_change(self.prestador_busca_cb.get())
         )
 
+        # Tipo de Serviço
         ctk.CTkLabel(
             linha,
             text="Serviço:",
-            width=70,  # Largura reduzida
+            width=70,
             text_color=self.cor_texto
         ).pack(side="left", padx=(12, 4))
 
-        # Combobox de tipo de serviço - COM TEMA
         self.tipo_cb = ctk.CTkComboBox(
             linha,
-            width=150,  # Reduzir largura
+            width=150,
             values=SERVICOS_FIXOS,
             state="readonly",
             fg_color=self.cor_secundaria,
@@ -302,21 +301,21 @@ class EnvioCortes(ctk.CTkFrame):
         self.tipo_cb.pack(side="left")
         self.tipo_cb.bind("<<ComboboxSelected>>", self._on_tipo_changed)
 
-        # Bancário (somente leitura) - COM TEMA - MAIS COMPACTO
+        # =========== SEÇÃO 3: DADOS BANCÁRIOS DO PRESTADOR ===========
         banco = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        banco.pack(fill="x", pady=(4, 2))  # Padding reduzido
+        banco.pack(fill="x", pady=(4, 2))
 
         ctk.CTkLabel(
             banco,
             text="Dados Bancários do Prestador",
-            font=("Arial", 11, "bold"),  # Fonte menor
+            font=("Arial", 11, "bold"),
             text_color=self.cor_texto
-        ).pack(anchor="w", padx=4, pady=1)  # Padding reduzido
+        ).pack(anchor="w", padx=4, pady=1)
 
         grid = ctk.CTkFrame(banco, fg_color=self.cor_fundo)
-        grid.pack(fill="x", padx=2, pady=1)  # Padding reduzido
+        grid.pack(fill="x", padx=2, pady=1)
 
-        def ro(parent, w=200):  # Reduzir largura padrão
+        def ro(parent, w=200):
             e = ctk.CTkEntry(
                 parent,
                 width=w,
@@ -327,8 +326,9 @@ class EnvioCortes(ctk.CTkFrame):
             )
             return e
 
+        # Linha 1: Telefone, CPF, Banco (somente leitura - carregados do banco)
         l1b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l1b.pack(fill="x", pady=1)  # Padding muito reduzido
+        l1b.pack(fill="x", pady=1)
         ctk.CTkLabel(l1b, text="Telefone:", width=80, text_color=self.cor_texto).pack(side="left", padx=2)
         self.telefone_entry = ro(l1b, 180)
         self.telefone_entry.pack(side="left", padx=2)
@@ -339,8 +339,9 @@ class EnvioCortes(ctk.CTkFrame):
         self.banco_entry = ro(l1b, 150)
         self.banco_entry.pack(side="left", padx=2)
 
+        # Linha 2: Agência, Conta, PIX (somente leitura - carregados do banco)
         l2b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l2b.pack(fill="x", pady=1)  # Padding muito reduzido
+        l2b.pack(fill="x", pady=1)
         ctk.CTkLabel(l2b, text="Agência:", width=80, text_color=self.cor_texto).pack(side="left", padx=2)
         self.agencia_entry = ro(l2b, 140)
         self.agencia_entry.pack(side="left", padx=2)
@@ -351,17 +352,47 @@ class EnvioCortes(ctk.CTkFrame):
         self.pix_entry = ro(l2b, 180)
         self.pix_entry.pack(side="left", padx=2)
 
+        # Linha 3: Titular, Email, Endereço (EDITÁVEIS)
         l3b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l3b.pack(fill="x", pady=1)  # Padding muito reduzido
+        l3b.pack(fill="x", pady=1)
         ctk.CTkLabel(l3b, text="Titular:", width=80, text_color=self.cor_texto).pack(side="left", padx=2)
-        self.titular_entry = ro(l3b, 220)
+        self.titular_entry = ctk.CTkEntry(
+            l3b,
+            width=150,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            state="normal"
+        )
         self.titular_entry.pack(side="left", padx=2)
 
-        # Tabela de cortes - COM TEMA - ALTURA REDUZIDA
-        tabela_frame = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        tabela_frame.pack(fill="x", pady=2)  # Padding reduzido
+        ctk.CTkLabel(l3b, text="Email:", width=50, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.email_entry = ctk.CTkEntry(
+            l3b,
+            width=150,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            state="normal"
+        )
+        self.email_entry.pack(side="left", padx=2)
 
-        # Configurar estilo da Treeview para combinar com o tema
+        ctk.CTkLabel(l3b, text="Endereço:", width=70, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.endereco_entry = ctk.CTkEntry(
+            l3b,
+            width=180,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            state="normal"
+        )
+        self.endereco_entry.pack(side="left", padx=2)
+
+        # =========== SEÇÃO 4: TABELA DE CORTES ===========
+        tabela_frame = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        tabela_frame.pack(fill="x", pady=2)
+
+        # Configurar estilo da Treeview
         self.style = ttk.Style()
         self.style.theme_use('default')
         self.style.configure(
@@ -371,14 +402,14 @@ class EnvioCortes(ctk.CTkFrame):
             fieldbackground=self.cor_secundaria,
             borderwidth=0,
             highlightthickness=0,
-            rowheight=20,  # Linhas mais baixas
-            font=("Arial", 9)  # Fonte menor
+            rowheight=20,
+            font=("Arial", 9)
         )
         self.style.map('Treeview', background=[('selected', self.cor_primaria)])
 
         self.style.configure(
             "Treeview.Heading",
-            font=("Arial", 9, "bold"),  # Fonte menor
+            font=("Arial", 9, "bold"),
             background=self.cor_primaria,
             foreground=self.cor_texto
         )
@@ -391,7 +422,7 @@ class EnvioCortes(ctk.CTkFrame):
             tabela_frame,
             columns=cols_ui,
             show="headings",
-            height=4,  # Altura ainda menor (4 linhas)
+            height=4,
             style="Treeview"
         )
 
@@ -404,38 +435,39 @@ class EnvioCortes(ctk.CTkFrame):
         for col in cols_ui:
             self.cortes_tree.heading(col, text=headers[col])
             if col in ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "Total"]:
-                w = 50  # Colunas numéricas mais enxutas
+                w = 50
             elif col in ["ID", "Número"]:
                 w = 70
             elif col == "Código":
                 w = 90
             else:
-                w = 160  # Descrição mais curta
+                w = 160
             self.cortes_tree.column(col, width=w, anchor="center")
 
-        # Sem scrollbar lateral
         self.cortes_tree.pack(fill="x")
         self.cortes_tree.bind("<<TreeviewSelect>>", self.on_corte_selecionado)
 
-        # Detalhes do corte básico - COM TEMA - MAIS COMPACTO
+        # =========== SEÇÃO 5: DETALHES DO CORTE E CONTATOS ===========
         det = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         det.pack(fill="x", pady=2)
 
         l1 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
         l1.pack(fill="x", pady=1)
 
+        # Contatos de Encarregado e Acabamento
         ctk.CTkLabel(
             l1,
             text="Tel Encarregado:",
-            width=100,  # Texto mais curto, largura reduzida
+            width=100,
             text_color=self.cor_texto
         ).pack(side="left", padx=2)
         self.tel_encarregado_entry = ctk.CTkEntry(
             l1,
-            width=120,  # Reduzir largura
+            width=120,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
-            text_color=self.cor_texto
+            text_color=self.cor_texto,
+            state="normal"
         )
         self.tel_encarregado_entry.pack(side="left", padx=2)
 
@@ -450,10 +482,12 @@ class EnvioCortes(ctk.CTkFrame):
             width=120,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
-            text_color=self.cor_texto
+            text_color=self.cor_texto,
+            state="normal"
         )
         self.tel_acabamento_entry.pack(side="left", padx=2)
 
+        # Data de Envio
         ctk.CTkLabel(
             l1,
             text="Data:",
@@ -465,12 +499,13 @@ class EnvioCortes(ctk.CTkFrame):
             width=90,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
-            text_color=self.cor_texto
+            text_color=self.cor_texto,
+            state="normal"
         )
         self.data_entry.insert(0, today_str())
         self.data_entry.pack(side="left", padx=2)
 
-        # Previsão de entrega + calendário - COM TEMA
+        # Previsão de Entrega com Calendário
         ctk.CTkLabel(
             l1,
             text="Prev. Entrega:",
@@ -482,14 +517,15 @@ class EnvioCortes(ctk.CTkFrame):
             width=90,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
-            text_color=self.cor_texto
+            text_color=self.cor_texto,
+            state="normal"
         )
         self.previsao_entry.pack(side="left", padx=2)
 
         ctk.CTkButton(
             l1,
             text="📅",
-            width=30,  # Botão menor
+            width=30,
             command=lambda: self._abrir_calendario(self.previsao_entry),
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
@@ -498,12 +534,63 @@ class EnvioCortes(ctk.CTkFrame):
 
         self.previsao_entry.bind("<Double-Button-1>", lambda e: self._abrir_calendario(self.previsao_entry))
 
+        # Campos Adicionais: Prioridade e Modalidade de Pagamento
+        ctk.CTkLabel(
+            l1,
+            text="Prioridade:",
+            width=70,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(10, 2))
+
+        self.prioridade_cb = ctk.CTkComboBox(
+            l1,
+            width=100,
+            values=["Normal", "Urgente", "Prioritário"],
+            state="readonly",
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            button_color=self.cor_primaria,
+            button_hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            dropdown_fg_color=self.cor_secundaria,
+            dropdown_text_color=self.cor_texto,
+            dropdown_hover_color=self.cor_hover
+        )
+        self.prioridade_cb.set("Normal")
+        self.prioridade_cb.pack(side="left", padx=2)
+
+        ctk.CTkLabel(
+            l1,
+            text="Pagamento:",
+            width=70,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(10, 2))
+
+        self.pagamento_cb = ctk.CTkComboBox(
+            l1,
+            width=100,
+            values=["À Vista", "30 Dias", "60 Dias", "90 Dias"],
+            state="readonly",
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            button_color=self.cor_primaria,
+            button_hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            dropdown_fg_color=self.cor_secundaria,
+            dropdown_text_color=self.cor_texto,
+            dropdown_hover_color=self.cor_hover
+        )
+        self.pagamento_cb.set("30 Dias")
+        self.pagamento_cb.pack(side="left", padx=2)
+
+        # Linha 2: Dados do Corte
         l2 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
         l2.pack(fill="x", pady=1)
+
         ctk.CTkLabel(l2, text="Código:", width=60, text_color=self.cor_texto).pack(side="left", padx=2)
         self.codigo_entry = ctk.CTkEntry(
             l2,
-            width=150,
+            width=120,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto,
@@ -514,7 +601,7 @@ class EnvioCortes(ctk.CTkFrame):
         ctk.CTkLabel(l2, text="Descrição:", width=70, text_color=self.cor_texto).pack(side="left", padx=2)
         self.descricao_entry = ctk.CTkEntry(
             l2,
-            width=320,
+            width=280,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto,
@@ -533,26 +620,77 @@ class EnvioCortes(ctk.CTkFrame):
         )
         self.ordem_entry.pack(side="left", padx=2)
 
-        # Área central (2 colunas) - COM TEMA - ALTURA OTIMIZADA
+        # Linha 3: Campos Adicionais do Corte
+        l3 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
+        l3.pack(fill="x", pady=1)
+
+        ctk.CTkLabel(l3, text="Coleção:", width=60, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.colecao_entry = ctk.CTkEntry(
+            l3,
+            width=120,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            state="normal"
+        )
+        self.colecao_entry.pack(side="left", padx=2)
+
+        ctk.CTkLabel(l3, text="Material:", width=60, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.material_entry = ctk.CTkEntry(
+            l3,
+            width=120,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            state="normal"
+        )
+        self.material_entry.pack(side="left", padx=2)
+
+        # CORES - CAMPO DE TEXTO PARA DIGITAR
+        ctk.CTkLabel(l3, text="Cores:", width=40, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.cores_entry = ctk.CTkEntry(
+            l3,
+            width=200,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            state="normal",
+            placeholder_text="Ex: Preto, Branco, Vermelho"
+        )
+        self.cores_entry.pack(side="left", padx=2)
+
+        ctk.CTkLabel(l3, text="Cliente:", width=60, text_color=self.cor_texto).pack(side="left", padx=(10, 2))
+        self.cliente_entry = ctk.CTkEntry(
+            l3,
+            width=120,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            state="normal"
+        )
+        self.cliente_entry.pack(side="left", padx=2)
+
+        # =========== SEÇÃO 6: ÁREA CENTRAL (QUANTIDADES + INFORMAÇÕES) ===========
         mid = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        mid.pack(fill="both", expand=True, pady=2)  # Padding reduzido
+        mid.pack(fill="both", expand=True, pady=2)
         mid.grid_columnconfigure(0, weight=3)
         mid.grid_columnconfigure(1, weight=2)
         mid.grid_rowconfigure(0, weight=1)
 
-        # ESQUERDA (grade) - COM TEMA - MAIS COMPACTA
+        # =========== COLUNA ESQUERDA: QUANTIDADES POR TAMANHO ===========
         left = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
         ctk.CTkLabel(
             left,
             text="Quantidades por Tamanho",
-            font=("Arial", 12, "bold"),  # Fonte menor
+            font=("Arial", 12, "bold"),
             text_color=self.cor_texto
         ).pack(anchor="w", padx=4, pady=1)
 
+        # Controle de Valor Único
         ctrl_valor = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-        ctrl_valor.pack(fill="x", pady=(0, 2))  # Padding reduzido
+        ctrl_valor.pack(fill="x", pady=(0, 2))
 
         self.chk_valor_unico = ctk.CTkCheckBox(
             ctrl_valor,
@@ -566,10 +704,10 @@ class EnvioCortes(ctk.CTkFrame):
         )
         self.chk_valor_unico.pack(anchor="w", padx=4)
 
+        # Cabeçalho da Grade
         header_g = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         header_g.pack(fill="x")
 
-        # Reduzir larguras das colunas da grade
         for h, w in [
             ("Tam.", 50),
             ("Disp.", 70),
@@ -580,10 +718,11 @@ class EnvioCortes(ctk.CTkFrame):
         ]:
             ctk.CTkLabel(header_g, text=h, width=w, text_color=self.cor_texto).pack(side="left", padx=1)
 
+        # Grade de Tamanhos
         self.grade_widgets = {}
         for tam in self.tamanhos:
             row = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-            row.pack(fill="x", pady=0)  # Sem padding entre linhas
+            row.pack(fill="x", pady=0)
 
             ctk.CTkLabel(row, text=tam, width=50, text_color=self.cor_texto).pack(side="left", padx=1)
 
@@ -596,7 +735,8 @@ class EnvioCortes(ctk.CTkFrame):
                 textvariable=self.quantidades[tam],
                 fg_color=self.cor_terciaria,
                 border_color=self.cor_borda,
-                text_color=self.cor_texto
+                text_color=self.cor_texto,
+                state="normal"
             )
             ent_qtd.pack(side="left", padx=1)
 
@@ -606,7 +746,8 @@ class EnvioCortes(ctk.CTkFrame):
                 textvariable=self.pilotos[tam],
                 fg_color=self.cor_terciaria,
                 border_color=self.cor_borda,
-                text_color=self.cor_texto
+                text_color=self.cor_texto,
+                state="normal"
             )
             ent_pil.pack(side="left", padx=1)
 
@@ -618,7 +759,8 @@ class EnvioCortes(ctk.CTkFrame):
                 fg_color=self.cor_terciaria,
                 border_color=self.cor_borda,
                 text_color=self.cor_texto,
-                placeholder_text_color="#888888"
+                placeholder_text_color="#888888",
+                state="normal"
             )
             ent_val.pack(side="left", padx=1)
             ent_val.bind("<KeyRelease>", lambda e, T=tam: self._on_valor_edit(T))
@@ -631,7 +773,7 @@ class EnvioCortes(ctk.CTkFrame):
 
             self.grade_widgets[tam] = {"disp": lbl_disp, "sub": lbl_total, "ent_val": ent_val}
 
-        # Totais - COM TEMA
+        # Totais
         totais = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         totais.pack(fill="x", pady=(2, 1))
 
@@ -639,7 +781,7 @@ class EnvioCortes(ctk.CTkFrame):
             totais,
             text="Total Peças:",
             width=90,
-            font=("Arial", 11, "bold"),  # Fonte menor
+            font=("Arial", 11, "bold"),
             text_color=self.cor_texto
         ).pack(side="left", padx=2)
 
@@ -667,11 +809,10 @@ class EnvioCortes(ctk.CTkFrame):
         )
         self.lbl_valor_total.pack(side="left", padx=2)
 
-        # Botões de ação - COM TEMA - MAIS COMPACTOS
+        # Botões de Ação
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         botoes.pack(fill="x", pady=(2, 4))
 
-        # Botões com larguras reduzidas
         ctk.CTkButton(
             botoes,
             text="Confirmar Envio",
@@ -712,17 +853,18 @@ class EnvioCortes(ctk.CTkFrame):
             text_color=self.cor_texto
         ).pack(side="left", padx=2)
 
-        # DIREITA (piloto + textos) - COM TEMA - MAIS COMPACTO
+        # =========== COLUNA DIREITA: PILOTO E INFORMAÇÕES ADICIONAIS ===========
         right = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
         right.grid(row=0, column=1, sticky="nsew")
 
+        # Seção Piloto Enviado
         sec_piloto = ctk.CTkFrame(right, fg_color=self.cor_fundo)
         sec_piloto.pack(fill="x", pady=(1, 4))
 
         ctk.CTkLabel(
             sec_piloto,
             text="Piloto Enviado",
-            font=("Arial", 12, "bold"),  # Fonte menor
+            font=("Arial", 12, "bold"),
             text_color=self.cor_texto
         ).pack(anchor="w", padx=4, pady=(2, 1))
 
@@ -757,7 +899,8 @@ class EnvioCortes(ctk.CTkFrame):
             textvariable=self.piloto_qtd_var,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
-            text_color=self.cor_texto
+            text_color=self.cor_texto,
+            state="normal"
         ).pack(side="left", padx=2)
 
         ctk.CTkButton(
@@ -774,28 +917,29 @@ class EnvioCortes(ctk.CTkFrame):
             sec_piloto,
             text="Nenhum.",
             anchor="w",
-            font=("Arial", 10),  # Fonte menor
+            font=("Arial", 10),
             text_color=self.cor_texto
         )
         self.piloto_resumo_lbl.pack(fill="x", padx=4, pady=(0, 2))
 
-        # Área de textos - COM TEMA - ALTURAS REDUZIDAS
+        # Área de Textos: Aviamentos
         ctk.CTkLabel(
             right,
-            text="Aviamentos:",
-            font=("Arial", 10),  # Fonte menor
+            text="Aviamentos Enviados:",
+            font=("Arial", 10),
             text_color=self.cor_texto
         ).pack(anchor="w", padx=4)
 
         self.aviamentos_entry = ctk.CTkTextbox(
             right,
-            height=40,  # Altura reduzida
+            height=60,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
         self.aviamentos_entry.pack(fill="x", expand=False, padx=4, pady=1)
 
+        # Área de Textos: Outros
         ctk.CTkLabel(
             right,
             text="Outros (linha, renda, etc.):",
@@ -805,23 +949,24 @@ class EnvioCortes(ctk.CTkFrame):
 
         self.outros_entry = ctk.CTkTextbox(
             right,
-            height=40,
+            height=60,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
         self.outros_entry.pack(fill="x", expand=False, padx=4, pady=1)
 
+        # Área de Textos: Observações Gerais
         ctk.CTkLabel(
             right,
-            text="Observações:",
+            text="Observações Gerais:",
             font=("Arial", 10),
             text_color=self.cor_texto
         ).pack(anchor="w", padx=4)
 
         self.obs_text = ctk.CTkTextbox(
             right,
-            height=80,  # Altura reduzida
+            height=100,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
@@ -1734,118 +1879,193 @@ class EnvioCortes(ctk.CTkFrame):
         params.append(corte_id)
         cur.execute(f"UPDATE {get_schema()}.cadastro_de_corte SET {valores_set} WHERE id=%s", params)
 
+    # ----------------------------- SALVAR ENVIO -----------------------------
     def confirmar_envio(self):
-        if not self._validar_envio():
+        """Salva o envio na tabela envios_cortes com TODOS os campos da tela."""
+
+        if not self.corte_selecionado:
+            messagebox.showwarning("Aviso", "Selecione um corte antes de confirmar o envio.")
+            return
+
+        if not self._prestador_id:
+            messagebox.showwarning("Aviso", "Selecione a costureira/prestador antes de confirmar o envio.")
             return
 
         try:
             from BANCO_DE_DADOS_PG import get_conn, get_schema
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao carregar módulo de banco de dados:\n{e}")
+            return
 
+        try:
+            # ---------------- DADOS BÁSICOS ----------------
+            schema = get_schema()
+
+            # data_envio
+            data_envio_str = (self.data_entry.get() or "").strip()
+            try:
+                data_envio = datetime.strptime(data_envio_str, "%d/%m/%Y").date()
+            except Exception:
+                data_envio = datetime.now().date()
+
+            # hora_envio = agora
+            hora_envio = datetime.now().time()
+
+            prestador_id = self._prestador_id
+            tipo_servico = (self.tipo_cb.get() or "").strip() or "Facção"
+
+            # corte_id veio da seleção da tree de cortes
+            # self.corte_selecionado costuma ser uma tupla/linha do SELECT
+            # onde o primeiro elemento é o ID do corte
+            try:
+                corte_id = int(self.corte_selecionado[0])
+            except Exception:
+                corte_id = None
+
+            ordem_corte = (self.ordem_entry.get() or "").strip() or None
+            codigo_corte = (self.codigo_entry.get() or "").strip() or None
+            descricao_corte = (self.descricao_entry.get() or "").strip() or None
+
+            colecao = (self.colecao_entry.get() or "").strip() or None
+            material = (self.material_entry.get() or "").strip() or None
+            cliente = (self.cliente_entry.get() or "").strip() or None
+            cores = (self.cores_entry.get() or "").strip() or None
+
+            prioridade = (self.prioridade_cb.get() or "").strip() or None
+            forma_pagamento = (self.pagamento_cb.get() or "").strip() or None
+
+            status_envio = "Enviado"
+
+            # ---------------- GRADE / QUANTIDADES ----------------
+            # Quantidades por tamanho
+            qtd_pp = safe_int(self.quantidades["PP"].get())
+            qtd_p = safe_int(self.quantidades["P"].get())
+            qtd_m = safe_int(self.quantidades["M"].get())
+            qtd_g = safe_int(self.quantidades["G"].get())
+            qtd_gg = safe_int(self.quantidades["GG"].get())
+            qtd_g1 = safe_int(self.quantidades["G1"].get())
+            qtd_g2 = safe_int(self.quantidades["G2"].get())
+            qtd_g3 = safe_int(self.quantidades["G3"].get())
+
+            # Valores por tamanho
+            valor_pp = parse_valor(self.valores["PP"].get())
+            valor_p = parse_valor(self.valores["P"].get())
+            valor_m = parse_valor(self.valores["M"].get())
+            valor_g = parse_valor(self.valores["G"].get())
+            valor_gg = parse_valor(self.valores["GG"].get())
+            valor_g1 = parse_valor(self.valores["G1"].get())
+            valor_g2 = parse_valor(self.valores["G2"].get())
+            valor_g3 = parse_valor(self.valores["G3"].get())
+
+            # Totais
+            total_pecas = (
+                    qtd_pp + qtd_p + qtd_m + qtd_g +
+                    qtd_gg + qtd_g1 + qtd_g2 + qtd_g3
+            )
+
+            total_pilotos = (
+                    safe_int(self.pilotos["PP"].get()) +
+                    safe_int(self.pilotos["P"].get()) +
+                    safe_int(self.pilotos["M"].get()) +
+                    safe_int(self.pilotos["G"].get()) +
+                    safe_int(self.pilotos["GG"].get()) +
+                    safe_int(self.pilotos["G1"].get()) +
+                    safe_int(self.pilotos["G2"].get()) +
+                    safe_int(self.pilotos["G3"].get())
+            )
+
+            valor_total_envio = (
+                    qtd_pp * valor_pp +
+                    qtd_p * valor_p +
+                    qtd_m * valor_m +
+                    qtd_g * valor_g +
+                    qtd_gg * valor_gg +
+                    qtd_g1 * valor_g1 +
+                    qtd_g2 * valor_g2 +
+                    qtd_g3 * valor_g3
+            )
+
+            # ---------------- TEXTOS / OBSERVAÇÕES ----------------
+            resumo_pilotos = self.piloto_resumo_lbl.cget("text") or "Nenhum."
+            resumo_pilotos = resumo_pilotos.strip() or "Nenhum."
+
+            aviamentos = ""
+            if hasattr(self, "aviamentos_entry"):
+                aviamentos = self.aviamentos_entry.get("1.0", "end").strip() or None
+
+            outros = ""
+            if hasattr(self, "outros_entry"):
+                outros = self.outros_entry.get("1.0", "end").strip() or None
+
+            observacoes = ""
+            if hasattr(self, "obs_text"):
+                observacoes = self.obs_text.get("1.0", "end").strip() or None
+
+            tel_encarregado = (self.tel_encarregado_entry.get() or "").strip() or None
+            tel_acabamento = (self.tel_acabamento_entry.get() or "").strip() or None
+
+            # Previsão de entrega
+            previsao_str = (self.previsao_entry.get() or "").strip()
+            previsao_entrega = None
+            if previsao_str:
+                try:
+                    previsao_entrega = datetime.strptime(previsao_str, "%d/%m/%Y").date()
+                except Exception:
+                    previsao_entrega = None  # se der erro, deixa nulo para não travar
+
+            # ---------------- INSERT NO BANCO ----------------
             with get_conn() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(f"SET LOCAL search_path = {get_schema()};")
-                    # 1. Debita do corte
-                    qtds = {t: safe_int(self.quantidades[t].get()) for t in self.tamanhos}
-                    pils = {t: safe_int(self.pilotos[t].get()) for t in self.tamanhos}
-                    self._debitar_do_corte(cur, self.corte_selecionado, qtds, pils)
+                    cur.execute(f"SET LOCAL search_path = {schema};")
 
-                    # 2. Insere na tabela de envios
-                    cur.execute("""
-                        SELECT EXISTS (
-                            SELECT FROM information_schema.tables 
-                            WHERE table_schema = %s AND table_name = 'envios_cortes'
-                        )
-                    """, (get_schema(),))
-                    if not cur.fetchone()[0]:
-                        # Criar tabela se não existir
-                        cur.execute(f"""
-                            CREATE TABLE {get_schema()}.envios_cortes (
-                                id SERIAL PRIMARY KEY,
-                                data_envio DATE,
-                                prestador_id INTEGER,
-                                tipo_servico TEXT,
-                                corte_id INTEGER,
-                                qtd_pp INTEGER DEFAULT 0,
-                                qtd_p INTEGER DEFAULT 0,
-                                qtd_m INTEGER DEFAULT 0,
-                                qtd_g INTEGER DEFAULT 0,
-                                qtd_gg INTEGER DEFAULT 0,
-                                qtd_g1 INTEGER DEFAULT 0,
-                                qtd_g2 INTEGER DEFAULT 0,
-                                qtd_g3 INTEGER DEFAULT 0,
-                                piloto_pp INTEGER DEFAULT 0,
-                                piloto_p INTEGER DEFAULT 0,
-                                piloto_m INTEGER DEFAULT 0,
-                                piloto_g INTEGER DEFAULT 0,
-                                piloto_gg INTEGER DEFAULT 0,
-                                piloto_g1 INTEGER DEFAULT 0,
-                                piloto_g2 INTEGER DEFAULT 0,
-                                piloto_g3 INTEGER DEFAULT 0,
-                                valor_pp NUMERIC(10,2) DEFAULT 0,
-                                valor_p NUMERIC(10,2) DEFAULT 0,
-                                valor_m NUMERIC(10,2) DEFAULT 0,
-                                valor_g NUMERIC(10,2) DEFAULT 0,
-                                valor_gg NUMERIC(10,2) DEFAULT 0,
-                                valor_g1 NUMERIC(10,2) DEFAULT 0,
-                                valor_g2 NUMERIC(10,2) DEFAULT 0,
-                                valor_g3 NUMERIC(10,2) DEFAULT 0,
-                                aviamentos TEXT,
-                                outros TEXT,
-                                observacoes TEXT,
-                                tel_encarregado TEXT,
-                                tel_acabamento TEXT,
-                                previsao_entrega DATE
-                            )
-                        """)
-
-                    # Inserir dados
-                    data_envio = datetime.now().date()
-                    previsao_str = self.previsao_entry.get().strip()
-                    previsao = None
-                    if previsao_str:
-                        try:
-                            previsao = datetime.strptime(previsao_str, "%d/%m/%Y").date()
-                        except Exception:
-                            pass
-
-                    cur.execute(f"""
-                        INSERT INTO {get_schema()}.envios_cortes (
-                            data_envio, prestador_id, tipo_servico, corte_id,
+                    sql = f"""
+                        INSERT INTO envios_cortes (
+                            data_envio, hora_envio, prestador_id, tipo_servico, corte_id,
+                            ordem_corte, codigo_corte, descricao_corte,
+                            colecao, material, cliente, cores,
+                            prioridade, forma_pagamento, status_envio,
                             qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3,
-                            piloto_pp, piloto_p, piloto_m, piloto_g, piloto_gg, piloto_g1, piloto_g2, piloto_g3,
                             valor_pp, valor_p, valor_m, valor_g, valor_gg, valor_g1, valor_g2, valor_g3,
-                            aviamentos, outros, observacoes, tel_encarregado, tel_acabamento, previsao_entrega
-                        ) VALUES (
-                            %s, %s, %s, %s,
-                            %s, %s, %s, %s, %s, %s, %s, %s,
-                            %s, %s, %s, %s, %s, %s, %s, %s,
-                            %s, %s, %s, %s, %s, %s, %s, %s,
-                            %s, %s, %s, %s, %s, %s
+                            total_pecas, total_pilotos, valor_total_envio,
+                            resumo_pilotos, aviamentos, outros, observacoes,
+                            tel_encarregado, tel_acabamento, previsao_entrega
                         )
-                    """, (
-                        data_envio, self._prestador_id, self._tipo_servico, self.corte_selecionado,
-                        qtds["PP"], qtds["P"], qtds["M"], qtds["G"], qtds["GG"], qtds["G1"], qtds["G2"], qtds["G3"],
-                        pils["PP"], pils["P"], pils["M"], pils["G"], pils["GG"], pils["G1"], pils["G2"], pils["G3"],
-                        parse_valor(self.valores["PP"].get()), parse_valor(self.valores["P"].get()),
-                        parse_valor(self.valores["M"].get()), parse_valor(self.valores["G"].get()),
-                        parse_valor(self.valores["GG"].get()), parse_valor(self.valores["G1"].get()),
-                        parse_valor(self.valores["G2"].get()), parse_valor(self.valores["G3"].get()),
-                        self.aviamentos_entry.get("1.0", "end-1c"),
-                        self.outros_entry.get("1.0", "end-1c"),
-                        self.obs_text.get("1.0", "end-1c"),
-                        self.tel_encarregado_entry.get(),
-                        self.tel_acabamento_entry.get(),
-                        previsao
-                    ))
+                        VALUES (
+                            %s,%s,%s,%s,%s,
+                            %s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s,%s,
+                            %s,%s,%s,%s,%s,%s,%s,%s,
+                            %s,%s,%s,%s,%s,%s,%s,%s,
+                            %s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s,%s
+                        )
+                        RETURNING id
+                    """
 
+                    cur.execute(
+                        sql,
+                        (
+                            data_envio, hora_envio, prestador_id, tipo_servico, corte_id,
+                            ordem_corte, codigo_corte, descricao_corte,
+                            colecao, material, cliente, cores,
+                            prioridade, forma_pagamento, status_envio,
+                            qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3,
+                            valor_pp, valor_p, valor_m, valor_g, valor_gg, valor_g1, valor_g2, valor_g3,
+                            total_pecas, total_pilotos, valor_total_envio,
+                            resumo_pilotos, aviamentos, outros, observacoes,
+                            tel_encarregado, tel_acabamento, previsao_entrega,
+                        )
+                    )
+                    envio_id = cur.fetchone()[0]
                     conn.commit()
 
-            messagebox.showinfo("Sucesso", "Envio confirmado e saldo debitado.")
-            self._atualizar_saldo_pos_envio(self.corte_selecionado)
-            self._recarregar_lista_cortes()
+            messagebox.showinfo("Sucesso", f"Envio registrado com sucesso! ID: {envio_id}")
+            self._limpar()
 
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao confirmar envio: {e}")
+            messagebox.showerror("Erro", f"Falha ao salvar envio:\n{e}")
 
     def _atualizar_saldo_pos_envio(self, corte_id: int):
         """
@@ -1993,14 +2213,40 @@ class EnvioCortes(ctk.CTkFrame):
         prest_conta = self.conta_entry.get()
         prest_pix = self.pix_entry.get()
         prest_titular = self.titular_entry.get()
+        prest_email = self.email_entry.get()
+        prest_endereco = self.endereco_entry.get()
 
         corte_codigo = self.codigo_entry.get()
         corte_desc = self.descricao_entry.get()
         corte_ordem = self.ordem_entry.get()
 
+        # Novos campos
+        colecao = self.colecao_entry.get()
+        material = self.material_entry.get()
+        cliente = self.cliente_entry.get()
+
+        # Obter cores selecionadas
+        cores_selecionadas = []
+        cores_opcoes = ["Preto", "Branco", "Vermelho", "Azul", "Verde", "Amarelo",
+                        "Rosa", "Roxo", "Laranja", "Cinza", "Marrom", "Bege",
+                        "Estampado", "Listrado", "Xadrez", "Bordô", "Mostarda", "Turquesa"]
+
+        for cor in cores_opcoes:
+            if hasattr(self, 'cores_vars') and cor in self.cores_vars:
+                if self.cores_vars[cor].get():
+                    cores_selecionadas.append(cor)
+
+        cores_texto = ", ".join(cores_selecionadas) if cores_selecionadas else "Não informado"
+
         data_envio = self.data_entry.get()
         hora_envio = datetime.now().strftime("%H:%M")
         tipo_servico = getattr(self, "_tipo_servico", "")
+
+        # Campos adicionais
+        prioridade = self.prioridade_cb.get()
+        pagamento = self.pagamento_cb.get()
+        tel_encarregado = self.tel_encarregado_entry.get()
+        tel_acabamento = self.tel_acabamento_entry.get()
 
         aviamentos = self.aviamentos_entry.get("1.0", "end-1c")
         outros = self.outros_entry.get("1.0", "end-1c")
@@ -2027,22 +2273,20 @@ class EnvioCortes(ctk.CTkFrame):
         c.setFillColor(cor_primaria)
         c.rect(0, height - 30 * mm, width, 30 * mm, fill=1, stroke=0)
 
-        # LOGO MAIOR E MAIS PARA CIMA
+        # Logo
         if PIL_OK and os.path.exists(LOGO_PATH):
             try:
                 img = Image.open(LOGO_PATH)
                 w, h = img.size
-                max_w = 30 * mm  # Aumentado de 25 para 30mm
+                max_w = 30 * mm
                 scale = max_w / w
                 img_w = w * scale
                 img_h = h * scale
 
-                # Desenhar a logo MAIS PARA CIMA
-                # Posição Y aumentada para subir a logo (height - 20mm em vez de -25mm)
                 c.drawImage(
                     LOGO_PATH,
-                    width - 40 * mm,  # Posição X ajustada
-                    height - 22 * mm,  # POSIÇÃO Y MAIS ALTA (subiu 3mm)
+                    width - 40 * mm,
+                    height - 22 * mm,
                     width=img_w,
                     height=img_h,
                     mask='auto'
@@ -2058,9 +2302,8 @@ class EnvioCortes(ctk.CTkFrame):
         c.setFont("Helvetica", 11)
         c.drawString(20 * mm, height - 26 * mm, "Envio de Corte - Comprovante")
 
-        # Data e hora - MOVIDA PARA NÃO SOBREPOR
+        # Data e hora
         c.setFont("Helvetica", 9)
-        # Movida para a esquerda para não sobrepor com a logo maior
         c.drawString(width - 85 * mm, height - 26 * mm, f"Data/Hora: {data_envio} {hora_envio}")
 
         # Linha separadora
@@ -2076,8 +2319,8 @@ class EnvioCortes(ctk.CTkFrame):
         c.setFont("Helvetica-Bold", 11)
         c.drawString(20 * mm, y, "DADOS DO PRESTADOR")
 
-        # Altura do cartão reduzida
-        altura_conteudo = 28 * mm
+        # Altura do cartão
+        altura_conteudo = 36 * mm  # Aumentado para mais campos
 
         # Retângulo de fundo
         c.setFillColor(cor_cinza)
@@ -2086,7 +2329,7 @@ class EnvioCortes(ctk.CTkFrame):
         c.setLineWidth(0.5)
         c.rect(20 * mm, y - altura_conteudo, width - 40 * mm, altura_conteudo, fill=0, stroke=1)
 
-        # Conteúdo em duas colunas
+        # Conteúdo
         y_start = y - 8 * mm
 
         # Linha 1: Nome e Telefone
@@ -2100,11 +2343,11 @@ class EnvioCortes(ctk.CTkFrame):
         c.drawString(42 * mm, y_start, nome_text)
 
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(width / 2 + 10 * mm, y_start, "Tel:")
+        c.drawString(width / 2 + 10 * mm, y_start, "Telefone:")
         c.setFont("Helvetica", 9)
-        c.drawString(width / 2 + 30 * mm, y_start, prest_tel or "")
+        c.drawString(width / 2 + 35 * mm, y_start, prest_tel or "")
 
-        # Linha 2: CPF e PIX
+        # Linha 2: CPF e Email
         y_start -= 5 * mm
         c.setFont("Helvetica-Bold", 9)
         c.drawString(25 * mm, y_start, "CPF:")
@@ -2112,11 +2355,14 @@ class EnvioCortes(ctk.CTkFrame):
         c.drawString(42 * mm, y_start, self.cpf_entry.get() or "")
 
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(width / 2 + 10 * mm, y_start, "PIX:")
+        c.drawString(width / 2 + 10 * mm, y_start, "Email:")
         c.setFont("Helvetica", 9)
-        c.drawString(width / 2 + 30 * mm, y_start, prest_pix or "")
+        email_text = prest_email or ""
+        if len(email_text) > 25:
+            email_text = email_text[:22] + "..."
+        c.drawString(width / 2 + 35 * mm, y_start, email_text)
 
-        # Linha 3: Banco e Agência
+        # Linha 3: Banco e Endereço
         y_start -= 5 * mm
         c.setFont("Helvetica-Bold", 9)
         c.drawString(25 * mm, y_start, "Banco:")
@@ -2124,16 +2370,31 @@ class EnvioCortes(ctk.CTkFrame):
         c.drawString(42 * mm, y_start, prest_banco or "")
 
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(width / 2 + 10 * mm, y_start, "Agência:")
+        c.drawString(width / 2 + 10 * mm, y_start, "Endereço:")
         c.setFont("Helvetica", 9)
-        c.drawString(width / 2 + 30 * mm, y_start, prest_agencia or "")
+        endereco_text = prest_endereco or ""
+        if len(endereco_text) > 25:
+            endereco_text = endereco_text[:22] + "..."
+        c.drawString(width / 2 + 35 * mm, y_start, endereco_text)
 
-        # Linha 4: Conta e Titular
+        # Linha 4: Agência e Conta
         y_start -= 5 * mm
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(25 * mm, y_start, "Conta:")
+        c.drawString(25 * mm, y_start, "Agência:")
         c.setFont("Helvetica", 9)
-        c.drawString(42 * mm, y_start, prest_conta or "")
+        c.drawString(42 * mm, y_start, prest_agencia or "")
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(width / 2 + 10 * mm, y_start, "Conta:")
+        c.setFont("Helvetica", 9)
+        c.drawString(width / 2 + 35 * mm, y_start, prest_conta or "")
+
+        # Linha 5: PIX e Titular
+        y_start -= 5 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_start, "PIX:")
+        c.setFont("Helvetica", 9)
+        c.drawString(42 * mm, y_start, prest_pix or "")
 
         c.setFont("Helvetica-Bold", 9)
         c.drawString(width / 2 + 10 * mm, y_start, "Titular:")
@@ -2141,18 +2402,18 @@ class EnvioCortes(ctk.CTkFrame):
         titular_text = prest_titular or ""
         if len(titular_text) > 25:
             titular_text = titular_text[:22] + "..."
-        c.drawString(width / 2 + 30 * mm, y_start, titular_text)
+        c.drawString(width / 2 + 35 * mm, y_start, titular_text)
 
         # ---------- SEÇÃO 2: Dados do Corte ----------
-        y = y_start - 10 * mm
+        y = y_start - 12 * mm
 
         # Título da seção
         c.setFillColor(cor_primaria)
         c.setFont("Helvetica-Bold", 11)
         c.drawString(20 * mm, y, "DADOS DO CORTE")
 
-        # Altura reduzida
-        altura_corte = 16 * mm
+        # Altura
+        altura_corte = 30 * mm  # Aumentado para incluir novos campos
 
         # Retângulo de fundo
         c.setFillColor(cor_cinza)
@@ -2161,7 +2422,7 @@ class EnvioCortes(ctk.CTkFrame):
         c.rect(20 * mm, y - altura_corte, width - 40 * mm, altura_corte, fill=0, stroke=1)
 
         # Conteúdo
-        y_corte = y - 6 * mm
+        y_corte = y - 8 * mm
 
         # Linha 1: Ordem, Código, Serviço
         c.setFillColor(black)
@@ -2172,31 +2433,95 @@ class EnvioCortes(ctk.CTkFrame):
         c.drawString(42 * mm, y_corte, ordem_text)
 
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(70 * mm, y_corte, "Código:")
+        c.drawString(85 * mm, y_corte, "Código:")
         c.setFont("Helvetica", 9)
         codigo_text = corte_codigo or ""
-        c.drawString(85 * mm, y_corte, codigo_text)
+        c.drawString(100 * mm, y_corte, codigo_text)
 
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(110 * mm, y_corte, "Serviço:")
+        c.drawString(140 * mm, y_corte, "Serviço:")
         c.setFont("Helvetica", 9)
         servico_text = tipo_servico or ""
         if len(servico_text) > 12:
             servico_text = servico_text[:10] + "..."
-        c.drawString(125 * mm, y_corte, servico_text)
+        c.drawString(155 * mm, y_corte, servico_text)
 
-        # Linha 2: Descrição
+        # Linha 2: Descrição e Cliente
         y_corte -= 5 * mm
         c.setFont("Helvetica-Bold", 9)
         c.drawString(25 * mm, y_corte, "Descrição:")
         c.setFont("Helvetica", 9)
         desc_text = corte_desc or ""
-        if len(desc_text) > 60:
-            desc_text = desc_text[:57] + "..."
-        c.drawString(45 * mm, y_corte, desc_text)
+        if len(desc_text) > 40:
+            desc_text = desc_text[:37] + "..."
+        c.drawString(50 * mm, y_corte, desc_text)
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(width / 2 + 10 * mm, y_corte, "Cliente:")
+        c.setFont("Helvetica", 9)
+        cliente_text = cliente or ""
+        if len(cliente_text) > 15:
+            cliente_text = cliente_text[:12] + "..."
+        c.drawString(width / 2 + 35 * mm, y_corte, cliente_text)
+
+        # Linha 3: Coleção e Material
+        y_corte -= 5 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_corte, "Coleção:")
+        c.setFont("Helvetica", 9)
+        colecao_text = colecao or ""
+        c.drawString(45 * mm, y_corte, colecao_text)
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(100 * mm, y_corte, "Material:")
+        c.setFont("Helvetica", 9)
+        material_text = material or ""
+        c.drawString(120 * mm, y_corte, material_text)
+
+        # Linha 4: CORES (informação importante)
+        y_corte -= 5 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_corte, "Cores:")
+        c.setFont("Helvetica", 9)
+        # Se houver muitas cores, quebrar em linhas
+        if cores_texto:
+            if len(cores_texto) > 60:
+                # Quebrar em duas linhas
+                palavras = cores_texto.split(", ")
+                linha1 = ", ".join(palavras[:len(palavras) // 2])
+                linha2 = ", ".join(palavras[len(palavras) // 2:])
+                c.drawString(42 * mm, y_corte, linha1)
+                y_corte -= 4 * mm
+                c.drawString(42 * mm, y_corte, linha2)
+            else:
+                c.drawString(42 * mm, y_corte, cores_texto)
+
+        # Linha 5: Contatos e Informações Adicionais
+        y_corte -= 9 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_corte, "Tel Encarregado:")
+        c.setFont("Helvetica", 9)
+        c.drawString(52 * mm, y_corte, tel_encarregado or "")
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(120 * mm, y_corte, "Tel Acabamento:")
+        c.setFont("Helvetica", 9)
+        c.drawString(148 * mm, y_corte, tel_acabamento or "")
+
+        # Linha 6: Prioridade e Pagamento
+        y_corte -= 5 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_corte, "Prioridade:")
+        c.setFont("Helvetica", 9)
+        c.drawString(48 * mm, y_corte, prioridade)
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(120 * mm, y_corte, "Pagamento:")
+        c.setFont("Helvetica", 9)
+        c.drawString(145 * mm, y_corte, pagamento)
 
         # ---------- SEÇÃO 3: Tabela de Quantidades ----------
-        y_table_start = y_corte - 12 * mm
+        y_table_start = y_corte - 15 * mm
 
         # Título da seção
         c.setFillColor(cor_primaria)
@@ -2282,7 +2607,7 @@ class EnvioCortes(ctk.CTkFrame):
         # Aviamentos
         c.setFillColor(black)
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(25 * mm, y_info_start, "Aviamentos:")
+        c.drawString(25 * mm, y_info_start, "Aviamentos Enviados:")
         c.setFont("Helvetica", 8)
 
         if aviamentos.strip():
@@ -2309,7 +2634,7 @@ class EnvioCortes(ctk.CTkFrame):
         # Outros
         if outros.strip():
             c.setFont("Helvetica-Bold", 9)
-            c.drawString(25 * mm, y_info_start, "Outros:")
+            c.drawString(25 * mm, y_info_start, "Outros (linha, renda, etc.):")
             c.setFont("Helvetica", 8)
 
             lines = []
