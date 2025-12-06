@@ -160,41 +160,41 @@ class EnvioCortes(ctk.CTkFrame):
     def _build_ui(self):
         # Frame principal com tema
         main = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        main.pack(fill="both", expand=True, padx=10, pady=8)
+        main.pack(fill="both", expand=True, padx=8, pady=4)  # Reduzir padding
 
-        # Cabeçalho + logo - COM TEMA
-        header = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        header.pack(fill="x", pady=(0, 4))
+        # Cabeçalho + logo - COM TEMA - ALTURA REDUZIDA
+        header = ctk.CTkFrame(main, fg_color=self.cor_fundo, height=40)  # Altura fixa menor
+        header.pack(fill="x", pady=(0, 2))  # Padding vertical reduzido
 
         ctk.CTkLabel(
             header,
             text="CONTROLE DE MÃO DE OBRA — Envio de Cortes",
-            font=("Arial", 16, "bold"),  # um pouco menor
+            font=("Arial", 14, "bold"),  # Fonte menor
             text_color=self.cor_texto
         ).pack(side="left", padx=(0, 6))
 
         if PIL_OK and os.path.exists(LOGO_PATH):
             img = Image.open(LOGO_PATH)
             w, h = img.size
-            tw = 120  # logo um pouco menor
+            tw = 90  # Logo ainda menor
             th = int(h * (tw / w))
             self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
             ctk.CTkLabel(header, image=self.logo_img, text="").pack(side="right")
 
         # Linha: Buscar Corte - COM TEMA
         l_busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        l_busca.pack(fill="x", pady=4)
+        l_busca.pack(fill="x", pady=2)  # Padding reduzido
 
         ctk.CTkLabel(
             l_busca,
             text="Buscar Corte:",
-            width=110,
+            width=100,  # Largura reduzida
             text_color=self.cor_texto
-        ).pack(side="left", padx=(0, 6))
+        ).pack(side="left", padx=(0, 4))
 
         self.busca_entry = ctk.CTkEntry(
             l_busca,
-            width=300,
+            width=280,  # Reduzir largura
             placeholder_text="Número, código ou descrição",
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
@@ -207,27 +207,26 @@ class EnvioCortes(ctk.CTkFrame):
         ctk.CTkButton(
             l_busca,
             text="Buscar",
-            width=90,
+            width=80,  # Botão menor
             command=self.buscar_cortes,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
-        ).pack(side="left", padx=8)
+        ).pack(side="left", padx=4)
 
-        # Costureira + Serviço + Dados bancários - COM TEMA
+        # Costureira + Serviço + Dados bancários - COM TEMA - COMPACTADO
         prest = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        prest.pack(fill="x", pady=4)
+        prest.pack(fill="x", pady=2)  # Padding reduzido
 
         linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        linha.pack(fill="x", pady=(4, 2))
+        linha.pack(fill="x", pady=(2, 1))  # Padding muito reduzido
 
         # ========= Filtro de serviço REMOVIDO da UI =========
-        # Mantém um combobox oculto para compatibilidade com código existente
         hidden = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
         hidden.pack_forget()
         self.filtro_servico_cb = ctk.CTkComboBox(
             hidden,
-            width=120,
+            width=100,
             values=["Todos"],
             state="readonly",
             fg_color=self.cor_secundaria,
@@ -242,20 +241,17 @@ class EnvioCortes(ctk.CTkFrame):
         self.filtro_servico_cb.set("Todos")
         # ====================================================
 
-        # Nova organização do cabeçalho:
-        # [Buscar Costureira: | combo grande....................]   [Serviço: | combo]
-
         ctk.CTkLabel(
             linha,
-            text="Buscar Costureira:",
-            width=120,
+            text="Costureira:",
+            width=80,  # Largura reduzida
             text_color=self.cor_texto
-        ).pack(side="left", padx=(2, 6))
+        ).pack(side="left", padx=(2, 4))
 
         # Combobox de costureira - COM TEMA
         self.prestador_busca_cb = ctk.CTkComboBox(
             linha,
-            width=420,
+            width=350,  # Reduzir largura
             values=["Digite para buscar..."],
             state="normal",
             command=self._on_prestador_change,
@@ -283,14 +279,14 @@ class EnvioCortes(ctk.CTkFrame):
         ctk.CTkLabel(
             linha,
             text="Serviço:",
-            width=80,
+            width=70,  # Largura reduzida
             text_color=self.cor_texto
-        ).pack(side="left", padx=(20, 6))
+        ).pack(side="left", padx=(12, 4))
 
         # Combobox de tipo de serviço - COM TEMA
         self.tipo_cb = ctk.CTkComboBox(
             linha,
-            width=180,
+            width=150,  # Reduzir largura
             values=SERVICOS_FIXOS,
             state="readonly",
             fg_color=self.cor_secundaria,
@@ -306,21 +302,21 @@ class EnvioCortes(ctk.CTkFrame):
         self.tipo_cb.pack(side="left")
         self.tipo_cb.bind("<<ComboboxSelected>>", self._on_tipo_changed)
 
-        # Bancário (somente leitura) - COM TEMA
+        # Bancário (somente leitura) - COM TEMA - MAIS COMPACTO
         banco = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        banco.pack(fill="x", pady=(6, 4))
+        banco.pack(fill="x", pady=(4, 2))  # Padding reduzido
 
         ctk.CTkLabel(
             banco,
             text="Dados Bancários do Prestador",
-            font=("Arial", 13, "bold"),
+            font=("Arial", 11, "bold"),  # Fonte menor
             text_color=self.cor_texto
-        ).pack(anchor="w", padx=4, pady=2)
+        ).pack(anchor="w", padx=4, pady=1)  # Padding reduzido
 
         grid = ctk.CTkFrame(banco, fg_color=self.cor_fundo)
-        grid.pack(fill="x", padx=2)
+        grid.pack(fill="x", padx=2, pady=1)  # Padding reduzido
 
-        def ro(parent, w=220):
+        def ro(parent, w=200):  # Reduzir largura padrão
             e = ctk.CTkEntry(
                 parent,
                 width=w,
@@ -332,38 +328,38 @@ class EnvioCortes(ctk.CTkFrame):
             return e
 
         l1b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l1b.pack(fill="x", pady=2)
-        ctk.CTkLabel(l1b, text="Telefone:", width=90, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.telefone_entry = ro(l1b, 220)
-        self.telefone_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l1b, text="CPF:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.cpf_entry = ro(l1b, 180)
-        self.cpf_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l1b, text="Banco:", width=70, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.banco_entry = ro(l1b, 180)
-        self.banco_entry.pack(side="left", padx=4)
+        l1b.pack(fill="x", pady=1)  # Padding muito reduzido
+        ctk.CTkLabel(l1b, text="Telefone:", width=80, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.telefone_entry = ro(l1b, 180)
+        self.telefone_entry.pack(side="left", padx=2)
+        ctk.CTkLabel(l1b, text="CPF:", width=50, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.cpf_entry = ro(l1b, 150)
+        self.cpf_entry.pack(side="left", padx=2)
+        ctk.CTkLabel(l1b, text="Banco:", width=60, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.banco_entry = ro(l1b, 150)
+        self.banco_entry.pack(side="left", padx=2)
 
         l2b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l2b.pack(fill="x", pady=2)
-        ctk.CTkLabel(l2b, text="Agência:", width=90, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.agencia_entry = ro(l2b, 160)
-        self.agencia_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l2b, text="Conta:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.conta_entry = ro(l2b, 180)
-        self.conta_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l2b, text="PIX:", width=70, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.pix_entry = ro(l2b, 220)
-        self.pix_entry.pack(side="left", padx=4)
+        l2b.pack(fill="x", pady=1)  # Padding muito reduzido
+        ctk.CTkLabel(l2b, text="Agência:", width=80, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.agencia_entry = ro(l2b, 140)
+        self.agencia_entry.pack(side="left", padx=2)
+        ctk.CTkLabel(l2b, text="Conta:", width=50, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.conta_entry = ro(l2b, 150)
+        self.conta_entry.pack(side="left", padx=2)
+        ctk.CTkLabel(l2b, text="PIX:", width=60, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.pix_entry = ro(l2b, 180)
+        self.pix_entry.pack(side="left", padx=2)
 
         l3b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l3b.pack(fill="x", pady=2)
-        ctk.CTkLabel(l3b, text="Titular da Conta:", width=140, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.titular_entry = ro(l3b, 280)
-        self.titular_entry.pack(side="left", padx=4)
+        l3b.pack(fill="x", pady=1)  # Padding muito reduzido
+        ctk.CTkLabel(l3b, text="Titular:", width=80, text_color=self.cor_texto).pack(side="left", padx=2)
+        self.titular_entry = ro(l3b, 220)
+        self.titular_entry.pack(side="left", padx=2)
 
-        # Tabela de cortes - COM TEMA
+        # Tabela de cortes - COM TEMA - ALTURA REDUZIDA
         tabela_frame = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        tabela_frame.pack(fill="x", pady=4)  # sem expand para não crescer demais
+        tabela_frame.pack(fill="x", pady=2)  # Padding reduzido
 
         # Configurar estilo da Treeview para combinar com o tema
         self.style = ttk.Style()
@@ -375,14 +371,14 @@ class EnvioCortes(ctk.CTkFrame):
             fieldbackground=self.cor_secundaria,
             borderwidth=0,
             highlightthickness=0,
-            rowheight=22,  # linhas mais baixas
-            font=("Arial", 10)
+            rowheight=20,  # Linhas mais baixas
+            font=("Arial", 9)  # Fonte menor
         )
         self.style.map('Treeview', background=[('selected', self.cor_primaria)])
 
         self.style.configure(
             "Treeview.Heading",
-            font=("Arial", 10, "bold"),
+            font=("Arial", 9, "bold"),  # Fonte menor
             background=self.cor_primaria,
             foreground=self.cor_texto
         )
@@ -395,7 +391,7 @@ class EnvioCortes(ctk.CTkFrame):
             tabela_frame,
             columns=cols_ui,
             show="headings",
-            height=5,  # altura menor
+            height=4,  # Altura ainda menor (4 linhas)
             style="Treeview"
         )
 
@@ -408,155 +404,155 @@ class EnvioCortes(ctk.CTkFrame):
         for col in cols_ui:
             self.cortes_tree.heading(col, text=headers[col])
             if col in ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "Total"]:
-                w = 60  # colunas numéricas mais enxutas
+                w = 50  # Colunas numéricas mais enxutas
             elif col in ["ID", "Número"]:
-                w = 80
+                w = 70
             elif col == "Código":
-                w = 100
+                w = 90
             else:
-                w = 180  # Descrição
+                w = 160  # Descrição mais curta
             self.cortes_tree.column(col, width=w, anchor="center")
 
         # Sem scrollbar lateral
         self.cortes_tree.pack(fill="x")
         self.cortes_tree.bind("<<TreeviewSelect>>", self.on_corte_selecionado)
 
-        # Detalhes do corte básico - COM TEMA
+        # Detalhes do corte básico - COM TEMA - MAIS COMPACTO
         det = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        det.pack(fill="x", pady=4)
+        det.pack(fill="x", pady=2)
 
         l1 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
-        l1.pack(fill="x", pady=2)
+        l1.pack(fill="x", pady=1)
 
         ctk.CTkLabel(
             l1,
-            text="Telefone Encarregado:",
-            width=150,
+            text="Tel Encarregado:",
+            width=100,  # Texto mais curto, largura reduzida
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
         self.tel_encarregado_entry = ctk.CTkEntry(
             l1,
-            width=180,
+            width=120,  # Reduzir largura
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
-        self.tel_encarregado_entry.pack(side="left", padx=4)
+        self.tel_encarregado_entry.pack(side="left", padx=2)
 
         ctk.CTkLabel(
             l1,
-            text="Telefone Acabamento:",
-            width=150,
+            text="Tel Acabamento:",
+            width=100,
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
         self.tel_acabamento_entry = ctk.CTkEntry(
             l1,
-            width=180,
+            width=120,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
-        self.tel_acabamento_entry.pack(side="left", padx=4)
+        self.tel_acabamento_entry.pack(side="left", padx=2)
 
         ctk.CTkLabel(
             l1,
             text="Data:",
-            width=60,
+            width=40,
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
         self.data_entry = ctk.CTkEntry(
             l1,
-            width=120,
+            width=90,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
         self.data_entry.insert(0, today_str())
-        self.data_entry.pack(side="left", padx=4)
+        self.data_entry.pack(side="left", padx=2)
 
         # Previsão de entrega + calendário - COM TEMA
         ctk.CTkLabel(
             l1,
-            text="Previsão de Entrega:",
-            width=160,
+            text="Prev. Entrega:",
+            width=90,
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
         self.previsao_entry = ctk.CTkEntry(
             l1,
-            width=120,
+            width=90,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
-        self.previsao_entry.pack(side="left", padx=(4, 0))
+        self.previsao_entry.pack(side="left", padx=2)
 
         ctk.CTkButton(
             l1,
             text="📅",
-            width=36,
+            width=30,  # Botão menor
             command=lambda: self._abrir_calendario(self.previsao_entry),
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
-        ).pack(side="left", padx=(6, 4))
+        ).pack(side="left", padx=2)
 
         self.previsao_entry.bind("<Double-Button-1>", lambda e: self._abrir_calendario(self.previsao_entry))
 
         l2 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
-        l2.pack(fill="x", pady=2)
-        ctk.CTkLabel(l2, text="Código:", width=70, text_color=self.cor_texto).pack(side="left", padx=4)
+        l2.pack(fill="x", pady=1)
+        ctk.CTkLabel(l2, text="Código:", width=60, text_color=self.cor_texto).pack(side="left", padx=2)
         self.codigo_entry = ctk.CTkEntry(
             l2,
-            width=180,
+            width=150,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto,
             state="disabled"
         )
-        self.codigo_entry.pack(side="left", padx=4)
+        self.codigo_entry.pack(side="left", padx=2)
 
-        ctk.CTkLabel(l2, text="Descrição:", width=80, text_color=self.cor_texto).pack(side="left", padx=4)
+        ctk.CTkLabel(l2, text="Descrição:", width=70, text_color=self.cor_texto).pack(side="left", padx=2)
         self.descricao_entry = ctk.CTkEntry(
             l2,
-            width=360,
+            width=320,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto,
             state="disabled"
         )
-        self.descricao_entry.pack(side="left", padx=4)
+        self.descricao_entry.pack(side="left", padx=2)
 
-        ctk.CTkLabel(l2, text="Nº Ordem:", width=80, text_color=self.cor_texto).pack(side="left", padx=4)
+        ctk.CTkLabel(l2, text="Nº Ordem:", width=70, text_color=self.cor_texto).pack(side="left", padx=2)
         self.ordem_entry = ctk.CTkEntry(
             l2,
-            width=120,
+            width=100,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto,
             state="disabled"
         )
-        self.ordem_entry.pack(side="left", padx=4)
+        self.ordem_entry.pack(side="left", padx=2)
 
-        # Área central (2 colunas) - COM TEMA
+        # Área central (2 colunas) - COM TEMA - ALTURA OTIMIZADA
         mid = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        mid.pack(fill="both", expand=True, pady=4)
+        mid.pack(fill="both", expand=True, pady=2)  # Padding reduzido
         mid.grid_columnconfigure(0, weight=3)
         mid.grid_columnconfigure(1, weight=2)
         mid.grid_rowconfigure(0, weight=1)
 
-        # ESQUERDA (grade) - COM TEMA
+        # ESQUERDA (grade) - COM TEMA - MAIS COMPACTA
         left = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
         ctk.CTkLabel(
             left,
             text="Quantidades por Tamanho",
-            font=("Arial", 13, "bold"),
+            font=("Arial", 12, "bold"),  # Fonte menor
             text_color=self.cor_texto
-        ).pack(anchor="w", padx=4, pady=2)
+        ).pack(anchor="w", padx=4, pady=1)
 
         ctrl_valor = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-        ctrl_valor.pack(fill="x", pady=(0, 4))
+        ctrl_valor.pack(fill="x", pady=(0, 2))  # Padding reduzido
 
         self.chk_valor_unico = ctk.CTkCheckBox(
             ctrl_valor,
@@ -573,49 +569,50 @@ class EnvioCortes(ctk.CTkFrame):
         header_g = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         header_g.pack(fill="x")
 
+        # Reduzir larguras das colunas da grade
         for h, w in [
-            ("Tam.", 60),
-            ("Disponível", 90),
-            ("Enviar", 90),
-            ("Pilotos", 90),
-            ("Valor/Peça (R$)", 120),
-            ("Subtotal", 110)
+            ("Tam.", 50),
+            ("Disp.", 70),
+            ("Enviar", 70),
+            ("Pilot.", 70),
+            ("Valor/Peça", 100),
+            ("Subtotal", 90)
         ]:
-            ctk.CTkLabel(header_g, text=h, width=w, text_color=self.cor_texto).pack(side="left", padx=2)
+            ctk.CTkLabel(header_g, text=h, width=w, text_color=self.cor_texto).pack(side="left", padx=1)
 
         self.grade_widgets = {}
         for tam in self.tamanhos:
             row = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-            row.pack(fill="x", pady=1)
+            row.pack(fill="x", pady=0)  # Sem padding entre linhas
 
-            ctk.CTkLabel(row, text=tam, width=60, text_color=self.cor_texto).pack(side="left", padx=2)
+            ctk.CTkLabel(row, text=tam, width=50, text_color=self.cor_texto).pack(side="left", padx=1)
 
-            lbl_disp = ctk.CTkLabel(row, text="0", width=90, text_color=self.cor_texto)
-            lbl_disp.pack(side="left", padx=2)
+            lbl_disp = ctk.CTkLabel(row, text="0", width=70, text_color=self.cor_texto)
+            lbl_disp.pack(side="left", padx=1)
 
             ent_qtd = ctk.CTkEntry(
                 row,
-                width=90,
+                width=70,
                 textvariable=self.quantidades[tam],
                 fg_color=self.cor_terciaria,
                 border_color=self.cor_borda,
                 text_color=self.cor_texto
             )
-            ent_qtd.pack(side="left", padx=2)
+            ent_qtd.pack(side="left", padx=1)
 
             ent_pil = ctk.CTkEntry(
                 row,
-                width=90,
+                width=70,
                 textvariable=self.pilotos[tam],
                 fg_color=self.cor_terciaria,
                 border_color=self.cor_borda,
                 text_color=self.cor_texto
             )
-            ent_pil.pack(side="left", padx=2)
+            ent_pil.pack(side="left", padx=1)
 
             ent_val = ctk.CTkEntry(
                 row,
-                width=120,
+                width=100,
                 textvariable=self.valores[tam],
                 placeholder_text="0,00",
                 fg_color=self.cor_terciaria,
@@ -623,119 +620,120 @@ class EnvioCortes(ctk.CTkFrame):
                 text_color=self.cor_texto,
                 placeholder_text_color="#888888"
             )
-            ent_val.pack(side="left", padx=2)
+            ent_val.pack(side="left", padx=1)
             ent_val.bind("<KeyRelease>", lambda e, T=tam: self._on_valor_edit(T))
 
             ent_qtd.bind("<KeyRelease>", lambda e, T=tam: self._on_qtd_edit(T))
             ent_pil.bind("<KeyRelease>", lambda e, T=tam: self._on_piloto_edit(T))
 
-            lbl_total = ctk.CTkLabel(row, text=fmt_moeda(0), width=110, text_color=self.cor_texto)
-            lbl_total.pack(side="left", padx=2)
+            lbl_total = ctk.CTkLabel(row, text=fmt_moeda(0), width=90, text_color=self.cor_texto)
+            lbl_total.pack(side="left", padx=1)
 
             self.grade_widgets[tam] = {"disp": lbl_disp, "sub": lbl_total, "ent_val": ent_val}
 
         # Totais - COM TEMA
         totais = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-        totais.pack(fill="x", pady=(4, 2))
+        totais.pack(fill="x", pady=(2, 1))
 
         ctk.CTkLabel(
             totais,
-            text="Total de Peças:",
-            width=120,
-            font=("Arial", 12, "bold"),
+            text="Total Peças:",
+            width=90,
+            font=("Arial", 11, "bold"),  # Fonte menor
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
 
         self.lbl_total_pecas = ctk.CTkLabel(
             totais,
             text="0",
-            font=("Arial", 12, "bold"),
+            font=("Arial", 11, "bold"),
             text_color=self.cor_texto
         )
-        self.lbl_total_pecas.pack(side="left", padx=4)
+        self.lbl_total_pecas.pack(side="left", padx=2)
 
         ctk.CTkLabel(
             totais,
             text="Valor Total:",
-            width=110,
-            font=("Arial", 12, "bold"),
+            width=90,
+            font=("Arial", 11, "bold"),
             text_color=self.cor_texto
-        ).pack(side="left", padx=12)
+        ).pack(side="left", padx=8)
 
         self.lbl_valor_total = ctk.CTkLabel(
             totais,
             text=fmt_moeda(0),
-            font=("Arial", 12, "bold"),
+            font=("Arial", 11, "bold"),
             text_color=self.cor_texto
         )
-        self.lbl_valor_total.pack(side="left", padx=4)
+        self.lbl_valor_total.pack(side="left", padx=2)
 
-        # Botões de ação - COM TEMA
+        # Botões de ação - COM TEMA - MAIS COMPACTOS
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-        botoes.pack(fill="x", pady=(4, 6))
+        botoes.pack(fill="x", pady=(2, 4))
 
+        # Botões com larguras reduzidas
         ctk.CTkButton(
             botoes,
             text="Confirmar Envio",
-            width=160,
+            width=140,
             command=self.confirmar_envio,
             fg_color=self.cor_sucesso,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
 
         ctk.CTkButton(
             botoes,
-            text="Pré-visualizar PDF",
-            width=150,
+            text="Pré-visualizar",
+            width=120,
             command=self.preview_impressao,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
 
         ctk.CTkButton(
             botoes,
             text="Exportar PDF",
-            width=140,
+            width=100,
             command=self.exportar_pdf,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
 
         ctk.CTkButton(
             botoes,
             text="Limpar",
-            width=120,
+            width=80,
             command=self._limpar,
             fg_color=self.cor_secundaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
 
-        # DIREITA (piloto + textos) - COM TEMA
+        # DIREITA (piloto + textos) - COM TEMA - MAIS COMPACTO
         right = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
         right.grid(row=0, column=1, sticky="nsew")
 
         sec_piloto = ctk.CTkFrame(right, fg_color=self.cor_fundo)
-        sec_piloto.pack(fill="x", pady=(2, 6))
+        sec_piloto.pack(fill="x", pady=(1, 4))
 
         ctk.CTkLabel(
             sec_piloto,
             text="Piloto Enviado",
-            font=("Arial", 13, "bold"),
+            font=("Arial", 12, "bold"),  # Fonte menor
             text_color=self.cor_texto
-        ).pack(anchor="w", padx=4, pady=(4, 2))
+        ).pack(anchor="w", padx=4, pady=(2, 1))
 
         lp = ctk.CTkFrame(sec_piloto, fg_color=self.cor_fundo)
-        lp.pack(fill="x", padx=4, pady=4)
+        lp.pack(fill="x", padx=4, pady=2)
 
-        ctk.CTkLabel(lp, text="Tamanho:", width=80, text_color=self.cor_texto).pack(side="left")
+        ctk.CTkLabel(lp, text="Tamanho:", width=60, text_color=self.cor_texto).pack(side="left")
 
         piloto_tam_cb = ctk.CTkComboBox(
             lp,
-            width=100,
+            width=80,
             values=self.tamanhos,
             variable=self.piloto_tam_var,
             state="readonly",
@@ -749,82 +747,86 @@ class EnvioCortes(ctk.CTkFrame):
             dropdown_hover_color=self.cor_hover
         )
         piloto_tam_cb.set(self.tamanhos[0])
-        piloto_tam_cb.pack(side="left", padx=4)
+        piloto_tam_cb.pack(side="left", padx=2)
 
-        ctk.CTkLabel(lp, text="Qtd:", width=40, text_color=self.cor_texto).pack(side="left")
+        ctk.CTkLabel(lp, text="Qtd:", width=30, text_color=self.cor_texto).pack(side="left")
 
         ctk.CTkEntry(
             lp,
-            width=80,
+            width=60,
             textvariable=self.piloto_qtd_var,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
-        ).pack(side="left", padx=4)
+        ).pack(side="left", padx=2)
 
         ctk.CTkButton(
             lp,
             text="Registrar",
-            width=100,
+            width=80,
             command=self._registrar_piloto,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
-        ).pack(side="left", padx=6)
+        ).pack(side="left", padx=4)
 
         self.piloto_resumo_lbl = ctk.CTkLabel(
             sec_piloto,
             text="Nenhum.",
             anchor="w",
+            font=("Arial", 10),  # Fonte menor
             text_color=self.cor_texto
         )
-        self.piloto_resumo_lbl.pack(fill="x", padx=4, pady=(0, 4))
+        self.piloto_resumo_lbl.pack(fill="x", padx=4, pady=(0, 2))
 
-        # Área de textos - COM TEMA
+        # Área de textos - COM TEMA - ALTURAS REDUZIDAS
         ctk.CTkLabel(
             right,
-            text="Aviamentos Enviados:",
+            text="Aviamentos:",
+            font=("Arial", 10),  # Fonte menor
             text_color=self.cor_texto
         ).pack(anchor="w", padx=4)
 
         self.aviamentos_entry = ctk.CTkTextbox(
             right,
-            height=60,
+            height=40,  # Altura reduzida
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
-        self.aviamentos_entry.pack(fill="x", expand=False, padx=4, pady=4)
+        self.aviamentos_entry.pack(fill="x", expand=False, padx=4, pady=1)
 
         ctk.CTkLabel(
             right,
-            text="Outros (linha, renda, aparelhos, etc.):",
+            text="Outros (linha, renda, etc.):",
+            font=("Arial", 10),
             text_color=self.cor_texto
         ).pack(anchor="w", padx=4)
 
         self.outros_entry = ctk.CTkTextbox(
             right,
-            height=60,
+            height=40,
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
-        self.outros_entry.pack(fill="x", expand=False, padx=4, pady=4)
+        self.outros_entry.pack(fill="x", expand=False, padx=4, pady=1)
 
         ctk.CTkLabel(
             right,
             text="Observações:",
+            font=("Arial", 10),
             text_color=self.cor_texto
         ).pack(anchor="w", padx=4)
 
         self.obs_text = ctk.CTkTextbox(
             right,
-            height=100,
+            height=80,  # Altura reduzida
             fg_color=self.cor_terciaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto
         )
-        self.obs_text.pack(fill="both", expand=True, padx=4, pady=4)
+        self.obs_text.pack(fill="both", expand=True, padx=4, pady=1)
 
         # Carregar dados após a UI estar construída
         self.after(100, self._carregar_dados_iniciais)
@@ -1420,34 +1422,23 @@ class EnvioCortes(ctk.CTkFrame):
             entry.insert(0, data_escolhida.strftime("%d/%m/%Y"))
             top.destroy()
 
+        # Fechar janela anterior se existir
+        if hasattr(self, '_cal_janela') and self._cal_janela.winfo_exists():
+            self._cal_janela.destroy()
+
         top = ctk.CTkToplevel(self)
-        top.withdraw()
+        self._cal_janela = top  # Guardar referência
         top.title("Calendário")
+        top.resizable(False, False)
 
-        # Quem deve ser usado como referência? → O BOTÃO! (se informado)
-        alvo = widget_origem if widget_origem else entry
-        alvo.update_idletasks()
+        # Não definir geometry ainda - vamos criar conteúdo primeiro
 
-        # Posição do alvo real
-        alvo_x = alvo.winfo_rootx()
-        alvo_y = alvo.winfo_rooty()
-        alvo_altura = alvo.winfo_height()
+        top.transient(self)  # Fica sempre na frente da janela principal
+        top.grab_set()  # Modal - trava interação com outras janelas
 
-        # Tamanho padrão
-        largura_cal = 300
-        altura_cal = 300
-
-        # Distância vertical
-        deslocamento_baixo = 1  # 12 px (bom visual)
-
-        # POSIÇÃO FINAL — AGORA ALINHADA AO BOTÃO 📅
-        x = alvo_x - 145
-        y = alvo_y + alvo_altura + 13
-        y = alvo_y + alvo_altura + deslocamento_baixo
-
-        top.geometry(f"{largura_cal}x{altura_cal}+{x}+{y}")
-        top.transient(self)
-        top.grab_set()
+        # =============================================
+        # CONTEÚDO DO CALENDÁRIO (criar primeiro)
+        # =============================================
 
         # --- CALENDÁRIO em português ---
         MESES_PT = [
@@ -1523,8 +1514,71 @@ class EnvioCortes(ctk.CTkFrame):
 
         desenhar_calendario()
 
-        top.deiconify()
+        # =============================================
+        # AGORA SIM - POSICIONAR A JANELA
+        # (após o conteúdo estar criado)
+        # =============================================
+
+        # Forçar atualização para calcular tamanhos
+        top.update_idletasks()
+
+        # Obter posição do widget alvo (botão ou campo)
+        alvo = widget_origem if widget_origem else entry
+        alvo.update_idletasks()
+
+        # Posição do widget alvo
+        alvo_x = alvo.winfo_rootx()
+        alvo_y = alvo.winfo_rooty()
+        alvo_largura = alvo.winfo_width()
+        alvo_altura = alvo.winfo_height()
+
+        # Tamanho real do calendário (agora já calculado)
+        largura_cal = top.winfo_width()
+        altura_cal = top.winfo_height()
+
+        # CALCULAR POSIÇÃO X (horizontal)
+        # =============================================
+        # PARA MOVER: ajuste os valores abaixo
+        # =============================================
+        if widget_origem:  # Se for o botão 📅
+            # Posição X: alinhar à direita do botão
+            x = alvo_x + alvo_largura - largura_cal  # Alinha à direita
+
+            # AJUSTE AQUI para mover horizontalmente:
+            # x = x - 150  # ← SUBTRAIA valor para mover para ESQUERDA
+            x = x - 100  # ← Exemplo: 100px para esquerda
+            # x = x + 50   # ← SOME valor para mover para DIREITA
+        else:  # Se for o campo entry
+            # Centralizar sobre o campo
+            x = alvo_x + (alvo_largura // 2) - (largura_cal // 2)
+
+        # CALCULAR POSIÇÃO Y (vertical)
+        # =============================================
+        # PARA MOVER: ajuste os valores abaixo
+        # =============================================
+        y = alvo_y + alvo_altura  # Coloca abaixo do widget
+        y = y + 5  # ← SOME valor para mover para BAIXO
+        # y = y - 50  # ← SUBTRAIA valor para mover para CIMA
+
+        # Ajustar para não sair da tela
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        if x + largura_cal > screen_width:
+            x = screen_width - largura_cal - 20
+        if x < 0:
+            x = 20
+        if y + altura_cal > screen_height:
+            y = alvo_y - altura_cal - 10
+        if y < 0:
+            y = 20
+
+        # APLICAR POSIÇÃO FINAL
+        top.geometry(f"{largura_cal}x{altura_cal}+{int(x)}+{int(y)}")
+
+        # Garantir que está na frente
         top.lift()
+        top.focus_force()
 
     def _limpar(self):
         self.corte_selecionado = None
@@ -1898,6 +1952,7 @@ class EnvioCortes(ctk.CTkFrame):
             from reportlab.pdfgen import canvas
             from reportlab.lib.pagesizes import A4
             from reportlab.lib.units import mm
+            from reportlab.lib.colors import Color, black, gray
         except ImportError:
             messagebox.showerror(
                 "Erro",
@@ -1905,13 +1960,13 @@ class EnvioCortes(ctk.CTkFrame):
                 "Instale com:\n\n"
                 "pip install reportlab"
             )
-            return None  # <-- importante: não tenta abrir depois
+            return None
 
         if not output_path:
             fd, output_path = tempfile.mkstemp(suffix=".pdf", prefix="envio_corte_")
             os.close(fd)
 
-        # Funções auxiliares internas
+        # Funções auxiliares
         def safe_int(v):
             try:
                 s = str(v).strip()
@@ -1930,7 +1985,7 @@ class EnvioCortes(ctk.CTkFrame):
             except Exception:
                 return 0.0
 
-        # ---------- Dados do prestador ----------
+        # ---------- Dados ----------
         prest_nome = self._prestador_nome
         prest_tel = self.telefone_entry.get()
         prest_banco = self.banco_entry.get()
@@ -1939,174 +1994,374 @@ class EnvioCortes(ctk.CTkFrame):
         prest_pix = self.pix_entry.get()
         prest_titular = self.titular_entry.get()
 
-        # ---------- Dados do corte ----------
         corte_codigo = self.codigo_entry.get()
         corte_desc = self.descricao_entry.get()
         corte_ordem = self.ordem_entry.get()
 
-        # ---------- Outros dados ----------
         data_envio = self.data_entry.get()
+        hora_envio = datetime.now().strftime("%H:%M")
         tipo_servico = getattr(self, "_tipo_servico", "")
 
         aviamentos = self.aviamentos_entry.get("1.0", "end-1c")
         outros = self.outros_entry.get("1.0", "end-1c")
         obs = self.obs_text.get("1.0", "end-1c")
 
-        # ---------- Quantidades e valores ----------
+        # Quantidades e valores
         qtds = {t: safe_int(self.quantidades[t].get()) for t in self.tamanhos}
         pils = {t: safe_int(self.pilotos[t].get()) for t in self.tamanhos}
         vals = {t: parse_valor(self.valores[t].get()) for t in self.tamanhos}
         totais = {t: (qtds[t] + pils[t]) * vals[t] for t in self.tamanhos}
         total_geral = sum(totais.values())
+        total_pecas = sum(qtds.values()) + sum(pils.values())
 
         # ---------- Criar PDF ----------
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
 
-        # Logo
+        # Cores
+        cor_primaria = Color(0.2, 0.4, 0.6)  # Azul escuro
+        cor_secundaria = Color(0.8, 0.9, 0.95)  # Azul claro
+        cor_cinza = Color(0.95, 0.95, 0.95)
+
+        # Cabeçalho com fundo colorido
+        c.setFillColor(cor_primaria)
+        c.rect(0, height - 30 * mm, width, 30 * mm, fill=1, stroke=0)
+
+        # LOGO MAIOR E MAIS PARA CIMA
         if PIL_OK and os.path.exists(LOGO_PATH):
             try:
                 img = Image.open(LOGO_PATH)
                 w, h = img.size
-                max_w = 50 * mm
+                max_w = 30 * mm  # Aumentado de 25 para 30mm
                 scale = max_w / w
+                img_w = w * scale
+                img_h = h * scale
+
+                # Desenhar a logo MAIS PARA CIMA
+                # Posição Y aumentada para subir a logo (height - 20mm em vez de -25mm)
                 c.drawImage(
                     LOGO_PATH,
-                    width - 60 * mm,
-                    height - 30 * mm,
-                    width=w * scale,
-                    height=h * scale
+                    width - 40 * mm,  # Posição X ajustada
+                    height - 22 * mm,  # POSIÇÃO Y MAIS ALTA (subiu 3mm)
+                    width=img_w,
+                    height=img_h,
+                    mask='auto'
                 )
             except Exception:
                 pass
 
         # Título
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(30 * mm, height - 30 * mm, "Envio de Corte / Controle de Mão de Obra")
+        c.setFont("Helvetica-Bold", 18)
+        c.setFillColorRGB(1, 1, 1)
+        c.drawString(20 * mm, height - 20 * mm, "CONTROLE DE MÃO DE OBRA")
 
-        # Prestador
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 40 * mm, "Prestador:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 40 * mm, prest_nome or "")
+        c.setFont("Helvetica", 11)
+        c.drawString(20 * mm, height - 26 * mm, "Envio de Corte - Comprovante")
 
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 48 * mm, "Telefone:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 48 * mm, prest_tel or "")
+        # Data e hora - MOVIDA PARA NÃO SOBREPOR
+        c.setFont("Helvetica", 9)
+        # Movida para a esquerda para não sobrepor com a logo maior
+        c.drawString(width - 85 * mm, height - 26 * mm, f"Data/Hora: {data_envio} {hora_envio}")
 
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 56 * mm, "Banco / Ag.:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 56 * mm, f"{prest_banco or ''} / {prest_agencia or ''}")
+        # Linha separadora
+        c.setStrokeColor(cor_primaria)
+        c.setLineWidth(1)
+        c.line(20 * mm, height - 35 * mm, width - 20 * mm, height - 35 * mm)
 
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 64 * mm, "Conta:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 64 * mm, prest_conta or "")
+        # ---------- SEÇÃO 1: Dados do Prestador ----------
+        y = height - 42 * mm
 
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 72 * mm, "PIX:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 72 * mm, prest_pix or "")
+        # Título da seção
+        c.setFillColor(cor_primaria)
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(20 * mm, y, "DADOS DO PRESTADOR")
 
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 80 * mm, "Titular:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 80 * mm, prest_titular or "")
+        # Altura do cartão reduzida
+        altura_conteudo = 28 * mm
 
-        # Corte / serviço
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 92 * mm, "Ordem / Código:")
-        c.setFont("Helvetica", 10)
-        c.drawString(65 * mm, height - 92 * mm, f"{corte_ordem or ''} / {corte_codigo or ''}")
+        # Retângulo de fundo
+        c.setFillColor(cor_cinza)
+        c.rect(20 * mm, y - altura_conteudo, width - 40 * mm, altura_conteudo, fill=1, stroke=0)
+        c.setStrokeColor(gray)
+        c.setLineWidth(0.5)
+        c.rect(20 * mm, y - altura_conteudo, width - 40 * mm, altura_conteudo, fill=0, stroke=1)
 
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 100 * mm, "Descrição:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 100 * mm, corte_desc or "")
+        # Conteúdo em duas colunas
+        y_start = y - 8 * mm
 
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 108 * mm, "Data envio:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 108 * mm, data_envio or "")
+        # Linha 1: Nome e Telefone
+        c.setFillColor(black)
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_start, "Nome:")
+        c.setFont("Helvetica", 9)
+        nome_text = prest_nome or ""
+        if len(nome_text) > 25:
+            nome_text = nome_text[:22] + "..."
+        c.drawString(42 * mm, y_start, nome_text)
 
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, height - 116 * mm, "Serviço:")
-        c.setFont("Helvetica", 10)
-        c.drawString(55 * mm, height - 116 * mm, tipo_servico or "")
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(width / 2 + 10 * mm, y_start, "Tel:")
+        c.setFont("Helvetica", 9)
+        c.drawString(width / 2 + 30 * mm, y_start, prest_tel or "")
 
-        # Tabela de tamanhos
-        y_table = height - 135 * mm
-        c.setFont("Helvetica-Bold", 10)
-        headers = ["Tam.", "Qtd", "Piloto", "Valor/Peça", "Subtotal"]
-        col_widths = [20 * mm, 20 * mm, 20 * mm, 25 * mm, 25 * mm]
-        x = 30 * mm
-        for i, h in enumerate(headers):
-            c.drawString(x, y_table, h)
+        # Linha 2: CPF e PIX
+        y_start -= 5 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_start, "CPF:")
+        c.setFont("Helvetica", 9)
+        c.drawString(42 * mm, y_start, self.cpf_entry.get() or "")
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(width / 2 + 10 * mm, y_start, "PIX:")
+        c.setFont("Helvetica", 9)
+        c.drawString(width / 2 + 30 * mm, y_start, prest_pix or "")
+
+        # Linha 3: Banco e Agência
+        y_start -= 5 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_start, "Banco:")
+        c.setFont("Helvetica", 9)
+        c.drawString(42 * mm, y_start, prest_banco or "")
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(width / 2 + 10 * mm, y_start, "Agência:")
+        c.setFont("Helvetica", 9)
+        c.drawString(width / 2 + 30 * mm, y_start, prest_agencia or "")
+
+        # Linha 4: Conta e Titular
+        y_start -= 5 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_start, "Conta:")
+        c.setFont("Helvetica", 9)
+        c.drawString(42 * mm, y_start, prest_conta or "")
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(width / 2 + 10 * mm, y_start, "Titular:")
+        c.setFont("Helvetica", 9)
+        titular_text = prest_titular or ""
+        if len(titular_text) > 25:
+            titular_text = titular_text[:22] + "..."
+        c.drawString(width / 2 + 30 * mm, y_start, titular_text)
+
+        # ---------- SEÇÃO 2: Dados do Corte ----------
+        y = y_start - 10 * mm
+
+        # Título da seção
+        c.setFillColor(cor_primaria)
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(20 * mm, y, "DADOS DO CORTE")
+
+        # Altura reduzida
+        altura_corte = 16 * mm
+
+        # Retângulo de fundo
+        c.setFillColor(cor_cinza)
+        c.rect(20 * mm, y - altura_corte, width - 40 * mm, altura_corte, fill=1, stroke=0)
+        c.setStrokeColor(gray)
+        c.rect(20 * mm, y - altura_corte, width - 40 * mm, altura_corte, fill=0, stroke=1)
+
+        # Conteúdo
+        y_corte = y - 6 * mm
+
+        # Linha 1: Ordem, Código, Serviço
+        c.setFillColor(black)
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_corte, "Ordem:")
+        c.setFont("Helvetica", 9)
+        ordem_text = corte_ordem or ""
+        c.drawString(42 * mm, y_corte, ordem_text)
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(70 * mm, y_corte, "Código:")
+        c.setFont("Helvetica", 9)
+        codigo_text = corte_codigo or ""
+        c.drawString(85 * mm, y_corte, codigo_text)
+
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(110 * mm, y_corte, "Serviço:")
+        c.setFont("Helvetica", 9)
+        servico_text = tipo_servico or ""
+        if len(servico_text) > 12:
+            servico_text = servico_text[:10] + "..."
+        c.drawString(125 * mm, y_corte, servico_text)
+
+        # Linha 2: Descrição
+        y_corte -= 5 * mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_corte, "Descrição:")
+        c.setFont("Helvetica", 9)
+        desc_text = corte_desc or ""
+        if len(desc_text) > 60:
+            desc_text = desc_text[:57] + "..."
+        c.drawString(45 * mm, y_corte, desc_text)
+
+        # ---------- SEÇÃO 3: Tabela de Quantidades ----------
+        y_table_start = y_corte - 12 * mm
+
+        # Título da seção
+        c.setFillColor(cor_primaria)
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(20 * mm, y_table_start, "QUANTIDADES POR TAMANHO")
+
+        y_table_start -= 6 * mm
+
+        # Cabeçalho da tabela
+        headers = ["TAM.", "QTD", "PILOTOS", "VALOR", "SUBTOTAL"]
+        col_widths = [20 * mm, 18 * mm, 22 * mm, 25 * mm, 28 * mm]
+        table_width = sum(col_widths)
+
+        # Posicionar tabela
+        table_x = 25 * mm
+
+        # Fundo do cabeçalho
+        c.setFillColor(cor_secundaria)
+        c.rect(table_x, y_table_start - 6 * mm, table_width, 6 * mm, fill=1, stroke=1)
+
+        # Texto do cabeçalho
+        x = table_x
+        c.setFont("Helvetica-Bold", 9)
+        c.setFillColor(black)
+        for i, header in enumerate(headers):
+            c.drawCentredString(x + col_widths[i] / 2, y_table_start - 3.5 * mm, header)
             x += col_widths[i]
 
-        y_table -= 6 * mm
-        c.setFont("Helvetica", 9)
-        for tam in self.tamanhos:
-            x = 30 * mm
-            c.drawString(x, y_table, tam)
+        y_table_start -= 8 * mm
+
+        # Dados da tabela
+        y = y_table_start
+        c.setFont("Helvetica", 8)
+        for i, tam in enumerate(self.tamanhos):
+            # Linha zebrada
+            if i % 2 == 0:
+                c.setFillColor(cor_cinza)
+                c.rect(table_x, y - 5 * mm, table_width, 5 * mm, fill=1, stroke=0)
+
+            c.setFillColor(black)
+            x = table_x
+            # Tamanho
+            c.drawCentredString(x + col_widths[0] / 2, y - 3 * mm, tam)
             x += col_widths[0]
-            c.drawString(x, y_table, str(qtds[tam]))
+            # Quantidade
+            c.drawCentredString(x + col_widths[1] / 2, y - 3 * mm, str(qtds[tam]))
             x += col_widths[1]
-            c.drawString(x, y_table, str(pils[tam]))
+            # Pilotos
+            c.drawCentredString(x + col_widths[2] / 2, y - 3 * mm, str(pils[tam]))
             x += col_widths[2]
-            c.drawString(x, y_table, fmt_dec2_br(vals[tam]))
+            # Valor
+            c.drawCentredString(x + col_widths[3] / 2, y - 3 * mm, fmt_dec2_br(vals[tam]))
             x += col_widths[3]
-            c.drawString(x, y_table, fmt_dec2_br(totais[tam]))
-            y_table -= 5 * mm
+            # Subtotal
+            c.drawCentredString(x + col_widths[4] / 2, y - 3 * mm, fmt_dec2_br(totais[tam]))
 
-        # Total geral
-        y_table -= 5 * mm
+            y -= 6 * mm
+
+        # Linha de total
+        y -= 3 * mm
+        c.setStrokeColor(black)
+        c.setLineWidth(0.5)
+        c.line(table_x, y, table_x + table_width, y)
+
+        y -= 6 * mm
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, y_table, "TOTAL GERAL:")
-        c.drawString(30 * mm + sum(col_widths[:4]), y_table, fmt_dec2_br(total_geral))
+        c.drawString(table_x, y, "TOTAL PEÇAS:")
+        c.drawRightString(table_x + sum(col_widths[:3]) - 5 * mm, y, str(total_pecas))
 
-        # Aviamentos, outros, observações
-        y_text = y_table - 15 * mm
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, y_text, "Aviamentos:")
-        c.setFont("Helvetica", 9)
-        c.drawString(
-            30 * mm,
-            y_text - 6 * mm,
-            aviamentos[:100] + "..." if len(aviamentos) > 100 else aviamentos
-        )
+        c.drawString(table_x + sum(col_widths[:3]) + 5 * mm, y, "VALOR TOTAL:")
+        c.drawRightString(table_x + table_width, y, fmt_dec2_br(total_geral))
 
-        y_text -= 12 * mm
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, y_text, "Outros:")
-        c.setFont("Helvetica", 9)
-        c.drawString(
-            30 * mm,
-            y_text - 6 * mm,
-            outros[:100] + "..." if len(outros) > 100 else outros
-        )
+        # ---------- SEÇÃO 4: Informações Adicionais ----------
+        y_info_start = y - 15 * mm
 
-        y_text -= 12 * mm
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, y_text, "Observações:")
+        # Título da seção
+        c.setFillColor(cor_primaria)
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(20 * mm, y_info_start, "INFORMAÇÕES ADICIONAIS")
 
-        # Quebra observações em linhas curtas
-        c.setFont("Helvetica", 9)
-        obs_lines = []
-        line = ""
-        for word in obs.split():
-            if len(line + " " + word) <= 100:
-                line += " " + word
-            else:
-                obs_lines.append(line)
-                line = word
-        if line:
-            obs_lines.append(line)
+        y_info_start -= 6 * mm
 
-        for i, line in enumerate(obs_lines[:5]):
-            c.drawString(30 * mm, y_text - 6 * mm - (i * 4 * mm), line.strip())
+        # Aviamentos
+        c.setFillColor(black)
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(25 * mm, y_info_start, "Aviamentos:")
+        c.setFont("Helvetica", 8)
+
+        if aviamentos.strip():
+            lines = []
+            words = aviamentos.split()
+            line = ""
+            for word in words:
+                if len(line + " " + word) <= 90:
+                    line += " " + word
+                else:
+                    lines.append(line.strip())
+                    line = word
+            if line:
+                lines.append(line.strip())
+
+            for i, line in enumerate(lines[:3]):
+                c.drawString(30 * mm, y_info_start - (i + 1) * 4 * mm, line)
+            if len(lines) > 3:
+                c.drawString(30 * mm, y_info_start - 4 * 4 * mm, "...")
+            y_info_start -= len(lines[:3]) * 4 * mm + 4 * mm
+        else:
+            y_info_start -= 4 * mm
+
+        # Outros
+        if outros.strip():
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(25 * mm, y_info_start, "Outros:")
+            c.setFont("Helvetica", 8)
+
+            lines = []
+            words = outros.split()
+            line = ""
+            for word in words:
+                if len(line + " " + word) <= 90:
+                    line += " " + word
+                else:
+                    lines.append(line.strip())
+                    line = word
+            if line:
+                lines.append(line.strip())
+
+            for i, line in enumerate(lines[:2]):
+                c.drawString(30 * mm, y_info_start - (i + 1) * 4 * mm, line)
+            if len(lines) > 2:
+                c.drawString(30 * mm, y_info_start - 3 * 4 * mm, "...")
+            y_info_start -= len(lines[:2]) * 4 * mm + 4 * mm
+        else:
+            y_info_start -= 4 * mm
+
+        # Observações
+        if obs.strip():
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(25 * mm, y_info_start, "Observações:")
+            c.setFont("Helvetica", 8)
+
+            lines = []
+            words = obs.split()
+            line = ""
+            for word in words:
+                if len(line + " " + word) <= 90:
+                    line += " " + word
+                else:
+                    lines.append(line.strip())
+                    line = word
+            if line:
+                lines.append(line.strip())
+
+            for i, line in enumerate(lines[:4]):
+                c.drawString(30 * mm, y_info_start - (i + 1) * 4 * mm, line)
+            if len(lines) > 4:
+                c.drawString(30 * mm, y_info_start - 5 * 4 * mm, "...")
+
+        # ---------- RODAPÉ ----------
+        c.setFont("Helvetica", 7)
+        c.setFillColor(gray)
+        c.drawCentredString(width / 2, 8 * mm, "Documento gerado automaticamente - Sistema de Controle de Mão de Obra")
+
+        # Número de página
+        c.drawString(width - 25 * mm, 5 * mm, "Página 1/1")
 
         c.save()
         return output_path
