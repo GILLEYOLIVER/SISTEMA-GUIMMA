@@ -1,3 +1,76 @@
+
+def corrigir_labels_pagina_temas(widget):
+    """
+    CORREÇÃO CRÍTICA: Remove fundos, bordas e contornos dos CTkLabels
+    que estão dentro de botões na página de Temas.
+    Isso elimina o quadrado branco ao redor do texto.
+    """
+    import customtkinter as ctk
+
+    try:
+        # CORREÇÃO 1: Labels dentro de botões (MAIOR PROBLEMA)
+        if isinstance(widget, ctk.CTkButton):
+            # Procura por labels dentro do botão
+            for child in widget.winfo_children():
+                if isinstance(child, ctk.CTkLabel):
+                    # Remove COMPLETAMENTE qualquer aparência visual
+                    try:
+                        child.configure(
+                            fg_color="transparent",  # FUNDO TRANSPARENTE
+                            border_width=0,  # SEM BORDA
+                            corner_radius=0,  # SEM CANTOS ARREDONDADOS
+                            bg_color="transparent"  # COR DE FUNDO TRANSPARENTE
+                        )
+                    except Exception:
+                        pass
+
+                    # Remove highlight do Tkinter (nivel mais baixo)
+                    try:
+                        child.configure(highlightthickness=0)
+                    except Exception:
+                        pass
+
+            # Também remove bordas do próprio botão se existirem
+            try:
+                widget.configure(border_width=0)
+            except Exception:
+                pass
+
+        # CORREÇÃO 2: Labels soltos na página
+        elif isinstance(widget, ctk.CTkLabel):
+            try:
+                # Verifica se o label tem cor de fundo visível
+                fg_color = widget.cget("fg_color")
+                if fg_color and fg_color not in ["transparent", "None", "", None]:
+                    widget.configure(
+                        fg_color="transparent",
+                        border_width=0,
+                        corner_radius=0
+                    )
+                else:
+                    # Já é transparente, só remove bordas
+                    widget.configure(border_width=0, corner_radius=0)
+            except Exception:
+                # Fallback: tenta tornar transparente de qualquer forma
+                try:
+                    widget.configure(fg_color="transparent", border_width=0, corner_radius=0)
+                except Exception:
+                    pass
+
+        # CORREÇÃO 3: Remove bordas de outros widgets que podem causar contorno
+        elif isinstance(widget, (ctk.CTkEntry, ctk.CTkOptionMenu, ctk.CTkComboBox)):
+            try:
+                widget.configure(border_width=0, highlightthickness=0)
+            except Exception:
+                pass
+
+        # APLICA RECURSIVAMENTE EM TODOS OS FILHOS
+        for child in widget.winfo_children():
+            corrigir_labels_pagina_temas(child)
+
+    except Exception as e:
+        # Ignora erros, não quebra a aplicação
+        pass
 import copy
 import json
 import math
@@ -10,47 +83,7 @@ from PIL import Image, ImageTk, ImageGrab
 import tkinter.messagebox as messagebox
 # =================== UTILITÁRIOS DE CORREÇÃO GLOBAL ===================
 
-def remover_bordas_botoes_tema(root_widget):
-    """
-    Remove bordas, fundos e contornos errados deixados pelo CTk ao trocar de tema.
-    Deve ser chamada APÓS a aplicação do tema, inclusive no MENU PRINCIPAL.
-    """
-    import customtkinter as ctk
-    import tkinter as tk
 
-    def limpar(widget):
-        try:
-            # CTkLabel: nunca deve ter fundo ou borda
-            if isinstance(widget, ctk.CTkLabel):
-                widget.configure(
-                    fg_color="transparent",
-                    border_width=0,
-                    corner_radius=0
-                )
-
-            # CTkButton: remover bordas e fundos de botões decorativos
-            elif isinstance(widget, ctk.CTkButton):
-                widget.configure(
-                    border_width=0,
-                    corner_radius=8
-                )
-
-            # Tk labels (para compatibilidade)
-            elif isinstance(widget, tk.Label):
-                widget.configure(bg="transparent")
-
-            # Tk frames (para compatibilidade)
-            elif isinstance(widget, tk.Frame):
-                widget.configure(bg="transparent")
-
-        except Exception:
-            pass
-
-        # Recursão
-        for child in widget.winfo_children():
-            limpar(child)
-
-    limpar(root_widget)
 
 def corrigir_bordas_labels(widget):
     """
@@ -61,7 +94,7 @@ def corrigir_bordas_labels(widget):
         import customtkinter as ctk
         # Remove borda apenas de labels
         if isinstance(widget, ctk.CTkLabel):
-            widget.configure(border_width=0, corner_radius=0, fg_color="transparent")
+            app = widget.winfo_toplevel(); cor_fundo = getattr(app, "cor_fundo", "transparent"); widget.configure(border_width=0, corner_radius=0, fg_color=cor_fundo)
 
         # Aplicar aos filhos
         for child in widget.winfo_children():
@@ -79,7 +112,7 @@ def corrigir_labels_transparentes(widget):
 
     try:
         if isinstance(widget, ctk.CTkLabel):
-            widget.configure(fg_color="transparent", border_width=0, corner_radius=0)
+            app = widget.winfo_toplevel(); cor_fundo = getattr(app, "cor_fundo", "transparent"); widget.configure(fg_color=cor_fundo, border_width=0, corner_radius=0)
 
         for child in widget.winfo_children():
             corrigir_labels_transparentes(child)
@@ -147,9 +180,9 @@ class BotaoPadronizado:
 
         config_padrao = {
             "height": 32,
-            "font": ("Arial", 12, "bold"),
+            "font": ("Arial", 12),
             "corner_radius": 8,
-            "border_width": 1
+            "border_width": 0
         }
 
         try:
@@ -250,7 +283,7 @@ class _Chip(ctk.CTkButton):
         self.label_text = text
         self.is_active = is_active
         display_text = f"● {text}" if is_active else text
-        font_style = ("Arial", 10, "bold" if is_active else "normal")
+        font_style = ("Arial", 10, "normal")
 
         super().__init__(
             master,
@@ -265,7 +298,7 @@ class _Chip(ctk.CTkButton):
     def set_active(self, active: bool):
         self.is_active = active
         display_text = f"● {self.label_text}" if active else self.label_text
-        font_style = ("Arial", 10, "bold" if active else "normal")
+        font_style = ("Arial", 10, "normal")
         self.configure(text=display_text, font=font_style)
 
 
@@ -340,6 +373,44 @@ def ajustar_hover(cor_base, fator=0.8):
         return f"#{r:02x}{g:02x}{b:02x}".upper()
     except Exception:
         return cor_base
+
+
+def remover_bordas_botoes_tema(widget):
+    """
+    Remove bordas, contornos, relieves e outlines de TODOS os botões
+    pertencentes ao widget informado (menu, topbar, páginas etc.)
+    """
+
+    # Tipos de widgets CTk aceitos
+    botoes = (
+        ctk.CTkButton,
+        ctk.CTkOptionMenu,
+        ctk.CTkComboBox,
+        ctk.CTkSegmentedButton,
+        ctk.CTkSwitch,
+    )
+
+    try:
+        # Se for um botão diretamente
+        if isinstance(widget, botoes):
+            try:
+                widget.configure(
+                    border_width=0,
+                    corner_radius=8,
+                    fg_color="transparent",
+                    hover_color=widget.cget("hover_color") if hasattr(widget, "cget") else "#444",
+                    text_color=widget.cget("text_color") if hasattr(widget, "cget") else "#fff"
+                )
+            except Exception:
+                pass
+
+        # Se possuir filhos, aplicar recursivamente
+        if hasattr(widget, "winfo_children"):
+            for child in widget.winfo_children():
+                remover_bordas_botoes_tema(child)
+
+    except Exception as e:
+        print(f"[Temas] Erro ao remover bordas: {e}")
 
 
 # =================== MÓDULO DE PALETAS ===================
@@ -1924,26 +1995,42 @@ class TemasPage(ctk.CTkFrame):
     # =================== CLASSE CHIP ===================
 
     class _Chip(ctk.CTkButton):
+        """Botão chip para temas SEM LABELS INTERNOS"""
+
         def __init__(self, master, text, command, is_active=False, **kw):
             self.label_text = text
             self.is_active = is_active
-            display_text = f"● {text}" if is_active else text
-            font_style = ("Arial", 10, "bold" if is_active else "normal")
 
+            # Texto com marcador se ativo
+            display_text = f"● {text}" if is_active else text
+            font_style = ("Arial", 10, "normal")
+
+            # Configuração SEM label interno
             super().__init__(
                 master,
-                text=display_text,
+                text=display_text,  # Texto DIRETO no botão
                 command=command,
                 height=22,
                 corner_radius=8,
                 font=font_style,
+                anchor="w",  # Alinha texto à esquerda
+                justify="left",
                 **kw
             )
 
+            # REMOVE TODAS AS BORDAS E CONTORNOS
+            self.configure(
+                border_width=0,
+                fg_color=kw.get('fg_color', "#333333"),
+                hover_color=kw.get('hover_color', "#444444"),
+                text_color=kw.get('text_color', "#FFFFFF")
+            )
+
         def set_active(self, active: bool):
+            """Ativa/desativa o chip"""
             self.is_active = active
             display_text = f"● {self.label_text}" if active else self.label_text
-            font_style = ("Arial", 10, "bold" if active else "normal")
+            font_style = ("Arial", 10, "normal")
             self.configure(text=display_text, font=font_style)
 
     def _build_right_panel(self, parent):
@@ -2277,6 +2364,21 @@ class TemasPage(ctk.CTkFrame):
             print(f"❌ Erro ao aplicar tema '{nome_tema}': {e}")
             return False
 
+            # 🔧 ADICIONE ESTAS LINHAS NO FINAL DO MÉTODO:
+            # Aplica correção imediatamente após trocar tema
+            self.after(100, lambda: corrigir_labels_pagina_temas(self))
+
+            # Atualiza estado interno
+            self.tema_atual = nome_tema
+            self.app.tema_atual = nome_tema
+
+            print(f"🎉 Tema '{nome_tema}' aplicado completamente")
+            return True
+
+        except Exception as e:
+            print(f"❌ Erro ao aplicar tema '{nome_tema}': {e}")
+            return False
+
     def corrigir_bordas_labels(widget):
         """
         Remove qualquer borda, raio ou cor de fundo que possa deixar os textos
@@ -2462,6 +2564,21 @@ class TemasPage(ctk.CTkFrame):
 
             # Atualiza referência de tema atual carregado no editor
             self.tema_atual = nome_tema
+
+        except Exception as e:
+            print(f"❌ Erro ao carregar tema no editor: {e}")
+            self._mostrar_erro(f"Falha ao carregar o tema '{nome_tema}' no editor.\n\n{e}")
+
+            # Atualiza referência de tema atual carregado no editor
+            self.tema_atual = nome_tema
+
+            # 🔧 ADICIONE ESTAS LINHAS:
+            # Aplica correção após carregar tema no editor
+            self.after(100, lambda: corrigir_labels_pagina_temas(self))
+
+            # Correção específica para o preview
+            if hasattr(self, 'preview_panel') and self.preview_panel.winfo_exists():
+                corrigir_labels_pagina_temas(self.preview_panel)
 
         except Exception as e:
             print(f"❌ Erro ao carregar tema no editor: {e}")
