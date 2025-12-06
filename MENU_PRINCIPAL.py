@@ -856,8 +856,7 @@ class OperaMenuApp(ctk.CTk):
         print(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         print(f"🎨 Tema aplicado: {self.current_theme_name}")
 
-
-    # ===== CONFIGURAÇÃO DA JANELA =====
+  # ===== CONFIGURAÇÃO DA JANELA =====
     def _setup_window(self):
         """Configura a janela principal maximizada COM BARRA DE TAREFAS VISÍVEL."""
         self.title("OPERA • Sistema de Gestão")
@@ -897,7 +896,6 @@ class OperaMenuApp(ctk.CTk):
         """Pergunta se o usuário deseja sair."""
         if messagebox.askyesno("Sair", "Deseja realmente sair do sistema?"):
             self.destroy()
-
 
     # ===== CONFIGURAÇÃO DE TECLADO =====
     def _setup_bindings(self):
@@ -1427,7 +1425,7 @@ class OperaMenuApp(ctk.CTk):
         print(f"🎯 Menu construído com tema: {len(self.MENU_ESTRUTURA)} categorias visíveis")
 
     def _create_menu_button(self, categoria: str):
-        """Cria botão de categoria no menu com tema aplicado."""
+        """Cria botão de categoria no menu com hover bem forte e submenu no hover."""
         btn_frame = ctk.CTkFrame(self.menu_frame, fg_color="transparent")
         btn_frame.pack_propagate(False)
         btn_frame.configure(width=self.SIDEBAR_WIDTH - 20, height=self.ITEM_HEIGHT)
@@ -1435,11 +1433,13 @@ class OperaMenuApp(ctk.CTk):
 
         icon = self.icons_cache.get(categoria)
 
-        # Usar cores do tema atual - COM HOVER REALÇADO
+        # Cores base
         btn_bg = self.cor_secundaria
-        btn_hover = self._realcar_cor(self.cor_secundaria, 1.3)  # 30% mais claro
+        # Hover bem mais claro
+        btn_hover = self._realcar_cor(btn_bg, 1.6)
         btn_text = self.cor_texto
         btn_border = self.cor_borda
+        btn_border_hover = self._realcar_cor(btn_border, 1.4)
 
         btn = ctk.CTkButton(
             btn_frame,
@@ -1448,7 +1448,7 @@ class OperaMenuApp(ctk.CTk):
             compound="left",
             anchor="w",
             fg_color=btn_bg,
-            hover_color=btn_hover,  # Hover realçado
+            hover_color=btn_hover,  # ainda deixo configurado, mas o principal é o on_enter
             text_color=btn_text,
             font=("Arial", 16),
             corner_radius=10,
@@ -1459,31 +1459,135 @@ class OperaMenuApp(ctk.CTk):
         btn.pack(fill="both", expand=True, padx=4)
         self._remove_button_focus(btn)
 
-        # CORREÇÃO: Efeito de hover mais pronunciado no frame também
-        def on_enter(_e):
+        def on_enter(_e, c=categoria):
             try:
+                # Destaque visual
                 btn_frame.pack_configure(padx=(12, 8))
-                # Frame com cor de hover mais realçada
-                btn_frame.configure(fg_color=self._realcar_cor(self.cor_primaria, 1.1))
+                btn_frame.configure(
+                    fg_color=self._realcar_cor(btn_bg, 0.9)  # um pouco mais escuro
+                )
+                # AQUI forçamos o hover de verdade
+                btn.configure(fg_color=btn_hover, border_color=btn_border_hover)
+
+                # abre submenu ao passar o mouse
+                if c != "Dashboard":
+                    self._cancel_submenu_close(c)
+                    self._on_category_hover(c)
             except Exception:
                 pass
 
-        def on_leave(_e):
+        def on_leave(_e, c=categoria):
             try:
                 btn_frame.pack_configure(padx=(10, 10))
                 btn_frame.configure(fg_color="transparent")
+                # volta para cor normal
+                btn.configure(fg_color=btn_bg, border_color=btn_border)
+
+                if c != "Dashboard":
+                    self._schedule_submenu_close(c)
             except Exception:
                 pass
 
+        # Hover valendo tanto no frame quanto no botão
         btn_frame.bind("<Enter>", on_enter)
         btn_frame.bind("<Leave>", on_leave)
         btn.bind("<Enter>", on_enter)
         btn.bind("<Leave>", on_leave)
 
-        btn.bind("<Enter>", lambda e, c=categoria: self._on_category_hover(c))
-        btn.bind("<Leave>", lambda e, c=categoria: self._schedule_submenu_close(c))
-
         self.botoes_menu[categoria] = btn_frame
+
+    def _create_submenu(self, categoria: str):
+        """Cria frame de submenu para uma categoria com tema aplicado."""
+        submenu_bg = self.cor_secundaria
+        submenu_border = self.cor_borda
+        # Hover forte para os itens do submenu
+        submenu_hover = self._realcar_cor(submenu_bg, 1.55)
+
+        frame = ctk.CTkFrame(
+            self,
+            fg_color=submenu_bg,
+            corner_radius=12,
+            border_color=submenu_border,
+            border_width=1,
+        )
+        frame.configure(width=self.SIDEBAR_WIDTH - 20)
+
+        frame.bind("<Enter>", lambda e, c=categoria: self._cancel_submenu_close(c))
+        frame.bind("<Leave>", lambda e, c=categoria: self._schedule_submenu_close(c))
+
+        itens = self.MENU_ESTRUTURA.get(categoria, [])
+        visible_items = [
+            item for item in itens
+            if self.user_manager.has_permission(item, "ver", categoria)
+        ]
+
+        for item in visible_items:
+            self._create_submenu_item(frame, categoria, item, submenu_bg, submenu_hover)
+
+        self.submenu_frames[categoria] = frame
+
+    def _create_submenu_item(self, parent, categoria: str, item: str,
+                             submenu_bg: str, submenu_hover: str):
+        """Cria item no submenu com hover bem evidente."""
+        item_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        item_frame.pack_propagate(False)
+        item_frame.pack(fill="x", padx=(6, 6), pady=3)
+        item_frame.configure(width=self.SIDEBAR_WIDTH - 40,
+                             height=self.ITEM_HEIGHT - 6)
+
+        submenu_icon = self._get_submenu_icon(categoria, item)
+
+        item_bg = submenu_bg
+        item_hover = submenu_hover
+        item_text_color = self.cor_texto
+        item_border = self.cor_borda
+        item_border_hover = self._realcar_cor(item_border, 1.4)
+
+        btn = ctk.CTkButton(
+            item_frame,
+            text=f"  {item}",
+            image=submenu_icon,
+            compound="left",
+            anchor="w",
+            fg_color=item_bg,
+            hover_color=item_hover,
+            text_color=item_text_color,
+            font=("Arial", 15),
+            corner_radius=8,
+            border_color=item_border,
+            border_width=1,
+            command=lambda i=item: self._on_submenu_click(categoria, i),
+        )
+        btn.pack(fill="both", expand=True)
+        self._remove_button_focus(btn)
+
+        def on_enter_sub(_e, c=categoria):
+            try:
+                item_frame.pack_configure(padx=(10, 2))
+                item_frame.configure(
+                    fg_color=self._realcar_cor(item_bg, 0.9)
+                )
+                # Força hover no botão também
+                btn.configure(fg_color=item_hover, border_color=item_border_hover)
+                self._cancel_submenu_close(c)
+            except Exception:
+                pass
+
+        def on_leave_sub(_e, c=categoria):
+            try:
+                item_frame.pack_configure(padx=(6, 6))
+                item_frame.configure(fg_color="transparent")
+                btn.configure(fg_color=item_bg, border_color=item_border)
+                self._schedule_submenu_close(c)
+            except Exception:
+                pass
+
+        item_frame.bind("<Enter>", on_enter_sub)
+        item_frame.bind("<Leave>", on_leave_sub)
+        btn.bind("<Enter>", on_enter_sub)
+        btn.bind("<Leave>", on_leave_sub)
+
+    # ===== GERENCIAMENTO DE SUBMENUS =====
 
     def _realcar_cor(self, hex_color: str, factor: float = 1.2) -> str:
         """Clareia uma cor hex para criar hover realçado."""
@@ -1553,93 +1657,6 @@ class OperaMenuApp(ctk.CTk):
         frame.lift()
 
         self._active_submenu = categoria
-
-    def _create_submenu(self, categoria: str):
-        """Cria frame de submenu para uma categoria com tema aplicado."""
-        # Usar cores do tema atual para o submenu
-        submenu_bg = self.cor_secundaria  # Usar cor secundária do tema
-        submenu_border = self.cor_borda
-        submenu_hover = self.cor_hover
-
-        frame = ctk.CTkFrame(
-            self,
-            fg_color=submenu_bg,
-            corner_radius=12,
-            border_color=submenu_border,
-            border_width=1,
-        )
-        frame.configure(width=self.SIDEBAR_WIDTH - 20)
-
-        frame.bind("<Enter>", lambda e, c=categoria: self._cancel_submenu_close(c))
-        frame.bind("<Leave>", lambda e, c=categoria: self._schedule_submenu_close(c))
-
-        itens = self.MENU_ESTRUTURA.get(categoria, [])
-        visible_items = [
-            item for item in itens
-            if self.user_manager.has_permission(item, "ver", categoria)
-        ]
-
-        for item in visible_items:
-            self._create_submenu_item(frame, categoria, item, submenu_bg, submenu_hover)
-
-        self.submenu_frames[categoria] = frame
-
-    def _create_submenu_item(self, parent, categoria: str, item: str, submenu_bg: str, submenu_hover: str):
-        """Cria item no submenu com tema aplicado corretamente."""
-        item_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        item_frame.pack_propagate(False)
-        item_frame.pack(fill="x", padx=(6, 6), pady=3)
-        item_frame.configure(width=self.SIDEBAR_WIDTH - 40, height=self.ITEM_HEIGHT - 6)
-
-        submenu_icon = self._get_submenu_icon(categoria, item)
-
-        # Usar cores do tema atual - CORREÇÃO AQUI
-        item_bg = submenu_bg
-        item_hover = submenu_hover
-        item_text_color = self.cor_texto
-        item_border = self.cor_borda
-
-        btn = ctk.CTkButton(
-            item_frame,
-            text=f"  {item}",
-            image=submenu_icon,
-            compound="left",
-            anchor="w",
-            fg_color=item_bg,
-            hover_color=item_hover,
-            text_color=item_text_color,
-            font=("Arial", 15),
-            corner_radius=8,
-            border_color=item_border,
-            border_width=1,
-            command=lambda i=item: self._on_submenu_click(categoria, i),
-        )
-        btn.pack(fill="both", expand=True)
-        self._remove_button_focus(btn)
-
-        # CORREÇÃO DAS FUNÇÕES HOVER DO SUBMENU
-        def on_enter_sub(_e):
-            try:
-                item_frame.pack_configure(padx=(9, 3))
-                item_frame.configure(fg_color=self._darker(item_bg, 0.80))
-                # NÃO alterar a cor do botão - deixe o hover_color funcionar
-            except Exception:
-                pass
-
-        def on_leave_sub(_e):
-            try:
-                item_frame.pack_configure(padx=(6, 6))
-                item_frame.configure(fg_color="transparent")
-                # NÃO alterar a cor do botão - ele voltará automaticamente
-            except Exception:
-                pass
-
-        item_frame.bind("<Enter>", on_enter_sub)
-        item_frame.bind("<Leave>", on_leave_sub)
-        btn.bind("<Enter>", on_enter_sub)
-        btn.bind("<Leave>", on_leave_sub)
-
-        btn.bind("<Enter>", lambda e, c=categoria: self._cancel_submenu_close(c))
 
     def _on_submenu_click(self, categoria: str, item: str):
         """Manipula clique em item do submenu."""
