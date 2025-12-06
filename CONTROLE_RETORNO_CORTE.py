@@ -6,10 +6,10 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import customtkinter as ctk
+from BANCO_DE_DADOS_PG import get_conn, get_schema
 
 # ---------- CONFIGURAÇÃO ----------
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
-
 
 # ============================== Utils ==============================
 def safe_int(v, default=0):
@@ -21,7 +21,6 @@ def safe_int(v, default=0):
     except Exception:
         return default
 
-
 def parse_valor(s):
     try:
         s = (s or "").strip().replace("R$", "").replace(" ", "")
@@ -30,12 +29,10 @@ def parse_valor(s):
     except Exception:
         return 0.0
 
-
 def fmt_moeda(v):
     s = f"{float(v):,.2f}"
     s = s.replace(",", "X").replace(".", ",").replace("X", ".")
     return f"R$ {s}"
-
 
 def fmt_dec2_br(valor):
     """
@@ -48,7 +45,6 @@ def fmt_dec2_br(valor):
         return f"{float(valor):.2f}".replace(".", ",")
     except (ValueError, TypeError):
         return "0,00"
-
 
 # ---------- helpers p/ cadastro_faccoes ----------
 def _coluna_titular():
@@ -66,7 +62,6 @@ def _coluna_titular():
         return None
     except Exception:
         return None
-
 
 def _coluna_endereco():
     """Descobre nome da coluna do endereço"""
@@ -88,6 +83,39 @@ def _coluna_endereco():
     except Exception:
         return None
 
+# ---------- helpers p/ envios_cortes ----------
+def _coluna_colecao():
+    """Descobre nome da coluna da coleção na tabela envios_cortes"""
+    try:
+        result = db.fetch_all(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = %s AND table_name = %s AND column_name ILIKE '%colecao%'",
+            (db.get_schema(), "envios_cortes")
+        )
+        return result[0]["column_name"] if result else "colecao"
+    except Exception:
+        return "colecao"
+
+def _coluna_material():
+    """Descobre nome da coluna do material na tabela envios_cortes"""
+    try:
+        result = db.fetch_all(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = %s AND table_name = %s AND column_name ILIKE '%material%'",
+            (db.get_schema(), "envios_cortes")
+        )
+        return result[0]["column_name"] if result else "material"
+    except Exception:
+        return "material"
+
+def _coluna_cliente():
+    """Descobre nome da coluna do cliente na tabela envios_cortes"""
+    try:
+        result = db.fetch_all(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = %s AND table_name = %s AND column_name ILIKE '%cliente%'",
+            (db.get_schema(), "envios_cortes")
+        )
+        return result[0]["column_name"] if result else "cliente"
+    except Exception:
+        return "cliente"
 
 # ============================== Tela ==============================
 class RetornoCortes(ctk.CTkFrame):
@@ -99,27 +127,68 @@ class RetornoCortes(ctk.CTkFrame):
         self.sistema = sistema
 
         # === APLICAR CORES AO FRAME PRINCIPAL ===
-        # Usando o mesmo padrão de cores do CADASTRO_DE_CORTE
         self.obter_cores_por_tema()
         self.configure(fg_color=self.cor_fundo)
 
+        # Variáveis de estado
         self.envio_selecionado = None
         self._prestador_id = None
         self._prestador_nome = ""
         self._tipo_servico = ""
+        self._prest_endereco = ""
 
-        # estados grade
+        # Dicionários para grade
         self.entregues = {t: ctk.IntVar(value=0) for t in self.tamanhos}
         self.copias = {t: ctk.IntVar(value=0) for t in self.tamanhos}
         self.defeitos = {t: ctk.IntVar(value=0) for t in self.tamanhos}
         self.faltantes = {t: ctk.IntVar(value=0) for t in self.tamanhos}
 
+        # Dados por tamanho
         self.enviado_por_tam = {t: 0 for t in self.tamanhos}
         self.valor_por_tam = {t: 0.0 for t in self.tamanhos}
-
         self.pilotos_por_tam = {t: 0 for t in self.tamanhos}
+
+        # Widgets da grade
+        self.grade_widgets = {}
+
+        # Variáveis de controle
         self.piloto_entregue_var = ctk.BooleanVar(value=True)
         self.incluir_conferencia_var = ctk.BooleanVar(value=True)
+
+        # Widgets principais (serão criados no _build_ui)
+        self.busca_entry = None
+        self.prestador_entry = None
+        self.servico_entry = None
+        self.telefone_entry = None
+        self.cpf_entry = None
+        self.banco_entry = None
+        self.agencia_entry = None
+        self.conta_entry = None
+        self.pix_entry = None
+        self.titular_entry = None
+        self.envios_tree = None
+        self.tel_encarregado_entry = None
+        self.tel_acabamento_entry = None
+        self.data_chegada_entry = None
+        self.codigo_entry = None
+        self.descricao_entry = None
+        self.ordem_entry = None
+        self.lbl_total_entregue = None
+        self.lbl_total_copias = None
+        self.lbl_total_regulares = None
+        self.lbl_valor_total = None
+        self.piloto_resumo_lbl = None
+        self.aviamentos_txt = None
+        self.outros_txt = None
+        self.obs_geral_txt = None
+        self.cb_mostrar_conf = None
+        self.cb_piloto_entregue = None
+        self.style = None
+
+        # Logo
+        self.logo_img = None
+
+        # Configuração inicial
         self.pack(fill="both", expand=True)
         self._build_ui()
         self.carregar_envios_pendentes()
@@ -618,188 +687,392 @@ class RetornoCortes(ctk.CTkFrame):
 
     # ----------------------------- Loaders -----------------------------
     def carregar_envios_pendentes(self):
+        """Carrega lista de envios a partir da tabela envios_cortes com todos os dados necessários."""
         try:
             termo = (self.busca_entry.get() or "").strip()
             self.envios_tree.delete(*self.envios_tree.get_children())
 
+            params = []
+            where = ["e.status_envio != 'Finalizado'"]  # Mostrar apenas não finalizados
+
             if termo:
-                result = db.fetch_all("""
-                                      SELECT id,
-                                             ordem_corte,
-                                             codigo_corte,
-                                             descricao_corte,
-                                             destino,
-                                             data_envio,
-                                             status,
-                                             servico,
-                                             COALESCE((SELECT SUM(COALESCE(quantidade_pilotos, 0))
-                                                       FROM envio_detalhes_tamanho edt
-                                                       WHERE edt.envio_id = controle_envio_cortes.id), 0) AS qtd_total
-                                      FROM controle_envio_cortes
-                                      WHERE (status = 'Enviado' OR (status = 'Em Conferência' AND %s))
-                                        AND (ordem_corte ILIKE %s OR codigo_corte ILIKE %s OR descricao_corte ILIKE %s)
-                                      ORDER BY data_envio DESC
-                                      """, (True if self.incluir_conferencia_var.get() else False,
-                                            f"%{termo}%", f"%{termo}%", f"%{termo}%"))
-            else:
-                result = db.fetch_all("""
-                                      SELECT id,
-                                             ordem_corte,
-                                             codigo_corte,
-                                             descricao_corte,
-                                             destino,
-                                             data_envio,
-                                             status,
-                                             servico,
-                                             COALESCE((SELECT SUM(COALESCE(quantidade_pilotos, 0))
-                                                       FROM envio_detalhes_tamanho edt
-                                                       WHERE edt.envio_id = controle_envio_cortes.id), 0) AS qtd_total
-                                      FROM controle_envio_cortes
-                                      WHERE status = 'Enviado'
-                                         OR (status = 'Em Conferência' AND %s)
-                                      ORDER BY data_envio DESC LIMIT 60
-                                      """, (True if self.incluir_conferencia_var.get() else False,))
+                like = f"%{termo}%"
+                where.append("""
+                    (e.ordem_corte ILIKE %s 
+                    OR e.codigo_corte ILIKE %s 
+                    OR e.descricao_corte ILIKE %s
+                    OR f.nome ILIKE %s
+                    OR e.cliente ILIKE %s
+                    OR e.colecao ILIKE %s
+                    OR e.material ILIKE %s)
+                """)
+                params.extend([like, like, like, like, like, like, like])
+
+            where_sql = " AND ".join(where)
+
+            # Obter nomes reais das colunas
+            colecao_col = _coluna_colecao()
+            material_col = _coluna_material()
+            cliente_col = _coluna_cliente()
+
+            sql = f"""
+                SELECT
+                    e.id,
+                    COALESCE(e.ordem_corte, '')              AS ordem_corte,
+                    COALESCE(e.codigo_corte, '')             AS codigo_corte,
+                    COALESCE(e.descricao_corte, '')          AS descricao_corte,
+                    COALESCE(f.nome, '')                     AS destino,
+                    TO_CHAR(e.data_envio, 'DD/MM/YYYY')      AS data_envio,
+                    COALESCE(e.status_envio, 'Enviado')      AS status,
+                    COALESCE(e.tipo_servico, '')             AS servico,
+                    COALESCE(e.{colecao_col}, '')            AS colecao,
+                    COALESCE(e.{material_col}, '')           AS material,
+                    COALESCE(e.{cliente_col}, '')            AS cliente,
+                    COALESCE(e.cores, '')                    AS cores,
+                    COALESCE(e.prioridade, '')               AS prioridade,
+                    COALESCE(e.forma_pagamento, '')          AS forma_pagamento,
+                    COALESCE(e.qtd_pp, 0)                    AS qtd_pp,
+                    COALESCE(e.qtd_p, 0)                     AS qtd_p,
+                    COALESCE(e.qtd_m, 0)                     AS qtd_m,
+                    COALESCE(e.qtd_g, 0)                     AS qtd_g,
+                    COALESCE(e.qtd_gg, 0)                    AS qtd_gg,
+                    COALESCE(e.qtd_g1, 0)                    AS qtd_g1,
+                    COALESCE(e.qtd_g2, 0)                    AS qtd_g2,
+                    COALESCE(e.qtd_g3, 0)                    AS qtd_g3,
+                    COALESCE(e.valor_pp, 0)                  AS valor_pp,
+                    COALESCE(e.valor_p, 0)                   AS valor_p,
+                    COALESCE(e.valor_m, 0)                   AS valor_m,
+                    COALESCE(e.valor_g, 0)                   AS valor_g,
+                    COALESCE(e.valor_gg, 0)                  AS valor_gg,
+                    COALESCE(e.valor_g1, 0)                  AS valor_g1,
+                    COALESCE(e.valor_g2, 0)                  AS valor_g2,
+                    COALESCE(e.valor_g3, 0)                  AS valor_g3,
+                    COALESCE(e.piloto_pp, 0)                 AS piloto_pp,
+                    COALESCE(e.piloto_p, 0)                  AS piloto_p,
+                    COALESCE(e.piloto_m, 0)                  AS piloto_m,
+                    COALESCE(e.piloto_g, 0)                  AS piloto_g,
+                    COALESCE(e.piloto_gg, 0)                 AS piloto_gg,
+                    COALESCE(e.piloto_g1, 0)                 AS piloto_g1,
+                    COALESCE(e.piloto_g2, 0)                 AS piloto_g2,
+                    COALESCE(e.piloto_g3, 0)                 AS piloto_g3,
+                    COALESCE(e.resumo_pilotos, '')           AS resumo_pilotos,
+                    COALESCE(e.aviamentos, '')               AS aviamentos,
+                    COALESCE(e.outros, '')                   AS outros,
+                    COALESCE(e.observacoes, '')              AS observacoes,
+                    COALESCE(e.tel_encarregado, '')          AS tel_encarregado,
+                    COALESCE(e.tel_acabamento, '')           AS tel_acabamento,
+                    COALESCE(e.total_pecas, 0)               AS qtd_total
+                FROM {get_schema()}.envios_cortes e
+                LEFT JOIN {get_schema()}.cadastro_faccoes f ON f.id = e.prestador_id
+                WHERE {where_sql}
+                ORDER BY e.data_envio DESC, e.id DESC
+            """
+
+            result = db.fetch_all(sql, tuple(params))
+
+            incluir_conf = bool(self.incluir_conferencia_var.get())
 
             for i, row in enumerate(result):
-                tag = ()
-                try:
-                    st = (row["status"] or "").strip()
-                    if st == "Em Conferência":
-                        tag = ('status_conferencia',)
-                    elif st == "Finalizado":
-                        tag = ('status_finalizado',)
-                except Exception:
-                    pass
+                status = (row.get("status") or "").strip()
 
-                # Adicionar tag para linhas alternadas
-                row_tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-                if tag:
-                    tag = tag + (row_tag,)
-                else:
-                    tag = (row_tag,)
+                # Se o checkbox "Mostrar 'Em Conferência'" estiver desmarcado,
+                # escondemos esses registros.
+                if status == "Em Conferência" and not incluir_conf:
+                    continue
 
-                self.envios_tree.insert("", "end",
-                                        values=(row["id"], row["ordem_corte"], row["codigo_corte"],
-                                                row["descricao_corte"],
-                                                row["destino"], row["data_envio"], row["status"], row["qtd_total"]),
-                                        tags=tag)
+                tag_status = ()
+                if status == "Em Conferência":
+                    tag_status = ("status_conferencia",)
+                elif status == "Finalizado":
+                    tag_status = ("status_finalizado",)
+
+                row_tag = "evenrow" if i % 2 == 0 else "oddrow"
+                tags = tag_status + (row_tag,) if tag_status else (row_tag,)
+
+                self.envios_tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        row["id"],
+                        row["ordem_corte"],
+                        row["codigo_corte"],
+                        row["descricao_corte"],
+                        row["destino"],
+                        row["data_envio"],
+                        status,
+                        row["qtd_total"],
+                    ),
+                    tags=tags,
+                )
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao carregar envios: {e}")
 
-    def on_envio_selecionado(self, _event=None):
-        sel = self.envios_tree.selection()
-        if not sel: return
-        v = self.envios_tree.item(sel[0], "values")
-
-        self.envio_selecionado = {
-            "id": v[0], "ordem": v[1], "codigo": v[2], "descricao": v[3],
-            "prestador": v[4], "data_envio": v[5]
-        }
-
+    def _carregar_dados_prestador(self, prestador_id):
+        """Carrega dados do prestador e preenche campos bancários."""
         try:
-            status = (v[6] or "").strip()
-        except Exception:
-            status = ""
+            print(f"DEBUG: Carregando prestador_id = {prestador_id}")  # DEBUG
 
-        if status == "Em Conferência":
-            self.envio_selecionado = {
-                "id": v[0], "ordem": v[1], "codigo": v[2], "descricao": v[3],
-                "prestador": v[4], "data_envio": v[5], "status": status
-            }
-            self._limpar_campos()
-            return
+            if not prestador_id:
+                print("DEBUG: prestador_id é None ou vazio")  # DEBUG
+                self._preencher_banco(None)
+                return
 
-        if status == "Finalizado":
-            messagebox.showinfo("Aviso", "Corte finalizado — não é possível registrar nova entrada.")
-            return
-
-        self.envio_selecionado = {
-            "id": v[0], "ordem": v[1], "codigo": v[2], "descricao": v[3],
-            "prestador": v[4], "data_envio": v[5], "status": status
-        }
-        self._tipo_servico = self._buscar_servico(self.envio_selecionado["id"]) or ""
-        self._prestador_nome = self.envio_selecionado["prestador"] or ""
-
-        self._preencher_header_envio()
-        self._carregar_detalhes_envio()
-        self._carregar_prestador_por_nome(self._prestador_nome)
-
-    def _buscar_servico(self, envio_id):
-        try:
-            result = db.fetch_one("SELECT servico FROM controle_envio_cortes WHERE id=%s LIMIT 1", (envio_id,))
-            return result["servico"] if result else ""
-        except Exception:
-            return ""
-
-    def _preencher_header_envio(self):
-        self.prestador_entry.configure(state="normal")
-        self.prestador_entry.delete(0, tk.END)
-        self.prestador_entry.insert(0, self._prestador_nome or "")
-        self.prestador_entry.configure(state="disabled")
-        self.servico_entry.configure(state="normal")
-        self.servico_entry.delete(0, tk.END)
-        self.servico_entry.insert(0, self._tipo_servico or "")
-        self.servico_entry.configure(state="disabled")
-
-        self.codigo_entry.configure(state="normal")
-        self.codigo_entry.delete(0, tk.END)
-        self.codigo_entry.insert(0, self.envio_selecionado["codigo"])
-        self.codigo_entry.configure(state="disabled")
-        self.descricao_entry.configure(state="normal")
-        self.descricao_entry.delete(0, tk.END)
-        self.descricao_entry.insert(0, self.envio_selecionado["descricao"])
-        self.descricao_entry.configure(state="disabled")
-        self.ordem_entry.configure(state="normal")
-        self.ordem_entry.delete(0, tk.END)
-        self.ordem_entry.insert(0, self.envio_selecionado["ordem"])
-        self.ordem_entry.configure(state="disabled")
-
-    def _carregar_prestador_por_nome(self, nome):
-        self._prestador_id = None
-        nome = (nome or "").strip()
-        if not nome:
-            self._preencher_banco(None)
-            return
-
-        try:
             tit_col = _coluna_titular()
-
-            base = "id, COALESCE(telefone,''), COALESCE(cpf,''), COALESCE(banco,''), COALESCE(agencia,''), COALESCE(conta,''), COALESCE(pix,'')"
-            select_full = f"{base}, COALESCE({tit_col},'')" if tit_col else f"{base}, ''"
-
-            result = db.fetch_all(f"""
-                SELECT {select_full}
-                FROM cadastro_faccoes
-                WHERE TRIM(LOWER(nome)) = TRIM(LOWER(%s))
-                ORDER BY id DESC LIMIT 1
-            """, (nome,))
-
-            if not result:
-                result = db.fetch_all(
-                    f"SELECT {select_full} FROM cadastro_faccoes WHERE nome ILIKE %s ORDER BY id DESC LIMIT 1",
-                    (f"%{nome}%",))
-
-            row = result[0] if result else None
-            self._prestador_id = row["id"] if row else None
-
-            # endereço (opcional)
             end_col = _coluna_endereco()
-            self._prest_endereco = ""
-            if end_col and self._prestador_id:
-                result = db.fetch_one(f"SELECT COALESCE({end_col},'') FROM cadastro_faccoes WHERE id=%s LIMIT 1",
-                                      (self._prestador_id,))
-                self._prest_endereco = (result[list(result.keys())[0]] if result else "") or ""
+
+            base = "id, nome, COALESCE(telefone,'') as telefone, COALESCE(cpf,'') as cpf, COALESCE(banco,'') as banco, COALESCE(agencia,'') as agencia, COALESCE(conta,'') as conta, COALESCE(pix,'') as pix"
+            select_full = f"{base}, COALESCE({tit_col},'') as titular" if tit_col else f"{base}, '' as titular"
+            select_full += f", COALESCE({end_col},'') as endereco" if end_col else ", '' as endereco"
+
+            sql = f"""
+                SELECT {select_full}
+                FROM {get_schema()}.cadastro_faccoes
+                WHERE id = %s
+                LIMIT 1
+            """
+
+            print(f"DEBUG: SQL = {sql}")  # DEBUG
+            print(f"DEBUG: Parâmetro = {prestador_id}")  # DEBUG
+
+            row = db.fetch_one(sql, (prestador_id,))
+
+            print(f"DEBUG: Resultado da consulta = {row}")  # DEBUG
 
             if row:
-                dados = [row[key] for key in row.keys() if key != "id"]
+                self._prestador_nome = row.get("nome") or ""
+                print(f"DEBUG: Nome do prestador = {self._prestador_nome}")  # DEBUG
+
+                self.prestador_entry.configure(state="normal")
+                self.prestador_entry.delete(0, tk.END)
+                self.prestador_entry.insert(0, self._prestador_nome)
+                self.prestador_entry.configure(state="disabled")
+
+                # Preencher dados bancários
+                dados = [
+                    row.get("telefone", ""),
+                    row.get("cpf", ""),
+                    row.get("banco", ""),
+                    row.get("agencia", ""),
+                    row.get("conta", ""),
+                    row.get("pix", ""),
+                    row.get("titular", "") if tit_col else "",
+                    row.get("endereco", "") if end_col else ""
+                ]
+
+                print(f"DEBUG: Dados bancários = {dados}")  # DEBUG
                 self._preencher_banco(dados, True)
             else:
+                print("DEBUG: Nenhum resultado encontrado para prestador_id")  # DEBUG
                 self._preencher_banco(None)
 
         except Exception as e:
+            print(f"DEBUG: Erro ao carregar dados do prestador: {e}")  # DEBUG
             self._preencher_banco(None)
             messagebox.showerror("Erro", f"Falha ao carregar dados do prestador: {e}")
+
+    def _carregar_detalhes_envio(self, envio_id):
+        """Carrega grade, valores, telefones e observações do envio selecionado."""
+        try:
+            # Limpa grade atual
+            for t in self.tamanhos:
+                self.entregues[t].set(0)
+                self.copias[t].set(0)
+                self.defeitos[t].set(0)
+                self.faltantes[t].set(0)
+                self.enviado_por_tam[t] = 0
+                self.valor_por_tam[t] = 0.0
+                self.pilotos_por_tam[t] = 0
+                self.grade_widgets[t]["enviado"].configure(text="0")
+                self.grade_widgets[t]["regulares"].configure(text="0")
+                self.grade_widgets[t]["valor"].configure(text=fmt_moeda(0))
+                self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(0))
+
+            self.lbl_total_entregue.configure(text="0")
+            self.lbl_total_copias.configure(text="0")
+            self.lbl_total_regulares.configure(text="0")
+            self.lbl_valor_total.configure(text=fmt_moeda(0))
+
+            # Dados da tabela envios_cortes
+            mapa_sufixo = {
+                "PP": "pp", "P": "p", "M": "m", "G": "g",
+                "GG": "gg", "G1": "g1", "G2": "g2", "G3": "g3",
+            }
+
+            cols_qtd = [f"qtd_{s}" for s in mapa_sufixo.values()]
+            cols_pil = [f"piloto_{s}" for s in mapa_sufixo.values()]
+            cols_val = [f"valor_{s}" for s in mapa_sufixo.values()]
+
+            outras_cols = [
+                "aviamentos", "outros", "observacoes",
+                "tel_encarregado", "tel_acabamento",
+                "prestador_id", "tipo_servico", "resumo_pilotos"
+            ]
+
+            sql_envio = f"""
+                SELECT {', '.join(cols_qtd + cols_pil + cols_val + outras_cols)}
+                FROM {get_schema()}.envios_cortes
+                WHERE id = %s
+            """
+            row = db.fetch_one(sql_envio, (envio_id,))
+
+            if row:
+                # Carregar dados do prestador
+                self._prestador_id = row.get("prestador_id")
+                self._tipo_servico = row.get("tipo_servico") or ""
+
+                # Atualiza o campo de serviço
+                self.servico_entry.configure(state="normal")
+                self.servico_entry.delete(0, tk.END)
+                self.servico_entry.insert(0, self._tipo_servico or "")
+                self.servico_entry.configure(state="disabled")
+
+                # Carrega dados bancários
+                if self._prestador_id:
+                    self._carregar_dados_prestador(self._prestador_id)
+
+                # Carregar resumo de pilotos e valores
+                resumo_pilotos = []
+                for tam, suf in mapa_sufixo.items():
+                    qtd_env = row.get(f"qtd_{suf}") or 0
+                    qtd_pil = row.get(f"piloto_{suf}") or 0
+                    val_unit = row.get(f"valor_{suf}") or 0
+
+                    self.enviado_por_tam[tam] = int(qtd_env)
+                    self.pilotos_por_tam[tam] = int(qtd_pil)
+                    self.valor_por_tam[tam] = float(val_unit or 0)
+
+                    self.grade_widgets[tam]["enviado"].configure(text=str(qtd_env))
+                    self.grade_widgets[tam]["valor"].configure(text=fmt_moeda(val_unit))
+
+                    if qtd_pil:
+                        resumo_pilotos.append(f"{tam}={qtd_pil}")
+
+                # Telefones do envio
+                self.tel_encarregado_entry.delete(0, tk.END)
+                self.tel_encarregado_entry.insert(0, row.get("tel_encarregado") or "")
+
+                self.tel_acabamento_entry.delete(0, tk.END)
+                self.tel_acabamento_entry.insert(0, row.get("tel_acabamento") or "")
+
+                # Observações do envio
+                self.aviamentos_txt.delete("1.0", tk.END)
+                self.aviamentos_txt.insert("1.0", row.get("aviamentos") or "")
+
+                self.outros_txt.delete("1.0", tk.END)
+                self.outros_txt.insert("1.0", row.get("outros") or "")
+
+                self.obs_geral_txt.delete("1.0", tk.END)
+                self.obs_geral_txt.insert("1.0", row.get("observacoes") or "")
+
+                # Resumo de pilotos
+                if row.get("resumo_pilotos"):
+                    self.piloto_resumo_lbl.configure(text=row["resumo_pilotos"])
+                elif resumo_pilotos:
+                    self.piloto_resumo_lbl.configure(text=", ".join(resumo_pilotos))
+                else:
+                    self.piloto_resumo_lbl.configure(text="Nenhum.")
+
+            # Ajustes adicionais do RETORNO, se já existir
+            try:
+                sql_ret = f"""
+                    SELECT resumo_piloto, aviamentos_recebidos, outros_recebidos, observacoes_gerais
+                    FROM {get_schema()}.controle_retorno_cortes
+                    WHERE envio_id = %s
+                """
+                row_ret = db.fetch_one(sql_ret, (envio_id,))
+
+                if row_ret:
+                    if row_ret.get("resumo_piloto"):
+                        self.piloto_resumo_lbl.configure(text=row_ret["resumo_piloto"] or "Nenhum.")
+
+                    self.aviamentos_txt.delete("1.0", tk.END)
+                    self.aviamentos_txt.insert("1.0", row_ret.get("aviamentos_recebidos") or "")
+
+                    self.outros_txt.delete("1.0", tk.END)
+                    self.outros_txt.insert("1.0", row_ret.get("outros_recebidos") or "")
+
+                    self.obs_geral_txt.delete("1.0", tk.END)
+                    self.obs_geral_txt.insert("1.0", row_ret.get("observacoes_gerais") or "")
+            except Exception:
+                pass  # Ignora erro se não existir retorno
+
+            # Recalcula totais
+            self._recalcular()
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao carregar detalhes do envio:\n{e}")
+
+    def on_envio_selecionado(self, _event=None):
+        """Dispara quando o usuário clica em um envio na lista."""
+        sel = self.envios_tree.selection()
+        if not sel:
+            return
+
+        valores = self.envios_tree.item(sel[0], "values")
+        try:
+            envio_id = int(valores[0])
+        except Exception:
+            envio_id = None
+
+        ordem = valores[1] if len(valores) > 1 else ""
+        codigo = valores[2] if len(valores) > 2 else ""
+        descricao = valores[3] if len(valores) > 3 else ""
+        prestador = valores[4] if len(valores) > 4 else ""
+        data_envio = valores[5] if len(valores) > 5 else ""
+        status = (valores[6] if len(valores) > 6 else "") or ""
+        qtd_total = valores[7] if len(valores) > 7 else 0
+
+        # Guarda o envio selecionado
+        self.envio_selecionado = {
+            "id": envio_id,
+            "ordem": ordem,
+            "codigo": codigo,
+            "descricao": descricao,
+            "prestador": prestador,
+            "data_envio": data_envio,
+            "status": status,
+            "qtd_total": qtd_total,
+        }
+
+        status = status.strip()
+
+        if status == "Finalizado":
+            messagebox.showinfo("Aviso", "Este envio já está FINALIZADO.\nNão é possível registrar novo retorno.")
+            return
+
+        # Preenche campos do cabeçalho IMEDIATAMENTE
+        self.codigo_entry.configure(state="normal")
+        self.codigo_entry.delete(0, tk.END)
+        self.codigo_entry.insert(0, codigo)
+        self.codigo_entry.configure(state="disabled")
+
+        self.descricao_entry.configure(state="normal")
+        self.descricao_entry.delete(0, tk.END)
+        self.descricao_entry.insert(0, descricao)
+        self.descricao_entry.configure(state="disabled")
+
+        self.ordem_entry.configure(state="normal")
+        self.ordem_entry.delete(0, tk.END)
+        self.ordem_entry.insert(0, ordem)
+        self.ordem_entry.configure(state="disabled")
+
+        # Preenche o prestador
+        self.prestador_entry.configure(state="normal")
+        self.prestador_entry.delete(0, tk.END)
+        self.prestador_entry.insert(0, prestador)
+        self.prestador_entry.configure(state="disabled")
+
+        # Data de chegada padrão = hoje
+        self.data_chegada_entry.delete(0, tk.END)
+        self.data_chegada_entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
+
+        # Limpa campos bancários
+        self._limpar_campos_bancarios()
+
+        # Carrega todos os detalhes
+        if envio_id is not None:
+            self._carregar_detalhes_envio(envio_id)
 
     def _preencher_banco(self, dados, has_titular=False):
         valores = ["", "", "", "", "", ""]
@@ -823,110 +1096,6 @@ class RetornoCortes(ctk.CTkFrame):
             entry.delete(0, tk.END)
             entry.insert(0, val or "")
             entry.configure(state="disabled")
-
-    def _carregar_detalhes_envio(self):
-        envio_id = self.envio_selecionado["id"]
-        try:
-            # Limpar dados anteriores
-            for t in self.tamanhos:
-                self.enviado_por_tam[t] = 0
-                self.valor_por_tam[t] = 0.0
-                self.pilotos_por_tam[t] = 0
-                self.entregues[t].set(0)
-                self.copias[t].set(0)
-                self.defeitos[t].set(0)
-                self.faltantes[t].set(0)
-                self.grade_widgets[t]["enviado"].configure(text="0")
-                self.grade_widgets[t]["regulares"].configure(text="0")
-                self.grade_widgets[t]["valor"].configure(text=fmt_moeda(0))
-                self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(0))
-
-            # Carregar detalhes do envio - CORREÇÃO AQUI
-            result = db.fetch_all("""
-                                  SELECT tamanho, COALESCE(quantidade_pilotos, 0) as quantidade_pilotos
-                                  FROM envio_detalhes_tamanho
-                                  WHERE envio_id = %s
-                                  """, (envio_id,))
-
-            for row in result:
-                tam = row["tamanho"]
-                if tam not in self.tamanhos: continue
-                self.pilotos_por_tam[tam] = row["quantidade_pilotos"] or 0
-                self.enviado_por_tam[tam] = self.pilotos_por_tam[tam]  # Usando pilotos como quantidade enviada
-                self.grade_widgets[tam]["enviado"].configure(text=str(self.pilotos_por_tam[tam] or 0))
-
-            # Carregar valores unitários da tabela controle_envio_cortes
-            result_valores = db.fetch_one("""
-                                          SELECT pp,
-                                                 p,
-                                                 m,
-                                                 g,
-                                                 gg,
-                                                 g1,
-                                                 g2,
-                                                 g3
-                                          FROM controle_envio_cortes
-                                          WHERE id = %s
-                                          """, (envio_id,))
-
-            if result_valores:
-                # Mapear os valores por tamanho
-                valores_map = {
-                    "PP": result_valores["pp"] or 0.0,
-                    "P": result_valores["p"] or 0.0,
-                    "M": result_valores["m"] or 0.0,
-                    "G": result_valores["g"] or 0.0,
-                    "GG": result_valores["gg"] or 0.0,
-                    "G1": result_valores["g1"] or 0.0,
-                    "G2": result_valores["g2"] or 0.0,
-                    "G3": result_valores["g3"] or 0.0
-                }
-
-                for tam in self.tamanhos:
-                    self.valor_por_tam[tam] = float(valores_map.get(tam, 0.0))
-                    self.grade_widgets[tam]["valor"].configure(text=fmt_moeda(self.valor_por_tam[tam]))
-
-            # Carregar dados de piloto
-            result = db.fetch_all("""
-                                  SELECT resumo_piloto, aviamentos_recebidos, outros_recebidos, observacoes_gerais
-                                  FROM controle_retorno_cortes
-                                  WHERE envio_id = %s
-                                  """, (envio_id,))
-
-            if result:
-                row = result[0]
-                self.piloto_resumo_lbl.configure(text=row["resumo_piloto"] or "Nenhum.")
-                self.aviamentos_txt.delete("1.0", tk.END)
-                self.aviamentos_txt.insert("1.0", row["aviamentos_recebidos"] or "")
-                self.outros_txt.delete("1.0", tk.END)
-                self.outros_txt.insert("1.0", row["outros_recebidos"] or "")
-                self.obs_geral_txt.delete("1.0", tk.END)
-                self.obs_geral_txt.insert("1.0", row["observacoes_gerais"] or "")
-            else:
-                self.piloto_resumo_lbl.configure(text="Nenhum.")
-                self.aviamentos_txt.delete("1.0", tk.END)
-                self.outros_txt.delete("1.0", tk.END)
-                self.obs_geral_txt.delete("1.0", tk.END)
-
-            # Carregar dados de retorno se existir
-            result = db.fetch_all("""
-                                  SELECT tamanho, entregue, copias, defeitos, faltantes
-                                  FROM retorno_detalhes_tamanho
-                                  WHERE envio_id = %s
-                                  """, (envio_id,))
-
-            for row in result:
-                tam = row["tamanho"]
-                if tam not in self.tamanhos: continue
-                self.entregues[tam].set(row["entregue"] or 0)
-                self.copias[tam].set(row["copias"] or 0)
-                self.defeitos[tam].set(row["defeitos"] or 0)
-                self.faltantes[tam].set(row["faltantes"] or 0)
-
-            self._recalcular()
-
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao carregar detalhes do envio: {e}")
 
     # ----------------------------- Cálculos -----------------------------
     def _recalcular(self, _event=None):
@@ -1146,6 +1315,22 @@ class RetornoCortes(ctk.CTkFrame):
         self.obs_geral_txt.delete("1.0", tk.END)
         self.piloto_entregue_var.set(True)
 
+    def _limpar_campos_bancarios(self):
+        """Limpa todos os campos bancários."""
+        campos_bancarios = [
+            self.telefone_entry,
+            self.cpf_entry,
+            self.banco_entry,
+            self.agencia_entry,
+            self.conta_entry,
+            self.pix_entry,
+            self.titular_entry
+        ]
+
+        for entry in campos_bancarios:
+            entry.configure(state="normal")
+            entry.delete(0, tk.END)
+            entry.configure(state="disabled")
 
 # ============================== MAIN ==============================
 if __name__ == "__main__":

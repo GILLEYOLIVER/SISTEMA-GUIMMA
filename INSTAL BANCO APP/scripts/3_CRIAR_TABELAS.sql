@@ -751,11 +751,20 @@ CREATE INDEX IF NOT EXISTS idx_ordem_corte_data_final ON opera.ordem_corte_ficha
 CREATE TABLE IF NOT EXISTS opera.envios_cortes (
     id               SERIAL PRIMARY KEY,
     data_envio       DATE NOT NULL,
+    hora_envio       TIME,
     prestador_id     INTEGER REFERENCES opera.cadastro_faccoes(id) ON DELETE RESTRICT,
     tipo_servico     TEXT,
     corte_id         INTEGER REFERENCES opera.cadastro_de_corte(id) ON DELETE RESTRICT,
-
-    -- QUANTIDADES ENVIADAS POR TAMANHO
+    ordem_corte      VARCHAR(50),
+    codigo_corte     VARCHAR(100),
+    descricao_corte  TEXT,
+    colecao          VARCHAR(100),
+    material         VARCHAR(100),
+    cliente          VARCHAR(200),
+    cores            TEXT,
+    prioridade       VARCHAR(30),
+    forma_pagamento  VARCHAR(50),
+    status_envio     VARCHAR(30) DEFAULT 'Enviado',
     qtd_pp           INTEGER DEFAULT 0,
     qtd_p            INTEGER DEFAULT 0,
     qtd_m            INTEGER DEFAULT 0,
@@ -764,8 +773,6 @@ CREATE TABLE IF NOT EXISTS opera.envios_cortes (
     qtd_g1           INTEGER DEFAULT 0,
     qtd_g2           INTEGER DEFAULT 0,
     qtd_g3           INTEGER DEFAULT 0,
-
-    -- PILOTOS POR TAMANHO
     piloto_pp        INTEGER DEFAULT 0,
     piloto_p         INTEGER DEFAULT 0,
     piloto_m         INTEGER DEFAULT 0,
@@ -774,8 +781,6 @@ CREATE TABLE IF NOT EXISTS opera.envios_cortes (
     piloto_g1        INTEGER DEFAULT 0,
     piloto_g2        INTEGER DEFAULT 0,
     piloto_g3        INTEGER DEFAULT 0,
-
-    -- VALOR UNITÁRIO POR TAMANHO
     valor_pp         NUMERIC(10,2) DEFAULT 0,
     valor_p          NUMERIC(10,2) DEFAULT 0,
     valor_m          NUMERIC(10,2) DEFAULT 0,
@@ -784,16 +789,16 @@ CREATE TABLE IF NOT EXISTS opera.envios_cortes (
     valor_g1         NUMERIC(10,2) DEFAULT 0,
     valor_g2         NUMERIC(10,2) DEFAULT 0,
     valor_g3         NUMERIC(10,2) DEFAULT 0,
-
-    -- CAMPOS DESCRITIVOS / CONTATO
+    total_pecas          INTEGER        DEFAULT 0,
+    total_pilotos        INTEGER        DEFAULT 0,
+    valor_total_envio    NUMERIC(12,2)  DEFAULT 0,
+    resumo_pilotos   TEXT,
     aviamentos       TEXT,
     outros           TEXT,
     observacoes      TEXT,
     tel_encarregado  TEXT,
     tel_acabamento   TEXT,
     previsao_entrega DATE,
-
-    -- AUDITORIA
     created_at       TIMESTAMP DEFAULT NOW(),
     updated_at       TIMESTAMP DEFAULT NOW()
 );
@@ -806,6 +811,10 @@ CREATE INDEX IF NOT EXISTS idx_envios_cortes_prestador
 
 CREATE INDEX IF NOT EXISTS idx_envios_cortes_corte
     ON opera.envios_cortes (corte_id);
+
+CREATE INDEX IF NOT EXISTS idx_envios_cortes_status
+    ON opera.envios_cortes (status_envio);
+
 
 -- ================================================================
 -- [TABELA 22] CONTROLE DE ENVIO DE CORTES (ATUALIZADA)
