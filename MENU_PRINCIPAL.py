@@ -248,17 +248,13 @@ class ThemeManager:
         def _apply_to_all_widgets(widget):
             """Aplica tema recursivamente em todos os widgets."""
             try:
-                # ------------------------------------------------------
-                # CTkFrame
-                # ------------------------------------------------------
+                # ---------- WIDGETS CUSTOMTKINTER ----------
                 if isinstance(widget, ctk.CTkFrame):
-                    if hasattr(widget, '_fg_color') and widget._fg_color not in ["transparent", None]:
+                    # frames usam a cor de fundo do tema
+                    if hasattr(widget, "_fg_color") and widget._fg_color not in ["transparent", None]:
                         widget.configure(fg_color=cor_fundo)
                     widget.configure(border_color=cor_borda)
 
-                # ------------------------------------------------------
-                # CTkButton
-                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkButton):
                     widget.configure(
                         fg_color=cor_secundaria,
@@ -266,24 +262,18 @@ class ThemeManager:
                         border_color=cor_borda,
                         text_color=cor_texto,
                         font=fonts["button"],
-                        corner_radius=8
+                        corner_radius=8,
                     )
 
-                # ------------------------------------------------------
-                # CTkLabel  (CORRIGIDO — elimina fundo quadrado)
-                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkLabel):
+                    # >>> AQUI ESTÁ A CORREÇÃO IMPORTANTE <<<
+                    # Toda label fica com fundo TRANSPARENTE para não criar qudrado em volta do texto.
                     widget.configure(
                         text_color=cor_texto,
                         font=fonts["body"],
-                        fg_color="transparent",  # 🔥 Correção definitiva
-                        border_width=0,
-                        corner_radius=0
+                        fg_color="transparent",
                     )
 
-                # ------------------------------------------------------
-                # CTkEntry
-                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkEntry):
                     widget.configure(
                         fg_color=cor_secundaria,
@@ -292,12 +282,9 @@ class ThemeManager:
                         font=fonts["body"],
                         placeholder_text_color=(
                             cor_texto if len(str(cor_texto)) <= 7 else str(cor_texto)[:7]
-                        )
+                        ),
                     )
 
-                # ------------------------------------------------------
-                # CTkComboBox
-                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkComboBox):
                     widget.configure(
                         fg_color=cor_secundaria,
@@ -308,12 +295,9 @@ class ThemeManager:
                         font=fonts["body"],
                         dropdown_fg_color=cor_secundaria,
                         dropdown_text_color=cor_texto,
-                        dropdown_hover_color=cor_hover_realcado
+                        dropdown_hover_color=cor_hover_realcado,
                     )
 
-                # ------------------------------------------------------
-                # CheckBox / Switch
-                # ------------------------------------------------------
                 elif isinstance(widget, (ctk.CTkCheckBox, ctk.CTkSwitch)):
                     widget.configure(
                         fg_color=cor_secundaria,
@@ -321,12 +305,9 @@ class ThemeManager:
                         button_color=cor_primaria,
                         button_hover_color=cor_hover_realcado,
                         text_color=cor_texto,
-                        font=fonts["body"]
+                        font=fonts["body"],
                     )
 
-                # ------------------------------------------------------
-                # TabView
-                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkTabview):
                     widget.configure(
                         segmented_button_fg_color=cor_primaria,
@@ -334,18 +315,13 @@ class ThemeManager:
                         segmented_button_unselected_color=cor_secundaria,
                         segmented_button_unselected_hover_color=cor_hover_realcado,
                         text_color=cor_texto,
-                        font=fonts["body"]
+                        font=fonts["body"],
                     )
 
-                # ------------------------------------------------------
-                # Scrollable Frame
-                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkScrollableFrame):
                     widget.configure(fg_color=cor_fundo, border_color=cor_borda)
 
-                # ------------------------------------------------------
-                # Tkinter Puro
-                # ------------------------------------------------------
+                # ---------- TKINTER PURO ----------
                 elif isinstance(widget, tk.Frame):
                     widget.configure(bg=cor_fundo)
 
@@ -361,9 +337,10 @@ class ThemeManager:
                     )
 
             except Exception:
+                # Ignora erros em widgets que não podem ser configurados
                 pass
 
-            # Recursão
+            # Recursão nos filhos
             try:
                 for child in widget.winfo_children():
                     _apply_to_all_widgets(child)
@@ -1053,9 +1030,64 @@ class OperaMenuApp(ctk.CTk):
 
         self.configure(fg_color=self.cor_fundo)
 
+        # Cria o menu lateral
         self._build_sidebar()
+
+        # REMOVE BORDAS, CONTORNOS E FOCOS DOS BOTÕES DO MENU LATERAL
+        remover_foco_e_bordas_menu(self.sidebar)
+
+
+        # Área principal
         self._build_main_area()
+
+        # Mostrar usuário
         self._update_user_display()
+
+    def remover_foco_e_bordas_menu(widget):
+        """
+        Remove completamente:
+        - borda visual aplicada pelo CustomTkinter
+        - foco (highlight) que cria contorno
+        - relieves invisíveis
+
+        Aplica isso recursivamente no MENU inteiro.
+        """
+        import customtkinter as ctk
+
+        try:
+            # Lista de widgets que causam contorno ao receber foco
+            tipos = (ctk.CTkButton, ctk.CTkOptionMenu, ctk.CTkComboBox)
+
+            if isinstance(widget, tipos):
+                try:
+                    widget.configure(
+                        border_width=0,
+                        corner_radius=0,
+                        fg_color="transparent",
+                        hover_color=widget.cget("hover_color"),
+                        text_color=widget.cget("text_color")
+                    )
+
+                    # Desativa o foco completamente
+                    widget.bind("<FocusVisible>", lambda e: "break")
+                    widget.bind("<FocusIn>", lambda e: widget.configure(border_width=0))
+                    widget.bind("<FocusOut>", lambda e: widget.configure(border_width=0))
+
+                    # Remove highlight do Tkinter raiz
+                    try:
+                        widget.configure(highlightthickness=0)
+                    except:
+                        pass
+
+                except Exception as erro_ajuste:
+                    print(f"[MENU] Erro ao remover foco/borda: {erro_ajuste}")
+
+            # Processar recursivamente
+            for child in widget.winfo_children():
+                remover_foco_e_bordas_menu(child)
+
+        except Exception as e:
+            print(f"[MENU] Erro geral ao limpar bordas/foco: {e}")
 
     def _build_sidebar(self):
         """Constrói a barra lateral."""
@@ -1119,6 +1151,11 @@ class OperaMenuApp(ctk.CTk):
 
         # Construir itens do menu
         self._build_menu_content()
+
+        # ================================
+        # 🔥 CHAMADA CERTA NO LUGAR CERTO
+        # ================================
+        remover_foco_e_bordas_menu(self.sidebar)
 
     def _build_main_area(self):
         """Constrói a área principal."""
@@ -1836,158 +1873,181 @@ class OperaMenuApp(ctk.CTk):
             self.after(500, self._open_dashboard_automatico)
 
     def open_page(self, page_name: str, categoria: str | None = None):
-            """Abre uma página no conteúdo principal com verificação de permissão."""
-            # Não abre se estiver carregando outra página ou fechando o app
-            if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
-                return
+        """Abre uma página no conteúdo principal com verificação de permissão."""
+        # Não abre se estiver carregando outra página ou fechando o app
+        if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
+            return
 
-            # Ação especial: trocar usuário
-            if page_name == "Trocar Usuário":
-                self.trocar_usuario()
-                return
+        # Ação especial: trocar usuário
+        if page_name == "Trocar Usuário":
+            self.trocar_usuario()
+            return
 
-            # ===================== VERIFICAÇÃO DE PERMISSÃO =====================
-            if not self.user_manager.has_permission(page_name, "ver", categoria):
-                messages = {
-                    # PRINCIPAL
-                    "Dashboard": "acessar o dashboard",
+        # ===================== VERIFICAÇÃO DE PERMISSÃO =====================
+        if not self.user_manager.has_permission(page_name, "ver", categoria):
+            messages = {
+                # PRINCIPAL
+                "Dashboard": "acessar o dashboard",
 
-                    # MODELOS
-                    "Cadastrar Modelo": "cadastrar novos modelos no sistema",
-                    "Imprimir Ficha Técnica": "imprimir fichas técnicas",
+                # MODELOS
+                "Cadastrar Modelo": "cadastrar novos modelos no sistema",
+                "Imprimir Ficha Técnica": "imprimir fichas técnicas",
 
-                    # ORDENS DE CORTE
-                    "Nova Ordem": "criar novas ordens de corte",
+                # ORDENS DE CORTE
+                "Nova Ordem": "criar novas ordens de corte",
 
-                    # REGISTRO DE CORTE
-                    "Cadastrar Corte": "cadastrar ordens de corte",
-                    "Consultar Ordens": "consultar ordens de corte",
+                # REGISTRO DE CORTE
+                "Cadastrar Corte": "cadastrar ordens de corte",
+                "Consultar Ordens": "consultar ordens de corte",
 
-                    # ESTOQUE
-                    "Entrada de Estoque": "registrar entradas de estoque",
-                    "Saída de Estoque": "registrar saídas de estoque",
-                    "Relatórios": "acessar relatórios de estoque",
+                # ESTOQUE
+                "Entrada de Estoque": "registrar entradas de estoque",
+                "Saída de Estoque": "registrar saídas de estoque",
+                "Relatórios": "acessar relatórios de estoque",
 
-                    # FACÇÕES
-                    "Cadastro de Facções": "cadastrar facções",
-                    "Pesquisar Serviço": "pesquisar serviços",
+                # FACÇÕES
+                "Cadastro de Facções": "cadastrar facções",
+                "Pesquisar Serviço": "pesquisar serviços",
 
-                    # MÃO DE OBRA
-                    "Controle de Mão de Obra": "controlar mão de obra",
+                # MÃO DE OBRA
+                "Controle de Mão de Obra": "controlar mão de obra",
 
-                    # PRODUÇÃO
-                    "Produção": "acessar o módulo de produção",
+                # PRODUÇÃO
+                "Produção": "acessar o módulo de produção",
 
-                    # ACABAMENTO
-                    "Registro Acabamento": "registrar acabamentos",
-                    "Finalizar Corte / Acabamento": "finalizar cortes e acabamentos",
+                # ACABAMENTO
+                "Registro Acabamento": "registrar acabamentos",
+                "Finalizar Corte / Acabamento": "finalizar cortes e acabamentos",
 
-                    # FINANCEIRO
-                    "Pagamento de Serviços": "efetuar pagamentos de serviços",
-                    "Custo Produto": "calcular custos de produtos",
-                    "Folha Pagamento": "acessar folha de pagamento",
-                    "Fechamento Mensal": "realizar fechamentos mensais",
-                    "Contas a Pagar": "gerenciar contas a pagar",
-                    "Adiantamento": "efetuar adiantamentos",
-                    "Adiantamentos Pendentes": "consultar adiantamentos pendentes",
+                # FINANCEIRO
+                "Pagamento de Serviços": "efetuar pagamentos de serviços",
+                "Custo Produto": "calcular custos de produtos",
+                "Folha Pagamento": "acessar folha de pagamento",
+                "Fechamento Mensal": "realizar fechamentos mensais",
+                "Contas a Pagar": "gerenciar contas a pagar",
+                "Adiantamento": "efetuar adiantamentos",
+                "Adiantamentos Pendentes": "consultar adiantamentos pendentes",
 
-                    # RELATÓRIOS
-                    "Produção": "acessar relatórios de produção",
-                    "Serviços Externos": "acessar relatórios de serviços externos",
-                    "Modelos Produzidos": "acessar relatórios de modelos produzidos",
-                    "Acabamento": "acessar relatórios de acabamento",
+                # RELATÓRIOS
+                "Produção": "acessar relatórios de produção",
+                "Serviços Externos": "acessar relatórios de serviços externos",
+                "Modelos Produzidos": "acessar relatórios de modelos produzidos",
+                "Acabamento": "acessar relatórios de acabamento",
 
-                    # CONFIGURAÇÕES / SISTEMA
-                    "Usuários": "gerenciar usuários do sistema",
-                    "Temas": "personalizar temas do sistema",
-                    "Backup": "realizar backup do sistema",
-                    "Gerenciar": "gerenciar banco de dados",
-                }
+                # CONFIGURAÇÕES / SISTEMA
+                "Usuários": "gerenciar usuários do sistema",
+                "Temas": "personalizar temas do sistema",
+                "Backup": "realizar backup do sistema",
+                "Gerenciar": "gerenciar banco de dados",
+            }
 
-                area_descricao = messages.get(page_name, "acessar esta área do sistema")
-                usuario_nome = getattr(self, "usuario_nome", "Usuário")
-                hierarquia = getattr(self, "usuario_hierarquia", "desconhecido")
+            area_descricao = messages.get(page_name, "acessar esta área do sistema")
+            usuario_nome = getattr(self, "usuario_nome", "Usuário")
+            hierarquia = getattr(self, "usuario_hierarquia", "desconhecido")
 
-                mensagem = f"""Olá {usuario_nome}! 
+            mensagem = f"""Olá {usuario_nome}! 
 
     Você não tem permissão para {area_descricao}.
 
     📋 Seu perfil atual: {hierarquia}
 
     Se você precisa acessar esta funcionalidade, entre em contato com o administrador do sistema."""
-                self._show_temporary_message(mensagem)
-                return
-            # ====================================================================
+            self._show_temporary_message(mensagem)
+            return
+        # ====================================================================
 
-            self._page_loading = True
+        self._page_loading = True
 
-            try:
-                # Limpar completamente o conteúdo anterior
-                for widget in self.content.winfo_children():
+        try:
+            # Limpar completamente o conteúdo anterior
+            for widget in self.content.winfo_children():
+                try:
+                    widget.destroy()
+                except Exception:
+                    pass
+
+            # Carregar página diretamente via rotas (route_map.json)
+            frame = self._load_page_direct(page_name)
+
+            if frame:
+                # Exibir no container principal
+                frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+                # CORREÇÃO ESPECÍFICA PARA PÁGINA DE TEMAS
+                if page_name == "Temas":
                     try:
-                        widget.destroy()
-                    except Exception:
-                        pass
+                        # Importa a correção da página de temas
+                        from TEMAS import corrigir_labels_pagina_temas
 
-                # Carregar página diretamente via rotas (route_map.json)
-                frame = self._load_page_direct(page_name)
+                        # Aplica correção em três momentos para garantir:
+                        # 1. Imediatamente (antes da renderização completa)
+                        corrigir_labels_pagina_temas(frame)
 
-                if frame:
-                    # Exibir no container principal
-                    frame.pack(fill="both", expand=True, padx=10, pady=10)
+                        # 2. Após 200ms (durante a renderização)
+                        self.after(200, lambda f=frame: corrigir_labels_pagina_temas(f))
 
-                    # Atualizar título da topbar
-                    if hasattr(self, "title_label"):
-                        self.title_label.configure(text=page_name)
+                        # 3. Após 500ms (após renderização completa)
+                        self.after(500, lambda f=frame: corrigir_labels_pagina_temas(f))
 
-                    # ================== INTEGRAÇÃO COM O SISTEMA/TEMA ==================
-                    try:
-                        # Referência do app dentro da página
-                        if hasattr(frame, "host"):
-                            frame.host = self
-                        if hasattr(frame, "sistema"):
-                            frame.sistema = self
-                        if hasattr(frame, "app"):
-                            frame.app = self
+                        print("🔧 Correções visuais aplicadas na página de Temas")
 
-                        # Garante que a página recém-carregada receba o tema atual
-                        if hasattr(self, "theme_manager"):
-                            self.theme_manager.apply_theme_to_widget(frame)
-
-                        # Se a página tiver método para atualizar o tema, chama
-                        if hasattr(frame, "atualizar_tema"):
-                            frame.atualizar_tema()
-                        elif hasattr(frame, "aplicar_tema"):
-                            frame.aplicar_tema()
+                    except ImportError as e:
+                        print(f"⚠️ Não foi possível importar correção de Temas: {e}")
                     except Exception as e:
-                        print(f"⚠️ Erro ao aplicar tema na página '{page_name}': {e}")
-                    # ==================================================================
+                        print(f"⚠️ Erro ao aplicar correção na página Temas: {e}")
 
-                    # Atualizar controle de página atual
-                    self.current_page = page_name
+                # Atualizar título da topbar
+                if hasattr(self, "title_label"):
+                    self.title_label.configure(text=page_name)
 
-                    # Guardar última página nas configurações
-                    try:
-                        self.settings["last_page"] = page_name
-                        ConfigManager.save_settings(self.settings)
-                    except Exception as e:
-                        print(f"⚠️ Erro ao salvar last_page nas configurações: {e}")
+                # ================== INTEGRAÇÃO COM O SISTEMA/TEMA ==================
+                try:
+                    # Referência do app dentro da página
+                    if hasattr(frame, "host"):
+                        frame.host = self
+                    if hasattr(frame, "sistema"):
+                        frame.sistema = self
+                    if hasattr(frame, "app"):
+                        frame.app = self
 
-                    # Registrar acesso à página nos logs
-                    try:
-                        self._log_page_access(page_name)
-                    except Exception as e:
-                        print(f"⚠️ Erro ao registrar log de acesso à página '{page_name}': {e}")
+                    # Garante que a página recém-carregada receba o tema atual
+                    if hasattr(self, "theme_manager"):
+                        self.theme_manager.apply_theme_to_widget(frame)
 
-                    print(f"✅ Página '{page_name}' carregada com sucesso")
+                    # Se a página tiver método para atualizar o tema, chama
+                    if hasattr(frame, "atualizar_tema"):
+                        frame.atualizar_tema()
+                    elif hasattr(frame, "aplicar_tema"):
+                        frame.aplicar_tema()
+                except Exception as e:
+                    print(f"⚠️ Erro ao aplicar tema na página '{page_name}': {e}")
+                # ==================================================================
 
-            except Exception as e:
-                messagebox.showerror("Erro", f"Falha ao abrir {page_name}:\n{e}", parent=self)
-                print(f"❌ Erro ao abrir página '{page_name}': {e}")
-                import traceback
-                traceback.print_exc()
-            finally:
-                self._page_loading = False
+                # Atualizar controle de página atual
+                self.current_page = page_name
+
+                # Guardar última página nas configurações
+                try:
+                    self.settings["last_page"] = page_name
+                    ConfigManager.save_settings(self.settings)
+                except Exception as e:
+                    print(f"⚠️ Erro ao salvar last_page nas configurações: {e}")
+
+                # Registrar acesso à página nos logs
+                try:
+                    self._log_page_access(page_name)
+                except Exception as e:
+                    print(f"⚠️ Erro ao registrar log de acesso à página '{page_name}': {e}")
+
+                print(f"✅ Página '{page_name}' carregada com sucesso")
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao abrir {page_name}:\n{e}", parent=self)
+            print(f"❌ Erro ao abrir página '{page_name}': {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            self._page_loading = False
 
     def _log_page_access(self, page_name: str):
         """Registra acesso à página no sistema de logs"""
@@ -2348,7 +2408,7 @@ class OperaMenuApp(ctk.CTk):
                 font=("Arial", 14),
                 fg_color=cor_secundaria,
                 text_color=cor_texto,
-                border_color=cor_borda,
+                border_width=0,
                 placeholder_text_color=cor_texto_placeholder,
                 corner_radius=10,
             )
@@ -2372,7 +2432,7 @@ class OperaMenuApp(ctk.CTk):
                 font=("Arial", 14),
                 fg_color=cor_secundaria,
                 text_color=cor_texto,
-                border_color=cor_borda,
+                border_width=0,
                 placeholder_text_color=cor_texto_placeholder,
                 corner_radius=10,
             )
@@ -2393,7 +2453,7 @@ class OperaMenuApp(ctk.CTk):
                 text_color=cor_texto,
                 fg_color=cor_botao_primario,
                 hover_color=cor_botao_primario,
-                border_color=cor_borda,
+                border_width=0,
             )
             chk_mostrar.pack(anchor="w", pady=(0, 25))
 
@@ -2891,6 +2951,45 @@ class OperaMenuApp(ctk.CTk):
             return hex_color
 
 
+def remover_foco_e_bordas_menu(widget_root):
+    """
+    Remove contornos, focos, highlight e bordas internas dos botões do menu lateral.
+    Funciona para CTkButton e widgets padrão do Tkinter.
+    """
+
+    import customtkinter as ctk
+    import tkinter as tk
+
+    def limpar(widget):
+        try:
+            # ============ BOTÕES CTK ============
+            if isinstance(widget, ctk.CTkButton):
+                widget.configure(
+                    border_width=0,
+                    fg_color=widget.cget("fg_color"),
+                    hover_color=widget.cget("hover_color"),
+                    corner_radius=8
+                )
+
+            # ============ TKINTER BUTTON ============
+            elif isinstance(widget, tk.Button):
+                widget.configure(
+                    highlightthickness=0,
+                    bd=0,
+                    borderwidth=0,
+                    relief="flat",
+                    highlightbackground=widget.cget("bg"),
+                    activebackground=widget.cget("bg")
+                )
+
+        except Exception:
+            pass
+
+        # percorre filhos
+        for child in widget.winfo_children():
+            limpar(child)
+
+    limpar(widget_root)
 
 
 # ===== EXECUÇÃO PRINCIPAL =====
