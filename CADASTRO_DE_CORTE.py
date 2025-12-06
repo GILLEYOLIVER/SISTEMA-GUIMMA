@@ -409,15 +409,23 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         header_frame.pack(fill="x", pady=(0, 10))
 
         # Título alinhado à esquerda - MESMO ESTILO DA SAÍDA
-        ctk.CTkLabel(header_frame, text="CADASTRO DE ORDEM DE CORTE",
-                     font=("Arial", 18, "bold"), text_color=self.cor_texto).pack(side="left", padx=10)
+        ctk.CTkLabel(
+            header_frame,
+            text="CADASTRO DE ORDEM DE CORTE",
+            font=("Arial", 18, "bold"),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=10)
 
         # Logo
         if hasattr(self, 'logo_image') and self.logo_image:
             logo_label = ctk.CTkLabel(header_frame, image=self.logo_image, text="")
             logo_label.pack(side="right", padx=10)
         else:
-            ctk.CTkLabel(header_frame, text="[LOGO NÃO CARREGADA]", text_color="red").pack(side="right")
+            ctk.CTkLabel(
+                header_frame,
+                text="[LOGO NÃO CARREGADA]",
+                text_color="red"
+            ).pack(side="right")
 
         # ========== INFORMAÇÕES BÁSICAS - MESMO ESTILO DA SAÍDA ==========
         info_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
@@ -427,52 +435,82 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         ordem_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         ordem_frame.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(ordem_frame, text="Nº ORDEM:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            ordem_frame,
+            text="Nº ORDEM:",
+            width=80,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
-        self.numero_ordem_entry = ctk.CTkEntry(ordem_frame, width=150,
-                                               fg_color=self.cor_secundaria,
-                                               border_color=self.cor_borda,
-                                               text_color=self.cor_texto_entry)
+        self.numero_ordem_entry = ctk.CTkEntry(
+            ordem_frame,
+            width=150,
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto_entry
+        )
         self.numero_ordem_entry.pack(side="left", padx=5)
         self.numero_ordem_entry.insert(0, self.numero_ordem)
         self.numero_ordem_entry.configure(state="readonly")
 
-        # Linha 2: Código e Descrição
+        # Linha 2: Código e Descrição (ENTRADAS ENCURTADAS)
         codigo_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         codigo_frame.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(codigo_frame, text="CÓDIGO:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            codigo_frame,
+            text="CÓDIGO:",
+            width=80,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
-        self.codigo_entry = ctk.CTkEntry(codigo_frame, width=150,
-                                         fg_color=self.cor_secundaria,
-                                         border_color=self.cor_borda,
-                                         text_color=self.cor_texto_entry)
+        self.codigo_entry = ctk.CTkEntry(
+            codigo_frame,
+            width=150,
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto_entry
+        )
         self.codigo_entry.pack(side="left", padx=5)
         self.codigo_entry.bind("<FocusOut>", self.buscar_descricao_por_codigo)
         self.codigo_entry.bind("<Return>", self.buscar_descricao_por_codigo)
 
-        ctk.CTkLabel(codigo_frame, text="DESCRIÇÃO:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            codigo_frame,
+            text="DESCRIÇÃO:",
+            width=80,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
-        self.descricao_entry = ctk.CTkEntry(codigo_frame,
-                                            fg_color=self.cor_secundaria,
-                                            border_color=self.cor_borda,
-                                            text_color=self.cor_texto_entry)
-        self.descricao_entry.pack(side="left", fill="x", expand=True, padx=5)
+        # antes: sem width + fill="x", expand=True (muito alongado)
+        self.descricao_entry = ctk.CTkEntry(
+            codigo_frame,
+            width=450,  # largura controlada
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto_entry
+        )
+        self.descricao_entry.pack(side="left", padx=5)
 
-        # Linha 3: Modelo
+        # Linha 3: Modelo (COMBOBOX ENCURTADA)
         sel_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         sel_frame.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(sel_frame, text="MODELO:", width=120, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            sel_frame,
+            text="MODELO:",
+            width=120,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
         self.modelo_ocf_cb = ctk.CTkComboBox(
             sel_frame,
             values=[],
-            width=280,
+            width=350,  # antes 280 + expand; agora largura fixa
             command=self._on_modelo_ocf_selected,
             fg_color=self.cor_secundaria,
             border_color=self.cor_borda,
@@ -480,14 +518,18 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             button_color=self.cor_primaria,
             button_hover_color=self.cor_hover
         )
-        self.modelo_ocf_cb.pack(side="left", padx=5, fill="x", expand=True)
+        self.modelo_ocf_cb.pack(side="left", padx=5)
         self.modelo_ocf_cb.set("Selecione um modelo")
 
-        ctk.CTkButton(sel_frame, text="↻", width=40,
-                      command=self._recarregar_modelos_ocf,
-                      fg_color=self.cor_primaria,
-                      hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkButton(
+            sel_frame,
+            text="↻",
+            width=40,
+            command=self._recarregar_modelos_ocf,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
         self._recarregar_modelos_ocf()
 
@@ -495,8 +537,13 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         dimensoes_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         dimensoes_frame.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(dimensoes_frame, text="COMPRIMENTO (m):", width=120, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            dimensoes_frame,
+            text="COMPRIMENTO (m):",
+            width=120,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
         self.comprimento_entry = ctk.CTkEntry(
             dimensoes_frame,
@@ -511,8 +558,13 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.comprimento_entry.pack(side="left", padx=5)
         self.comprimento_entry.insert(0, "7.35")
 
-        ctk.CTkLabel(dimensoes_frame, text="LARGURA (m):", width=100, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            dimensoes_frame,
+            text="LARGURA (m):",
+            width=100,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
         self.largura_entry = ctk.CTkEntry(
             dimensoes_frame,
@@ -527,39 +579,63 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.largura_entry.pack(side="left", padx=5)
         self.largura_entry.insert(0, "1.48")
 
-        # Linha 5: Pessoal
+        # Linha 5: Pessoal (ENTRADAS ENCURTADAS)
         pessoal_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         pessoal_frame.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(pessoal_frame, text="CORTADOR:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            pessoal_frame,
+            text="CORTADOR:",
+            width=80,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
-        self.cortador_entry = ctk.CTkEntry(pessoal_frame,
-                                           fg_color=self.cor_secundaria,
-                                           border_color=self.cor_borda,
-                                           text_color=self.cor_texto_entry)
-        self.cortador_entry.pack(side="left", fill="x", expand=True, padx=5)
+        self.cortador_entry = ctk.CTkEntry(
+            pessoal_frame,
+            width=260,  # antes fill="x", expand=True
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto_entry
+        )
+        self.cortador_entry.pack(side="left", padx=5)
 
-        ctk.CTkLabel(pessoal_frame, text="AJUDANTE:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            pessoal_frame,
+            text="AJUDANTE:",
+            width=80,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
-        self.ajudante_entry = ctk.CTkEntry(pessoal_frame,
-                                           fg_color=self.cor_secundaria,
-                                           border_color=self.cor_borda,
-                                           text_color=self.cor_texto_entry)
-        self.ajudante_entry.pack(side="left", fill="x", expand=True, padx=5)
+        self.ajudante_entry = ctk.CTkEntry(
+            pessoal_frame,
+            width=260,  # antes fill="x", expand=True
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto_entry
+        )
+        self.ajudante_entry.pack(side="left", padx=5)
 
         # Linha 6: Data
         data_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         data_frame.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(data_frame, text="DATA:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            data_frame,
+            text="DATA:",
+            width=80,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
-        self.data_entry = ctk.CTkEntry(data_frame, width=120,
-                                       fg_color=self.cor_secundaria,
-                                       border_color=self.cor_borda,
-                                       text_color=self.cor_texto_entry)
+        self.data_entry = ctk.CTkEntry(
+            data_frame,
+            width=120,
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto_entry
+        )
         self.data_entry.pack(side="left", padx=5)
         self.data_entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
 
@@ -576,7 +652,13 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         headers = ["TECIDO", "", "COR", "", "COMPOSIÇÃO", "",
                    "BOBINAS", "", "FOLHAS", ""] + self.tamanhos + ["TOTAL PEÇAS"]
 
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=5, style="Custom.Treeview")
+        self.tree = ttk.Treeview(
+            table_frame,
+            columns=columns,
+            show="headings",
+            height=5,
+            style="Custom.Treeview"
+        )
 
         for col, header in zip(columns, headers):
             self.tree.heading(col, text=header)
@@ -696,8 +778,14 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         footer_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         footer_frame.pack(fill="x", pady=5)
 
-        ctk.CTkLabel(footer_frame, text="TOTAL DE PEÇAS:", width=120, anchor="e",
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            footer_frame,
+            text="TOTAL DE PEÇAS:",
+            width=120,
+            anchor="e",
+            font=("Arial", 12, "bold"),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
         self.lbl_total_pecas = ctk.CTkLabel(
             footer_frame,
@@ -709,8 +797,14 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         )
         self.lbl_total_pecas.pack(side="left", padx=5)
 
-        ctk.CTkLabel(footer_frame, text="FOLHAS:", width=80, anchor="e",
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            footer_frame,
+            text="FOLHAS:",
+            width=80,
+            anchor="e",
+            font=("Arial", 12, "bold"),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
         self.lbl_total_folhas = ctk.CTkLabel(
             footer_frame,
@@ -722,8 +816,14 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         )
         self.lbl_total_folhas.pack(side="left", padx=5)
 
-        ctk.CTkLabel(footer_frame, text="METROS:", width=80, anchor="e",
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            footer_frame,
+            text="METROS:",
+            width=80,
+            anchor="e",
+            font=("Arial", 12, "bold"),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
         self.lbl_metros = ctk.CTkLabel(
             footer_frame,
@@ -735,8 +835,14 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         )
         self.lbl_metros.pack(side="left", padx=5)
 
-        ctk.CTkLabel(footer_frame, text="RENDIMENTO:", width=100, anchor="e",
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            footer_frame,
+            text="RENDIMENTO:",
+            width=100,
+            anchor="e",
+            font=("Arial", 12, "bold"),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
         self.lbl_rendimento = ctk.CTkLabel(
             footer_frame,
@@ -752,13 +858,20 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         obs_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         obs_frame.pack(fill="x", pady=5)
 
-        ctk.CTkLabel(obs_frame, text="OBSERVAÇÕES:", width=100, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(
+            obs_frame,
+            text="OBSERVAÇÕES:",
+            width=100,
+            anchor="e",
+            text_color=self.cor_texto
+        ).pack(side="left", padx=5)
 
-        self.obs_entry = ctk.CTkEntry(obs_frame,
-                                      fg_color=self.cor_secundaria,
-                                      border_color=self.cor_borda,
-                                      text_color=self.cor_texto_entry)
+        self.obs_entry = ctk.CTkEntry(
+            obs_frame,
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto_entry
+        )
         self.obs_entry.pack(side="left", fill="x", expand=True, padx=5)
 
         # ========== BOTÕES FINAIS - MESMO ESTILO DA SAÍDA ==========
