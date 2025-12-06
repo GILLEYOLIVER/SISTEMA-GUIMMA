@@ -19,6 +19,8 @@ from tkinter import messagebox, ttk
 from PIL import Image
 import customtkinter as ctk
 from TEMAS import TemasPage, is_dark_color
+from TEMAS import remover_bordas_botoes_tema
+
 
 
 # ===== IMPORTAÇÕES DO SISTEMA =====
@@ -216,7 +218,7 @@ class ThemeManager:
         # Hovers realçados
         cor_hover_realcado = self._realcar_cor(cor_secundaria, 1.3)
 
-        # Estilo básico para Treeview (ttk) – usado em várias páginas de relatório/estoque
+        # Estilo básico para Treeview (ttk)
         try:
             style = ttk.Style(root_widget)
             style.configure(
@@ -246,12 +248,17 @@ class ThemeManager:
         def _apply_to_all_widgets(widget):
             """Aplica tema recursivamente em todos os widgets."""
             try:
-                # ---------- WIDGETS CUSTOMTKINTER ----------
+                # ------------------------------------------------------
+                # CTkFrame
+                # ------------------------------------------------------
                 if isinstance(widget, ctk.CTkFrame):
                     if hasattr(widget, '_fg_color') and widget._fg_color not in ["transparent", None]:
                         widget.configure(fg_color=cor_fundo)
                     widget.configure(border_color=cor_borda)
 
+                # ------------------------------------------------------
+                # CTkButton
+                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkButton):
                     widget.configure(
                         fg_color=cor_secundaria,
@@ -262,25 +269,35 @@ class ThemeManager:
                         corner_radius=8
                     )
 
+                # ------------------------------------------------------
+                # CTkLabel  (CORRIGIDO — elimina fundo quadrado)
+                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkLabel):
-                    cfg = {"text_color": cor_texto, "font": fonts["body"]}
-                    # Evita que labels mantenham a cor de fundo do tema anterior
-                    # (o que gera contornos quadrados ao redor do texto).
-                    current_fg = getattr(widget, "_fg_color", None)
-                    if current_fg not in (None, "transparent"):
-                        cfg["fg_color"] = cor_fundo
-                    widget.configure(**cfg)
+                    widget.configure(
+                        text_color=cor_texto,
+                        font=fonts["body"],
+                        fg_color="transparent",  # 🔥 Correção definitiva
+                        border_width=0,
+                        corner_radius=0
+                    )
 
+                # ------------------------------------------------------
+                # CTkEntry
+                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkEntry):
                     widget.configure(
                         fg_color=cor_secundaria,
                         border_color=cor_borda,
                         text_color=cor_texto,
                         font=fonts["body"],
-                        # Evita códigos de cor inválidos (ex: #RRGGBBAA). Usa uma variação segura.
-                        placeholder_text_color=cor_texto if len(str(cor_texto)) <= 7 else str(cor_texto)[:7]
+                        placeholder_text_color=(
+                            cor_texto if len(str(cor_texto)) <= 7 else str(cor_texto)[:7]
+                        )
                     )
 
+                # ------------------------------------------------------
+                # CTkComboBox
+                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkComboBox):
                     widget.configure(
                         fg_color=cor_secundaria,
@@ -294,6 +311,9 @@ class ThemeManager:
                         dropdown_hover_color=cor_hover_realcado
                     )
 
+                # ------------------------------------------------------
+                # CheckBox / Switch
+                # ------------------------------------------------------
                 elif isinstance(widget, (ctk.CTkCheckBox, ctk.CTkSwitch)):
                     widget.configure(
                         fg_color=cor_secundaria,
@@ -304,6 +324,9 @@ class ThemeManager:
                         font=fonts["body"]
                     )
 
+                # ------------------------------------------------------
+                # TabView
+                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkTabview):
                     widget.configure(
                         segmented_button_fg_color=cor_primaria,
@@ -314,10 +337,15 @@ class ThemeManager:
                         font=fonts["body"]
                     )
 
+                # ------------------------------------------------------
+                # Scrollable Frame
+                # ------------------------------------------------------
                 elif isinstance(widget, ctk.CTkScrollableFrame):
                     widget.configure(fg_color=cor_fundo, border_color=cor_borda)
 
-                # ---------- TKINTER "PURO" (algumas páginas antigas usam) ----------
+                # ------------------------------------------------------
+                # Tkinter Puro
+                # ------------------------------------------------------
                 elif isinstance(widget, tk.Frame):
                     widget.configure(bg=cor_fundo)
 
@@ -333,10 +361,9 @@ class ThemeManager:
                     )
 
             except Exception:
-                # Ignora erros em widgets que não podem ser configurados
                 pass
 
-            # Aplica recursivamente nos filhos
+            # Recursão
             try:
                 for child in widget.winfo_children():
                     _apply_to_all_widgets(child)
@@ -346,10 +373,13 @@ class ThemeManager:
         _apply_to_all_widgets(root_widget)
 
     def _apply_global_theme(self, palette: dict):
-        """Aplica a paleta em TODOS os widgets do aplicativo."""
-        # Aplica em toda a aplicação (inclui páginas já abertas)
         try:
             self._apply_palette_to_widget(self.app, palette, self.fonts)
+
+            # CORREÇÃO CRÍTICA — EVITA CAIXAS QUADRADAS
+            from TEMAS import remover_bordas_botoes_tema
+            remover_bordas_botoes_tema(self.app)
+
         except Exception as e:
             print(f"[Tema] Erro ao aplicar tema global: {e}")
 
@@ -430,6 +460,12 @@ class ThemeManager:
 
             # Reconstrói a interface
             app._build_interface()
+
+            try:
+                from TEMAS import remover_bordas_botoes_tema
+                remover_bordas_botoes_tema(app)
+            except Exception as e:
+                print("[Tema] Falha ao remover bordas após reconstrução:", e)
 
             # Atualiza display do usuário
             if hasattr(app, '_update_user_display'):
