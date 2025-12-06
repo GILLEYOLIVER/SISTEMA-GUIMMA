@@ -8,7 +8,84 @@ import colorsys
 import customtkinter as ctk
 from PIL import Image, ImageTk, ImageGrab
 import tkinter.messagebox as messagebox
+# =================== UTILITÁRIOS DE CORREÇÃO GLOBAL ===================
 
+def remover_bordas_botoes_tema(root_widget):
+    """
+    Remove bordas, fundos e contornos errados deixados pelo CTk ao trocar de tema.
+    Deve ser chamada APÓS a aplicação do tema, inclusive no MENU PRINCIPAL.
+    """
+    import customtkinter as ctk
+    import tkinter as tk
+
+    def limpar(widget):
+        try:
+            # CTkLabel: nunca deve ter fundo ou borda
+            if isinstance(widget, ctk.CTkLabel):
+                widget.configure(
+                    fg_color="transparent",
+                    border_width=0,
+                    corner_radius=0
+                )
+
+            # CTkButton: remover bordas e fundos de botões decorativos
+            elif isinstance(widget, ctk.CTkButton):
+                widget.configure(
+                    border_width=0,
+                    corner_radius=8
+                )
+
+            # Tk labels (para compatibilidade)
+            elif isinstance(widget, tk.Label):
+                widget.configure(bg="transparent")
+
+            # Tk frames (para compatibilidade)
+            elif isinstance(widget, tk.Frame):
+                widget.configure(bg="transparent")
+
+        except Exception:
+            pass
+
+        # Recursão
+        for child in widget.winfo_children():
+            limpar(child)
+
+    limpar(root_widget)
+
+def corrigir_bordas_labels(widget):
+    """
+    Remove qualquer borda ou contorno visual que aparece em labels após trocar o tema.
+    Aplica recursivamente em todos os filhos.
+    """
+    try:
+        import customtkinter as ctk
+        # Remove borda apenas de labels
+        if isinstance(widget, ctk.CTkLabel):
+            widget.configure(border_width=0, corner_radius=0, fg_color="transparent")
+
+        # Aplicar aos filhos
+        for child in widget.winfo_children():
+            corrigir_bordas_labels(child)
+
+    except Exception as e:
+        print(f"[ERRO corrigir_bordas_labels] {e}")
+
+def corrigir_labels_transparentes(widget):
+    """
+    Garante que TODOS os CTkLabel fiquem com fg_color="transparent",
+    corrigindo o que o ThemeManager sobrescreveu no MENU.
+    """
+    import customtkinter as ctk
+
+    try:
+        if isinstance(widget, ctk.CTkLabel):
+            widget.configure(fg_color="transparent", border_width=0, corner_radius=0)
+
+        for child in widget.winfo_children():
+            corrigir_labels_transparentes(child)
+
+    except Exception:
+        pass
 
 
 # =================== CONSTANTES E CONFIGURAÇÕES ===================
@@ -2140,30 +2217,58 @@ class TemasPage(ctk.CTkFrame):
             print(f"❌ Tema personalizado '{nome_tema}' não encontrado!")
             self._mostrar_aviso(f"Tema personalizado '{nome_tema}' não encontrado.")
 
+    # ---------------------------------------------------------
+    # CORREÇÃO GLOBAL DE BORDAS NO SISTEMA OPERA
+    # ---------------------------------------------------------
+
     def _aplicar_tema_completo(self, nome_tema):
-        """Aplica um tema em toda a aplicação"""
+        """
+        Aplica um tema em toda a aplicação, usando o ThemeManager se existir,
+        e depois limpa bordas/fundos indesejados em labels e botões de tema.
+        """
         try:
             tema = self.paletas.obter_tema(nome_tema)
             if not tema:
                 print(f"⚠️ Tema '{nome_tema}' não encontrado.")
                 return False
 
-            # Atualiza preview
-            self._update_live_preview()
+            # Atualiza o preview da própria página de temas
+            try:
+                self._update_live_preview()
+            except Exception as e:
+                print(f"[AVISO] Falha ao atualizar preview: {e}")
 
-            # Usa ThemeManager se disponível
+            # Aplica via ThemeManager, se disponível
             theme_manager = getattr(self.app, "theme_manager", None)
             if theme_manager:
                 theme_manager.apply_theme(nome_tema, tema)
                 print(f"✅ Tema aplicado via ThemeManager: {nome_tema}")
+            else:
+                # Fallback: apenas registra as cores no objeto app
+                for campo, valor in tema.items():
+                    setattr(self.app, f"cor_{campo}", valor)
+
+            # 🔧 LIMPEZA VISUAL: remove contorno de textos e botões de tema
+            try:
+                corrigir_bordas_labels(self.app)
+            except Exception as e:
+                print(f"[AVISO] Erro ao corrigir bordas de labels: {e}")
+
+            try:
+                remover_bordas_botoes_tema(self.app)
+            except Exception as e:
+                print(f"[AVISO] Erro ao ajustar botões de tema: {e}")
 
             # Atualiza estado interno
             self.tema_atual = nome_tema
             self.app.tema_atual = nome_tema
 
-            # Salva preferência
+            # Salva preferência (padrão ou personalizado)
             is_custom = nome_tema in self.paletas.custom
-            self._salvar_preferencia_tema_atual(nome_tema, "personalizado" if is_custom else "padrao")
+            self._salvar_preferencia_tema_atual(
+                nome_tema,
+                "personalizado" if is_custom else "padrao"
+            )
 
             print(f"🎉 Tema '{nome_tema}' aplicado completamente")
             return True
@@ -2171,6 +2276,110 @@ class TemasPage(ctk.CTkFrame):
         except Exception as e:
             print(f"❌ Erro ao aplicar tema '{nome_tema}': {e}")
             return False
+
+    def corrigir_bordas_labels(widget):
+        """
+        Remove qualquer borda, raio ou cor de fundo que possa deixar os textos
+        com um quadrado em volta (para CTkLabel).
+        """
+        import customtkinter as ctk
+
+        try:
+            if isinstance(widget, ctk.CTkLabel):
+                widget.configure(
+                    fg_color="transparent",
+                    border_width=0,
+                    corner_radius=0
+                )
+
+            for child in widget.winfo_children():
+                corrigir_bordas_labels(child)
+
+        except Exception as e:
+            print(f"[ERRO corrigir_bordas_labels] {e}")
+
+    def atualizar_cores_widgets(self, widget, tema):
+        import customtkinter as ctk
+
+        try:
+            # LABEL
+            if isinstance(widget, ctk.CTkLabel):
+                widget.configure(
+                    text_color=tema["texto"],
+                    fg_color="transparent",
+                    border_width=0,
+                    corner_radius=0
+                )
+
+            # BOTÃO
+            elif isinstance(widget, ctk.CTkButton):
+                widget.configure(
+                    fg_color=tema["secundaria"],
+                    hover_color=tema["hover"],
+                    text_color=tema["texto"],
+                    border_color=tema["borda"],
+                    border_width=1
+                )
+
+            # ENTRADA
+            elif isinstance(widget, ctk.CTkEntry):
+                widget.configure(
+                    fg_color=tema["primaria"],
+                    text_color=tema["texto"],
+                    border_color=tema["borda"]
+                )
+
+            # FRAME
+            elif isinstance(widget, ctk.CTkFrame):
+                widget.configure(
+                    fg_color=tema["primaria"],
+                    border_color=tema["borda"]
+                )
+
+            # RECURSÃO
+            for child in widget.winfo_children():
+                self.atualizar_cores_widgets(child, tema)
+
+        except Exception as e:
+            print(f"[ERRO atualizar_cores_widgets] {e}")
+
+    def _criar_elementos_preview(self):
+        """Cria os elementos de exemplo no preview SEM bordas indesejadas."""
+        self.sample_label = ctk.CTkLabel(self.preview_container, text="Texto de Exemplo",
+                                         font=("Arial", 12), border_width=0,
+                                         corner_radius=0, fg_color="transparent")
+        self.sample_label.pack(pady=10, padx=10)
+
+        self.sample_button = ctk.CTkButton(self.preview_container, text="Botão Secundário",
+                                           font=("Arial", 11))
+        self.sample_button.pack(pady=5, padx=10)
+
+        self.sample_entry = ctk.CTkEntry(self.preview_container,
+                                         placeholder_text="Campo de entrada",
+                                         font=("Arial", 11))
+        self.sample_entry.pack(pady=5, padx=10, fill="x")
+
+        self.tertiary_frame = ctk.CTkFrame(self.preview_container,
+                                           corner_radius=6, border_width=2)
+        self.tertiary_frame.pack(pady=10, padx=10, fill="x")
+
+        self.tertiary_label = ctk.CTkLabel(self.tertiary_frame, text="Frame Terciário",
+                                           font=("Arial", 10),
+                                           border_width=0, corner_radius=0,
+                                           fg_color="transparent")
+        self.tertiary_label.pack(pady=8)
+
+        self.border_frame = ctk.CTkFrame(self.preview_container,
+                                         corner_radius=6, border_width=3)
+        self.border_frame.pack(pady=5, padx=10, fill="x")
+
+        self.border_label = ctk.CTkLabel(self.border_frame, text="Exemplo de Borda",
+                                         font=("Arial", 9),
+                                         border_width=0, corner_radius=0,
+                                         fg_color="transparent")
+        self.border_label.pack(pady=6)
+
+        self._criar_botoes_status()
 
     def _abrir_seletor_cor(self, campo):
         """Abre seletor de cor para um campo específico"""
