@@ -1425,7 +1425,15 @@ class OperaMenuApp(ctk.CTk):
         print(f"🎯 Menu construído com tema: {len(self.MENU_ESTRUTURA)} categorias visíveis")
 
     def _create_menu_button(self, categoria: str):
-        """Cria botão de categoria no menu com hover bem forte e submenu no hover."""
+        """
+        Cria botão de categoria no menu lateral.
+
+        - Botão SEMPRE visível
+        - Hover forte usando apenas hover_color nativo do CTkButton
+        - Submenu abre ao passar o mouse
+        - Sem “rastro” de cor depois do hover
+        """
+        # Frame "card" do botão
         btn_frame = ctk.CTkFrame(self.menu_frame, fg_color="transparent")
         btn_frame.pack_propagate(False)
         btn_frame.configure(width=self.SIDEBAR_WIDTH - 20, height=self.ITEM_HEIGHT)
@@ -1433,13 +1441,19 @@ class OperaMenuApp(ctk.CTk):
 
         icon = self.icons_cache.get(categoria)
 
+        # ==============================
         # Cores base
-        btn_bg = self.cor_secundaria
-        # Hover bem mais claro
-        btn_hover = self._realcar_cor(btn_bg, 1.6)
-        btn_text = self.cor_texto
-        btn_border = self.cor_borda
-        btn_border_hover = self._realcar_cor(btn_border, 1.4)
+        # ==============================
+        base = self.cor_secundaria
+
+        card_bg = self._darker(base, 0.82)  # card fixo, sempre igual
+        btn_bg = self._realcar_cor(base, 1.06)  # cor normal do botão
+        btn_hover = self._realcar_cor(base, 1.55)  # hover bem mais claro
+
+        border_color = self.cor_borda
+
+        # Card sempre visível, não mexemos mais nessa cor no hover
+        btn_frame.configure(fg_color=card_bg)
 
         btn = ctk.CTkButton(
             btn_frame,
@@ -1448,52 +1462,49 @@ class OperaMenuApp(ctk.CTk):
             compound="left",
             anchor="w",
             fg_color=btn_bg,
-            hover_color=btn_hover,  # ainda deixo configurado, mas o principal é o on_enter
-            text_color=btn_text,
-            font=("Arial", 16),
+            hover_color=btn_hover,  # CustomTkinter cuida de ligar/desligar
+            text_color=self.cor_texto,
+            font=("Arial", 16, "bold") if categoria == "Dashboard" else ("Arial", 16),
             corner_radius=10,
-            border_color=btn_border,
+            border_color=border_color,
             border_width=1,
+            # hover permanece ativado (padrão), não vamos desligar
             command=lambda c=categoria: self._on_category_click(c),
         )
         btn.pack(fill="both", expand=True, padx=4)
         self._remove_button_focus(btn)
 
-        def on_enter(_e, c=categoria):
+        # ==============================
+        # Eventos: só layout + submenu
+        # ==============================
+        def on_enter(_e):
             try:
-                # Destaque visual
+                # apenas um leve deslocamento para dar sensação de foco
                 btn_frame.pack_configure(padx=(12, 8))
-                btn_frame.configure(
-                    fg_color=self._realcar_cor(btn_bg, 0.9)  # um pouco mais escuro
-                )
-                # AQUI forçamos o hover de verdade
-                btn.configure(fg_color=btn_hover, border_color=btn_border_hover)
 
-                # abre submenu ao passar o mouse
-                if c != "Dashboard":
-                    self._cancel_submenu_close(c)
-                    self._on_category_hover(c)
+                if categoria != "Dashboard":
+                    self._cancel_submenu_close(categoria)
+                    self._on_category_hover(categoria)
             except Exception:
                 pass
 
-        def on_leave(_e, c=categoria):
+        def on_leave(_e):
             try:
+                # volta o padding original
                 btn_frame.pack_configure(padx=(10, 10))
-                btn_frame.configure(fg_color="transparent")
-                # volta para cor normal
-                btn.configure(fg_color=btn_bg, border_color=btn_border)
 
-                if c != "Dashboard":
-                    self._schedule_submenu_close(c)
+                if categoria != "Dashboard":
+                    self._schedule_submenu_close(categoria)
             except Exception:
                 pass
 
-        # Hover valendo tanto no frame quanto no botão
+        # Aplica eventos tanto no card quanto no botão, mas SEM mexer em cor
         btn_frame.bind("<Enter>", on_enter)
         btn_frame.bind("<Leave>", on_leave)
         btn.bind("<Enter>", on_enter)
         btn.bind("<Leave>", on_leave)
 
+        # Guarda referência para posicionar submenu
         self.botoes_menu[categoria] = btn_frame
 
     def _create_submenu(self, categoria: str):
