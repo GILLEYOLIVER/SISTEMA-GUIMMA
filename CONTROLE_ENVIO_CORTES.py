@@ -392,26 +392,46 @@ class EnvioCortes(ctk.CTkFrame):
         tabela_frame = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         tabela_frame.pack(fill="x", pady=2)
 
-        # Configurar estilo da Treeview
+        # === ESTILO BÁSICO DO TREEVIEW (CONTRASTE FORTe) ===
         self.style = ttk.Style()
-        self.style.theme_use('default')
+        self.style.theme_use("default")
+
+        # Cores fixas para garantir contraste em QUALQUER tema
+        header_bg = "#020617"  # bem escuro
+        header_fg = "#F9FAFB"  # quase branco
+        row_bg = self.cor_secundaria
+        row_fg = self.cor_texto
+        selection_bg = "#111827"  # fundo escuro para seleção
+        selection_fg = "#F9FAFB"  # texto claro na seleção
+
         self.style.configure(
             "Treeview",
-            background=self.cor_secundaria,
-            foreground=self.cor_texto,
-            fieldbackground=self.cor_secundaria,
+            background=row_bg,
+            foreground=row_fg,
+            fieldbackground=row_bg,
             borderwidth=0,
             highlightthickness=0,
             rowheight=20,
             font=("Arial", 9)
         )
-        self.style.map('Treeview', background=[('selected', self.cor_primaria)])
+
+        self.style.map(
+            "Treeview",
+            background=[
+                ("selected", selection_bg),
+                ("!selected", row_bg),
+            ],
+            foreground=[
+                ("selected", selection_fg),
+                ("!selected", row_fg),
+            ]
+        )
 
         self.style.configure(
             "Treeview.Heading",
             font=("Arial", 9, "bold"),
-            background=self.cor_primaria,
-            foreground=self.cor_texto
+            background=header_bg,
+            foreground=header_fg
         )
 
         # Configurar colunas da treeview
@@ -445,7 +465,60 @@ class EnvioCortes(ctk.CTkFrame):
             self.cortes_tree.column(col, width=w, anchor="center")
 
         self.cortes_tree.pack(fill="x")
-        self.cortes_tree.bind("<<TreeviewSelect>>", self.on_corte_selecionado)
+        self._configurar_treeview()
+
+        # TAG QUE VAI PINTAR A LINHA SELECIONADA COM CONTRASTE FORTE
+        self.cortes_tree.tag_configure(
+            "linha_selecionada",
+            background=selection_bg,
+            foreground=selection_fg
+        )
+
+        # Em vez de chamar direto on_corte_selecionado, passamos por _on_tree_select
+        self.cortes_tree.bind("<<TreeviewSelect>>", self._on_tree_select)
+
+
+        # === ESTILO PROFISSIONAL DE CONTRASTE PARA O TREEVIEW ===
+        self.style = ttk.Style()
+        self.style.theme_use("clam")  # clam permite sobrescrever seleção
+
+        # Cores de contraste (independentes do tema do usuário)
+        header_bg = "#000000"
+        header_fg = "#FFFFFF"
+        row_bg = self.cor_secundaria
+        row_fg = self.cor_texto
+        selection_bg = "#1E40AF"  # azul forte – fica bom no claro e escuro
+        selection_fg = "#FFFFFF"
+
+        self.style.configure(
+            "Treeview",
+            background=row_bg,
+            foreground=row_fg,
+            fieldbackground=row_bg,
+            rowheight=22,
+            borderwidth=0,
+            font=("Arial", 10)
+        )
+
+        self.style.map(
+            "Treeview",
+            background=[("selected", selection_bg)],
+            foreground=[("selected", selection_fg)]
+        )
+
+        self.style.configure(
+            "Treeview.Heading",
+            background=header_bg,
+            foreground=header_fg,
+            font=("Arial", 10, "bold")
+        )
+
+        # TAG dedicada para reforçar contraste visual
+        self.cortes_tree.tag_configure(
+            "linha_selecionada",
+            background=selection_bg,
+            foreground=selection_fg
+        )
 
         # =========== SEÇÃO 5: DETALHES DO CORTE E CONTATOS ===========
         det = ctk.CTkFrame(main, fg_color=self.cor_fundo)
@@ -976,6 +1049,170 @@ class EnvioCortes(ctk.CTkFrame):
         # Carregar dados após a UI estar construída
         self.after(100, self._carregar_dados_iniciais)
 
+    def _configurar_treeview(self):
+        """
+        Configura o estilo da Treeview para seguir o tema na seleção,
+        mas manter cabeçalho sempre escuro para melhor contraste.
+        """
+        self.style = ttk.Style()
+
+        try:
+            self.style.theme_use("clam")  # respeita estilos customizados
+        except tk.TclError:
+            pass
+
+        # Cores base do tema
+        row_bg = getattr(self, "cor_secundaria", "#111827")
+        row_fg = getattr(self, "cor_texto", "#E5E7EB")
+        selecao_bg = getattr(self, "cor_selecao", "#1E3A8A")  # fundo da seleção segue o tema
+
+        # Cabeçalho sempre escuro
+        header_bg = "#020617"  # preto bem escuro
+        header_fg = "#F9FAFB"  # quase branco
+
+        # Calcula contraste automático da seleção
+        def _hex_to_rgb(h):
+            h = h.lstrip('#')
+            if len(h) == 3:
+                h = ''.join([c * 2 for c in h])
+            try:
+                return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+            except:
+                return (0, 0, 0)
+
+        def _is_dark(hex_color):
+            r, g, b = _hex_to_rgb(hex_color)
+            lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+            return lum < 0.5
+
+        selecao_fg = "#FFFFFF" if _is_dark(selecao_bg) else "#000000"
+
+        # ===== Estilo das linhas =====
+        self.style.configure(
+            "Opera.Treeview",
+            background=row_bg,
+            foreground=row_fg,
+            fieldbackground=row_bg,
+            rowheight=22,
+            borderwidth=0,
+            highlightthickness=0,
+            font=("Arial", 10)
+        )
+
+        self.style.map(
+            "Opera.Treeview",
+            background=[("selected", selecao_bg), ("!selected", row_bg)],
+            foreground=[("selected", selecao_fg), ("!selected", row_fg)]
+        )
+
+        # ===== Cabeçalho sempre escuro =====
+        self.style.configure(
+            "Opera.Treeview.Heading",
+            background=header_bg,
+            foreground=header_fg,
+            font=("Arial", 10, "bold"),
+            relief="flat"
+        )
+
+        self.style.map(
+            "Opera.Treeview.Heading",
+            background=[("active", header_bg), ("!active", header_bg)],
+            foreground=[("active", header_fg), ("!active", header_fg)]
+        )
+
+        # Aplica estilo
+        self.cortes_tree.configure(style="Opera.Treeview")
+
+        # TAG de seleção consistente
+        self.cortes_tree.tag_configure(
+            "linha_selecionada",
+            background=selecao_bg,
+            foreground=selecao_fg
+        )
+
+    def on_corte_selecionado(self, event):
+        sel = self.cortes_tree.selection()
+        if not sel:
+            return
+
+        item = sel[0]
+        vals = self.cortes_tree.item(item, "values")
+        if not vals:
+            return
+
+        # ID é o primeiro elemento
+        corte_id = vals[0]
+        self.corte_selecionado = corte_id
+
+        # Helper para preencher entries
+        def _set_entry(entry, value, disabled=True):
+            entry.configure(state="normal")
+            entry.delete(0, "end")
+            entry.insert(0, value if value is not None else "")
+            if disabled:
+                entry.configure(state="disabled")
+            else:
+                entry.configure(state="normal")
+
+        # Preenche campos básicos com os valores da linha
+        # Estrutura: [ID, Número, Código, Descrição, PP, P, M, G, GG, G1, G2, G3, Total]
+        _set_entry(self.codigo_entry, vals[2] if len(vals) > 2 else "")
+        _set_entry(self.descricao_entry, vals[3] if len(vals) > 3 else "")
+        _set_entry(self.ordem_entry, vals[1] if len(vals) > 1 else "")
+
+        # Preenche grade com saldos por tamanho
+        cols_tam = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+        for i, tam in enumerate(cols_tam):
+            idx = 4 + i  # após id, numero, codigo, descricao
+            if idx < len(vals):
+                qtd_tam = safe_int(vals[idx])
+            else:
+                qtd_tam = 0
+
+            # Label de disponível
+            self.grade_widgets[tam]["disp"].configure(text=str(qtd_tam))
+
+            # Quantidade a enviar começa igual ao disponível
+            self.quantidades[tam].set(qtd_tam)
+            self._total_por_tam[tam] = qtd_tam
+            self._piloto_prev[tam] = 0
+
+        # Limpa quantidades de piloto e valores
+        for tam in self.tamanhos:
+            self.pilotos[tam].set(0)
+            self.valores[tam].set("")
+
+        # Recalcula totais
+        self._recalcular()
+
+        # Carrega, se houver, um envio já registrado na tabela controle_envio_cortes
+        corte_pronto = self._carregar_dados_corte_pronto(corte_id)
+        if corte_pronto:
+            servico, faccao, costureira, ordem, codigo, descricao, *qtds, _total = corte_pronto
+
+            if codigo:
+                _set_entry(self.codigo_entry, codigo)
+            if descricao:
+                _set_entry(self.descricao_entry, descricao)
+            if ordem:
+                _set_entry(self.ordem_entry, ordem)
+
+            # Atualiza a grade com os valores do registro pronto
+            for tam, qtd in zip(self.tamanhos, qtds):
+                qtd_int = safe_int(qtd)
+                self.grade_widgets[tam]["disp"].configure(text=str(qtd_int))
+                self.quantidades[tam].set(qtd_int)
+                self._total_por_tam[tam] = qtd_int
+                self._piloto_prev[tam] = 0
+
+            # Tipo de serviço
+            if servico:
+                self.tipo_cb.set(servico)
+                self._on_tipo_changed()
+
+            # Seleciona a facção/costureira associada
+            self._selecionar_prestador_por_nome(faccao or costureira)
+
     def _carregar_dados_iniciais(self):
         """Carrega os dados iniciais após a UI estar pronta"""
         try:
@@ -986,6 +1223,26 @@ class EnvioCortes(ctk.CTkFrame):
 
         except Exception as e:
             print(f"Erro ao carregar dados iniciais: {e}")
+
+    def _on_tree_select(self, event=None):
+        """
+        Aplica a TAG 'linha_selecionada' na(s) linha(s) selecionada(s),
+        usando as cores configuradas em _configurar_treeview, que já
+        acompanham o tema atual.
+        """
+        tree = self.cortes_tree
+
+        # Remove tags de todas as linhas
+        for item in tree.get_children():
+            tree.item(item, tags=())
+
+        # Marca as linhas selecionadas com a TAG de seleção
+        selecionados = tree.selection()
+        for iid in selecionados:
+            tree.item(iid, tags=("linha_selecionada",))
+
+        # Mantém a lógica de preenchimento dos campos do corte
+        self.on_corte_selecionado(event)
 
     # ----------------------------- Métodos de Carregamento -----------------------------
     def _carregar_prestadores(self):
@@ -1398,76 +1655,6 @@ class EnvioCortes(ctk.CTkFrame):
                         self.cortes_tree.insert("", "end", values=row)
         except Exception as e:
             messagebox.showerror("Erro", f"Falha na busca: {e}")
-
-    def on_corte_selecionado(self, event):
-        sel = self.cortes_tree.selection()
-        if not sel:
-            return
-        item = sel[0]
-        vals = self.cortes_tree.item(item, "values")
-        if not vals:
-            return
-
-        # ID é o primeiro elemento
-        corte_id = vals[0]
-        self.corte_selecionado = corte_id
-
-        # Preenche campos básicos
-        def _set_entry(entry, value):
-            entry.configure(state="normal")
-            entry.delete(0, "end")
-            entry.insert(0, value)
-            entry.configure(state="disabled")
-
-        _set_entry(self.codigo_entry, vals[2] if len(vals) > 2 else "")
-        _set_entry(self.descricao_entry, vals[3] if len(vals) > 3 else "")
-        _set_entry(self.ordem_entry, vals[1] if len(vals) > 1 else "")
-
-        # Preenche grade com saldos
-        cols_tam = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
-        for i, tam in enumerate(cols_tam):
-            idx = 4 + i  # após id, numero, codigo, descricao
-            if idx < len(vals):
-                qtd_tam = safe_int(vals[idx])
-            else:
-                qtd_tam = 0
-
-            self.grade_widgets[tam]["disp"].configure(text=str(qtd_tam))
-            self.quantidades[tam].set(qtd_tam)
-            self._total_por_tam[tam] = qtd_tam
-            self._piloto_prev[tam] = 0
-
-        # Limpa quantidades enviadas
-        for tam in self.tamanhos:
-            self.pilotos[tam].set(0)
-            self.valores[tam].set("")
-
-        self._recalcular()
-
-        corte_pronto = self._carregar_dados_corte_pronto(corte_id)
-        if corte_pronto:
-            servico, faccao, costureira, ordem, codigo, descricao, *qtds, _total = corte_pronto
-
-            if codigo:
-                _set_entry(self.codigo_entry, codigo)
-            if descricao:
-                _set_entry(self.descricao_entry, descricao)
-            if ordem:
-                _set_entry(self.ordem_entry, ordem)
-
-            for tam, qtd in zip(self.tamanhos, qtds):
-                qtd_int = safe_int(qtd)
-                self.grade_widgets[tam]["disp"].configure(text=str(qtd_int))
-                self.quantidades[tam].set(qtd_int)
-                self._total_por_tam[tam] = qtd_int
-                self._piloto_prev[tam] = 0
-
-            if servico:
-                self.tipo_cb.set(servico)
-                self._on_tipo_changed()
-
-            self._selecionar_prestador_por_nome(faccao or costureira)
-
     # ----------------------------- Métodos de Grade -----------------------------
     def _on_toggle_valor_unico(self):
         if self.valor_unico_var.get():
