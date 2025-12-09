@@ -10,6 +10,7 @@ Tabelas utilizadas (nomes conforme seu banco):
   cortes_finalizados
 """
 from __future__ import annotations
+import TEMAS
 import os, csv, webbrowser
 from datetime import datetime, date, timedelta
 from typing import Dict, Any, List

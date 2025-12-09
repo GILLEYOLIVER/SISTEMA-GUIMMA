@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import TEMAS
 import os
 from datetime import datetime
 import tkinter as tk
