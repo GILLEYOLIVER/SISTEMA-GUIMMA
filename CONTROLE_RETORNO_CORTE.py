@@ -138,10 +138,11 @@ class RetornoCortes(ctk.CTkFrame):
         self._prest_endereco = ""
 
         # Dicionários para grade
-        self.entregues = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.copias = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.defeitos = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.faltantes = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        # StringVar evita exceções do Tkinter quando o campo fica vazio ("")
+        self.entregues = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.copias = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.defeitos = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.faltantes = {t: tk.StringVar(value="0") for t in self.tamanhos}
 
         # Dados por tamanho
         self.enviado_por_tam = {t: 0 for t in self.tamanhos}
@@ -687,30 +688,42 @@ class RetornoCortes(ctk.CTkFrame):
 
     # ----------------------------- Loaders -----------------------------
     def carregar_envios_pendentes(self):
-        """Carrega lista de envios a partir da tabela envios_cortes com todos os dados necessários."""
+        """
+        Carrega lista de envios a partir da tabela envios_cortes,
+        MOSTRANDO APENAS cortes que AINDA NÃO POSSUEM RETORNO REGISTRADO.
+
+        Regra:
+          - e.status_envio != 'Finalizado'
+          - NÃO EXISTE registro em controle_retorno_cortes para esse envio_id
+        """
         try:
             termo = (self.busca_entry.get() or "").strip()
             self.envios_tree.delete(*self.envios_tree.get_children())
 
             params = []
-            where = ["e.status_envio != 'Finalizado'"]  # Mostrar apenas não finalizados
+
+            # Só exibe envios NÃO finalizados E que ainda NÃO têm retorno registrado
+            where = [
+                "e.status_envio != 'Finalizado'",
+                f"NOT EXISTS (SELECT 1 FROM {get_schema()}.controle_retorno_cortes r WHERE r.envio_id = e.id)"
+            ]
 
             if termo:
                 like = f"%{termo}%"
                 where.append("""
                     (e.ordem_corte ILIKE %s 
-                    OR e.codigo_corte ILIKE %s 
-                    OR e.descricao_corte ILIKE %s
-                    OR f.nome ILIKE %s
-                    OR e.cliente ILIKE %s
-                    OR e.colecao ILIKE %s
-                    OR e.material ILIKE %s)
+                     OR e.codigo_corte ILIKE %s 
+                     OR e.descricao_corte ILIKE %s
+                     OR f.nome ILIKE %s
+                     OR e.colecao ILIKE %s
+                     OR e.cores ILIKE %s
+                     OR e.material ILIKE %s)
                 """)
                 params.extend([like, like, like, like, like, like, like])
 
             where_sql = " AND ".join(where)
 
-            # Obter nomes reais das colunas
+            # Obter nomes reais das colunas dinâmicas
             colecao_col = _coluna_colecao()
             material_col = _coluna_material()
             cliente_col = _coluna_cliente()
@@ -768,30 +781,34 @@ class RetornoCortes(ctk.CTkFrame):
                 ORDER BY e.data_envio DESC, e.id DESC
             """
 
+            print("\n[DEBUG] SQL carregar_envios_pendentes:")
+            print(sql)
+            print(f"[DEBUG] Parâmetros = {params}")
+
             result = db.fetch_all(sql, tuple(params))
+            print(f"[DEBUG] Registros retornados para lista de envios pendentes = {len(result)}")
 
             incluir_conf = bool(self.incluir_conferencia_var.get())
 
             for i, row in enumerate(result):
                 status = (row.get("status") or "").strip()
 
-                # Se o checkbox "Mostrar 'Em Conferência'" estiver desmarcado,
-                # escondemos esses registros.
+                # Se quisermos ainda ocultar "Em Conferência" via checkbox, mantemos essa regra
                 if status == "Em Conferência" and not incluir_conf:
                     continue
 
-                tag_status = ()
-                if status == "Em Conferência":
-                    tag_status = ("status_conferencia",)
+                tags = ()
+                if status == "Enviado":
+                    tags = ("status_enviado",)
+                elif status == "Em Conferência":
+                    tags = ("status_conferencia",)
                 elif status == "Finalizado":
-                    tag_status = ("status_finalizado",)
-
-                row_tag = "evenrow" if i % 2 == 0 else "oddrow"
-                tags = tag_status + (row_tag,) if tag_status else (row_tag,)
+                    tags = ("status_finalizado",)
 
                 self.envios_tree.insert(
                     "",
                     "end",
+                    iid=row["id"],
                     values=(
                         row["id"],
                         row["ordem_corte"],
@@ -799,13 +816,15 @@ class RetornoCortes(ctk.CTkFrame):
                         row["descricao_corte"],
                         row["destino"],
                         row["data_envio"],
-                        status,
+                        row["status"],
                         row["qtd_total"],
                     ),
                     tags=tags,
                 )
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             messagebox.showerror("Erro", f"Falha ao carregar envios: {e}")
 
     def _carregar_dados_prestador(self, prestador_id):
@@ -1130,42 +1149,88 @@ class RetornoCortes(ctk.CTkFrame):
 
     # ----------------------------- Ações -----------------------------
     def registrar_entrada(self):
+        """
+        Registra a ENTRADA (retorno) de um envio, de forma ÚNICA.
+        - Se já existir retorno para o envio, NÃO deixa registrar novamente.
+        - Grava cabeçalho em controle_retorno_cortes
+        - Grava detalhes em retorno_detalhes_tamanho
+        - Atualiza status do envio em envios_cortes
+        - Remove o corte da lista (recarrega somente pendentes)
+        """
+        print("\n================ INÍCIO registrar_entrada() ================\n")
+
         if not self.envio_selecionado:
+            print("[DEBUG] registrar_entrada: nenhum envio selecionado.")
             messagebox.showwarning("Aviso", "Selecione um envio antes de registrar entrada.")
             return
 
         envio_id = self.envio_selecionado["id"]
+        print(f"[DEBUG] registrar_entrada: envio_id selecionado = {envio_id}")
+
         try:
-            # Verificar se já existe retorno
-            result = db.fetch_one("SELECT id FROM controle_retorno_cortes WHERE envio_id=%s LIMIT 1", (envio_id,))
-            retorno_id = result["id"] if result else None
+            # 1) Verificar se já existe retorno para esse envio
+            result = db.fetch_one(
+                "SELECT id FROM controle_retorno_cortes WHERE envio_id=%s LIMIT 1",
+                (envio_id,)
+            )
+            if result:
+                print(f"[DEBUG] registrar_entrada: já existe retorno_id={result['id']} para envio_id={envio_id}")
+                messagebox.showwarning(
+                    "Atenção",
+                    "Este corte já possui entrada registrada.\n"
+                    "Cada envio só pode registrar retorno uma única vez."
+                )
+                return
 
-            # Dados principais
-            data_chegada_str = self.data_chegada_entry.get().strip()
-            data_chegada = datetime.strptime(data_chegada_str, "%d/%m/%Y") if data_chegada_str else datetime.now()
+            # 2) Coletar dados da tela
+            data_chegada_str = (self.data_chegada_entry.get() or "").strip()
+            if data_chegada_str:
+                try:
+                    data_chegada = datetime.strptime(data_chegada_str, "%d/%m/%Y").date()
+                except ValueError:
+                    print("[WARN] Data inválida no campo data_chegada, usando hoje.")
+                    data_chegada = datetime.now().date()
+            else:
+                data_chegada = datetime.now().date()
 
-            tel_enc = self.tel_encarregado_entry.get().strip()
-            tel_acab = self.tel_acabamento_entry.get().strip()
+            tel_enc = (self.tel_encarregado_entry.get() or "").strip()
+            tel_acab = (self.tel_acabamento_entry.get() or "").strip()
+            piloto_resumo = (self.piloto_resumo_lbl.cget("text") or "").strip()
+            aviamentos = (self.aviamentos_txt.get("1.0", tk.END) or "").strip()
+            outros = (self.outros_txt.get("1.0", tk.END) or "").strip()
+            obs_geral = (self.obs_geral_txt.get("1.0", tk.END) or "").strip()
 
-            piloto_resumo = self.piloto_resumo_lbl.cget("text") or "Nenhum."
-            aviamentos = self.aviamentos_txt.get("1.0", tk.END).strip()
-            outros = self.outros_txt.get("1.0", tk.END).strip()
-            obs_geral = self.obs_geral_txt.get("1.0", tk.END).strip()
+            print(f"[DEBUG] data_chegada      = {data_chegada}")
+            print(f"[DEBUG] tel_encarregado  = '{tel_enc}'")
+            print(f"[DEBUG] tel_acabamento   = '{tel_acab}'")
+            print(f"[DEBUG] resumo_piloto    = '{piloto_resumo}'")
+            print(f"[DEBUG] aviamentos       = '{aviamentos}'")
+            print(f"[DEBUG] outros           = '{outros}'")
+            print(f"[DEBUG] observacoes      = '{obs_geral}'")
 
-            # Calcular totais
+            # 3) Calcular totais a partir da grade por tamanho
             total_entregue = 0
             total_copias = 0
             total_defeitos = 0
             total_faltantes = 0
             total_regulares = 0
             valor_total = 0.0
+
+            print("\n[DEBUG] ---- DETALHES POR TAMANHO ----")
             for tam in self.tamanhos:
                 entregue = safe_int(self.entregues[tam].get())
                 copias = safe_int(self.copias[tam].get())
                 defeitos = safe_int(self.defeitos[tam].get())
                 faltantes = safe_int(self.faltantes[tam].get())
                 regulares = max(0, entregue - defeitos - faltantes)
-                subtotal = regulares * self.valor_por_tam[tam]
+                valor_unit = float(self.valor_por_tam.get(tam, 0.0) or 0.0)
+                subtotal = regulares * valor_unit
+
+                print(
+                    f"[DEBUG] TAM={tam} | entregues={entregue} | copias={copias} | "
+                    f"defeitos={defeitos} | faltantes={faltantes} | regulares={regulares} | "
+                    f"valor_unit={valor_unit} | subtotal={subtotal}"
+                )
 
                 total_entregue += entregue
                 total_copias += copias
@@ -1174,63 +1239,98 @@ class RetornoCortes(ctk.CTkFrame):
                 total_regulares += regulares
                 valor_total += subtotal
 
-            # Inserir/atualizar controle_retorno_cortes
-            if retorno_id:
-                db.execute("""
-                    UPDATE controle_retorno_cortes
-                    SET data_chegada=%s, telefone_encarregado=%s, telefone_acabamento=%s,
-                        resumo_piloto=%s, aviamentos_recebidos=%s, outros_recebidos=%s, observacoes_gerais=%s,
-                        total_entregue=%s, total_copias=%s, total_defeitos=%s, total_faltantes=%s,
-                        total_regulares=%s, valor_total=%s
-                    WHERE id=%s
-                """, (data_chegada, tel_enc, tel_acab, piloto_resumo, aviamentos, outros, obs_geral,
-                      total_entregue, total_copias, total_defeitos, total_faltantes, total_regulares, valor_total,
-                      retorno_id))
-            else:
-                result = db.fetch_one("""
-                    INSERT INTO controle_retorno_cortes
-                    (envio_id, data_chegada, telefone_encarregado, telefone_acabamento,
-                     resumo_piloto, aviamentos_recebidos, outros_recebidos, observacoes_gerais,
-                     total_entregue, total_copias, total_defeitos, total_faltantes,
-                     total_regulares, valor_total)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                    RETURNING id
-                """, (envio_id, data_chegada, tel_enc, tel_acab, piloto_resumo, aviamentos, outros, obs_geral,
-                      total_entregue, total_copias, total_defeitos, total_faltantes, total_regulares, valor_total))
-                retorno_id = result["id"] if result else None
+            print("\n[DEBUG] ---- TOTAIS CALCULADOS ----")
+            print(f"total_entregue  = {total_entregue}")
+            print(f"total_copias    = {total_copias}")
+            print(f"total_defeitos  = {total_defeitos}")
+            print(f"total_faltantes = {total_faltantes}")
+            print(f"total_regulares = {total_regulares}")
+            print(f"valor_total     = {valor_total}\n")
 
-            # Inserir/atualizar retorno_detalhes_tamanho
+            # 4) Inserir cabeçalho em controle_retorno_cortes
+            print("[DEBUG] INSERT em controle_retorno_cortes...")
+            result = db.fetch_one(
+                """
+                INSERT INTO controle_retorno_cortes
+                (envio_id, data_chegada, telefone_encarregado, telefone_acabamento,
+                 resumo_piloto, aviamentos_recebidos, outros_recebidos, observacoes_gerais,
+                 total_entregue, total_copias, total_defeitos, total_faltantes,
+                 total_regulares, valor_total)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                RETURNING id
+                """,
+                (
+                    envio_id, data_chegada, tel_enc, tel_acab,
+                    piloto_resumo, aviamentos, outros, obs_geral,
+                    total_entregue, total_copias, total_defeitos,
+                    total_faltantes, total_regulares, valor_total
+                )
+            )
+            retorno_id = result["id"] if result else None
+            print(f"[DEBUG] controle_retorno_cortes.id gerado = {retorno_id}")
+
+            # 5) Gravar detalhes por tamanho em retorno_detalhes_tamanho
+            print("[DEBUG] Limpando detalhes antigos em retorno_detalhes_tamanho (por segurança)...")
             db.execute("DELETE FROM retorno_detalhes_tamanho WHERE envio_id=%s", (envio_id,))
+
+            print("[DEBUG] Inserindo novos detalhes em retorno_detalhes_tamanho...")
             for tam in self.tamanhos:
                 entregue = safe_int(self.entregues[tam].get())
                 copias = safe_int(self.copias[tam].get())
                 defeitos = safe_int(self.defeitos[tam].get())
                 faltantes = safe_int(self.faltantes[tam].get())
                 regulares = max(0, entregue - defeitos - faltantes)
-                subtotal = regulares * self.valor_por_tam[tam]
+                valor_unit = float(self.valor_por_tam.get(tam, 0.0) or 0.0)
+                subtotal = regulares * valor_unit
 
                 if entregue > 0 or copias > 0 or defeitos > 0 or faltantes > 0:
-                    db.execute("""
+                    print(
+                        f"[DEBUG] INSERT retorno_detalhes_tamanho | envio_id={envio_id}, "
+                        f"tam={tam}, ent={entregue}, copias={copias}, "
+                        f"defeitos={defeitos}, faltantes={faltantes}, "
+                        f"regulares={regulares}, subtotal={subtotal}"
+                    )
+                    db.execute(
+                        """
                         INSERT INTO retorno_detalhes_tamanho
                         (envio_id, tamanho, entregue, copias, defeitos, faltantes, regulares, subtotal)
                         VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                    """, (envio_id, tam, entregue, copias, defeitos, faltantes, regulares, subtotal))
+                        """,
+                        (envio_id, tam, entregue, copias, defeitos, faltantes, regulares, subtotal)
+                    )
 
-            # Atualizar status do envio para "Em Conferência"
-            db.execute("UPDATE controle_envio_cortes SET status='Em Conferência' WHERE id=%s", (envio_id,))
+            # 6) Atualizar status do envio na tabela envios_cortes
+            print("[DEBUG] Atualizando status do envio em envios_cortes para 'Em Conferência'...")
+            db.execute(
+                "UPDATE envios_cortes SET status_envio = 'Em Conferência' WHERE id = %s",
+                (envio_id,)
+            )
 
-            # Dar baixa no piloto se marcado
+            # 7) Zerar pilotos se marcado (baixa de piloto)
             if self.piloto_entregue_var.get():
-                db.execute("""
+                print("[DEBUG] piloto_entregue_var = True -> zerando quantidade_pilotos em envio_detalhes_tamanho...")
+                db.execute(
+                    """
                     UPDATE envio_detalhes_tamanho
-                    SET quantidade_pilotos = 0
-                    WHERE envio_id = %s AND quantidade_pilotos > 0
-                """, (envio_id,))
+                       SET quantidade_pilotos = 0
+                     WHERE envio_id = %s
+                       AND quantidade_pilotos > 0
+                    """,
+                    (envio_id,)
+                )
 
-            messagebox.showinfo("Sucesso", "Entrada registrada com sucesso!")
+            print("\n================ FIM registrar_entrada() (SUCESSO) ================\n")
+
+            # 8) Limpar seleção e recarregar somente pendentes
+            self._limpar_campos()
             self.carregar_envios_pendentes()
 
+            messagebox.showinfo("Sucesso", "Entrada registrada com sucesso!")
+
         except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[ERRO] registrar_entrada: {e}")
             messagebox.showerror("Erro", f"Falha ao registrar entrada: {e}")
 
     def pre_visualizar_pdf(self):

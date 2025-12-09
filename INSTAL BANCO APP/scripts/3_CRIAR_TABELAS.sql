@@ -817,7 +817,7 @@ CREATE INDEX IF NOT EXISTS idx_envios_cortes_status
 
 
 -- ================================================================
--- [TABELA 22] CONTROLE DE ENVIO DE CORTES (ATUALIZADA)
+-- [TABELA 22] CONTROLE DE ENVIO DE CORTES
 -- ================================================================
 CREATE TABLE IF NOT EXISTS opera.controle_envio_cortes (
     id                SERIAL PRIMARY KEY,
@@ -835,6 +835,8 @@ CREATE TABLE IF NOT EXISTS opera.controle_envio_cortes (
     valor_total       NUMERIC(12,2),
     status            VARCHAR(50) DEFAULT 'Em Conferência',
     observacao        TEXT,
+
+    -- grade enviada
     pp                INTEGER,
     p                 INTEGER,
     m                 INTEGER,
@@ -846,13 +848,13 @@ CREATE TABLE IF NOT EXISTS opera.controle_envio_cortes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_envio_cortes_data_envio ON opera.controle_envio_cortes (data_envio);
-CREATE INDEX IF NOT EXISTS idx_envio_cortes_servico ON opera.controle_envio_cortes (servico);
+CREATE INDEX IF NOT EXISTS idx_envio_cortes_servico    ON opera.controle_envio_cortes (servico);
 CREATE INDEX IF NOT EXISTS idx_envio_cortes_costureira ON opera.controle_envio_cortes (costureira);
 CREATE INDEX IF NOT EXISTS idx_envio_cortes_ordem_corte ON opera.controle_envio_cortes (ordem_corte);
 CREATE INDEX IF NOT EXISTS idx_envio_cortes_status ON opera.controle_envio_cortes (status);
 
 -- ================================================================
--- [TABELA 23] ENTRADA DE ACABAMENTO
+-- [TABELA 23] ENTRADA DE ACABAMENTO (RETORNO)
 -- ================================================================
 CREATE TABLE IF NOT EXISTS opera.entrada_acabamento (
     id                  SERIAL PRIMARY KEY,
@@ -872,16 +874,13 @@ CREATE TABLE IF NOT EXISTS opera.entrada_acabamento (
 -- ================================================================
 CREATE TABLE IF NOT EXISTS opera.historico_de_servico (
     id BIGSERIAL PRIMARY KEY,
-    envio_id INTEGER NOT NULL REFERENCES opera.controle_envio_cortes (id) ON DELETE CASCADE,
-    entrada_id INTEGER REFERENCES opera.entrada_acabamento (id) ON DELETE SET NULL,
-    pagamento_id BIGINT REFERENCES opera.pagamento_servicos (id) ON DELETE SET NULL,
+    envio_id INTEGER NOT NULL REFERENCES opera.controle_envio_cortes(id) ON DELETE CASCADE,
+    entrada_id INTEGER REFERENCES opera.entrada_acabamento(id) ON DELETE SET NULL,
+    pagamento_id BIGINT REFERENCES opera.pagamento_servicos(id) ON DELETE SET NULL,
     tipo_servico VARCHAR(50),
     status VARCHAR(50) DEFAULT 'Em Andamento',
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE INDEX IF NOT EXISTS idx_entrada_acabamento_envio ON opera.entrada_acabamento (envio_id);
-CREATE INDEX IF NOT EXISTS idx_entrada_acabamento_data ON opera.entrada_acabamento (data_chegada);
 
 -- ================================================================
 -- [TABELA 25] CONTROLE DE RETORNO DE CORTES (USADO PELO CONTROLE_RETORNO_CORTE)
@@ -1330,61 +1329,36 @@ CREATE TABLE IF NOT EXISTS opera.estoque_saida_log (
 -- [TABELA 42] CORTES FINALIZADOS COMPLETO
 -- ================================================================
 CREATE TABLE IF NOT EXISTS opera.cortes_finalizados_completo (
-    id                   SERIAL PRIMARY KEY,
-    entrada_id           INTEGER UNIQUE REFERENCES opera.entrada_acabamento(id),
-    corte_id             INTEGER REFERENCES opera.controle_envio_cortes(id),
-    codigo               VARCHAR(100),
-    descricao            TEXT,
-    costureira           VARCHAR(200),
-    servico              VARCHAR(100),
-    data_envio           DATE,
-    data_chegada         DATE,
-    data_conferencia     TIMESTAMP,
-    qtd_enviada          INTEGER DEFAULT 0,
-    total_entregue       INTEGER DEFAULT 0,
-    total_copias         INTEGER DEFAULT 0,
-    total_defeitos       INTEGER DEFAULT 0,
-    total_faltantes      INTEGER DEFAULT 0,
-    total_regulares      INTEGER DEFAULT 0,
-    valor_peca           NUMERIC(12,2) DEFAULT 0,
-    valor_total          NUMERIC(12,2) DEFAULT 0,
-    bonificacao          BOOLEAN DEFAULT FALSE,
-    valor_bonificacao    NUMERIC(12,2) DEFAULT 0,
-    qtd_pp               INTEGER DEFAULT 0,
-    qtd_p                INTEGER DEFAULT 0,
-    qtd_m                INTEGER DEFAULT 0,
-    qtd_g                INTEGER DEFAULT 0,
-    qtd_gg               INTEGER DEFAULT 0,
-    qtd_g1               INTEGER DEFAULT 0,
-    qtd_g2               INTEGER DEFAULT 0,
-    qtd_g3               INTEGER DEFAULT 0,
-    qtd_defeito_pp       INTEGER DEFAULT 0,
-    qtd_defeito_p        INTEGER DEFAULT 0,
-    qtd_defeito_m        INTEGER DEFAULT 0,
-    qtd_defeito_g        INTEGER DEFAULT 0,
-    qtd_defeito_gg       INTEGER DEFAULT 0,
-    qtd_defeito_g1       INTEGER DEFAULT 0,
-    qtd_defeito_g2       INTEGER DEFAULT 0,
-    qtd_defeito_g3       INTEGER DEFAULT 0,
-    qtd_regular_pp       INTEGER DEFAULT 0,
-    qtd_regular_p        INTEGER DEFAULT 0,
-    qtd_regular_m        INTEGER DEFAULT 0,
-    qtd_regular_g        INTEGER DEFAULT 0,
-    qtd_regular_gg       INTEGER DEFAULT 0,
-    qtd_regular_g1       INTEGER DEFAULT 0,
-    qtd_regular_g2       INTEGER DEFAULT 0,
-    qtd_regular_g3       INTEGER DEFAULT 0,
-    status               VARCHAR(50) DEFAULT 'Finalizado',
-    observacoes          TEXT,
-    usuario_finalizacao  VARCHAR(100),
-    created_at           TIMESTAMP DEFAULT NOW(),
-    updated_at           TIMESTAMP DEFAULT NOW()
+    id                    SERIAL PRIMARY KEY,
+    entrada_id            INTEGER REFERENCES opera.entrada_acabamento(id) ON DELETE SET NULL,
+    envio_id              INTEGER REFERENCES opera.controle_envio_cortes(id) ON DELETE SET NULL,
+    corte_id              INTEGER REFERENCES opera.cadastro_de_corte(id) ON DELETE SET NULL,
+
+    descricao             TEXT,
+    ordem_corte           VARCHAR(100),
+    codigo_corte          VARCHAR(100),
+
+    -- totais por tamanho
+    qtd_regular_pp        INTEGER DEFAULT 0,
+    qtd_regular_p         INTEGER DEFAULT 0,
+    qtd_regular_m         INTEGER DEFAULT 0,
+    qtd_regular_g         INTEGER DEFAULT 0,
+    qtd_regular_gg        INTEGER DEFAULT 0,
+    qtd_regular_g1        INTEGER DEFAULT 0,
+    qtd_regular_g2        INTEGER DEFAULT 0,
+    qtd_regular_g3        INTEGER DEFAULT 0,
+
+    status                VARCHAR(50) DEFAULT 'Finalizado',
+    observacoes           TEXT,
+    usuario_finalizacao   VARCHAR(100),
+
+    created_at            TIMESTAMP DEFAULT NOW(),
+    updated_at            TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_cortes_finalizados_completo_entrada ON opera.cortes_finalizados_completo (entrada_id);
-CREATE INDEX IF NOT EXISTS idx_cortes_finalizados_completo_corte ON opera.cortes_finalizados_completo (corte_id);
-CREATE INDEX IF NOT EXISTS idx_cortes_finalizados_completo_status ON opera.cortes_finalizados_completo (status);
-
+CREATE INDEX IF NOT EXISTS idx_cortes_finalizados_completo_corte   ON opera.cortes_finalizados_completo (corte_id);
+CREATE INDEX IF NOT EXISTS idx_cortes_finalizados_completo_status  ON opera.cortes_finalizados_completo (status);
 -- ================================================================
 -- [TABELA 43] LOG DE FINALIZAÇÕES
 -- ================================================================
@@ -1400,8 +1374,9 @@ CREATE TABLE IF NOT EXISTS opera.log_finalizacoes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_log_finalizacoes_entrada ON opera.log_finalizacoes (entrada_id);
-CREATE INDEX IF NOT EXISTS idx_log_finalizacoes_data ON opera.log_finalizacoes (data_hora);
+CREATE INDEX IF NOT EXISTS idx_log_finalizacoes_data    ON opera.log_finalizacoes (data_hora);
 CREATE INDEX IF NOT EXISTS idx_log_finalizacoes_usuario ON opera.log_finalizacoes (usuario);
+
 
 -- ================================================================
 -- [TABELA 44] ENTRADA ACABAMENTO DETALHES
@@ -1409,46 +1384,49 @@ CREATE INDEX IF NOT EXISTS idx_log_finalizacoes_usuario ON opera.log_finalizacoe
 CREATE TABLE IF NOT EXISTS opera.entrada_acabamento_detalhes (
     id                   SERIAL PRIMARY KEY,
     entrada_id           INTEGER NOT NULL REFERENCES opera.entrada_acabamento(id) ON DELETE CASCADE,
+
     observacoes_finalizacao TEXT,
     bonificacao_aplicada BOOLEAN DEFAULT FALSE,
     usuario_conferencia  VARCHAR(100),
+
+    -- totais por tamanho
     total_entregue       INTEGER DEFAULT 0,
     total_copias         INTEGER DEFAULT 0,
     total_defeitos       INTEGER DEFAULT 0,
     total_faltantes      INTEGER DEFAULT 0,
     total_regulares      INTEGER DEFAULT 0,
+
     valor_total_pagar    NUMERIC(12,2) DEFAULT 0,
     status_finalizacao   VARCHAR(20) DEFAULT 'Pendente',
+
     data_conferencia     TIMESTAMP,
     created_at           TIMESTAMP DEFAULT NOW(),
     updated_at           TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_entrada_det_entrada ON opera.entrada_acabamento_detalhes (entrada_id);
-CREATE INDEX IF NOT EXISTS idx_entrada_det_status ON opera.entrada_acabamento_detalhes (status_finalizacao);
+CREATE INDEX IF NOT EXISTS idx_entrada_det_status  ON opera.entrada_acabamento_detalhes (status_finalizacao);
+
 
 -- ================================================================
--- [TABELA 45] CONTROLE ENVIO CORTES DETALHES
+-- [TABELA 45] DETALHES DO ENVIO POR TAMANHO (PP, P, M, G...)
 -- ================================================================
 CREATE TABLE IF NOT EXISTS opera.controle_envio_cortes_detalhes (
     id                   SERIAL PRIMARY KEY,
     envio_id             INTEGER NOT NULL REFERENCES opera.controle_envio_cortes(id) ON DELETE CASCADE,
+
     prestador_servico    VARCHAR(200),
     tipo_servico         VARCHAR(100),
-    valor_pp             NUMERIC(12,2) DEFAULT 0,
-    valor_p              NUMERIC(12,2) DEFAULT 0,
-    valor_m              NUMERIC(12,2) DEFAULT 0,
-    valor_g              NUMERIC(12,2) DEFAULT 0,
-    valor_gg             NUMERIC(12,2) DEFAULT 0,
-    valor_g1             NUMERIC(12,2) DEFAULT 0,
-    valor_g2             NUMERIC(12,2) DEFAULT 0,
-    valor_g3             NUMERIC(12,2) DEFAULT 0,
-    created_at           TIMESTAMP DEFAULT NOW(),
-    updated_at           TIMESTAMP DEFAULT NOW()
+
+    valor_pp NUMERIC(12,2) DEFAULT 0,
+    valor_p  NUMERIC(12,2) DEFAULT 0,
+    valor_m  NUMERIC(12,2) DEFAULT 0,
+    valor_g  NUMERIC(12,2) DEFAULT 0,
+    valor_gg NUMERIC(12,2) DEFAULT 0,
+    valor_g1 NUMERIC(12,2) DEFAULT 0,
+    valor_g2 NUMERIC(12,2) DEFAULT 0,
+    valor_g3 NUMERIC(12,2) DEFAULT 0
 );
-
-CREATE INDEX IF NOT EXISTS idx_envio_det_envio ON opera.controle_envio_cortes_detalhes (envio_id);
-
 -- ================================================================
 -- [TABELA 46] RELATÓRIOS FINALIZAÇÃO
 -- ================================================================

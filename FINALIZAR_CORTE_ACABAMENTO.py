@@ -563,105 +563,130 @@ class FinalizacaoCortes(ctk.CTkFrame):
         return {r[0] for r in cur.fetchall()}
 
     def carregar_retornos_pendentes(self):
+        """
+        Carrega na grade todos os RETORNOS registrados em controle_retorno_cortes
+        vinculados aos envios em envios_cortes.
+
+        - Mostra ordem, código, descrição, prestador, data de chegada, status e qtd total.
+        - Se "Mostrar Finalizados" estiver desmarcado, oculta status_envio = 'Finalizado'.
+        - Cria um mapa retorno_id -> envio_id para uso em _carregar_detalhes_retorno().
+        """
+        print("\n================ carregar_retornos_pendentes() ================")
         try:
             termo = (self.busca_entry.get() or "").strip()
             self.retornos_tree.delete(*self.retornos_tree.get_children())
+
+            # mapa retorno -> envio (usado depois)
+            self.mapa_retorno_envio = {}
 
             conn = get_conn()
             cur = conn.cursor()
             schema = get_schema()
             self._set_search_path(cur, schema)
 
-            # Descobre colunas existentes
-            cols_e = self._cols(cur, schema, "entrada_acabamento")
-            cols_c = self._cols(cur, schema, "controle_envio_cortes")
-
-            # Helper para escolher a primeira coluna existente
-            def pick(cols_set, candidates, default_sql):
-                for c in candidates:
-                    if c in cols_set:
-                        return c
-                return default_sql  # já com tipo SQL, ex.: "NULL::date" ou "''::text"
-
-            # Escolhas tolerantes a diferenças do banco
-            e_data_col = pick(cols_e, ["data_chegada", "data_entrada", "data"], "NULL::date")
-            # Quando vier como nome de coluna, prefixa com 'e.' e faz cast para date
-            e_data_sql = f"e.{e_data_col}::date" if "::" not in e_data_col and e_data_col != "NULL::date" else e_data_col
-
-            c_ordem_col = pick(cols_c, ["ordem_corte", "ordem", "numero_ordem"], "''::text")
-            c_codigo_col = pick(cols_c, ["codigo_corte", "codigo", "codigo_modelo"], "''::text")
-            c_desc_col = pick(cols_c, ["descricao_corte", "descricao", "descricao_modelo"], "''::text")
-            c_dest_col = pick(cols_c, ["destino", "costureira", "faccao"], "''::text")
-            c_status_col_exists = ("status" in cols_c)
-
-            base_sql = f"""
-                SELECT e.id,
-                       {('c.' + c_ordem_col) if '::' not in c_ordem_col else c_ordem_col} AS ordem_corte,
-                       {('c.' + c_codigo_col) if '::' not in c_codigo_col else c_codigo_col} AS codigo_corte,
-                       {('c.' + c_desc_col) if '::' not in c_desc_col else c_desc_col}   AS descricao_corte,
-                       {('c.' + c_dest_col) if '::' not in c_dest_col else c_dest_col}   AS destino,
-                       {e_data_sql} AS data_chegada,
-                       {("COALESCE(c.status,'')") if c_status_col_exists else "''::text"} AS status,
-                       COALESCE((
-                         SELECT SUM(COALESCE(quantidade,0) + COALESCE(quantidade_pilotos,0))
-                           FROM {schema}.envio_detalhes_tamanho edt
-                          WHERE edt.envio_id = c.id
-                       ),0) AS qtd_total
-                  FROM {schema}.entrada_acabamento e
-                  JOIN {schema}.controle_envio_cortes c ON e.envio_id = c.id
+            sql = f"""
+                SELECT
+                    r.id                        AS retorno_id,
+                    r.envio_id                  AS envio_id,
+                    COALESCE(e.ordem_corte, '') AS ordem_corte,
+                    COALESCE(e.codigo_corte, '') AS codigo_corte,
+                    COALESCE(e.descricao_corte, '') AS descricao_corte,
+                    COALESCE(f.nome, '')        AS prestador,
+                    r.data_chegada              AS data_chegada,
+                    COALESCE(e.status_envio, '') AS status_envio,
+                    COALESCE(e.total_pecas, 0)  AS qtd_total
+                FROM {schema}.controle_retorno_cortes r
+                JOIN {schema}.envios_cortes e
+                  ON e.id = r.envio_id
+                LEFT JOIN {schema}.cadastro_faccoes f
+                  ON f.id = e.prestador_id
             """
 
             where = []
             params = []
 
-            # Filtro por status somente se a coluna existir
-            if not self.mostrar_finalizados and c_status_col_exists:
-                where.append("c.status = 'Em Conferência'")
+            # checkbox "Mostrar Finalizados"
+            self.mostrar_finalizados = bool(self.cb_mostrar_finalizados.get())
+            if not self.mostrar_finalizados:
+                where.append("COALESCE(e.status_envio,'') <> 'Finalizado'")
 
             if termo:
                 like = f"%{termo}%"
-                # usa as colunas escolhidas; se alguma virou ''::text, o filtro nela será inócuo (sem erro)
-                where.append(f"(({('c.' + c_ordem_col) if '::' not in c_ordem_col else c_ordem_col}) ILIKE %s OR "
-                             f"({('c.' + c_codigo_col) if '::' not in c_codigo_col else c_codigo_col}) ILIKE %s OR "
-                             f"({('c.' + c_desc_col) if '::' not in c_desc_col else c_desc_col})   ILIKE %s)")
-                params.extend([like, like, like])
+                where.append("""
+                    (
+                        e.ordem_corte     ILIKE %s OR
+                        e.codigo_corte    ILIKE %s OR
+                        e.descricao_corte ILIKE %s OR
+                        f.nome            ILIKE %s
+                    )
+                """)
+                params.extend([like, like, like, like])
 
             if where:
-                base_sql += " WHERE " + " AND ".join(where)
+                sql += " WHERE " + " AND ".join(where)
 
-            # Ordenação: usa a data se existir, senão cai para c.id (estável e sempre existente)
-            order_expr = (e_data_sql if e_data_sql != "NULL::date" else "c.id")
-            base_sql += f" ORDER BY {order_expr} DESC"
-            if not termo:
-                base_sql += " LIMIT 50"
+            sql += " ORDER BY r.data_chegada DESC, r.id DESC"
 
-            cur.execute(base_sql, tuple(params))
+            print("[DEBUG] SQL carregar_retornos_pendentes:")
+            print(sql)
+            print("[DEBUG] Parâmetros:", params)
 
-            # Configurar cores das linhas alternadas
-            if ctk.get_appearance_mode() == "Dark":
-                cor_linha_par = self.cor_fundo
-                cor_linha_impar = self.cor_secundaria
-            else:
-                cor_linha_par = "#ffffff"
-                cor_linha_impar = "#f0f0f0"
-
-            for i, row in enumerate(cur.fetchall()):
-                # row: (id, ordem, codigo, descricao, destino, data_chegada, status, qtd_total)
-                st = (row[6] or "").strip() if len(row) > 6 else ""
-                tag = ('status_conferencia',) if st == "Em Conferência" else (
-                    ('status_finalizado',) if st == "Finalizado" else ())
-
-                # Adicionar tag de linha alternada
-                row_tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-                if tag:
-                    tag = tag + (row_tag,)
-                else:
-                    tag = (row_tag,)
-
-                self.retornos_tree.insert("", "end", values=row, tags=tag)
-
+            cur.execute(sql, tuple(params))
+            rows = cur.fetchall()
             conn.close()
+
+            print(f"[DEBUG] Retornos encontrados: {len(rows)}")
+
+            for i, row in enumerate(rows):
+                (
+                    retorno_id,
+                    envio_id,
+                    ordem,
+                    codigo,
+                    descricao,
+                    prestador,
+                    data_chegada,
+                    status_envio,
+                    qtd_total,
+                ) = row
+
+                # guarda o vínculo em memória
+                self.mapa_retorno_envio[int(retorno_id)] = int(envio_id)
+
+                status_envio = (status_envio or "").strip()
+
+                # tags de status
+                tag_status = ()
+                if status_envio == "Em Conferência":
+                    tag_status = ("status_conferencia",)
+                elif status_envio == "Finalizado":
+                    tag_status = ("status_finalizado",)
+
+                # linha alternada
+                row_tag = "evenrow" if i % 2 == 0 else "oddrow"
+                tags = tag_status + (row_tag,) if tag_status else (row_tag,)
+
+                self.retornos_tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        retorno_id,
+                        ordem,
+                        codigo,
+                        descricao,
+                        prestador,
+                        data_chegada.strftime("%d/%m/%Y") if data_chegada else "",
+                        status_envio,
+                        qtd_total,
+                    ),
+                    tags=tags,
+                )
+
+            print(f"[DEBUG] mapa_retorno_envio: {self.mapa_retorno_envio}")
+
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             messagebox.showerror("Erro", f"Falha ao carregar retornos: {e}")
 
     # ... (o restante dos métodos permanecem EXATAMENTE iguais, apenas o visual foi modificado)
@@ -688,23 +713,34 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self._preencher_header_retorno()
         self._carregar_detalhes_retorno()
 
-    def _buscar_servico(self, entrada_id):
+    def _buscar_servico(self, retorno_id):
+        """
+        Retorna o tipo de serviço (Facção, Bordado, etc.)
+        do envio vinculado a este RETORNO.
+        """
         try:
             conn = get_conn()
             cur = conn.cursor()
             schema = get_schema()
             self._set_search_path(cur, schema)
+
             cur.execute(f"""
-                SELECT c.servico
-                  FROM {schema}.controle_envio_cortes c
-                  JOIN {schema}.entrada_acabamento e ON e.envio_id = c.id
-                 WHERE e.id = %s
+                SELECT COALESCE(e.tipo_servico, '')
+                  FROM {schema}.controle_retorno_cortes r
+                  JOIN {schema}.envios_cortes e
+                    ON e.id = r.envio_id
+                 WHERE r.id = %s
                  LIMIT 1
-            """, (entrada_id,))
-            r = cur.fetchone()
+            """, (retorno_id,))
+            row = cur.fetchone()
             conn.close()
-            return r[0] if r else ""
-        except Exception:
+
+            servico = row[0] if row else ""
+            print(f"[DEBUG] _buscar_servico retorno_id={retorno_id} -> '{servico}'")
+            return servico
+
+        except Exception as exc:
+            print(f"[DEBUG] _buscar_servico ERRO: {exc}")
             return ""
 
     def _preencher_header_retorno(self):
@@ -744,65 +780,136 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.data_entrada_entry.configure(state="disabled")
 
     def _carregar_detalhes_retorno(self):
+        """
+        Carrega na grade os dados do ENVIO + RETORNO para o retorno selecionado.
+
+        Usa:
+          - self.mapa_retorno_envio[retorno_id] -> envio_id
+          - envio_detalhes_tamanho             -> quantidade enviada, pilotos, valor_peca
+          - retorno_detalhes_tamanho           -> entregue, copias, defeitos, faltantes
+        """
+        if not getattr(self, "retorno_selecionado", None):
+            messagebox.showwarning("Aviso", "Selecione um retorno na lista.")
+            return
+
+        try:
+            retorno_id = int(self.retorno_selecionado["id"])
+        except Exception:
+            messagebox.showerror("Erro", "ID de retorno inválido.")
+            return
+
+        print(f"\n================ _carregar_detalhes_retorno() retorno_id={retorno_id} ================")
+
+        # pega o envio_id a partir do mapa preenchido em carregar_retornos_pendentes
+        envio_id = None
+        if hasattr(self, "mapa_retorno_envio"):
+            envio_id = self.mapa_retorno_envio.get(retorno_id)
+
+        if not envio_id:
+            messagebox.showerror("Erro", "Não foi possível localizar o envio desta entrada.")
+            print(f"[DEBUG] mapa_retorno_envio: {getattr(self, 'mapa_retorno_envio', None)}")
+            return
+
+        print(f"[DEBUG] envio_id vinculado = {envio_id}")
+
+        # 0) LIMPA A GRADE
+        for t in self.tamanhos:
+            self.entregues_vars[t].set(0)
+            self.copias_vars[t].set(0)
+            self.defeitos_vars[t].set(0)
+            self.faltantes_vars[t].set(0)
+
+            self.enviado_por_tam[t] = 0
+            self.valor_por_tam[t] = 0.0
+            self.pilotos_por_tam[t] = 0
+
+            self.grade_widgets[t]["enviado"].configure(text="0")
+            self.grade_widgets[t]["valor"].configure(text=fmt_moeda(0))
+            self.grade_widgets[t]["regulares"].configure(text="0")
+            self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(0))
+
         try:
             conn = get_conn()
             cur = conn.cursor()
             schema = get_schema()
             self._set_search_path(cur, schema)
 
-            # Limpa dados prévios
-            for t in self.tamanhos:
-                self.entregues_vars[t].set(0)
-                self.copias_vars[t].set(0)
-                self.defeitos_vars[t].set(0)
-                self.faltantes_vars[t].set(0)
-                self.enviado_por_tam[t] = 0
-                self.valor_por_tam[t] = 0.0
-                self.pilotos_por_tam[t] = 0
-                self.grade_widgets[t]["enviado"].configure(text="0")
-                self.grade_widgets[t]["valor"].configure(text=fmt_moeda(0))
-                self.grade_widgets[t]["regulares"].configure(text="0")
-                self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(0))
-
-            # Busca dados do envio original
-            cur.execute(f"""
-                SELECT tamanho, quantidade, quantidade_pilotos, valor_peca
+            # 1) DETALHE DO ENVIO (envio_detalhes_tamanho)
+            cur.execute(
+                f"""
+                SELECT tamanho,
+                       COALESCE(quantidade,0)         AS quantidade,
+                       COALESCE(quantidade_pilotos,0) AS pilotos,
+                       COALESCE(valor_peca,0)         AS valor_peca
                   FROM {schema}.envio_detalhes_tamanho
-                 WHERE envio_id = (
-                        SELECT envio_id
-                          FROM {schema}.entrada_acabamento
-                         WHERE id = %s
-                 )
-            """, (self.retorno_selecionado["id"],))
+                 WHERE envio_id = %s
+                """,
+                (envio_id,),
+            )
+            envio_rows = cur.fetchall()
+            print(f"[DEBUG] Linhas em envio_detalhes_tamanho: {len(envio_rows)}")
 
-            for tamanho, quantidade, pilotos, valor in cur.fetchall():
-                if tamanho in self.tamanhos:
-                    total_enviado = safe_int(quantidade) + safe_int(pilotos)
-                    self.enviado_por_tam[tamanho] = total_enviado
-                    self.valor_por_tam[tamanho] = float(valor or 0)
-                    self.pilotos_por_tam[tamanho] = safe_int(pilotos)
-                    self.grade_widgets[tamanho]["enviado"].configure(text=str(total_enviado))
-                    self.grade_widgets[tamanho]["valor"].configure(text=fmt_moeda(valor or 0))
+            for tamanho, quantidade, pilotos, valor_peca in envio_rows:
+                if tamanho not in self.tamanhos:
+                    continue
 
-            # Busca dados do retorno (entrada) para preencher valores atuais
-            cur.execute(f"""
-                SELECT tamanho, quantidade_entregue, quantidade_copias,
-                       quantidade_defeito, quantidade_faltante
+                qtd_env = safe_int(quantidade)
+                qtd_pil = safe_int(pilotos)
+                val_uni = float(valor_peca or 0)
+
+                total_enviado = qtd_env + qtd_pil
+
+                self.enviado_por_tam[tamanho] = total_enviado
+                self.pilotos_por_tam[tamanho] = qtd_pil
+                self.valor_por_tam[tamanho] = val_uni
+
+                self.grade_widgets[tamanho]["enviado"].configure(text=str(total_enviado))
+                self.grade_widgets[tamanho]["valor"].configure(text=fmt_moeda(val_uni))
+
+                print(
+                    f"[DEBUG] ENVIO tam={tamanho} | qtd={qtd_env} | pilotos={qtd_pil} "
+                    f"| total_enviado={total_enviado} | valor={val_uni}"
+                )
+
+            # 2) DETALHE DO RETORNO (retorno_detalhes_tamanho)
+            cur.execute(
+                f"""
+                SELECT tamanho,
+                       COALESCE(entregue,0)  AS entregue,
+                       COALESCE(copias,0)    AS copias,
+                       COALESCE(defeitos,0)  AS defeitos,
+                       COALESCE(faltantes,0) AS faltantes
                   FROM {schema}.retorno_detalhes_tamanho
-                 WHERE retorno_id = %s
-            """, (self.retorno_selecionado["id"],))
+                 WHERE envio_id = %s
+                """,
+                (envio_id,),
+            )
+            retorno_rows = cur.fetchall()
+            print(f"[DEBUG] Linhas em retorno_detalhes_tamanho: {len(retorno_rows)}")
 
-            for tamanho, entregue, copias, defeito, faltante in cur.fetchall():
-                if tamanho in self.tamanhos:
-                    self.entregues_vars[tamanho].set(entregue or 0)
-                    self.copias_vars[tamanho].set(copias or 0)
-                    self.defeitos_vars[tamanho].set(defeito or 0)
-                    self.faltantes_vars[tamanho].set(faltante or 0)
+            for tamanho, entregue, copias, defeitos, faltantes in retorno_rows:
+                if tamanho not in self.tamanhos:
+                    continue
+
+                self.entregues_vars[tamanho].set(entregue or 0)
+                self.copias_vars[tamanho].set(copias or 0)
+                self.defeitos_vars[tamanho].set(defeitos or 0)
+                self.faltantes_vars[tamanho].set(faltantes or 0)
+
+                print(
+                    f"[DEBUG] RETORNO tam={tamanho} | ent={entregue} | "
+                    f"copias={copias} | defeitos={defeitos} | faltantes={faltantes}"
+                )
 
             conn.close()
+
+            # 3) Recalcula totais/subtotais
             self._recalcular_totais()
+
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao carregar detalhes: {e}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Erro", f"Falha ao carregar detalhes do retorno:\n{e}")
 
     def _recalcular_totais(self, _event=None):
         total_entregue = 0
@@ -1098,163 +1205,103 @@ class FinalizacaoCortes(ctk.CTkFrame):
     # ----------------------------- Ações de Banco -----------------------------
     def finalizar_completo(self):
         if not self.retorno_selecionado:
-            messagebox.showwarning("Aviso", "Selecione um retorno primeiro!")
+            messagebox.showwarning("Aviso", "Selecione um retorno na lista.")
             return
 
-        total_faltante = safe_int(self.lbl_total_faltante.cget("text"))
-        total_defeito = safe_int(self.lbl_total_defeito.cget("text"))
-        if total_faltante > 0 or total_defeito > 0:
-            if not messagebox.askyesno(
-                    "Confirmar",
-                    f"Há {total_faltante} peças faltantes e {total_defeito} com defeito.\n"
-                    "Deseja realmente finalizar o corte completo?"
-            ):
-                return
+        if messagebox.askyesno("Confirmar", "Deseja realmente finalizar este corte?"):
+            try:
+                conn = get_conn()
+                cur = conn.cursor()
+                schema = get_schema()
+                self._set_search_path(cur, schema)
 
-        try:
-            conn = get_conn()
-            cur = conn.cursor()
-            schema = get_schema()
-            self._set_search_path(cur, schema)
+                # Descobre envio_id
+                cur.execute(f"""
+                    SELECT envio_id
+                      FROM {schema}.entrada_acabamento
+                     WHERE id = %s
+                """, (self.retorno_selecionado["id"],))
+                row = cur.fetchone()
+                if not row:
+                    conn.close()
+                    messagebox.showerror("Erro", "Não foi possível localizar o envio desta entrada.")
+                    return
 
-            bonif_flag = 1 if getattr(self, 'bonif_final_var', None) and self.bonif_final_var.get() == 'sim' else 0
+                envio_id = row[0]
 
-            # Atualiza status
-            cur.execute(f"""
-                UPDATE {schema}.controle_envio_cortes
-                   SET status = 'Finalizado'
-                 WHERE id = (SELECT envio_id FROM {schema}.entrada_acabamento WHERE id = %s)
-            """, (self.retorno_selecionado["id"],))
+                # Recalcula totais
+                total_entregue = 0
+                total_copias = 0
+                total_defeitos = 0
+                total_faltantes = 0
+                total_regulares = 0
+                valor_total = 0.0
 
-            cur.execute(f"""
-                UPDATE {schema}.historico_de_servico
-                   SET status = 'Finalizado'
-                 WHERE envio_id = (SELECT envio_id FROM {schema}.entrada_acabamento WHERE id = %s)
-            """, (self.retorno_selecionado["id"],))
+                for t in self.tamanhos:
+                    entregue = safe_int(self.entregues_vars[t].get())
+                    copias = safe_int(self.copias_vars[t].get())
+                    defeitos = safe_int(self.defeitos_vars[t].get())
+                    faltantes = safe_int(self.faltantes_vars[t].get())
+                    regulares = max(0, entregue - defeitos - faltantes)
+                    subtotal = regulares * float(self.valor_por_tam.get(t, 0.0))
 
-            # Observações
-            obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
-            if obs_finalizacao:
+                    total_entregue += entregue
+                    total_copias += copias
+                    total_defeitos += defeitos
+                    total_faltantes += faltantes
+                    total_regulares += regulares
+                    valor_total += subtotal
+
+                obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
+                bonif = self.bonif_final_var.get()
+                bonif_aplicada = (bonif == "sim")
+
+                # Atualiza entrada_acabamento como finalizada
                 cur.execute(f"""
                     UPDATE {schema}.entrada_acabamento
-                       SET observacoes_finalizacao = %s
+                       SET total_entregue  = %s,
+                           total_defeitos  = %s,
+                           total_faltantes = %s,
+                           total_regulares = %s,
+                           valor_total     = %s,
+                           observacoes_finalizacao = %s,
+                           bonificacao_aplicada    = %s,
+                           data_finalizacao        = %s
                      WHERE id = %s
-                """, (obs_finalizacao, self.retorno_selecionado["id"]))
+                """, (total_entregue, total_defeitos, total_faltantes,
+                      total_regulares, valor_total, obs_finalizacao,
+                      bonif_aplicada, datetime.now().date(),
+                      self.retorno_selecionado["id"]))
 
-            # Descobrir colunas (para campos opcionais)
-            cols_c = self._cols(cur, schema, "controle_envio_cortes")
-            cols_e = self._cols(cur, schema, "entrada_acabamento")
+                # Marca envio como finalizado
+                # (usa status_envio se existir, senão tenta status)
+                cols_envio = self._cols(cur, schema, "envios_cortes")
+                if "status_envio" in cols_envio:
+                    cur.execute(f"""
+                        UPDATE {schema}.envios_cortes
+                           SET status_envio = 'Finalizado'
+                         WHERE id = %s
+                    """, (envio_id,))
+                elif "status" in cols_envio:
+                    cur.execute(f"""
+                        UPDATE {schema}.envios_cortes
+                           SET status = 'Finalizado'
+                         WHERE id = %s
+                    """, (envio_id,))
 
-            def pick(alias, table_alias, candidates, default_sql):
-                pool = cols_c if table_alias == "c" else cols_e
-                for cnd in candidates:
-                    if cnd in pool:
-                        return f"{table_alias}.{cnd} AS {alias}"
-                return f"{default_sql} AS {alias}"
-
-            select_parts = [
-                "c.id AS corte_id",
-                "e.id AS entrada_id",
-                pick("codigo", "c", ["codigo", "codigo_corte", "codigo_modelo"], "''"),
-                pick("descricao", "c", ["descricao", "descricao_corte", "descricao_modelo"], "''"),
-                pick("costureira", "c", ["costureira", "faccao", "destino"], "''"),
-                pick("data_envio", "c", ["data_envio", "dt_envio", "data"], "NULL"),
-                pick("data_chegada", "e", ["data_chegada", "dt_chegada"], "NULL"),
-                pick("qtd_enviada", "c", ["quantidade_total", "total_pecas", "qtd_enviada"], "0"),
-                pick("observacao", "e", ["observacoes_finalizacao", "observacao"], "''"),
-                pick("valor_peca", "c", ["valor_peca", "vlr_peca"], "0.00"),
-                pick("bonificacao", "c", ["bonificacao", "bonus", "bonific"], "1"),
-                pick("qtd_pp", "c", ["qtd_pp", "pp"], "0"),
-                pick("qtd_p", "c", ["qtd_p", "p"], "0"),
-                pick("qtd_m", "c", ["qtd_m", "m"], "0"),
-                pick("qtd_g", "c", ["qtd_g", "g"], "0"),
-                pick("qtd_gg", "c", ["qtd_gg", "gg"], "0"),
-                pick("qtd_g1", "c", ["qtd_g1", "g1"], "0"),
-                pick("qtd_g2", "c", ["qtd_g2", "g2"], "0"),
-                pick("qtd_g3", "c", ["qtd_g3", "g3"], "0"),
-            ]
-
-            cur.execute(f"""
-                SELECT {", ".join(select_parts)}
-                  FROM {schema}.controle_envio_cortes c
-                  JOIN {schema}.entrada_acabamento e ON e.envio_id = c.id
-                 WHERE e.id = %s
-            """, (self.retorno_selecionado["id"],))
-            row = cur.fetchone()
-
-            if row:
-                (
-                    corte_id, entrada_id, codigo, descricao, costureira,
-                    data_envio, data_chegada, qtd_enviada, observacao,
-                    valor_peca, _bonif_ignore,
-                    qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3
-                ) = row
-
-                data_conferencia = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                cur.execute(f"""
-                    INSERT INTO {schema}.cortes_finalizados (
-                        corte_id, entrada_id, codigo, descricao, costureira,
-                        data_envio, data_chegada, qtd_enviada, observacao,
-                        status, data_conferencia, valor_peca, bonificacao,
-                        qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3,
-                        qtd_defeito_pp, qtd_defeito_p, qtd_defeito_m, qtd_defeito_g,
-                        qtd_defeito_gg, qtd_defeito_g1, qtd_defeito_g2, qtd_defeito_g3
-                    )
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,
-                            %s,%s,%s,%s,
-                            %s,%s,%s,%s,%s,%s,%s,%s,
-                            0,0,0,0,0,0,0,0)
-                    ON CONFLICT (entrada_id) DO UPDATE SET
-                        status = EXCLUDED.status,
-                        data_conferencia = EXCLUDED.data_conferencia,
-                        valor_peca = EXCLUDED.valor_peca,
-                        bonificacao = EXCLUDED.bonificacao
-                """, (
-                    corte_id, entrada_id, codigo, descricao, costureira,
-                    data_envio, data_chegada, safe_int(qtd_enviada), observacao,
-                    "Finalizado", data_conferencia, float(valor_peca or 0), bonif_flag,
-                    safe_int(qtd_pp), safe_int(qtd_p), safe_int(qtd_m), safe_int(qtd_g),
-                    safe_int(qtd_gg), safe_int(qtd_g1), safe_int(qtd_g2), safe_int(qtd_g3)
-                ))
-
-            conn.commit()
-            conn.close()
-
-            messagebox.showinfo("Sucesso", "Corte finalizado com sucesso!")
-            self.limpar_campos()
-            self.carregar_retornos_pendentes()
-
-        except Exception as e:
-            try:
+                conn.commit()
                 conn.close()
-            except Exception:
-                pass
-            messagebox.showerror("Erro", f"Falha ao finalizar corte: {e}")
+
+                messagebox.showinfo("Sucesso", "Corte finalizado com sucesso.")
+                self.limpar_campos()
+                self.carregar_retornos_pendentes()
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao finalizar corte: {e}")
 
     def salvar_baixa_parcial(self):
         if not self.retorno_selecionado:
-            messagebox.showwarning("Aviso", "Selecione um retorno primeiro!")
+            messagebox.showwarning("Aviso", "Selecione um retorno na lista.")
             return
-
-        # Validação
-        for t in self.tamanhos:
-            enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
-            entregue = safe_int(self.entregues_vars[t].get())
-            copias = safe_int(self.copias_vars[t].get())
-            defeito = safe_int(self.defeitos_vars[t].get())
-            faltante = safe_int(self.faltantes_vars[t].get())
-
-            if entregue + defeito + faltante > enviado:
-                messagebox.showwarning(
-                    "Aviso",
-                    f"Inconsistência em {t}: Entregue {entregue} + Defeito {defeito} + Faltante {faltante} > Enviado {enviado}"
-                )
-                return
-
-            if copias > entregue:
-                messagebox.showwarning("Aviso", f"Cópias não podem exceder Entregue ({t})")
-                return
 
         try:
             conn = get_conn()
@@ -1262,154 +1309,85 @@ class FinalizacaoCortes(ctk.CTkFrame):
             schema = get_schema()
             self._set_search_path(cur, schema)
 
-            bonif_flag = 1 if getattr(self, 'bonif_final_var', None) and self.bonif_final_var.get() == 'sim' else 0
+            # Descobre envio_id a partir da entrada
+            cur.execute(f"""
+                SELECT envio_id
+                  FROM {schema}.entrada_acabamento
+                 WHERE id = %s
+            """, (self.retorno_selecionado["id"],))
+            row = cur.fetchone()
+            if not row:
+                conn.close()
+                messagebox.showerror("Erro", "Não foi possível localizar o envio desta entrada.")
+                return
 
-            # Atualiza detalhes por tamanho
+            envio_id = row[0]
+
+            # Recalcula totais com base nos campos atuais
+            total_entregue = 0
+            total_copias = 0
+            total_defeitos = 0
+            total_faltantes = 0
+            total_regulares = 0
+            valor_total = 0.0
+
+            # Limpa detalhes antigos para este envio
+            cur.execute(f"DELETE FROM {schema}.retorno_detalhes_tamanho WHERE envio_id = %s", (envio_id,))
+
             for t in self.tamanhos:
                 entregue = safe_int(self.entregues_vars[t].get())
                 copias = safe_int(self.copias_vars[t].get())
-                defeito = safe_int(self.defeitos_vars[t].get())
-                faltante = safe_int(self.faltantes_vars[t].get())
+                defeitos = safe_int(self.defeitos_vars[t].get())
+                faltantes = safe_int(self.faltantes_vars[t].get())
 
-                # UPSERT em retorno_detalhes_tamanho
-                cur.execute(f"""
-                    INSERT INTO {schema}.retorno_detalhes_tamanho
-                        (retorno_id, tamanho, quantidade_entregue, quantidade_copias,
-                         quantidade_defeito, quantidade_faltante)
-                    VALUES (%s,%s,%s,%s,%s,%s)
-                    ON CONFLICT (retorno_id, tamanho) DO UPDATE SET
-                        quantidade_entregue = EXCLUDED.quantidade_entregue,
-                        quantidade_copias   = EXCLUDED.quantidade_copias,
-                        quantidade_defeito  = EXCLUDED.quantidade_defeito,
-                        quantidade_faltante = EXCLUDED.quantidade_faltante
-                """, (self.retorno_selecionado["id"], t, entregue, copias, defeito, faltante))
+                regulares = max(0, entregue - defeitos - faltantes)
+                subtotal = regulares * float(self.valor_por_tam.get(t, 0.0))
 
-            # Observações (append com quebra de linha)
+                if any([entregue, copias, defeitos, faltantes, regulares, subtotal]):
+                    cur.execute(f"""
+                        INSERT INTO {schema}.retorno_detalhes_tamanho
+                            (envio_id, tamanho, entregue, copias, defeitos,
+                             faltantes, regulares, subtotal)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (envio_id, t, entregue, copias, defeitos,
+                          faltantes, regulares, subtotal))
+
+                total_entregue += entregue
+                total_copias += copias
+                total_defeitos += defeitos
+                total_faltantes += faltantes
+                total_regulares += regulares
+                valor_total += subtotal
+
+            # Atualiza entrada_acabamento com os novos totais e observações
             obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
-            if obs_finalizacao:
-                cur.execute(f"""
-                    UPDATE {schema}.entrada_acabamento
-                       SET observacoes_finalizacao =
-                           COALESCE(observacoes_finalizacao, '') ||
-                           CASE WHEN COALESCE(observacoes_finalizacao,'') = '' THEN %s ELSE %s END
-                     WHERE id = %s
-                """, ("\n" + obs_finalizacao, "\n" + obs_finalizacao, self.retorno_selecionado["id"]))
-
-            # Base para cortes_finalizados
-            cols_c = self._cols(cur, schema, "controle_envio_cortes")
-            cols_e = self._cols(cur, schema, "entrada_acabamento")
-
-            def pick(alias, table_alias, candidates, default_sql):
-                pool = cols_c if table_alias == "c" else cols_e
-                for cnd in candidates:
-                    if cnd in pool:
-                        return f"{table_alias}.{cnd} AS {alias}"
-                return f"{default_sql} AS {alias}"
-
-            select_parts = [
-                "c.id AS corte_id",
-                "e.id AS entrada_id",
-                pick("codigo", "c", ["codigo", "codigo_corte", "codigo_modelo"], "''"),
-                pick("descricao", "c", ["descricao", "descricao_corte", "descricao_modelo"], "''"),
-                pick("costureira", "c", ["costureira", "faccao", "destino"], "''"),
-                pick("data_envio", "c", ["data_envio", "dt_envio", "data"], "NULL"),
-                pick("data_chegada", "e", ["data_chegada", "dt_chegada"], "NULL"),
-                pick("qtd_enviada", "c", ["quantidade_total", "total_pecas", "qtd_enviada"], "0"),
-                pick("observacao", "e", ["observacoes_finalizacao", "observacao"], "''"),
-                pick("valor_peca", "c", ["valor_peca", "vlr_peca"], "0.00"),
-                pick("bonificacao", "c", ["bonificacao", "bonus", "bonific"], "1"),
-                pick("qtd_pp", "c", ["qtd_pp", "pp"], "0"),
-                pick("qtd_p", "c", ["qtd_p", "p"], "0"),
-                pick("qtd_m", "c", ["qtd_m", "m"], "0"),
-                pick("qtd_g", "c", ["qtd_g", "g"], "0"),
-                pick("qtd_gg", "c", ["qtd_gg", "gg"], "0"),
-                pick("qtd_g1", "c", ["qtd_g1", "g1"], "0"),
-                pick("qtd_g2", "c", ["qtd_g2", "g2"], "0"),
-                pick("qtd_g3", "c", ["qtd_g3", "g3"], "0"),
-            ]
 
             cur.execute(f"""
-                SELECT {", ".join(select_parts)}
-                  FROM {schema}.controle_envio_cortes c
-                  JOIN {schema}.entrada_acabamento e ON e.envio_id = c.id
-                 WHERE e.id = %s
-            """, (self.retorno_selecionado["id"],))
-            base = cur.fetchone()
-
-            # UPSERT em cortes_finalizados
-            total_defeitos = sum(safe_int(self.defeitos_vars[t].get()) for t in self.tamanhos)
-            total_faltante_lbl = safe_int(self.lbl_total_faltante.cget("text"))
-            novo_status = "Finalizado" if (total_defeitos == 0 and total_faltante_lbl == 0) else "Parcial"
-
-            if base:
-                (
-                    corte_id, entrada_id, codigo, descricao, costureira,
-                    data_envio, data_chegada, qtd_enviada, observacao,
-                    valor_peca, _bonif_ignore,
-                    qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3
-                ) = base
-
-                cur.execute(f"""
-                    INSERT INTO {schema}.cortes_finalizados (
-                        corte_id, entrada_id, codigo, descricao, costureira,
-                        data_envio, data_chegada, qtd_enviada, observacao,
-                        status, data_conferencia, valor_peca, bonificacao,
-                        qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3
-                    )
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,
-                            %s,%s,%s,%s,
-                            %s,%s,%s,%s,%s,%s,%s)
-                    ON CONFLICT (entrada_id) DO UPDATE SET
-                        status = EXCLUDED.status,
-                        data_conferencia = EXCLUDED.data_conferencia,
-                        valor_peca = EXCLUDED.valor_peca,
-                        bonificacao = EXCLUDED.bonificacao,
-                        codigo = EXCLUDED.codigo,
-                        descricao = EXCLUDED.descricao,
-                        costureira = EXCLUDED.costureira
-                """, (
-                    corte_id, entrada_id, codigo, descricao, costureira,
-                    data_envio, data_chegada, safe_int(qtd_enviada), observacao,
-                    novo_status, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    float(valor_peca or 0), bonif_flag,
-                    safe_int(qtd_pp), safe_int(qtd_p), safe_int(qtd_m), safe_int(qtd_g),
-                    safe_int(qtd_gg), safe_int(qtd_g1), safe_int(qtd_g2), safe_int(qtd_g3)
-                ))
-
-                # Atualiza defeitos por tamanho em cortes_finalizados
-                cur.execute(f"""
-                    UPDATE {schema}.cortes_finalizados
-                       SET qtd_defeito_pp = %s, qtd_defeito_p = %s, qtd_defeito_m = %s, qtd_defeito_g = %s,
-                           qtd_defeito_gg = %s, qtd_defeito_g1 = %s, qtd_defeito_g2 = %s, qtd_defeito_g3 = %s
-                     WHERE entrada_id = %s
-                """, (
-                    safe_int(self.defeitos_vars["PP"].get()), safe_int(self.defeitos_vars["P"].get()),
-                    safe_int(self.defeitos_vars["M"].get()), safe_int(self.defeitos_vars["G"].get()),
-                    safe_int(self.defeitos_vars["GG"].get()), safe_int(self.defeitos_vars["G1"].get()),
-                    safe_int(self.defeitos_vars["G2"].get()), safe_int(self.defeitos_vars["G3"].get()),
-                    self.retorno_selecionado["id"]
-                ))
+                UPDATE {schema}.entrada_acabamento
+                   SET total_entregue  = %s,
+                       total_defeitos  = %s,
+                       total_faltantes = %s,
+                       total_regulares = %s,
+                       valor_total     = %s,
+                       observacoes_finalizacao = %s
+                 WHERE id = %s
+            """, (total_entregue, total_defeitos, total_faltantes,
+                  total_regulares, valor_total, obs_finalizacao,
+                  self.retorno_selecionado["id"]))
 
             conn.commit()
             conn.close()
 
-            if novo_status == "Parcial":
-                messagebox.showinfo(
-                    "Baixa Parcial",
-                    f"Baixa parcial salva com sucesso!\n"
-                    f"Restam {total_faltante_lbl} peças faltantes e {total_defeitos} com defeito para conferência futura."
-                )
-            else:
-                messagebox.showinfo("Sucesso", "Todos os itens foram finalizados!")
+            # Atualiza labels na tela
+            self.lbl_total_entregue.configure(text=str(total_entregue))
+            self.lbl_total_copias.configure(text=str(total_copias))
+            self.lbl_total_defeito.configure(text=str(total_defeitos))
+            self.lbl_total_faltante.configure(text=str(total_faltantes))
+            self.lbl_total_regulares.configure(text=str(total_regulares))
+            self.lbl_valor_total.configure(text=fmt_moeda(valor_total))
 
-            self.limpar_campos()
-            self.carregar_retornos_pendentes()
-
+            messagebox.showinfo("Sucesso", "Baixa parcial salva com sucesso.")
         except Exception as e:
-            try:
-                conn.close()
-            except Exception:
-                pass
             messagebox.showerror("Erro", f"Falha ao salvar baixa parcial: {e}")
 
     def limpar_campos(self):
