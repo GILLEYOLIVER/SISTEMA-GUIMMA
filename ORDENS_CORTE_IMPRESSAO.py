@@ -5,6 +5,7 @@ Página de listagem e impressão de Ordens de Corte
 Usa o mesmo padrão de banco, temas e estilo da NOVA_ORDEM.py
 """
 
+import TEMAS
 import os
 import logging
 from datetime import datetime
