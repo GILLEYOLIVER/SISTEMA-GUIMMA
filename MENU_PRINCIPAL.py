@@ -290,6 +290,10 @@ class ThemeManager:
             estilo_btn_ttk = ttk.Style(root_widget)
             aplicar_estilo_treeview(
                 style=estilo_btn_ttk,
+        # Estilo básico para Treeview (ttk) com contraste dinâmico
+        try:
+            aplicar_estilo_treeview(
+                style=ttk.Style(root_widget),
                 prefixo="Treeview",
                 cor_fundo=cor_fundo,
                 cor_linhas=cor_secundaria,
@@ -317,6 +321,29 @@ class ThemeManager:
         def _apply_to_all_widgets(widget):
             """Aplica tema recursivamente em todos os widgets."""
             try:
+                estilo_btn_ttk = None
+                try:
+                    estilo_btn_ttk = ttk.Style()
+                    estilo_btn_ttk.configure(
+                        "Opera.TButton",
+                        background=cor_secundaria,
+                        foreground=cor_texto,
+                        relief=tk.FLAT,
+                        borderwidth=0,
+                        focusthickness=0,
+                        highlightthickness=0,
+                        padding=6,
+                        font=fonts["button"],
+                    )
+                    estilo_btn_ttk.map(
+                        "Opera.TButton",
+                        background=[("active", cor_hover_realcado), ("pressed", cor_hover)],
+                        relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
+                        bordercolor=[("pressed", ""), ("active", "")],
+                    )
+                except Exception:
+                    estilo_btn_ttk = None
+
                 # ---------- WIDGETS CUSTOMTKINTER ----------
                 if isinstance(widget, ctk.CTkFrame):
                     # frames usam a cor de fundo do tema
