@@ -533,6 +533,24 @@ def remover_bordas_botoes_tema(widget):
         ctk.CTkSegmentedButton,
         ctk.CTkSwitch,
     )
+    estilo_ttk = None
+    try:
+        estilo_ttk = ttk.Style()
+        estilo_ttk.configure(
+            "TButton",
+            relief=tk.FLAT,
+            borderwidth=0,
+            focusthickness=0,
+            highlightthickness=0,
+            padding=6,
+        )
+        estilo_ttk.map(
+            "TButton",
+            relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
+            bordercolor=[("pressed", ""), ("active", "")],
+        )
+    except Exception:
+        estilo_ttk = None
 
     try:
         # Se for um botão diretamente

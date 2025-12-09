@@ -243,6 +243,29 @@ class ThemeManager:
         def _apply_to_all_widgets(widget):
             """Aplica tema recursivamente em todos os widgets."""
             try:
+                estilo_btn_ttk = None
+                try:
+                    estilo_btn_ttk = ttk.Style()
+                    estilo_btn_ttk.configure(
+                        "Opera.TButton",
+                        background=cor_secundaria,
+                        foreground=cor_texto,
+                        relief=tk.FLAT,
+                        borderwidth=0,
+                        focusthickness=0,
+                        highlightthickness=0,
+                        padding=6,
+                        font=fonts["button"],
+                    )
+                    estilo_btn_ttk.map(
+                        "Opera.TButton",
+                        background=[("active", cor_hover_realcado), ("pressed", cor_hover)],
+                        relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
+                        bordercolor=[("pressed", ""), ("active", "")],
+                    )
+                except Exception:
+                    estilo_btn_ttk = None
+
                 # ---------- WIDGETS CUSTOMTKINTER ----------
                 if isinstance(widget, ctk.CTkFrame):
                     # frames usam a cor de fundo do tema
@@ -319,6 +342,14 @@ class ThemeManager:
 
                 elif isinstance(widget, ttk.Treeview):
                     padronizar_treeview(widget)
+
+                elif isinstance(widget, ttk.Button):
+                    if estilo_btn_ttk:
+                        widget.configure(style="Opera.TButton")
+                        try:
+                            widget.state(["!focus"])
+                        except Exception:
+                            pass
 
                 # ---------- TKINTER PURO ----------
                 elif isinstance(widget, tk.Frame):
