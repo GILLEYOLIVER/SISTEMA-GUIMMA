@@ -10,7 +10,13 @@ Dashboard (PostgreSQL com Fallback)
 import os
 from datetime import datetime, timedelta, date
 import customtkinter as ctk
-from TEMAS import get_contraste_texto, is_dark_color, ajustar_hover
+from TEMAS import (
+    get_contraste_texto,
+    is_dark_color,
+    ajustar_hover,
+    aplicar_estilo_treeview,
+    aplicar_tags_alternadas,
+)
 from tkinter import ttk, messagebox
 
 # ==== IMPORT CORRETO DO MÓDULO POSTGRESQL COM FALLBACK ====
@@ -1377,12 +1383,6 @@ class DashboardPage(ctk.CTkFrame):
         try:
             style = ttk.Style()
 
-            # Garante um tema que respeita cores de cabeçalho
-            try:
-                style.theme_use("clam")
-            except Exception:
-                pass
-
             # -------- CABEÇALHO (TÍTULOS) – FUNDO ESCURO / LETRAS CLARAS --------
             cab_bg = self.cor_cabecalho_fundo  # já definido no __init__ (#2C3E50)
             cab_fg = self.cor_cabecalho_texto  # já definido no __init__ (#FFFFFF)
@@ -1399,48 +1399,16 @@ class DashboardPage(ctk.CTkFrame):
             selecao_bg = ajustar_hover(self.cor_destaque)
             selecao_fg = get_contraste_texto(selecao_bg)
 
-            # -------- ESTILO PRINCIPAL DA TREEVIEW --------
-            style.configure(
-                "OperaDashboard.Treeview",
-                background=linhas_bg,
-                foreground=linhas_fg,
-                fieldbackground=linhas_bg,
-                rowheight=22,
-                borderwidth=0,
-                relief="flat",
-            )
-
-            style.map(
-                "OperaDashboard.Treeview",
-                background=[
-                    ("selected", selecao_bg),
-                    ("!selected", linhas_bg),
-                ],
-                foreground=[
-                    ("selected", selecao_fg),
-                    ("!selected", linhas_fg),
-                ],
-            )
-
-            # -------- ESTILO DO CABEÇALHO (TÍTULOS DAS COLUNAS) --------
-            style.configure(
-                "OperaDashboard.Treeview.Heading",
-                background=cab_bg,
-                foreground=cab_fg,
-                font=("Arial", 11, "bold"),
-                relief="flat",
-            )
-
-            style.map(
-                "OperaDashboard.Treeview.Heading",
-                background=[
-                    ("active", ajustar_hover(cab_bg)),
-                    ("!active", cab_bg),
-                ],
-                foreground=[
-                    ("active", cab_fg),
-                    ("!active", cab_fg),
-                ],
+            aplicar_estilo_treeview(
+                style=style,
+                prefixo="OperaDashboard.Treeview",
+                cor_fundo=self.cor_fundo,
+                cor_linhas=linhas_bg,
+                cor_cabecalho=cab_bg,
+                cor_texto=linhas_fg,
+                cor_borda=self.cor_borda,
+                cor_selecao=selecao_bg,
+                altura_linha=22,
             )
 
             # Aplica o estilo específico nas Treeviews do dashboard
@@ -1448,6 +1416,7 @@ class DashboardPage(ctk.CTkFrame):
                          getattr(self, "tree_and", None)):
                 if tree is not None:
                     tree.configure(style="OperaDashboard.Treeview")
+                    aplicar_tags_alternadas(tree, linhas_bg, self.cor_fundo)
 
         except Exception as e:
             print(f"⚠️ Erro ao aplicar estilo nas Treeviews do Dashboard: {e}")
