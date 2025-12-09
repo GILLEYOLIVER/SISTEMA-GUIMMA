@@ -2,6 +2,7 @@
 # Relatório de Serviços Externos (Facções) – compatível com MENU_PRINCIPAL
 
 from __future__ import annotations
+import TEMAS
 import csv
 import os
 from datetime import date, timedelta

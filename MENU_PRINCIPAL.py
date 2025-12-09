@@ -18,8 +18,14 @@ from PIL import Image, ImageTk
 from tkinter import messagebox, ttk
 from PIL import Image
 import customtkinter as ctk
-from TEMAS import TemasPage, is_dark_color
-from TEMAS import remover_bordas_botoes_tema
+from TEMAS import (
+    TemasPage,
+    aplicar_estilo_treeview,
+    get_contraste_texto,
+    is_dark_color,
+    padronizar_treeview,
+    remover_bordas_botoes_tema,
+)
 
 
 
@@ -218,29 +224,18 @@ class ThemeManager:
         # Hovers realçados
         cor_hover_realcado = self._realcar_cor(cor_secundaria, 1.3)
 
-        # Estilo básico para Treeview (ttk)
+        # Estilo básico para Treeview (ttk) com contraste dinâmico
         try:
-            style = ttk.Style(root_widget)
-            style.configure(
-                "Treeview",
-                background=cor_secundaria,
-                foreground=cor_texto,
-                fieldbackground=cor_secundaria,
-                bordercolor=cor_borda,
-                font=fonts["body"],
-                rowheight=28,
-            )
-            style.map(
-                "Treeview",
-                background=[("selected", cor_destaque)],
-                foreground=[("selected", cor_texto)],
-            )
-            style.configure(
-                "Treeview.Heading",
-                background=cor_primaria,
-                foreground=cor_texto,
-                bordercolor=cor_borda,
-                font=fonts["heading"],
+            aplicar_estilo_treeview(
+                style=ttk.Style(root_widget),
+                prefixo="Treeview",
+                cor_fundo=cor_fundo,
+                cor_linhas=cor_secundaria,
+                cor_cabecalho=cor_primaria,
+                cor_texto=get_contraste_texto(cor_secundaria) or cor_texto,
+                cor_borda=cor_borda,
+                cor_selecao=palette.get("selecao", cor_destaque),
+                altura_linha=28,
             )
         except Exception as e:
             print(f"[Tema] Erro ao aplicar tema em Treeview: {e}")
@@ -320,6 +315,9 @@ class ThemeManager:
 
                 elif isinstance(widget, ctk.CTkScrollableFrame):
                     widget.configure(fg_color=cor_fundo, border_color=cor_borda)
+
+                elif isinstance(widget, ttk.Treeview):
+                    padronizar_treeview(widget)
 
                 # ---------- TKINTER PURO ----------
                 elif isinstance(widget, tk.Frame):
