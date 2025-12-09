@@ -18,8 +18,14 @@ from PIL import Image, ImageTk
 from tkinter import messagebox, ttk
 from PIL import Image
 import customtkinter as ctk
-from TEMAS import TemasPage, is_dark_color
-from TEMAS import remover_bordas_botoes_tema
+from TEMAS import (
+    TemasPage,
+    aplicar_estilo_treeview,
+    get_contraste_texto,
+    is_dark_color,
+    padronizar_treeview,
+    remover_bordas_botoes_tema,
+)
 
 
 
@@ -218,29 +224,18 @@ class ThemeManager:
         # Hovers realçados
         cor_hover_realcado = self._realcar_cor(cor_secundaria, 1.3)
 
-        # Estilo básico para Treeview (ttk)
+        # Estilo básico para Treeview (ttk) com contraste dinâmico
         try:
-            style = ttk.Style(root_widget)
-            style.configure(
-                "Treeview",
-                background=cor_secundaria,
-                foreground=cor_texto,
-                fieldbackground=cor_secundaria,
-                bordercolor=cor_borda,
-                font=fonts["body"],
-                rowheight=28,
-            )
-            style.map(
-                "Treeview",
-                background=[("selected", cor_destaque)],
-                foreground=[("selected", cor_texto)],
-            )
-            style.configure(
-                "Treeview.Heading",
-                background=cor_primaria,
-                foreground=cor_texto,
-                bordercolor=cor_borda,
-                font=fonts["heading"],
+            aplicar_estilo_treeview(
+                style=ttk.Style(root_widget),
+                prefixo="Treeview",
+                cor_fundo=cor_fundo,
+                cor_linhas=cor_secundaria,
+                cor_cabecalho=cor_primaria,
+                cor_texto=get_contraste_texto(cor_secundaria) or cor_texto,
+                cor_borda=cor_borda,
+                cor_selecao=palette.get("selecao", cor_destaque),
+                altura_linha=28,
             )
         except Exception as e:
             print(f"[Tema] Erro ao aplicar tema em Treeview: {e}")
@@ -248,6 +243,29 @@ class ThemeManager:
         def _apply_to_all_widgets(widget):
             """Aplica tema recursivamente em todos os widgets."""
             try:
+                estilo_btn_ttk = None
+                try:
+                    estilo_btn_ttk = ttk.Style()
+                    estilo_btn_ttk.configure(
+                        "Opera.TButton",
+                        background=cor_secundaria,
+                        foreground=cor_texto,
+                        relief=tk.FLAT,
+                        borderwidth=0,
+                        focusthickness=0,
+                        highlightthickness=0,
+                        padding=6,
+                        font=fonts["button"],
+                    )
+                    estilo_btn_ttk.map(
+                        "Opera.TButton",
+                        background=[("active", cor_hover_realcado), ("pressed", cor_hover)],
+                        relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
+                        bordercolor=[("pressed", ""), ("active", "")],
+                    )
+                except Exception:
+                    estilo_btn_ttk = None
+
                 # ---------- WIDGETS CUSTOMTKINTER ----------
                 if isinstance(widget, ctk.CTkFrame):
                     # frames usam a cor de fundo do tema
@@ -260,6 +278,7 @@ class ThemeManager:
                         fg_color=cor_secundaria,
                         hover_color=cor_hover_realcado,
                         border_color=cor_borda,
+                        border_width=0,
                         text_color=cor_texto,
                         font=fonts["button"],
                         corner_radius=8,
@@ -321,6 +340,17 @@ class ThemeManager:
                 elif isinstance(widget, ctk.CTkScrollableFrame):
                     widget.configure(fg_color=cor_fundo, border_color=cor_borda)
 
+                elif isinstance(widget, ttk.Treeview):
+                    padronizar_treeview(widget)
+
+                elif isinstance(widget, ttk.Button):
+                    if estilo_btn_ttk:
+                        widget.configure(style="Opera.TButton")
+                        try:
+                            widget.state(["!focus"])
+                        except Exception:
+                            pass
+
                 # ---------- TKINTER PURO ----------
                 elif isinstance(widget, tk.Frame):
                     widget.configure(bg=cor_fundo)
@@ -333,6 +363,9 @@ class ThemeManager:
                         bg=cor_secundaria,
                         fg=cor_texto,
                         activebackground=cor_hover,
+                        relief=tk.FLAT,
+                        borderwidth=0,
+                        highlightthickness=0,
                         font=fonts["button"],
                     )
 
