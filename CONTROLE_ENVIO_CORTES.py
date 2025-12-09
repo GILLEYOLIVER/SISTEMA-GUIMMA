@@ -2,6 +2,7 @@
 """
 ENVIO_CORTE.py — Envio de Cortes / Controle de Mão de Obra
 """
+import TEMAS
 import os
 import webbrowser
 import tempfile

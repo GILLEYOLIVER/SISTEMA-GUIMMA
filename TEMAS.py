@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 def corrigir_labels_pagina_temas(widget):
     """
     CORREÇÃO CRÍTICA: Remove fundos, bordas e contornos dos CTkLabels
@@ -77,6 +79,7 @@ import math
 import re
 import tkinter as tk
 from tkinter import Canvas
+from tkinter import ttk
 import colorsys
 import customtkinter as ctk
 from PIL import Image, ImageTk, ImageGrab
@@ -375,6 +378,147 @@ def ajustar_hover(cor_base, fator=0.8):
         return cor_base
 
 
+def aplicar_estilo_treeview(
+    *,
+    style: "ttk.Style" | None = None,
+    prefixo: str = "Treeview",
+    cor_fundo: str = "#FFFFFF",
+    cor_linhas: str = "#F5F5F5",
+    cor_cabecalho: str = "#0D6EFD",
+    cor_texto: str | None = None,
+    cor_borda: str = "#CED4DA",
+    cor_selecao: str = "#0D6EFD",
+    altura_linha: int = 25,
+):
+    """Aplica o estilo padrão de Treeview usado no *Cadastro de Modelo*.
+
+    Esse padrão garante contraste dinâmico para texto e efeito de hover
+    em cabeçalhos e linhas selecionadas.
+    """
+
+    try:
+        style = style or ttk.Style()
+
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+
+        texto_padrao = cor_texto or get_contraste_texto(cor_linhas)
+        texto_selecao = get_contraste_texto(cor_selecao)
+        texto_header = get_contraste_texto(cor_cabecalho)
+
+        style.configure(
+            prefixo,
+            background=cor_linhas,
+            fieldbackground=cor_linhas,
+            foreground=texto_padrao,
+            rowheight=altura_linha,
+            bordercolor=cor_borda,
+            borderwidth=1,
+            font=("Arial", 10),
+        )
+
+        style.configure(
+            f"{prefixo}.Heading",
+            background=cor_cabecalho,
+            foreground=texto_header,
+            relief="flat",
+            font=("Arial", 10, "bold"),
+        )
+
+        style.map(
+            prefixo,
+            background=[("selected", cor_selecao)],
+            foreground=[("selected", texto_selecao)],
+        )
+
+        style.map(
+            f"{prefixo}.Heading",
+            background=[("active", ajustar_hover(cor_cabecalho))],
+            relief=[("active", "flat"), ("pressed", "flat")],
+        )
+
+        return style
+    except Exception as e:
+        print(f"[Temas] Erro ao aplicar estilo Treeview: {e}")
+        return None
+
+
+def aplicar_tags_alternadas(tree: ttk.Treeview, cor_par: str, cor_impar: str):
+    """Configura tags de linhas alternadas com contraste automático."""
+
+    try:
+        tree.tag_configure("evenrow", background=cor_par, foreground=get_contraste_texto(cor_par))
+        tree.tag_configure("oddrow", background=cor_impar, foreground=get_contraste_texto(cor_impar))
+
+        for i, item in enumerate(tree.get_children()):
+            tag = "evenrow" if i % 2 == 0 else "oddrow"
+            tree.item(item, tags=(tag,))
+    except Exception as e:
+        print(f"[Temas] Erro ao aplicar tags alternadas: {e}")
+
+
+def padronizar_treeview(tree: ttk.Treeview, prefixo: str | None = None):
+    """Aplica o padrão visual oficial de Treeview usando as cores do tema atual."""
+
+    try:
+        app = tree.winfo_toplevel()
+
+        cor_fundo = getattr(app, "cor_fundo", "#FFFFFF")
+        cor_secundaria = getattr(app, "cor_secundaria", "#F5F5F5")
+        cor_primaria = getattr(app, "cor_primaria", "#0D6EFD")
+        cor_texto = getattr(app, "cor_texto", get_contraste_texto(cor_fundo))
+        cor_borda = getattr(app, "cor_borda", "#CED4DA")
+
+        nome_prefixo = prefixo or tree.cget("style") or "Treeview"
+
+        estilo = aplicar_estilo_treeview(
+            prefixo=nome_prefixo,
+            cor_fundo=cor_fundo,
+            cor_linhas=cor_secundaria,
+            cor_cabecalho=cor_primaria,
+            cor_texto=cor_texto,
+            cor_borda=cor_borda,
+            cor_selecao=cor_primaria,
+        )
+
+        if estilo:
+            tree.configure(style=nome_prefixo)
+            aplicar_tags_alternadas(tree, cor_secundaria, cor_fundo)
+    except Exception as e:
+        print(f"[Temas] Erro ao padronizar Treeview: {e}")
+
+
+def padronizar_treeviews_container(widget):
+    """Padroniza todas as Treeviews de um container recursivamente."""
+
+    try:
+        if isinstance(widget, ttk.Treeview):
+            padronizar_treeview(widget)
+
+        for child in widget.winfo_children():
+            padronizar_treeviews_container(child)
+    except Exception as e:
+        print(f"[Temas] Erro ao padronizar Treeviews do container: {e}")
+
+
+# Aplicar padronização automática a toda Treeview criada após importar este módulo
+try:
+    _ORIGINAL_TREEVIEW_INIT
+except NameError:
+    _ORIGINAL_TREEVIEW_INIT = ttk.Treeview.__init__
+
+    def _treeview_init_padrao(self, *args, **kwargs):
+        _ORIGINAL_TREEVIEW_INIT(self, *args, **kwargs)
+        try:
+            padronizar_treeview(self, kwargs.get("style"))
+        except Exception:
+            pass
+
+    ttk.Treeview.__init__ = _treeview_init_padrao
+
+
 def remover_bordas_botoes_tema(widget):
     """
     Remove bordas, contornos, relieves e outlines de TODOS os botões
@@ -394,12 +538,30 @@ def remover_bordas_botoes_tema(widget):
         # Se for um botão diretamente
         if isinstance(widget, botoes):
             try:
+                fg = widget.cget("fg_color") if hasattr(widget, "cget") else None
+                hover = widget.cget("hover_color") if hasattr(widget, "cget") else None
+                texto = widget.cget("text_color") if hasattr(widget, "cget") else None
+
                 widget.configure(
                     border_width=0,
-                    corner_radius=8,
-                    fg_color="transparent",
-                    hover_color=widget.cget("hover_color") if hasattr(widget, "cget") else "#444",
-                    text_color=widget.cget("text_color") if hasattr(widget, "cget") else "#fff"
+                    corner_radius=getattr(widget, "corner_radius", 8),
+                    fg_color=fg or "transparent",
+                    hover_color=hover or fg or "transparent",
+                    text_color=texto if texto not in (None, "") else None,
+                )
+                try:
+                    widget.configure(highlightthickness=0)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        if isinstance(widget, tk.Button):
+            try:
+                widget.configure(
+                    borderwidth=0,
+                    highlightthickness=0,
+                    relief=tk.FLAT,
                 )
             except Exception:
                 pass
