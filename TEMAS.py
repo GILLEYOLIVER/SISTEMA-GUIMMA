@@ -584,13 +584,6 @@ def remover_bordas_botoes_tema(widget):
             except Exception:
                 pass
 
-        if isinstance(widget, ttk.Button):
-            try:
-                widget.configure(style="TButton")
-                widget.state(["!focus"])
-            except Exception:
-                pass
-
         # Se possuir filhos, aplicar recursivamente
         if hasattr(widget, "winfo_children"):
             for child in widget.winfo_children():
