@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 def corrigir_labels_pagina_temas(widget):
     """
     CORREÇÃO CRÍTICA: Remove fundos, bordas e contornos dos CTkLabels
