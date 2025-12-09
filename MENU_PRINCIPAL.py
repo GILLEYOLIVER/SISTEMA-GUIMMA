@@ -155,6 +155,9 @@ class ThemeManager:
         except Exception as e:
             print(f"[Tema] Erro ao aplicar atributos de cor no app: {e}")
 
+        # Ajusta estilos base de botões antes de estilizar widgets existentes
+        self._configure_button_styles(pal)
+
         # Atualiza fontes base compartilhadas
         self._configure_base_fonts()
 
@@ -194,6 +197,64 @@ class ThemeManager:
             "button": ("Arial", 12, "bold"),
         }
 
+    def _configure_button_styles(self, palette: dict):
+        """Configura estilos base para botões Tk/ttk antes da aplicação recursiva."""
+        import tkinter as tk
+        from tkinter import ttk
+
+        cor_secundaria = palette.get("secundaria", "#1F2937")
+        cor_texto = palette.get("texto", "#FFFFFF")
+        cor_hover = palette.get("hover", cor_secundaria)
+
+        try:
+            estilo = ttk.Style(self.app)
+            estilo.configure(
+                "Opera.TButton",
+                background=cor_secundaria,
+                foreground=cor_texto,
+                relief=tk.FLAT,
+                borderwidth=0,
+                focusthickness=0,
+                highlightthickness=0,
+                padding=6,
+                font=self.fonts["button"],
+            )
+            estilo.configure(
+                "TButton",
+                background=cor_secundaria,
+                foreground=cor_texto,
+                relief=tk.FLAT,
+                borderwidth=0,
+                focusthickness=0,
+                highlightthickness=0,
+                padding=6,
+                font=self.fonts["button"],
+            )
+            estilo.map(
+                "Opera.TButton",
+                background=[("active", cor_hover), ("pressed", cor_hover)],
+                relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
+                bordercolor=[("pressed", ""), ("active", "")],
+            )
+            estilo.map(
+                "TButton",
+                background=[("active", cor_hover), ("pressed", cor_hover)],
+                relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
+                bordercolor=[("pressed", ""), ("active", "")],
+            )
+        except Exception as e:
+            print(f"[Tema] Erro ao configurar estilos base de botões: {e}")
+
+        try:
+            # Remove bordas e destaques padrão de botões Tk
+            self.app.option_add("*Button.highlightthickness", 0)
+            self.app.option_add("*Button.borderwidth", 0)
+            self.app.option_add("*Button.relief", tk.FLAT)
+            self.app.option_add("*Button.highlightcolor", cor_secundaria)
+            self.app.option_add("*Button.highlightbackground", cor_secundaria)
+        except Exception:
+            pass
+
     def _configure_base_fonts(self):
         """Garante que todas as páginas utilizem as mesmas fontes base."""
         try:
@@ -224,6 +285,11 @@ class ThemeManager:
         # Hovers realçados
         cor_hover_realcado = self._realcar_cor(cor_secundaria, 1.3)
 
+        estilo_btn_ttk = None
+        try:
+            estilo_btn_ttk = ttk.Style(root_widget)
+            aplicar_estilo_treeview(
+                style=estilo_btn_ttk,
         # Estilo básico para Treeview (ttk) com contraste dinâmico
         try:
             aplicar_estilo_treeview(
@@ -237,8 +303,20 @@ class ThemeManager:
                 cor_selecao=palette.get("selecao", cor_destaque),
                 altura_linha=28,
             )
+            estilo_btn_ttk.map(
+                "Opera.TButton",
+                background=[("active", cor_hover_realcado), ("pressed", cor_hover)],
+                relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
+                bordercolor=[("pressed", ""), ("active", "")],
+            )
+            estilo_btn_ttk.map(
+                "TButton",
+                background=[("active", cor_hover_realcado), ("pressed", cor_hover)],
+                relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
+                bordercolor=[("pressed", ""), ("active", "")],
+            )
         except Exception as e:
-            print(f"[Tema] Erro ao aplicar tema em Treeview: {e}")
+            print(f"[Tema] Erro ao aplicar tema em Treeview/Botões: {e}")
 
         def _apply_to_all_widgets(widget):
             """Aplica tema recursivamente em todos os widgets."""
