@@ -650,12 +650,11 @@ class OperaMenuApp(ctk.CTk):
     MENU_ESTRUTURA = {
         "Dashboard": ["Dashboard"],
         "MODELOS": ["Cadastrar Modelo", "Imprimir Ficha Técnica"],
+        "FACÇÕES": ["Cadastro de Facções", "Pesquisar Serviço"],
+        "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
         "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
-        "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
-        "FACÇÕES": ["Cadastro de Facções", "Pesquisar Serviço"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
-        "PRODUÇÃO": ["Produção"],
         "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento"],
         "FINANCEIRO": [
             "Pagamento de Serviços", "Custo Produto", "Folha Pagamento",
@@ -713,7 +712,7 @@ class OperaMenuApp(ctk.CTk):
         },
         "RELATÓRIOS": {
             "Produção": "PRODUÇAO.png",
-            "Serviços Externos": "SERVIÇOES EXTERNOS.png",
+            "Serviços Externos": "SERVIÇOS EXTERNOS.png",
             "Modelos Produzidos": "MODELOS PRODUZIDOS.png",
             "Acabamento": "ACABAMENTO.png",
         },
@@ -725,6 +724,7 @@ class OperaMenuApp(ctk.CTk):
         },
         "BANCO DE DADOS": {
             "Gerenciar": "ENGRENAGEM.png",
+            "Backup": "BACKUP.png"
         },
     }
 
@@ -1138,7 +1138,7 @@ class OperaMenuApp(ctk.CTk):
         subtitulo = ctk.CTkLabel(
             self.sidebar,
             text="Menu Principal",
-            font=("Arial", 14),
+            font=("Arial", 18),
             text_color=self.cor_texto,
         )
         subtitulo.pack(pady=(0, 12))
