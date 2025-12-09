@@ -536,12 +536,30 @@ def remover_bordas_botoes_tema(widget):
         # Se for um botão diretamente
         if isinstance(widget, botoes):
             try:
+                fg = widget.cget("fg_color") if hasattr(widget, "cget") else None
+                hover = widget.cget("hover_color") if hasattr(widget, "cget") else None
+                texto = widget.cget("text_color") if hasattr(widget, "cget") else None
+
                 widget.configure(
                     border_width=0,
-                    corner_radius=8,
-                    fg_color="transparent",
-                    hover_color=widget.cget("hover_color") if hasattr(widget, "cget") else "#444",
-                    text_color=widget.cget("text_color") if hasattr(widget, "cget") else "#fff"
+                    corner_radius=getattr(widget, "corner_radius", 8),
+                    fg_color=fg or "transparent",
+                    hover_color=hover or fg or "transparent",
+                    text_color=texto if texto not in (None, "") else None,
+                )
+                try:
+                    widget.configure(highlightthickness=0)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        if isinstance(widget, tk.Button):
+            try:
+                widget.configure(
+                    borderwidth=0,
+                    highlightthickness=0,
+                    relief=tk.FLAT,
                 )
             except Exception:
                 pass

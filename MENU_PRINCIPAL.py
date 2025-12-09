@@ -255,6 +255,7 @@ class ThemeManager:
                         fg_color=cor_secundaria,
                         hover_color=cor_hover_realcado,
                         border_color=cor_borda,
+                        border_width=0,
                         text_color=cor_texto,
                         font=fonts["button"],
                         corner_radius=8,
@@ -331,6 +332,9 @@ class ThemeManager:
                         bg=cor_secundaria,
                         fg=cor_texto,
                         activebackground=cor_hover,
+                        relief=tk.FLAT,
+                        borderwidth=0,
+                        highlightthickness=0,
                         font=fonts["button"],
                     )
 
