@@ -12,6 +12,7 @@ SISTEMA DE GESTÃO DE USUÁRIOS – Profissional 3.0
 - Código limpo, organizado e altamente funcional
 """
 
+import TEMAS
 import os
 import sys
 import csv
