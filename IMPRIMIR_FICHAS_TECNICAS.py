@@ -9,7 +9,6 @@ EXATAMENTE o mesmo layout da página CADASTRAR_MODELO.py.
 - Lê os dados do banco (PostgreSQL) e mapeia nos MESMOS campos do gerador
 - Duplo clique ou botão gera o PDF e imprime/abre
 """
-import TEMAS
 import os
 import re
 import platform

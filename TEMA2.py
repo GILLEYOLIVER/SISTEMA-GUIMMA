@@ -6,7 +6,6 @@ banco e em arquivo, além de pré-visualizar em tempo real onde cada cor é
 aplicada."""
 from __future__ import annotations
 
-import TEMAS
 import importlib
 import json
 import os

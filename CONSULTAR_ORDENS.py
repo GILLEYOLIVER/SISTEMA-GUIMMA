@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import TEMAS
 import customtkinter as ctk
 from tkinter import ttk, messagebox, Toplevel, filedialog
 import os

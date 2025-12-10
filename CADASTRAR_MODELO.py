@@ -21,13 +21,7 @@ warnings.filterwarnings(
 # =================== IMPORTS UI/IMG/PDF ===================
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
-from TEMAS import (
-    get_contraste_texto,
-    is_dark_color,
-    ajustar_hover,
-    aplicar_estilo_treeview,
-    aplicar_tags_alternadas,
-)
+from TEMAS import get_contraste_texto, is_dark_color, ajustar_hover
 import customtkinter as ctk
 
 try:
@@ -4275,15 +4269,28 @@ class CadastroModelosApp(ctk.CTkFrame):
             except:
                 pass
 
-            aplicar_estilo_treeview(
-                style=style,
-                cor_fundo=cor_fundo,
-                cor_linhas=cor_secundaria,
-                cor_cabecalho=cor_primaria,
-                cor_texto=cor_texto,
-                cor_borda=cor_borda,
-                cor_selecao=cor_selecao,
-            )
+            # Configurar cores da Treeview
+            style.configure("Treeview",
+                            background=cor_secundaria,
+                            fieldbackground=cor_secundaria,
+                            foreground=cor_texto,
+                            rowheight=25,
+                            bordercolor=cor_borda,
+                            borderwidth=1,
+                            font=("Arial", 10))
+
+            style.configure("Treeview.Heading",
+                            background=cor_primaria,
+                            foreground=get_contraste_texto(cor_primaria),
+                            relief="flat",
+                            font=("Arial", 10, "bold"))
+
+            style.map("Treeview",
+                      background=[('selected', cor_selecao)],
+                      foreground=[('selected', get_contraste_texto(cor_selecao))])
+
+            style.map("Treeview.Heading",
+                      relief=[('active', 'flat'), ('pressed', 'flat')])
 
             # Aplicar estilo a todas as tabelas conhecidas
             tabelas = [
@@ -4297,7 +4304,14 @@ class CadastroModelosApp(ctk.CTkFrame):
                 if tabela and hasattr(tabela, 'winfo_exists') and tabela.winfo_exists():
                     try:
                         # Configurar tags para linhas alternadas
-                        aplicar_tags_alternadas(tabela, cor_secundaria, cor_fundo)
+                        tabela.tag_configure('evenrow', background=cor_secundaria)
+                        tabela.tag_configure('oddrow', background=cor_fundo)
+
+                        # Aplicar tags alternadas
+                        children = tabela.get_children()
+                        for i, item in enumerate(children):
+                            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+                            tabela.item(item, tags=(tag,))
                     except Exception as e:
                         print(f"Erro ao aplicar estilo na tabela: {e}")
 

@@ -4,7 +4,6 @@ RELATORIO_ENVIO_DETALHADO.py (PostgreSQL)
 Relatório detalhado do fluxo de cortes
 """
 
-import TEMAS
 import os
 from datetime import datetime, date, timedelta
 import customtkinter as ctk

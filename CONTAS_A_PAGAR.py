@@ -17,7 +17,6 @@ Como usar no seu menu (padrão atual do sistema):
     # Continua aceitando o padrão antigo para compatibilidade:
     # page = ContasAPagarPage(parent=container, host=self)
 """
-import TEMAS
 import os
 import json
 from datetime import datetime, date, timedelta
