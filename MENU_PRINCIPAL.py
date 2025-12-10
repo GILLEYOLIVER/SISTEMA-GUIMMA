@@ -54,11 +54,11 @@ except Exception as e:
     MENU_POSTGRES_AVAILABLE = False
 
 
-    def get_conn():
+def get_conn():
         raise RuntimeError("PostgreSQL indisponível")
 
 
-    def get_schema():
+def get_schema():
         return "opera"
 
 # ===== CONFIGURAÇÕES GLOBAIS =====
@@ -282,15 +282,10 @@ class ThemeManager:
         cor_alerta = palette.get("alerta", "#ef4444")
         cor_destaque = palette.get("destaque", "#2563eb")
 
-        # Hovers realçados
+        # Hover realçado
         cor_hover_realcado = self._realcar_cor(cor_secundaria, 1.3)
 
-        estilo_btn_ttk = None
-        try:
-            estilo_btn_ttk = ttk.Style(root_widget)
-            aplicar_estilo_treeview(
-                style=estilo_btn_ttk,
-        # Estilo básico para Treeview (ttk) com contraste dinâmico
+        # === Estilo básico para Treeview (com bom contraste) ===
         try:
             aplicar_estilo_treeview(
                 style=ttk.Style(root_widget),
@@ -303,73 +298,74 @@ class ThemeManager:
                 cor_selecao=palette.get("selecao", cor_destaque),
                 altura_linha=28,
             )
+        except Exception as e:
+            print(f"[Tema] Erro ao aplicar estilo Treeview: {e}")
+
+        # === Estilo base para ttk.Button ===
+        try:
+            estilo_btn_ttk = ttk.Style(root_widget)
+            estilo_btn_ttk.configure(
+                "Opera.TButton",
+                background=cor_secundaria,
+                foreground=cor_texto,
+                relief=tk.FLAT,
+                borderwidth=0,
+                focusthickness=0,
+                highlightthickness=0,
+                padding=6,
+                font=fonts["button"],
+            )
             estilo_btn_ttk.map(
                 "Opera.TButton",
                 background=[("active", cor_hover_realcado), ("pressed", cor_hover)],
                 relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
-                bordercolor=[("pressed", ""), ("active", "")],
             )
             estilo_btn_ttk.map(
                 "TButton",
                 background=[("active", cor_hover_realcado), ("pressed", cor_hover)],
                 relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
-                bordercolor=[("pressed", ""), ("active", "")],
             )
         except Exception as e:
-            print(f"[Tema] Erro ao aplicar tema em Treeview/Botões: {e}")
+            print(f"[Tema] Erro ao aplicar tema em botões ttk: {e}")
 
+        # ========== FUNÇÃO RECURSIVA ==========
         def _apply_to_all_widgets(widget):
-            """Aplica tema recursivamente em todos os widgets."""
-            try:
-                estilo_btn_ttk = None
-                try:
-                    estilo_btn_ttk = ttk.Style()
-                    estilo_btn_ttk.configure(
-                        "Opera.TButton",
-                        background=cor_secundaria,
-                        foreground=cor_texto,
-                        relief=tk.FLAT,
-                        borderwidth=0,
-                        focusthickness=0,
-                        highlightthickness=0,
-                        padding=6,
-                        font=fonts["button"],
-                    )
-                    estilo_btn_ttk.map(
-                        "Opera.TButton",
-                        background=[("active", cor_hover_realcado), ("pressed", cor_hover)],
-                        relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
-                        bordercolor=[("pressed", ""), ("active", "")],
-                    )
-                except Exception:
-                    estilo_btn_ttk = None
+            """Aplica tema a um widget e, se for container, aos filhos."""
+            import customtkinter as ctk
+            import tkinter as tk
+            from tkinter import ttk
 
-                # ---------- WIDGETS CUSTOMTKINTER ----------
+            # Se True, NÃO entra nos filhos (pra não mexer nos widgets internos do CTk)
+            parar_recursao = False
+
+            try:
+                # ====== WIDGETS CUSTOMTKINTER ======
+
+                # Frames principais podem ter filhos tratados normalmente
                 if isinstance(widget, ctk.CTkFrame):
-                    # frames usam a cor de fundo do tema
-                    if hasattr(widget, "_fg_color") and widget._fg_color not in ["transparent", None]:
-                        widget.configure(fg_color=cor_fundo)
-                    widget.configure(border_color=cor_borda)
+                    widget.configure(fg_color=cor_fundo, border_color=cor_borda)
+                    parar_recursao = False
 
                 elif isinstance(widget, ctk.CTkButton):
+                    # NÃO mexer em fg_color → respeita BotaoPadronizado
                     widget.configure(
-                        fg_color=cor_secundaria,
-                        hover_color=cor_hover_realcado,
-                        border_color=cor_borda,
                         border_width=0,
+                        bg_color="transparent",
                         text_color=cor_texto,
                         font=fonts["button"],
-                        corner_radius=8,
+                        corner_radius=getattr(widget, "corner_radius", 8),
                     )
+                    # Não entrar nos filhos internos do CTkButton
+                    parar_recursao = True
 
                 elif isinstance(widget, ctk.CTkLabel):
-                    # >>> AQUI ESTÁ A CORREÇÃO IMPORTANTE <<<
-                    # Toda label fica com fundo TRANSPARENTE para não criar qudrado em volta do texto.
                     widget.configure(
+                        fg_color="transparent",
+                        bg_color="transparent",
                         text_color=cor_texto,
                         font=fonts["body"],
-                        fg_color="transparent",
                     )
+                    parar_recursao = True
 
                 elif isinstance(widget, ctk.CTkEntry):
                     widget.configure(
@@ -377,10 +373,8 @@ class ThemeManager:
                         border_color=cor_borda,
                         text_color=cor_texto,
                         font=fonts["body"],
-                        placeholder_text_color=(
-                            cor_texto if len(str(cor_texto)) <= 7 else str(cor_texto)[:7]
-                        ),
                     )
+                    parar_recursao = True
 
                 elif isinstance(widget, ctk.CTkComboBox):
                     widget.configure(
@@ -394,6 +388,7 @@ class ThemeManager:
                         dropdown_text_color=cor_texto,
                         dropdown_hover_color=cor_hover_realcado,
                     )
+                    parar_recursao = True
 
                 elif isinstance(widget, (ctk.CTkCheckBox, ctk.CTkSwitch)):
                     widget.configure(
@@ -404,6 +399,7 @@ class ThemeManager:
                         text_color=cor_texto,
                         font=fonts["body"],
                     )
+                    parar_recursao = True
 
                 elif isinstance(widget, ctk.CTkTabview):
                     widget.configure(
@@ -414,27 +410,24 @@ class ThemeManager:
                         text_color=cor_texto,
                         font=fonts["body"],
                     )
+                    # Não entrar na estrutura interna do CTkTabview
+                    parar_recursao = True
 
                 elif isinstance(widget, ctk.CTkScrollableFrame):
                     widget.configure(fg_color=cor_fundo, border_color=cor_borda)
+                    # Pode ter conteúdo seu dentro → manter recursão
+                    parar_recursao = False
 
+                # ====== TREEVIEW ======
                 elif isinstance(widget, ttk.Treeview):
                     padronizar_treeview(widget)
+                    # Evitar entrar na estrutura interna do Treeview
+                    parar_recursao = True
 
+                # ====== BOTÕES / LABELS / FRAMES TK/TTK ======
                 elif isinstance(widget, ttk.Button):
-                    if estilo_btn_ttk:
-                        widget.configure(style="Opera.TButton")
-                        try:
-                            widget.state(["!focus"])
-                        except Exception:
-                            pass
-
-                # ---------- TKINTER PURO ----------
-                elif isinstance(widget, tk.Frame):
-                    widget.configure(bg=cor_fundo)
-
-                elif isinstance(widget, tk.Label):
-                    widget.configure(bg=cor_fundo, fg=cor_texto, font=fonts["body"])
+                    widget.configure(style="Opera.TButton")
+                    parar_recursao = True  # normalmente ttk.Button não tem filhos
 
                 elif isinstance(widget, tk.Button):
                     widget.configure(
@@ -446,18 +439,32 @@ class ThemeManager:
                         highlightthickness=0,
                         font=fonts["button"],
                     )
+                    parar_recursao = True
 
-            except Exception:
-                # Ignora erros em widgets que não podem ser configurados
-                pass
+                elif isinstance(widget, tk.Label):
+                    widget.configure(
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
 
-            # Recursão nos filhos
-            try:
-                for child in widget.winfo_children():
-                    _apply_to_all_widgets(child)
-            except Exception:
-                pass
+                elif isinstance(widget, tk.Frame):
+                    widget.configure(bg=cor_fundo)
+                    parar_recursao = False  # frames são containers normais
 
+            except Exception as e:
+                print(f"[Tema] Erro ao aplicar tema em widget {type(widget).__name__}: {e}")
+
+            # === Recursão apenas se não for widget complexo do CTk / ttk ===
+            if not parar_recursao:
+                try:
+                    for child in widget.winfo_children():
+                        _apply_to_all_widgets(child)
+                except Exception:
+                    pass
+
+        # Aplica tema globalmente começando pela raiz
         _apply_to_all_widgets(root_widget)
 
     def _apply_global_theme(self, palette: dict):
@@ -736,8 +743,8 @@ class OperaMenuApp(ctk.CTk):
     """Aplicação principal do sistema OPERA."""
 
     # Configurações de layout
-    SIDEBAR_WIDTH = 270
-    ITEM_HEIGHT = 44
+    SIDEBAR_WIDTH = 300
+    ITEM_HEIGHT = 50
 
     # Ícones das categorias
     ICON_MAPPING = {
@@ -1218,21 +1225,21 @@ class OperaMenuApp(ctk.CTk):
             self.sidebar,
             fg_color="transparent"
         )
-        titulo_frame.pack(pady=(10, 4))
+        titulo_frame.pack(pady=(20, 10))
 
         # Carregar ícone do sistema
         try:
             icon_path = os.path.join(APP_DIR, "ICONE_SISTEMA.png")
             if os.path.exists(icon_path):
                 img = Image.open(icon_path)
-                img = ctk.CTkImage(light_image=img, dark_image=img, size=(28, 28))
+                img = ctk.CTkImage(light_image=img, dark_image=img, size=(60, 60))
 
                 icon_label = ctk.CTkLabel(
                     titulo_frame,
                     image=img,
                     text=""
                 )
-                icon_label.pack(side="left", padx=(0, 8))
+                icon_label.pack(side="left", padx=(0, 10))
         except Exception as e:
             print(f"⚠️ Erro ao carregar ícone do sistema no sidebar: {e}")
 
@@ -1252,11 +1259,11 @@ class OperaMenuApp(ctk.CTk):
             font=("Arial", 18),
             text_color=self.cor_texto,
         )
-        subtitulo.pack(pady=(0, 12))
+        subtitulo.pack(pady=(0, 40))
 
         # Frame do menu
         self.menu_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        self.menu_frame.pack(fill="both", expand=True, padx=4, pady=(4, 8))
+        self.menu_frame.pack(fill="both", expand=True, padx=10, pady=(4, 8))
 
         # Construir itens do menu
         self._build_menu_content()
@@ -1291,14 +1298,15 @@ class OperaMenuApp(ctk.CTk):
         self.content.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
     def _build_topbar(self):
-        """Constrói a barra superior MAIS FINA."""
+        """Constrói a barra superior com altura ~30% maior."""
+        # ALTURA ORIGINAL ≈ 36  →  AUMENTADA EM ~30% (≈ 47)
         self.topbar = ctk.CTkFrame(
             self.main,
             fg_color=self.cor_primaria,
             corner_radius=12,
             border_color=self.cor_borda,
             border_width=1,
-            height=36  # ALTURA REDUZIDA (era cerca de 50-60px)
+            height=48  # ⬅️ AQUI FOI AUMENTADO (~30% MAIOR)
         )
         self.topbar.grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 4))
         self.topbar.grid_propagate(False)  # Impede que widgets filhos alterem o tamanho
@@ -1306,83 +1314,133 @@ class OperaMenuApp(ctk.CTk):
         # CONFIGURAÇÃO DE COLUNAS COM ESPAÇAMENTO ADEQUADO
         self.topbar.grid_columnconfigure(0, weight=1)  # Título
         self.topbar.grid_columnconfigure(1, weight=0)  # Botões de utilidade
-        self.topbar.grid_columnconfigure(2, weight=0)  # ESPAÇO ENTRE BOTÕES E TEMA
+        self.topbar.grid_columnconfigure(2, weight=0)  # Espaço entre botões e tema
         self.topbar.grid_columnconfigure(3, weight=0)  # Botão de tema
         self.topbar.grid_columnconfigure(4, weight=0)  # Informações do usuário
 
+        # FONTE DO TÍTULO
+        # Se o título estava em 18, +30% ≈ 24
         self.title_label = ctk.CTkLabel(
             self.topbar,
             text="Dashboard",
-            font=("Arial", 16, "bold"),  # Fonte ligeiramente menor
+            font=("Arial", 30),  # ⬅️ FONTE AUMENTADA EM ~30%
             text_color=self.cor_texto,
         )
-        self.title_label.grid(row=0, column=0, sticky="w", padx=15, pady=2)  # Padding horizontal aumentado
+        self.title_label.grid(row=0, column=0, sticky="w", padx=15, pady=4)
 
-        self._build_utility_buttons()
-        self._add_theme_switch_to_topbar()  # ADICIONAR BOTÃO DE TEMA AQUI
-        self._build_user_widget()
+        # Botões de utilidade, switch de tema e info do usuário
+        self._build_utility_buttons()  # ⬅️ também ajustada em ~30% (abaixo)
+        self._add_theme_switch_to_topbar()  # ⬅️ switch maior
+        self._build_user_widget()  # ⬅️ fonte do usuário maior
 
     def _build_utility_buttons(self):
-        """Constrói botões de utilidade na topbar com tamanho reduzido."""
-        button_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
-        button_frame.grid(row=0, column=1, sticky="e", padx=10)  # Padding aumentado
+        """Constrói os botões da topbar com hover moderno, cantos arredondados e sem cartão fixo."""
 
-        buttons = [
-            ("⟳", self.reload_current_page),
-            ("🔄", self.trocar_usuario),
-        ]
+        # Frame com altura fixa para impedir expansão
+        button_frame = ctk.CTkFrame(
+            self.topbar,
+            fg_color=self.cor_primaria,
+            corner_radius=0,
+            border_width=0,
+            height=34
+        )
+        button_frame.grid(row=0, column=1, sticky="e", padx=10, pady=10)
+        button_frame.grid_propagate(False)
 
-        for text, command in buttons:
-            btn = ctk.CTkButton(
-                button_frame,
-                text=text,
-                width=28,  # Largura reduzida
-                height=28,  # Altura reduzida
-                corner_radius=8,
-                fg_color=self.cor_secundaria,
-                hover_color=self.cor_hover,
-                text_color=self.cor_texto,
-                font=("Arial", 14, "bold"),  # Fonte menor
-                command=command,
+        # ================================
+        # ÍCONE TROCA_USUARIO (22px)
+        # ================================
+        try:
+            icon_path = os.path.join(ICONS_DIR, "TROCA_USUARIO.png")
+            img = Image.open(icon_path)
+
+            self.icon_switch_user = ctk.CTkImage(
+                light_image=img,
+                dark_image=img,
+                size=(22, 22)
             )
-            btn.pack(side="left", padx=4)  # Padding horizontal entre botões
-            self._remove_button_focus(btn)
+        except Exception as e:
+            print("Erro ao carregar TROCA_USUARIO.png:", e)
+            self.icon_switch_user = None
+
+        # ==========
+        # HOVER CONFIG
+        # ==========
+        base_bg = "transparent"
+        hover_bg = self.cor_terciaria  # <<< AGORA USANDO A COR TERCIÁRIA
+        hover_radius = 12  # <<< CANTOS ARREDONDADOS (igual ao padrão do sistema)
+
+        def on_enter(widget):
+            widget.configure(fg_color=hover_bg, corner_radius=hover_radius)
+
+        def on_leave(widget):
+            widget.configure(fg_color=base_bg, corner_radius=0)
+
+        # =================
+        # Botão Atualizar
+        # =================
+        lbl_refresh = ctk.CTkLabel(
+            button_frame,
+            text="⟳",
+            font=("Arial", 23, "bold"),
+            text_color=self.cor_texto,
+            fg_color=base_bg,
+            corner_radius=0
+        )
+        lbl_refresh.pack(side="left", padx=16, pady=0)
+        lbl_refresh.bind("<Button-1>", lambda e: self.reload_current_page())
+        lbl_refresh.bind("<Enter>", lambda e, w=lbl_refresh: on_enter(w))
+        lbl_refresh.bind("<Leave>", lambda e, w=lbl_refresh: on_leave(w))
+
+        # ======================
+        # Botão Trocar Usuário
+        # ======================
+        lbl_user = ctk.CTkLabel(
+            button_frame,
+            text="",
+            image=self.icon_switch_user,
+            fg_color=base_bg,
+            bg_color="transparent",
+            corner_radius=0
+        )
+        lbl_user.pack(side="left", padx=10, pady=0)
+        lbl_user.bind("<Button-1>", lambda e: self.trocar_usuario())
+        lbl_user.bind("<Enter>", lambda e, w=lbl_user: on_enter(w))
+        lbl_user.bind("<Leave>", lambda e, w=lbl_user: on_leave(w))
 
     def _add_theme_switch_to_topbar(self):
-        """Adiciona um switch elegante com ícone de sol/lua e espaçamento correto na topbar."""
+        """Adiciona switch de tema com ~30% a mais de tamanho."""
         import customtkinter as ctk
 
         # Remover switch antigo se existir
         if hasattr(self, "theme_switch_frame") and self.theme_switch_frame.winfo_exists():
             self.theme_switch_frame.destroy()
 
-        # Criar frame alinhado à direita COM MAIS ESPAÇAMENTO
         self.theme_switch_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
-        self.theme_switch_frame.grid(row=0, column=3, padx=15, sticky="e")  # MAIS ESPAÇAMENTO
+        self.theme_switch_frame.grid(row=0, column=3, padx=18, sticky="e")
 
-        # Determinar se está no modo escuro baseado no tema atual
-        # Garantir que current_theme_name existe e tem valor válido
+        # Garante current_theme_name
         if not hasattr(self, 'current_theme_name') or not self.current_theme_name:
             self.current_theme_name = "CLÁSSICO CLARO"
 
         is_dark_mode = self.current_theme_name.upper() == "CLÁSSICO ESCURO"
 
-        # ÍCONE DO TEMA (com espaçamento perfeito)
+        # ÍCONE DO TEMA – fonte maior (~30%)
         self.icon_theme = ctk.CTkLabel(
             self.theme_switch_frame,
             text="🌙" if is_dark_mode else "☀️",
-            font=("Arial", 16),
+            font=("Arial", 27),  # ⬅️ era 16, aumentado
         )
-        self.icon_theme.pack(side="left", padx=(0, 10))  # espaço de 10px antes do switch
+        self.icon_theme.pack(side="left", padx=(0, 10))
 
-        # Switch elegante e pequeno
+        # Switch – dimensões aumentadas em ~30%
         self.theme_switch = ctk.CTkSwitch(
             self.theme_switch_frame,
             text="",
-            width=40,
-            height=20,
-            switch_width=40,
-            switch_height=20,
+            width=52,  # ⬅️ era 40
+            height=26,  # ⬅️ era 20
+            switch_width=52,  # ⬅️ era 40
+            switch_height=26,  # ⬅️ era 20
             fg_color="#A3A3A3",
             progress_color="#3B82F6",
             button_color="#FFFFFF",
@@ -1390,7 +1448,6 @@ class OperaMenuApp(ctk.CTk):
             command=self._toggle_theme_mode
         )
 
-        # Estado inicial baseado no tema atual
         if is_dark_mode:
             self.theme_switch.select()
         else:
@@ -1450,15 +1507,15 @@ class OperaMenuApp(ctk.CTk):
             self.theme_switch.deselect()
 
     def _build_user_widget(self):
-        """Constrói widget de informações do usuário na MESMA LINHA."""
+        """Constrói widget de informações do usuário com fonte ~30% maior."""
         user_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
-        user_frame.grid(row=0, column=4, padx=15, sticky="e")  # MAIS ESPAÇAMENTO
+        user_frame.grid(row=0, column=4, padx=18, sticky="e")
 
-        # Criar UM ÚNICO label com todas as informações na mesma linha
+        # FONTE ORIGINAL ≈ 11 → +30% ≈ 14
         self.user_info_label = ctk.CTkLabel(
             user_frame,
-            text="Carregando...",  # Texto temporário
-            font=("Arial", 11),
+            text="Carregando...",
+            font=("Arial", 14),  # ⬅️ fonte aumentada em ~30%
             text_color=self.cor_texto,
         )
         self.user_info_label.pack(side="right", anchor="e")
@@ -1544,6 +1601,7 @@ class OperaMenuApp(ctk.CTk):
         - Submenu abre ao passar o mouse
         - Sem “rastro” de cor depois do hover
         """
+
         # Frame "card" do botão
         btn_frame = ctk.CTkFrame(self.menu_frame, fg_color="transparent")
         btn_frame.pack_propagate(False)
@@ -1566,6 +1624,13 @@ class OperaMenuApp(ctk.CTk):
         # Card sempre visível, não mexemos mais nessa cor no hover
         btn_frame.configure(fg_color=card_bg)
 
+        # ===============================================
+        # BTN: CORREÇÃO DO NEGRITO DO DASHBOARD 👇👇👇
+        # Antes: font=("Arial", 16, "bold") if categoria == "Dashboard" else ("Arial", 16)
+        # Agora: TODOS usam fonte normal (sem bold)
+        # ===============================================
+        font_usado = ("Arial", 16)  # ✔️ ajuste aplicado aqui
+
         btn = ctk.CTkButton(
             btn_frame,
             text=f"  {categoria}",
@@ -1573,13 +1638,12 @@ class OperaMenuApp(ctk.CTk):
             compound="left",
             anchor="w",
             fg_color=btn_bg,
-            hover_color=btn_hover,  # CustomTkinter cuida de ligar/desligar
+            hover_color=btn_hover,
             text_color=self.cor_texto,
-            font=("Arial", 16, "bold") if categoria == "Dashboard" else ("Arial", 16),
+            font=font_usado,  # ✔️ AQUI está o ajuste (antes tinha bold para Dashboard)
             corner_radius=10,
             border_color=border_color,
             border_width=1,
-            # hover permanece ativado (padrão), não vamos desligar
             command=lambda c=categoria: self._on_category_click(c),
         )
         btn.pack(fill="both", expand=True, padx=4)
@@ -1590,7 +1654,6 @@ class OperaMenuApp(ctk.CTk):
         # ==============================
         def on_enter(_e):
             try:
-                # apenas um leve deslocamento para dar sensação de foco
                 btn_frame.pack_configure(padx=(12, 8))
 
                 if categoria != "Dashboard":
@@ -1601,7 +1664,6 @@ class OperaMenuApp(ctk.CTk):
 
         def on_leave(_e):
             try:
-                # volta o padding original
                 btn_frame.pack_configure(padx=(10, 10))
 
                 if categoria != "Dashboard":
@@ -1609,7 +1671,6 @@ class OperaMenuApp(ctk.CTk):
             except Exception:
                 pass
 
-        # Aplica eventos tanto no card quanto no botão, mas SEM mexer em cor
         btn_frame.bind("<Enter>", on_enter)
         btn_frame.bind("<Leave>", on_leave)
         btn.bind("<Enter>", on_enter)
@@ -3153,3 +3214,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # fechado aqui
+
+#final
