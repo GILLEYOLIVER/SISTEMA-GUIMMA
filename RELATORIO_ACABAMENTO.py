@@ -55,68 +55,27 @@ class RelatorioAcabamentoPage(ctk.CTkFrame):
 
     def __init__(self, master, sistema=None, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
-
-        # Referência ao sistema / menu principal (quando vier pelo MENU_PRINCIPAL)
         self.sistema = sistema
-
-        # Garante que o frame ocupe a área toda
         self.pack(fill="both", expand=True)
 
         # Logger opcional
         try:
             from LOG_SISTEMA import get_logger
+
             self.logger = get_logger("OPERA_SYSTEM")
         except Exception:
             self.logger = None
 
-        # ============================================================
-        # TEMA – MESMO PADRÃO DO RESTANTE DO SISTEMA (ENTRADA_ESTOQUE)
-        # ============================================================
+        # Tema herdado do sistema (com defaults)
         origem = self.sistema
+        self.cor_fundo = getattr(origem, "cor_fundo", "#0E1525")
+        self.cor_texto = getattr(origem, "cor_texto", "#e5e7eb")
+        self.cor_borda = getattr(origem, "cor_borda", "#334155")
+        self.cor_primaria = getattr(origem, "cor_primaria", "#1F538D")
+        self.cor_hover = getattr(origem, "cor_hover", "#14375E")
+        self.cor_destaque = getattr(origem, "cor_selecao", "#223649")
 
-        if origem is not None and hasattr(origem, "cor_fundo"):
-            # Herdar cores do MENU_PRINCIPAL quando a página é aberta por ele
-            self.cor_fundo = getattr(origem, "cor_fundo", "#0E1525")
-            self.cor_primaria = getattr(origem, "cor_primaria", "#1F538D")
-            self.cor_secundaria = getattr(origem, "cor_secundaria", "#111827")
-            self.cor_texto = getattr(origem, "cor_texto", "#e5e7eb")
-            self.cor_borda = getattr(origem, "cor_borda", "#334155")
-            self.cor_hover = getattr(origem, "cor_hover", "#14375E")
-
-            # Cores de destaque / seleção / status
-            self.cor_destaque = getattr(origem, "cor_selecao", "#223649")
-            self.cor_selecao = getattr(origem, "cor_selecao", self.cor_destaque)
-            self.cor_sucesso = getattr(origem, "cor_sucesso", "#22C55E")
-            self.cor_alerta = getattr(origem, "cor_alerta", "#EF4444")
-        else:
-            # Fallback quando a página é executada ISOLADA (sistema=None)
-            tema_atual = ctk.get_appearance_mode()
-            if tema_atual == "Dark":
-                self.cor_fundo = "#020617"
-                self.cor_primaria = "#1f2937"
-                self.cor_secundaria = "#111827"
-                self.cor_texto = "#e5e7eb"
-                self.cor_borda = "#273244"
-                self.cor_hover = "#334155"
-                self.cor_destaque = "#1d4ed8"
-                self.cor_selecao = self.cor_destaque
-                self.cor_sucesso = "#22C55E"
-                self.cor_alerta = "#EF4444"
-            else:
-                self.cor_fundo = "#ffffff"
-                self.cor_primaria = "#3a7ebf"
-                self.cor_secundaria = "#f0f0f0"
-                self.cor_texto = "black"
-                self.cor_borda = "#cccccc"
-                self.cor_hover = "#2e4a66"
-                self.cor_destaque = self.cor_primaria
-                self.cor_selecao = self.cor_primaria
-                self.cor_sucesso = "#16A34A"
-                self.cor_alerta = "#DC2626"
-
-        # ============================================================
-        # FILTROS – mesmo que já existia (mês atual como padrão)
-        # ============================================================
+        # Filtros padrão (mês atual)
         hoje = date.today()
         self.ini_var = tk.StringVar(
             value=_first_day_of_month(hoje).strftime("%Y-%m-%d")
@@ -129,9 +88,7 @@ class RelatorioAcabamentoPage(ctk.CTkFrame):
         self.faccao_var = tk.StringVar(value="")
         self.status_var = tk.StringVar(value="Todos")
 
-        # ============================================================
-        # APLICA TEMA E MONTA A INTERFACE
-        # ============================================================
+        # Cria UI
         self._apply_ttk_theme()
         self._build_ui()
 
@@ -141,65 +98,29 @@ class RelatorioAcabamentoPage(ctk.CTkFrame):
         if self.logger:
             self.logger.info("[PAGINA] Relatório de Acabamento: inicialização OK")
 
-
-    # ---------------------- Tema Treeview ----------------------
     # ---------------------- Tema Treeview ----------------------
     def _apply_ttk_theme(self):
-        """
-        Aplica o MESMO estilo de Treeview usado nas outras páginas
-        (Entrada de Estoque, Histórico de Serviços, etc).
-
-        Cabeçalho escuro, texto claro e seleção com alto contraste.
-        """
-        if not hasattr(self, "style"):
-            self.style = ttk.Style()
-
-        # "default" é o mais previsível para customizar
+        style = ttk.Style()
         try:
-            self.style.theme_use("default")
+            style.theme_use("clam")
         except Exception:
             pass
 
-        tema_atual = ctk.get_appearance_mode()
-        if tema_atual == "Dark":
-            cor_fundo = self.cor_secundaria
-            cor_texto = self.cor_texto
-            cor_campo = self.cor_secundaria
-            cor_selecao = self.cor_selecao
-        else:
-            cor_fundo = "#f0f0f0"
-            cor_texto = "black"
-            cor_campo = "#f0f0f0"
-            cor_selecao = self.cor_selecao
-
-        # Linhas da tabela
-        self.style.configure(
+        style.configure(
             "Treeview",
-            background=cor_fundo,
-            fieldbackground=cor_campo,
-            foreground=cor_texto,
+            background=self.cor_fundo,
+            fieldbackground=self.cor_fundo,
+            foreground=self.cor_texto,
             bordercolor=self.cor_borda,
             rowheight=26,
-            borderwidth=0,
-            highlightthickness=0,
         )
-
-        # Cabeçalho com cor primária (igual Entrada de Estoque)
-        self.style.configure(
+        style.configure(
             "Treeview.Heading",
-            background=self.cor_primaria,
+            background=self.cor_destaque,
             foreground=self.cor_texto,
-            font=("Arial", 10, "bold"),
             relief="flat",
-            borderwidth=1,
         )
-
-        # Seleção forte e legível
-        self.style.map(
-            "Treeview",
-            background=[("selected", cor_selecao)],
-            foreground=[("selected", "white")],
-        )
+        style.map("Treeview", background=[("selected", self.cor_destaque)])
 
     # ---------------------- UI ----------------------
     def _build_ui(self):

@@ -163,86 +163,46 @@ class HistoricoServicosPage(ctk.CTkFrame):
             self.cor_terciaria = "#e5e5e5"
 
     def configurar_treeview_theme(self):
-        """
-        Estilo padronizado da Treeview:
-        - Cabeçalho azul escuro com hover mais claro
-        - Linhas claras com texto escuro
-        - Seleção azul claro (igual à tela de Entrada de Estoque que você mostrou)
-        """
-        # Garante que as cores do tema estão atualizadas
+        """Configura as cores da Treeview baseado no tema atual - MESMO ESTILO DO CADASTRO_DE_CORTE"""
+        # CORREÇÃO: Garantir que as cores estão atualizadas
         self.obter_cores_por_tema()
 
-        # Cria/usa um Style próprio
-        self.style = ttk.Style()
-        self.style.theme_use("default")
+        if not hasattr(self, 'style'):
+            self.style = ttk.Style()
 
-        tema = ctk.get_appearance_mode()
+        self.style.theme_use('default')
 
-        # --------- CORES DE FUNDO DAS LINHAS ---------
-        if tema == "Dark":
-            bg = getattr(self, "cor_secundaria", "#111827")
-            fg = getattr(self, "cor_texto", "#E5E7EB")
+        tema_atual = ctk.get_appearance_mode()
+
+        if tema_atual == "Dark":
+            cor_fundo = self.cor_secundaria
+            cor_texto = self.cor_texto
+            cor_campo = self.cor_secundaria
+            cor_selecao = self.cor_primaria
         else:
-            bg = "#F5F5F5"
-            fg = "#111111"
+            cor_fundo = "#f0f0f0"
+            cor_texto = "black"
+            cor_campo = "#f0f0f0"
+            cor_selecao = self.cor_primaria
 
-        # --------- CABEÇALHO ---------
-        header_bg = "#1E3A8A"  # azul escuro do cabeçalho
-        header_hover_bg = "#4F8BFF"  # azul mais claro no hover
-        header_fg = "#FFFFFF"  # texto branco
+        self.style.configure("Custom.Treeview",
+                             background=cor_fundo,
+                             foreground=cor_texto,
+                             fieldbackground=cor_campo,
+                             borderwidth=0,
+                             highlightthickness=0,
+                             rowheight=25)
 
-        # --------- SELEÇÃO DA LINHA (AZUL CLARO) ---------
-        select_bg = "#4A90E2"  # ⭐ azul claro igual ao print
-        select_fg = "#FFFFFF"  # texto branco
+        self.style.configure("Custom.Treeview.Heading",
+                             background=self.cor_primaria,
+                             foreground=self.cor_texto,
+                             relief="flat",
+                             borderwidth=1,
+                             font=('Arial', 10, 'bold'))
 
-        # --------- CORPO DA TABELA ---------
-        self.style.configure(
-            "Custom.Treeview",
-            background=bg,
-            foreground=fg,
-            fieldbackground=bg,
-            rowheight=26,
-            font=("Arial", 10),
-            borderwidth=0,
-            highlightthickness=0,
-        )
-
-        # --------- CABEÇALHO ---------
-        self.style.configure(
-            "Custom.Treeview.Heading",
-            background=header_bg,
-            foreground=header_fg,
-            font=("Arial", 11, "bold"),
-            relief="flat",
-            borderwidth=1,
-            padding=4,
-        )
-
-        # Hover no título das colunas
-        self.style.map(
-            "Custom.Treeview.Heading",
-            background=[
-                ("active", header_hover_bg),  # mouse em cima do título
-                ("!disabled", header_bg),
-            ],
-            foreground=[
-                ("active", header_fg),
-                ("!disabled", header_fg),
-            ],
-        )
-
-        # --------- SELEÇÃO DAS LINHAS ---------
-        self.style.map(
-            "Custom.Treeview",
-            background=[
-                ("selected", select_bg),
-                ("!selected", bg),
-            ],
-            foreground=[
-                ("selected", select_fg),
-                ("!selected", fg),
-            ],
-        )
+        self.style.map('Custom.Treeview',
+                       background=[('selected', cor_selecao)],
+                       foreground=[('selected', "white")])
 
     def setup_ui(self):
         """Configuração completa da interface gráfica com MESMO ESTILO DO CADASTRO_DE_CORTE"""

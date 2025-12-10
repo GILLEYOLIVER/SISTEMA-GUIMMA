@@ -755,7 +755,7 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         1) Se o relatório foi aberto a partir do MENU_PRINCIPAL, copia TODAS as
            cores do próprio menu (controller), garantindo que fique idêntico.
-        2) Se não houver controller, usa um tema padrão.
+        2) Se não houver controller, usa um tema roxo padrão.
         """
         controller = getattr(self, "controller", None)
 
@@ -783,86 +783,70 @@ class AdvancedStockReport(ctk.CTkFrame):
                 if hasattr(controller, nome_atributo):
                     setattr(self, nome_atributo, getattr(controller, nome_atributo))
 
-            # ------- Garantias de fallback caso o menu não tenha tudo -------
-            if not hasattr(self, "cor_texto"):
-                self.cor_texto = "#E5E7EB"
+            # Garantias de fallback caso o menu não tenha alguns atributos específicos
             if not hasattr(self, "cor_texto_entry"):
-                self.cor_texto_entry = self.cor_texto
-            if not hasattr(self, "cor_texto_secundario"):
-                self.cor_texto_secundario = "#9CA3AF"
+                self.cor_texto_entry = getattr(self, "cor_texto", "#ffffff")
+
             if not hasattr(self, "cor_placeholder"):
-                self.cor_placeholder = self.cor_texto_secundario
-            if not hasattr(self, "cor_borda"):
-                self.cor_borda = "#4B5563"
-            if not hasattr(self, "cor_hover"):
-                self.cor_hover = "#374151"
-            if not hasattr(self, "cor_destaque"):
-                self.cor_destaque = "#2563EB"
-            if not hasattr(self, "cor_sucesso"):
-                self.cor_sucesso = "#22C55E"
-            if not hasattr(self, "cor_alerta"):
-                self.cor_alerta = "#EF4444"
+                self.cor_placeholder = getattr(self, "cor_texto_secundario", "#888888")
+
             if not hasattr(self, "cor_selecao"):
-                self.cor_selecao = self.cor_destaque
+                self.cor_selecao = getattr(self, "cor_destaque", "#4f46e5")
 
             return
 
-        # 2) Fallback: tema padrão (usado somente se não houver controller)
-        self.cor_fundo = "#130720"  # Fundo geral
-        self.cor_primaria = "#24113B"  # Header / cards principais
-        self.cor_secundaria = "#1A0D2B"  # Blocos internos / tabelas
-        self.cor_terciaria = "#10061B"  # Detalhes
+        # 2) Fallback: tema roxo padrão (usado somente se não houver controller)
+        self.cor_fundo = "#130720"  # Fundo geral roxo bem escuro
+        self.cor_primaria = "#24113b"  # Cards e blocos principais
+        self.cor_secundaria = "#1a0d2b"  # Blocos internos / áreas secundárias
+        self.cor_terciaria = "#10061b"  # Detalhes / fundo mais escuro
 
-        self.cor_texto = "#F5F5FF"
+        self.cor_texto = "#f5f5ff"  # Texto principal claro
         self.cor_texto_entry = self.cor_texto
-        self.cor_texto_secundario = "#B5AECF"
-        self.cor_placeholder = "#9B8FB5"
+        self.cor_texto_secundario = "#b5aecf"
+        self.cor_placeholder = "#9b8fb5"
 
-        self.cor_borda = "#3B235A"
+        self.cor_borda = "#3b235a"
         self.cor_hover = "#312049"
 
-        self.cor_sucesso = "#22C55E"
-        self.cor_alerta = "#EF4444"
+        self.cor_sucesso = "#22c55e"
+        self.cor_alerta = "#ef4444"
 
-        self.cor_destaque = "#4F46E5"
+        self.cor_destaque = "#4f46e5"  # Roxo mais vivo para destaques
         self.cor_selecao = self.cor_destaque
 
     def configurar_treeview_theme(self):
         """
-        Estilo de Treeview idêntico ao usado em ENTRADA_ESTOQUE e HISTÓRICO DE SERVIÇOS.
+        Configura as cores da Treeview usando as mesmas cores do tema atual.
+        Não trava em nenhuma paleta fixa: sempre usa self.cor_* que vem do menu.
         """
-        # Garante que as cores estão sincronizadas
+        # Garante que as cores estão sincronizadas com o tema antes de aplicar
         self.obter_cores_por_tema()
 
-        if not hasattr(self, "style"):
-            self.style = ttk.Style()
-
+        self.style = ttk.Style()
         self.style.theme_use("default")
 
-        tema_atual = ctk.get_appearance_mode()
-        if tema_atual == "Dark":
-            cor_fundo = self.cor_secundaria
-            cor_texto = self.cor_texto
-            cor_campo = self.cor_secundaria
-            cor_selecao = self.cor_selecao
-        else:
-            cor_fundo = "#f0f0f0"
-            cor_texto = "black"
-            cor_campo = "#f0f0f0"
-            cor_selecao = self.cor_selecao
+        cor_fundo_linhas = self.cor_secundaria
+        cor_texto_linhas = self.cor_texto
+        cor_campo = self.cor_secundaria
 
-        # Linhas
+        # Cor de seleção: usa cor_selecao, se não existir tenta destaque ou primaria
+        cor_selecao = getattr(self, "cor_selecao", None) or \
+                      getattr(self, "cor_destaque", None) or \
+                      self.cor_primaria
+
+        # Configuração geral das linhas
         self.style.configure(
             "Custom.Treeview",
-            background=cor_fundo,
-            foreground=cor_texto,
+            background=cor_fundo_linhas,
+            foreground=cor_texto_linhas,
             fieldbackground=cor_campo,
             borderwidth=0,
             highlightthickness=0,
             rowheight=25,
         )
 
-        # Cabeçalho
+        # Cabeçalho usando a cor primária do tema
         self.style.configure(
             "Custom.Treeview.Heading",
             background=self.cor_primaria,
@@ -872,11 +856,11 @@ class AdvancedStockReport(ctk.CTkFrame):
             font=("Arial", 10, "bold"),
         )
 
-        # Seleção
+        # Mapeia cor de seleção usando a paleta atual
         self.style.map(
             "Custom.Treeview",
             background=[("selected", cor_selecao)],
-            foreground=[("selected", "white")],
+            foreground=[("selected", "#FFFFFF")],
         )
 
     def _create_default_controller(self):
