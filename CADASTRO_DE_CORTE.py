@@ -11,8 +11,6 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle, Paragraph
 
-from TEMAS import padronizar_treeview, padronizar_treeviews_container
-
 # Importação robusta do PyMuPDF
 try:
     import fitz as _fitz  # tentar importar 'fitz'
@@ -917,8 +915,6 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         if hasattr(self, 'cor_cb') and self.cor_cb is not None:
             self.cor_cb.bind("<<ComboboxSelected>>", self._atualizar_composicao)
 
-        padronizar_treeviews_container(self)
-
         self.after(100, self.carregar_tecidos)
         self.after(100, self.verificar_inicializacao_widgets)
 
@@ -1465,8 +1461,6 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         tecido_tree.bind("<<TreeviewSelect>>", on_tecido_select)
         do_busca()
         search_entry.focus_set()
-
-        padronizar_treeviews_container(dialog)
 
     def _salvar_tecidos(self, cursor, cadastro_id):
         def _as_int(v):

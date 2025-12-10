@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import TEMAS
 import os, sys
 from datetime import datetime
 import customtkinter as ctk
