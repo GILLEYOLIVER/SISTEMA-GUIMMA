@@ -12,6 +12,7 @@ import os, csv, webbrowser
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 import customtkinter as ctk
+import TEMAS
 from tkinter import ttk, messagebox, filedialog
 
 # ---------- Acesso PG ----------

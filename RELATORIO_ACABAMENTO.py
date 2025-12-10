@@ -2,6 +2,7 @@
 # Relatório de Acabamento – compatível com MENU_PRINCIPAL
 
 from __future__ import annotations
+import TEMAS
 import csv
 from datetime import date, timedelta
 import tkinter as tk

@@ -1,3 +1,4 @@
+import TEMAS
 import os
 import customtkinter as ctk
 from tkinter import ttk, messagebox, END

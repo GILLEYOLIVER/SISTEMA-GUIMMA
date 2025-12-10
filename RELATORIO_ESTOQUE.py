@@ -8,6 +8,7 @@ RELATORIO_ESTOQUE.py — versão COMPLETA com IA MEGA + UI conversacional
 Requisitos opcionais: fpdf, matplotlib
 """
 
+import TEMAS
 import os
 import csv
 import re

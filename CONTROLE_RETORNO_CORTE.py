@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import TEMAS
 import BANCO_DE_DADOS_PG as db
 import os
 import json
