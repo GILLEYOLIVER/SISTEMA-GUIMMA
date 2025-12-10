@@ -1351,7 +1351,7 @@ class OperaMenuApp(ctk.CTk):
         # ÍCONE TROCA_USUARIO (22px)
         # ================================
         try:
-            icon_path = os.path.join(ICONS_DIR, "TROCA_USUARIO.png")
+            icon_path = os.path.join(ICONS_DIR, "TROCAR_USUARIO.png")
             img = Image.open(icon_path)
 
             self.icon_switch_user = ctk.CTkImage(
@@ -1360,7 +1360,7 @@ class OperaMenuApp(ctk.CTk):
                 size=(22, 22)
             )
         except Exception as e:
-            print("Erro ao carregar TROCA_USUARIO.png:", e)
+            print("Erro ao carregar TROCAR_USUARIO.png:", e)
             self.icon_switch_user = None
 
         # ==========
@@ -3217,3 +3217,4 @@ if __name__ == "__main__":
     # fechado aqui
 
 #final
+#NOVA VERSSAO 10/12/2025
