@@ -1,6 +1,6 @@
 {
   "theme": "CLÁSSICO CLARO",
-  "last_page": "Entrada de Estoque",
+  "last_page": "Cadastrar Modelo",
   "custom_themes": {
     "Slate Pro SDFASDFASDFS": {
       "fundo": "#151A24",
@@ -277,7 +277,7 @@
     "fundo": "#FFFFFF",
     "texto": "#111827",
     "destaque": "#4B5563",
-    "selecao": "#111827",
+    "selecao": "#AFAFAF",
     "sucesso": "#2E7D32",
     "alerta": "#C62828",
     "borda": "#9CA3AF",
