@@ -2822,132 +2822,95 @@ class UsuariosPage(ctk.CTkFrame):
             print(f"❌ [ERRO LOAD_LOGS] Erro ao carregar logs: {e}")
 
     def _filtrar_logs(self):
-        """Filtra os logs com base nos critérios informados - CORRIGIDO"""
-        if not hasattr(self, "tree_logs"):
-            return
-
+        """Aplica filtros nos logs usando a VIEW vw_usuario_logs (CORRIGIDO)."""
         try:
-            # Obter valores dos filtros
-            data_ini = (self.log_ini.get() or "").strip()
-            data_fim = (self.log_fim.get() or "").strip()
-            usuario = (self.log_usuario.get() or "").strip()
-            acao = (self.log_acao.get() or "").strip()
-            termo = (self.log_busca.get() or "").strip()
-
-            print(f"🔍 [FILTRO] Buscando logs com filtros:")
-            print(f"   Data Início: {data_ini}")
-            print(f"   Data Fim: {data_fim}")
-            print(f"   Usuário: {usuario}")
-            print(f"   Ação: {acao}")
-            print(f"   Termo: {termo}")
-
-            # Converter datas para formato SQL
-            data_ini_sql = ""
-            data_fim_sql = ""
-
-            if data_ini:
-                try:
-                    data_obj = datetime.strptime(data_ini, "%d/%m/%Y")
-                    data_ini_sql = data_obj.strftime("%Y-%m-%d 00:00:00")
-                    print(f"📅 [DATA] Data início convertida: {data_ini_sql}")
-                except ValueError as e:
-                    print(f"❌ [DATA] Erro ao converter data início: {e}")
-                    data_ini_sql = data_ini
-
-            if data_fim:
-                try:
-                    data_obj = datetime.strptime(data_fim, "%d/%m/%Y")
-                    data_fim_sql = data_obj.strftime("%Y-%m-%d 23:59:59")
-                    print(f"📅 [DATA] Data fim convertida: {data_fim_sql}")
-                except ValueError as e:
-                    print(f"❌ [DATA] Erro ao converter data fim: {e}")
-                    data_fim_sql = data_fim
-
-            # Construir WHERE dinamicamente
-            where_conditions = []
-            params = []
-
-            if data_ini_sql:
-                where_conditions.append("data_hora >= %s")
-                params.append(data_ini_sql)
-
-            if data_fim_sql:
-                where_conditions.append("data_hora <= %s")
-                params.append(data_fim_sql)
-
-            if usuario:
-                where_conditions.append("usuario ILIKE %s")
-                params.append(f"%{usuario}%")
-                print(f"👤 [USUARIO] Buscando usuário: %{usuario}%")
-
-            if acao and acao != "Todos":
-                where_conditions.append("acao ILIKE %s")
-                params.append(f"%{acao}%")
-                print(f"🎯 [ACAO] Buscando ação: %{acao}%")
-
-            if termo:
-                where_conditions.append("(usuario ILIKE %s OR pagina ILIKE %s OR acao ILIKE %s OR detalhe ILIKE %s)")
-                like_term = f"%{termo}%"
-                params.extend([like_term, like_term, like_term, like_term])
-                print(f"🔎 [TERMO] Buscando termo: {like_term}")
-
-            where_sql = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
-
-            print(f"📝 [SQL] WHERE: {where_sql}")
-            print(f"📝 [SQL] Parâmetros: {params}")
+            if not POSTGRES_AVAILABLE:
+                messagebox.showwarning("Logs", "PostgreSQL não disponível.")
+                return
 
             schema = get_schema()
 
-            # Buscar dados
-            sql = f"""
-                SELECT data_hora, usuario, acao, pagina, detalhe
-                FROM {schema}.usuario_logs
-                {where_sql}
-                ORDER BY data_hora DESC
-                LIMIT 1000
+            # -------------------------
+            # CAPTURA DOS FILTROS
+            # -------------------------
+            usuario = (self.log_usuario.get() or "").strip()
+            acao = (self.log_acao.get() or "").strip()
+            busca = (self.log_busca.get() or "").strip()
+            data_ini = (self.log_ini.get() or "").strip()
+            data_fim = (self.log_fim.get() or "").strip()
+
+            # Converter datas (DD/MM/AAAA → YYYY-MM-DD)
+            def conv(d):
+                try:
+                    return datetime.strptime(d, "%d/%m/%Y").strftime("%Y-%m-%d")
+                except:
+                    return None
+
+            data_ini_sql = conv(data_ini)
+            data_fim_sql = conv(data_fim)
+
+            # -------------------------
+            # MONTAGEM DA QUERY (CORRETA)
+            # -------------------------
+            query = f"""
+                SELECT 
+                    data_hora,
+                    usuario,
+                    acao,
+                    pagina,
+                    detalhe
+                FROM {schema}.vw_usuario_logs
+                WHERE 1=1
             """
+            params = []
 
-            print(f"📝 [SQL FINAL]: {sql}")
+            if data_ini_sql:
+                query += " AND DATE(data_hora) >= %s"
+                params.append(data_ini_sql)
 
-            rows = self._fetch_all(sql, tuple(params))
+            if data_fim_sql:
+                query += " AND DATE(data_hora) <= %s"
+                params.append(data_fim_sql)
 
-            print(f"📊 [RESULTADO] Encontrados {len(rows) if rows else 0} registros")
+            if usuario:
+                query += " AND usuario ILIKE %s"
+                params.append(f"%{usuario}%")
 
-            # Limpar treeview
-            for item in self.tree_logs.get_children():
-                self.tree_logs.delete(item)
+            if acao and acao.lower() != "todos":
+                query += " AND acao ILIKE %s"
+                params.append(f"%{acao}%")
 
-            # Popular treeview
-            if rows:
-                for r in rows or []:
-                    self.tree_logs.insert("", "end", values=(r[0], r[1], r[2], r[3], r[4]))
-                    print(f"📄 [LOG] {r[0]} | {r[1]} | {r[2]} | {r[3]}")
-            else:
-                print("📭 [LOG] Nenhum registro encontrado")
+            if busca:
+                query += " AND (usuario ILIKE %s OR acao ILIKE %s OR pagina ILIKE %s OR detalhe ILIKE %s)"
+                params += [f"%{busca}%"] * 4
+
+            query += " ORDER BY data_hora DESC"
+
+            # -------------------------
+            # EXECUÇÃO
+            # -------------------------
+            rows = self._fetch_all(query, tuple(params))
+
+            # -------------------------
+            # ATUALIZAR INTERFACE
+            # -------------------------
+            self.tree_logs.delete(*self.tree_logs.get_children())
+
+            for row in rows:
+                dt = row[0].strftime("%d/%m/%Y %H:%M") if row[0] else ""
+                usuario = row[1] or ""
+                acao = row[2] or ""
+                pagina = row[3] or ""
+                detalhe = row[4] or ""
+                self.tree_logs.insert("", "end", values=(dt, usuario, acao, pagina, detalhe))
 
             # Atualizar contador
-            count = len(rows) if rows else 0
-            self.logs_count_label.configure(text=f"{count} registros encontrados")
-
-            print(f"✅ [FILTRO] Filtro aplicado com sucesso - {count} registros")
+            if hasattr(self, "logs_count_label"):
+                self.logs_count_label.configure(text=f"{len(rows)} registros encontrados")
 
         except Exception as e:
-            print(f"❌ [ERRO FILTRO] Erro ao filtrar logs: {e}")
-            import traceback
-            traceback.print_exc()
             messagebox.showerror("Filtro", f"Erro ao aplicar filtros: {e}")
-
-    def _testar_filtro_usuario(self):
-        """Método temporário para testar filtro de usuário"""
-        print("🧪 [TESTE] Testando filtro de usuário...")
-
-        # Simular digitação do usuário "GIL"
-        if hasattr(self, 'log_usuario'):
-            self.log_usuario.delete(0, "end")
-            self.log_usuario.insert(0, "GIL")
-
-            # Aplicar filtro após um breve delay
-            self.after(500, self._filtrar_logs)
+            print("❌ [ERRO FILTRAR LOGS]", e)
 
     def _limpar_filtros_logs(self):
         """Limpa todos os filtros de logs"""
@@ -4881,3 +4844,4 @@ if __name__ == "__main__":
     page.pack(fill="both", expand=True, padx=20, pady=20)
 
     root.mainloop()
+#ultimo 11/12/2025
