@@ -296,7 +296,8 @@ class SuccessDialog(QDialog):
     def __init__(self, parent=None, total_tabelas=0, message="", script_type=""):
         super().__init__(parent)
         self.setWindowTitle("🎉 SISTEMA OPERA CRIADO COM SUCESSO!")
-        self.setFixedSize(800, 600)
+        # 🔹 Janela mais baixa e mais larga (fica mais elegante)
+        self.setFixedSize(760, 420)
         self.total_tabelas = total_tabelas
         self.message = message
         self.script_type = script_type
@@ -304,15 +305,16 @@ class SuccessDialog(QDialog):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(12)
 
+        # ================== ESTILO GERAL ==================
         self.setStyleSheet("""
             QDialog {
                 background: #0f1419;
                 color: #ffffff;
-                border: 3px solid #007bff;
-                border-radius: 15px;
+                border: 2px solid #007bff;
+                border-radius: 14px;
             }
             QLabel {
                 color: #ffffff;
@@ -323,144 +325,176 @@ class SuccessDialog(QDialog):
                 color: #ffffff;
                 border-radius: 10px;
                 font-weight: bold;
-                padding: 12px 25px;
-                font-size: 14pt;
-                min-width: 120px;
+                padding: 10px 22px;
+                font-size: 12pt;
+                min-width: 140px;
             }
             QPushButton:hover {
                 background: #3399ff;
             }
         """)
 
-        # Ícone de sucesso
+        # ================== CABEÇALHO ==================
+        header_frame = QFrame()
+        header_frame.setStyleSheet("""
+            QFrame {
+                background: #08111a;
+                border-radius: 10px;
+            }
+        """)
+        header_layout = QVBoxLayout(header_frame)
+        header_layout.setContentsMargins(10, 10, 10, 10)
+        header_layout.setSpacing(4)
+
         lbl_icon = QLabel("🎉")
         lbl_icon.setAlignment(Qt.AlignCenter)
-        lbl_icon.setStyleSheet("font-size: 50pt; margin: 10px;")
-        layout.addWidget(lbl_icon)
+        lbl_icon.setStyleSheet("font-size: 40pt;")
+        header_layout.addWidget(lbl_icon)
 
         lbl_title = QLabel("SISTEMA OPERA CRIADO COM SUCESSO!")
-        lbl_title.setStyleSheet("font-size: 18pt; font-weight: bold; color: #007bff;")
         lbl_title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(lbl_title)
+        lbl_title.setStyleSheet("font-size: 17pt; font-weight: bold; color: #4da3ff;")
+        header_layout.addWidget(lbl_title)
 
         lbl_sub = QLabel("Banco de dados configurado e pronto para uso")
         lbl_sub.setAlignment(Qt.AlignCenter)
-        lbl_sub.setStyleSheet("font-size: 12pt; color: #cccccc; margin-bottom: 10px;")
-        layout.addWidget(lbl_sub)
+        lbl_sub.setStyleSheet("font-size: 11pt; color: #cfd8e3;")
+        header_layout.addWidget(lbl_sub)
 
-        # Estatísticas - MENSAGEM DINÂMICA POR SCRIPT
+        layout.addWidget(header_frame)
+
+        # ================== BLOCO CENTRAL ==================
         stats_frame = QFrame()
         stats_frame.setStyleSheet("""
             QFrame {
-                background: #1a1f25;
-                border: 1px solid #2a2f35;
+                background: #151b23;
+                border: 1px solid #252b33;
                 border-radius: 10px;
-                padding: 15px;
             }
         """)
         stats_layout = QVBoxLayout(stats_frame)
+        stats_layout.setContentsMargins(16, 12, 16, 12)
+        stats_layout.setSpacing(6)
 
-        # 🔥 MENSAGEM DINÂMICA BASEADA NO TIPO DE SCRIPT
+        # --- mensagem principal dinâmica por script ---
         if self.script_type == "script_1":
             lbl_achievement = QLabel("✅ BANCO BANCO_OPERA CRIADO COM SUCESSO!")
+            lbl_achievement.setStyleSheet("font-size: 14pt; font-weight: bold; color: #66b3ff;")
             lbl_achievement.setAlignment(Qt.AlignCenter)
-            lbl_achievement.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff;")
             stats_layout.addWidget(lbl_achievement)
 
-            lbl_next_step = QLabel("➡️ PRÓXIMO PASSO: Execute o script 2_CRIAR_SCHEMA.sql")
+            lbl_next_step = QLabel("➡️ Próximo passo: execute o script 2_CRIAR_SCHEMA.sql")
             lbl_next_step.setAlignment(Qt.AlignCenter)
-            lbl_next_step.setStyleSheet("font-size: 12pt; color: #99ccff; margin-top: 10px;")
+            lbl_next_step.setStyleSheet("font-size: 10pt; color: #9cc7ff; margin-top: 4px;")
             stats_layout.addWidget(lbl_next_step)
 
         elif self.script_type == "script_2":
             lbl_achievement = QLabel("✅ SCHEMA OPERA CONFIGURADO COM SUCESSO!")
+            lbl_achievement.setStyleSheet("font-size: 14pt; font-weight: bold; color: #66b3ff;")
             lbl_achievement.setAlignment(Qt.AlignCenter)
-            lbl_achievement.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff;")
             stats_layout.addWidget(lbl_achievement)
 
             if self.total_tabelas > 0:
-                lbl_tables = QLabel(f"📊 TABELAS EXISTENTES: {self.total_tabelas}")
+                lbl_tables = QLabel(f"📊 Tabelas existentes: {self.total_tabelas}")
                 lbl_tables.setAlignment(Qt.AlignCenter)
-                lbl_tables.setStyleSheet("font-size: 14pt; color: #66b3ff; margin-top: 10px;")
+                lbl_tables.setStyleSheet("font-size: 11pt; color: #b3d4ff; margin-top: 4px;")
                 stats_layout.addWidget(lbl_tables)
 
-            lbl_next_step = QLabel("➡️ PRÓXIMO PASSO: Execute o script 3_CRIAR_TABELAS.sql")
+            lbl_next_step = QLabel("➡️ Próximo passo: execute o script 3_CRIAR_TABELAS.sql")
             lbl_next_step.setAlignment(Qt.AlignCenter)
-            lbl_next_step.setStyleSheet("font-size: 12pt; color: #99ccff; margin-top: 10px;")
+            lbl_next_step.setStyleSheet("font-size: 10pt; color: #9cc7ff; margin-top: 4px;")
             stats_layout.addWidget(lbl_next_step)
 
         elif self.script_type == "script_3":
             lbl_achievement = QLabel("✅ SISTEMA OPERA CONFIGURADO COM SUCESSO!")
+            lbl_achievement.setStyleSheet("font-size: 15pt; font-weight: bold; color: #66ffa8;")
             lbl_achievement.setAlignment(Qt.AlignCenter)
-            lbl_achievement.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff;")
             stats_layout.addWidget(lbl_achievement)
 
-            lbl_tables = QLabel(f"📊 TOTAL DE TABELAS CRIADAS: {self.total_tabelas}")
+            lbl_tables = QLabel(f"📊 Total de tabelas criadas: {self.total_tabelas}")
             lbl_tables.setAlignment(Qt.AlignCenter)
-            lbl_tables.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff; margin-top: 10px;")
+            lbl_tables.setStyleSheet("font-size: 12pt; color: #b3ffd9; margin-top: 4px;")
             stats_layout.addWidget(lbl_tables)
-
-            # Status baseado na quantidade de tabelas
-            if self.total_tabelas >= 40:
-                status_msg = "🚀 SISTEMA COMPLETO - PRONTO PARA PRODUÇÃO!"
-                status_color = "#00ff88"
-            elif self.total_tabelas >= 20:
-                status_msg = "⚠️ SISTEMA PARCIAL - ALGUMAS TABELAS CRIADAS"
-                status_color = "#ffaa00"
-            elif self.total_tabelas > 0:
-                status_msg = "🔧 SISTEMA BÁSICO - POUCAS TABELAS CRIADAS"
-                status_color = "#ffcc00"
-            else:
-                status_msg = "❌ NENHUMA TABELA CRIADA - VERIFIQUE O SCRIPT"
-                status_color = "#ff5555"
-
-            lbl_status = QLabel(status_msg)
-            lbl_status.setAlignment(Qt.AlignCenter)
-            lbl_status.setStyleSheet(f"font-size: 14pt; color: {status_color}; margin-top: 10px; font-weight: bold;")
-            stats_layout.addWidget(lbl_status)
-
         else:
-            # Para outros scripts (APAGAR_TUDO, etc.)
-            lbl_achievement = QLabel("✅ SCRIPT EXECUTADO COM SUCESSO!")
+            lbl_achievement = QLabel("✅ Script executado com sucesso!")
             lbl_achievement.setAlignment(Qt.AlignCenter)
-            lbl_achievement.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff;")
+            lbl_achievement.setStyleSheet("font-size: 14pt; font-weight: bold; color: #66b3ff;")
             stats_layout.addWidget(lbl_achievement)
 
             if self.total_tabelas > 0:
-                lbl_tables = QLabel(f"📊 TABELAS NO SCHEMA OPERA: {self.total_tabelas}")
+                lbl_tables = QLabel(f"📊 Tabelas no schema opera: {self.total_tabelas}")
                 lbl_tables.setAlignment(Qt.AlignCenter)
-                lbl_tables.setStyleSheet("font-size: 14pt; color: #66b3ff; margin-top: 10px;")
+                lbl_tables.setStyleSheet("font-size: 11pt; color: #b3d4ff; margin-top: 4px;")
                 stats_layout.addWidget(lbl_tables)
 
-        # Informações de configuração (sempre visíveis)
-        lbl_info = QLabel("✅ Schema: opera\n✅ Usuário: GIL DE OLIVEIRA\n✅ Senha: 2580")
+        # --- info fixa de acesso ---
+        lbl_info = QLabel("✅ Schema: opera   •   Usuário: GIL DE OLIVEIRA   •   Senha: 2580")
         lbl_info.setAlignment(Qt.AlignCenter)
-        lbl_info.setStyleSheet("font-size: 11pt; color: #cccccc; margin-top: 15px;")
+        lbl_info.setStyleSheet("font-size: 9pt; color: #a0a7b3; margin-top: 8px;")
         stats_layout.addWidget(lbl_info)
 
         layout.addWidget(stats_frame)
 
-        # Mensagem adicional do log (LIMPA E FILTRADA)
+        # ================== MENSAGEM DE LOG (OPCIONAL) ==================
         if self.message:
             clean_message = self.clean_success_message(self.message, self.script_type)
             if clean_message:
                 lbl_msg = QLabel(clean_message)
                 lbl_msg.setWordWrap(True)
                 lbl_msg.setAlignment(Qt.AlignCenter)
-                lbl_msg.setStyleSheet(
-                    "font-size: 10pt; color: #99ccff; background: #1a2f4a; padding: 10px; border-radius: 5px;")
+                lbl_msg.setStyleSheet("""
+                    font-size: 9pt;
+                    color: #9cc7ff;
+                    background: #10233a;
+                    padding: 8px 10px;
+                    border-radius: 6px;
+                """)
                 layout.addWidget(lbl_msg)
+
+        # ================== FAIXA DE STATUS INFERIOR ==================
+        status_frame = QFrame()
+        status_layout = QHBoxLayout(status_frame)
+        status_layout.setContentsMargins(10, 6, 10, 6)
+
+        if self.script_type == "script_3" and self.total_tabelas > 0:
+            if self.total_tabelas >= 40:
+                status_text = f"🚀 SISTEMA COMPLETO! {self.total_tabelas} tabelas criadas"
+                bg_color = "#066f46"
+            elif self.total_tabelas >= 20:
+                status_text = f"⚠️ SISTEMA PARCIAL – {self.total_tabelas} tabelas criadas"
+                bg_color = "#8a5b00"
+            else:
+                status_text = f"🔧 SISTEMA BÁSICO – {self.total_tabelas} tabelas criadas"
+                bg_color = "#735c12"
+        else:
+            status_text = "✅ Operação concluída com sucesso"
+            bg_color = "#065f8a"
+
+        status_frame.setStyleSheet(f"""
+            QFrame {{
+                background: {bg_color};
+                border-radius: 8px;
+            }}
+        """)
+
+        lbl_status = QLabel(status_text)
+        lbl_status.setAlignment(Qt.AlignCenter)
+        lbl_status.setStyleSheet("font-size: 10pt; font-weight: bold; color: #f0f9ff;")
+        status_layout.addWidget(lbl_status)
+
+        layout.addWidget(status_frame)
 
         layout.addStretch()
 
-        # Botões
+        # ================== BOTÃO ÚNICO ==================
         btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
 
         btn_ok = QPushButton("🎯 Fechar")
         btn_ok.clicked.connect(self.accept)
-        btn_ok.setStyleSheet("font-size: 12pt;")
-
         btn_layout.addWidget(btn_ok)
+
+        btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
     def clean_success_message(self, message, script_type):
@@ -468,8 +502,8 @@ class SuccessDialog(QDialog):
         if not message:
             return ""
 
-        # Remover mensagens genéricas duplicadas
-        if "executado com sucesso" in message.lower():
+        txt = message.lower()
+        if "executado com sucesso" in txt or "script concluído" in txt:
             if script_type == "script_1":
                 return "Banco BANCO_OPERA criado/preparado com sucesso!"
             elif script_type == "script_2":
@@ -480,6 +514,7 @@ class SuccessDialog(QDialog):
                 return "Operação concluída com sucesso!"
 
         return message
+
 
 
 # ================================================================
@@ -594,106 +629,7 @@ def confirm_table_creation(self, password: str = None, user: str = "postgres",
 # ================================================================
 # 🎯 Método execute_script (COMPLETO)
 # ================================================================
-def execute_script(self):
-    """Executa o script SQL selecionado com banco automático correto"""
-    selected = self.scripts_list.currentItem()
-    if not selected:
-        QMessageBox.warning(self, "⚠️ Aviso", "Nenhum script selecionado!")
-        return
 
-    script = selected.text()
-    password = self.password_input.text().strip()
-    user = self.user_input.text().strip()
-    port = self.port_input.text().strip() or None
-
-    # 🔥 CORREÇÃO CRÍTICA: Determinar o banco CORRETO para cada script
-    # IGNORA a seleção atual do usuário e força o banco adequado
-    if script == "1_CRIAR_BANCO.sql":
-        database = "postgres"  # Script 1 SEMPRE no postgres
-        self.log_html("💡 Script 1: Executando no banco POSTGRES (criação do BANCO_OPERA)")
-    elif script == "2_CRIAR_SCHEMA.sql":
-        database = "BANCO_OPERA"  # Script 2 SEMPRE no BANCO_OPERA
-        self.log_html("💡 Script 2: Executando no banco BANCO_OPERA (configuração do schema)")
-    elif script == "3_CRIAR_TABELAS.sql":
-        database = "BANCO_OPERA"  # Script 3 SEMPRE no BANCO_OPERA
-        self.log_html("💡 Script 3: Executando no banco BANCO_OPERA (criação de tabelas)")
-    else:
-        # Para outros scripts, usa BANCO_OPERA por padrão
-        database = "BANCO_OPERA"
-        self.log_html(f"💡 Script personalizado: Executando no banco BANCO_OPERA")
-
-    # 🔄 ATUALIZAR VISUALMENTE o combobox para refletir o banco correto
-    current_displayed_db = self.db_combo.currentText()
-    if current_displayed_db != database:
-        self.db_combo.setCurrentText(database)
-        self.log_html(f"🔄 Banco alterado automaticamente: {current_displayed_db} → {database}")
-
-    self.log_html(f"🚀 INICIANDO EXECUÇÃO: {script}")
-    self.log_html(f"📁 Banco definido: {database}")
-    self.log_html(f"👤 Usuário: {user}")
-    self.log_html(f"🔌 Porta: {port or 'auto-detecção'}")
-
-    # Feedback específico e detalhado por script
-    if script == "1_CRIAR_BANCO.sql":
-        self.log_html("🎯 OBJETIVO: Criar banco de dados BANCO_OPERA")
-        self.log_html("💡 AÇÃO: Executando CREATE DATABASE no PostgreSQL")
-    elif script == "2_CRIAR_SCHEMA.sql":
-        self.log_html("🎯 OBJETIVO: Configurar schema OPERA no banco BANCO_OPERA")
-        self.log_html("💡 AÇÃO: Criar extensões, schema, usuários e permissões")
-    elif script == "3_CRIAR_TABELAS.sql":
-        self.log_html("🎯 OBJETIVO: Criar tabelas do sistema Opera Fashion")
-        self.log_html("💡 AÇÃO: Executar CREATE TABLE para todas as tabelas do sistema")
-    else:
-        self.log_html(f"🎯 OBJETIVO: Executar script personalizado {script}")
-
-    # Mostrar barra de progresso indeterminada
-    self.progress.setVisible(True)
-    self.progress.setRange(0, 0)  # Progresso indeterminado
-    self.progress.setFormat(f"Executando {script}... %p%")
-
-    # 🔧 VERIFICAÇÃO PRÉ-EXECUÇÃO para scripts 2 e 3
-    if script in ["2_CRIAR_SCHEMA.sql", "3_CRIAR_TABELAS.sql"]:
-        self.log_html("🔍 Verificando pré-requisitos...")
-        # Verificar se o banco BANCO_OPERA existe
-        db_exists = self.db_manager.check_database_exists("BANCO_OPERA", password, user, port)
-        if not db_exists:
-            error_msg = f"❌ ERRO CRÍTICO: Banco BANCO_OPERA não existe!\n\nExecute o script 1_CRIAR_BANCO.sql primeiro."
-            self.log_html(error_msg)
-            self.progress.setVisible(False)
-            QMessageBox.critical(self, "❌ Banco Não Encontrado", error_msg)
-            return
-
-    # 🧵 CRIAR E CONFIGURAR THREAD DE EXECUÇÃO
-    self.worker = WorkerThread(
-        db_manager=self.db_manager,
-        task_type="install_script",
-        password=password,
-        script_name=script,
-        database=database,  # 🔥 Banco CORRETO forçado
-        user=user,
-        port=port
-    )
-
-    # 🔗 CONECTAR SINAIS DA THREAD (ATUALIZADO)
-    self.worker.finished.connect(self.on_exec_finished)
-    self.worker.success_dialog.connect(self.show_success_dialog)
-    self.worker.switch_database.connect(self.switch_to_banco_opera)
-    self.worker.log_message.connect(self.log_html)
-    self.worker.progress_update.connect(self.on_progress_update)
-
-    # 🚀 INICIAR EXECUÇÃO
-    self.log_html("⏳ Iniciando processo de execução...")
-
-    # Desabilitar botões durante execução
-    self.set_buttons_enabled(False)
-
-    self.worker.start()
-
-    # Timer para timeout (segurança)
-    self.execution_timer = QTimer()
-    self.execution_timer.setSingleShot(True)
-    self.execution_timer.timeout.connect(self.on_execution_timeout)
-    self.execution_timer.start(300000)  # 5 minutos timeout
 
 
 def show_success_dialog(self, total_tabelas, message, script_type=""):
@@ -705,165 +641,6 @@ def show_success_dialog(self, total_tabelas, message, script_type=""):
 # ================================================================
 # ✅ Diálogo de sucesso (CORRIGIDO)
 # ================================================================
-class SuccessDialog(QDialog):
-    def __init__(self, parent=None, total_tabelas=0, message="", script_type=""):
-        super().__init__(parent)
-        self.setWindowTitle("🎉 SISTEMA OPERA CRIADO COM SUCESSO!")
-        self.setFixedSize(800, 600)
-        self.total_tabelas = total_tabelas
-        self.message = message
-        self.script_type = script_type
-        self.init_ui()
-
-    def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
-
-        self.setStyleSheet("""
-            QDialog {
-                background: #0f1419;
-                color: #ffffff;
-                border: 3px solid #007bff;
-                border-radius: 15px;
-            }
-            QLabel {
-                color: #ffffff;
-                background: transparent;
-            }
-            QPushButton {
-                background: #007bff;
-                color: #ffffff;
-                border-radius: 10px;
-                font-weight: bold;
-                padding: 12px 25px;
-                font-size: 14pt;
-                min-width: 120px;
-            }
-            QPushButton:hover {
-                background: #3399ff;
-            }
-        """)
-
-        # Ícone de sucesso
-        lbl_icon = QLabel("🎉")
-        lbl_icon.setAlignment(Qt.AlignCenter)
-        lbl_icon.setStyleSheet("font-size: 50pt; margin: 10px;")
-        layout.addWidget(lbl_icon)
-
-        lbl_title = QLabel("SISTEMA OPERA CRIADO COM SUCESSO!")
-        lbl_title.setStyleSheet("font-size: 18pt; font-weight: bold; color: #007bff;")
-        lbl_title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(lbl_title)
-
-        lbl_sub = QLabel("Banco de dados configurado e pronto para uso")
-        lbl_sub.setAlignment(Qt.AlignCenter)
-        lbl_sub.setStyleSheet("font-size: 12pt; color: #cccccc; margin-bottom: 10px;")
-        layout.addWidget(lbl_sub)
-
-        # Estatísticas - MENSAGEM DINÂMICA POR SCRIPT
-        stats_frame = QFrame()
-        stats_frame.setStyleSheet("""
-            QFrame {
-                background: #1a1f25;
-                border: 1px solid #2a2f35;
-                border-radius: 10px;
-                padding: 15px;
-            }
-        """)
-        stats_layout = QVBoxLayout(stats_frame)
-
-        # 🔥 MENSAGEM DINÂMICA BASEADA NO TIPO DE SCRIPT
-        if self.script_type == "script_1":
-            lbl_achievement = QLabel("✅ BANCO BANCO_OPERA CRIADO COM SUCESSO!")
-            lbl_achievement.setAlignment(Qt.AlignCenter)
-            lbl_achievement.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff;")
-            stats_layout.addWidget(lbl_achievement)
-
-            lbl_next_step = QLabel("➡️ PRÓXIMO PASSO: Execute o script 2_CRIAR_SCHEMA.sql")
-            lbl_next_step.setAlignment(Qt.AlignCenter)
-            lbl_next_step.setStyleSheet("font-size: 12pt; color: #99ccff; margin-top: 10px;")
-            stats_layout.addWidget(lbl_next_step)
-
-        elif self.script_type == "script_2":
-            lbl_achievement = QLabel("✅ SCHEMA OPERA CONFIGURADO COM SUCESSO!")
-            lbl_achievement.setAlignment(Qt.AlignCenter)
-            lbl_achievement.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff;")
-            stats_layout.addWidget(lbl_achievement)
-
-            if self.total_tabelas > 0:
-                lbl_tables = QLabel(f"📊 TABELAS EXISTENTES: {self.total_tabelas}")
-                lbl_tables.setAlignment(Qt.AlignCenter)
-                lbl_tables.setStyleSheet("font-size: 14pt; color: #66b3ff; margin-top: 10px;")
-                stats_layout.addWidget(lbl_tables)
-
-            lbl_next_step = QLabel("➡️ PRÓXIMO PASSO: Execute o script 3_CRIAR_TABELAS.sql")
-            lbl_next_step.setAlignment(Qt.AlignCenter)
-            lbl_next_step.setStyleSheet("font-size: 12pt; color: #99ccff; margin-top: 10px;")
-            stats_layout.addWidget(lbl_next_step)
-
-        elif self.script_type == "script_3":
-            lbl_achievement = QLabel("✅ TODAS AS TABELAS CRIADAS COM SUCESSO!")
-            lbl_achievement.setAlignment(Qt.AlignCenter)
-            lbl_achievement.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff;")
-            stats_layout.addWidget(lbl_achievement)
-
-            lbl_tables = QLabel(f"📊 TOTAL DE TABELAS CRIADAS: {self.total_tabelas}")
-            lbl_tables.setAlignment(Qt.AlignCenter)
-            lbl_tables.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff; margin-top: 10px;")
-            stats_layout.addWidget(lbl_tables)
-
-            lbl_complete = QLabel("🚀 SISTEMA OPERA FASHION PRONTO PARA USO!")
-            lbl_complete.setAlignment(Qt.AlignCenter)
-            lbl_complete.setStyleSheet("font-size: 14pt; color: #99ccff; margin-top: 10px;")
-            stats_layout.addWidget(lbl_complete)
-
-        else:
-            # Mensagem genérica para outros scripts
-            lbl_tables = QLabel(f"📊 TABELAS NO SCHEMA OPERA: {self.total_tabelas}")
-            lbl_tables.setAlignment(Qt.AlignCenter)
-            lbl_tables.setStyleSheet("font-size: 16pt; font-weight: bold; color: #66b3ff;")
-            stats_layout.addWidget(lbl_tables)
-
-        # Informações de configuração (sempre visíveis)
-        lbl_info = QLabel("✅ Schema: opera\n✅ Usuário: GIL DE OLIVEIRA\n✅ Senha: 2580")
-        lbl_info.setAlignment(Qt.AlignCenter)
-        lbl_info.setStyleSheet("font-size: 11pt; color: #cccccc; margin-top: 15px;")
-        stats_layout.addWidget(lbl_info)
-
-        layout.addWidget(stats_frame)
-
-        # Mensagem adicional do log
-        if self.message:
-            # Limpar a mensagem para remover duplicatas
-            clean_message = self.message
-            if "Script" in clean_message and "executado com sucesso" in clean_message:
-                # Manter apenas a parte importante da mensagem
-                if "Banco BANCO_OPERA criado" in clean_message:
-                    clean_message = "Banco BANCO_OPERA criado/preparado com sucesso!"
-                elif "Schema opera configurado" in clean_message:
-                    clean_message = "Schema opera configurado com sucesso!"
-                elif "46 tabelas criadas" in clean_message:
-                    clean_message = "46 tabelas criadas com sucesso!"
-
-            lbl_msg = QLabel(clean_message)
-            lbl_msg.setWordWrap(True)
-            lbl_msg.setAlignment(Qt.AlignCenter)
-            lbl_msg.setStyleSheet(
-                "font-size: 10pt; color: #99ccff; background: #1a2f4a; padding: 10px; border-radius: 5px;")
-            layout.addWidget(lbl_msg)
-
-        layout.addStretch()
-
-        # Botões
-        btn_layout = QHBoxLayout()
-
-        btn_ok = QPushButton("🎯 Fechar")
-        btn_ok.clicked.connect(self.accept)
-        btn_ok.setStyleSheet("font-size: 12pt;")
-
-        btn_layout.addWidget(btn_ok)
-        layout.addLayout(btn_layout)
 
 
 class ConfigDialog(QDialog):
@@ -1297,6 +1074,105 @@ class InstallerApp(QMainWindow):
         for s in scripts:
             self.scripts_list.addItem(s["filename"])
 
+    def execute_script(self):
+        """Executa o script SQL selecionado com banco automático correto"""
+        selected = self.scripts_list.currentItem()
+        if not selected:
+            QMessageBox.warning(self, "⚠️ Aviso", "Nenhum script selecionado!")
+            return
+
+        script = selected.text()
+        password = self.password_input.text().strip()
+        user = self.user_input.text().strip()
+        port = self.port_input.text().strip() or None
+
+        # 🔥 Determinar o banco CORRETO para cada script
+        if script == "1_CRIAR_BANCO.sql":
+            database = "postgres"  # Script 1 SEMPRE no postgres
+            self.log_html("💡 Script 1: Executando no banco POSTGRES (criação do BANCO_OPERA)")
+        elif script == "2_CRIAR_SCHEMA.sql":
+            database = "BANCO_OPERA"  # Script 2 SEMPRE no BANCO_OPERA
+            self.log_html("💡 Script 2: Executando no banco BANCO_OPERA (configuração do schema)")
+        elif script == "3_CRIAR_TABELAS.sql":
+            database = "BANCO_OPERA"  # Script 3 SEMPRE no BANCO_OPERA
+            self.log_html("💡 Script 3: Executando no banco BANCO_OPERA (criação de tabelas)")
+        else:
+            # Para outros scripts, usa BANCO_OPERA por padrão
+            database = "BANCO_OPERA"
+            self.log_html(f"💡 Script personalizado: Executando no banco BANCO_OPERA")
+
+        # 🔄 Atualiza o combobox para refletir o banco correto
+        current_displayed_db = self.db_combo.currentText()
+        if current_displayed_db != database:
+            self.db_combo.setCurrentText(database)
+            self.log_html(f"🔄 Banco alterado automaticamente: {current_displayed_db} → {database}")
+
+        self.log_html(f"🚀 INICIANDO EXECUÇÃO: {script}")
+        self.log_html(f"📁 Banco definido: {database}")
+        self.log_html(f"👤 Usuário: {user}")
+        self.log_html(f"🔌 Porta: {port or 'auto-detecção'}")
+
+        # Feedback específico por script
+        if script == "1_CRIAR_BANCO.sql":
+            self.log_html("🎯 OBJETIVO: Criar banco de dados BANCO_OPERA")
+            self.log_html("💡 AÇÃO: Executando CREATE DATABASE no PostgreSQL")
+        elif script == "2_CRIAR_SCHEMA.sql":
+            self.log_html("🎯 OBJETIVO: Configurar schema OPERA no banco BANCO_OPERA")
+            self.log_html("💡 AÇÃO: Criar extensões, schema, usuários e permissões")
+        elif script == "3_CRIAR_TABELAS.sql":
+            self.log_html("🎯 OBJETIVO: Criar tabelas do sistema Opera Fashion")
+            self.log_html("💡 AÇÃO: Executar CREATE TABLE para todas as tabelas do sistema")
+        else:
+            self.log_html(f"🎯 OBJETIVO: Executar script personalizado {script}")
+
+        # Barra de progresso indeterminada
+        self.progress.setVisible(True)
+        self.progress.setRange(0, 0)
+        self.progress.setFormat(f"Executando {script}... %p%")
+
+        # Verificação pré-execução para scripts 2 e 3
+        if script in ["2_CRIAR_SCHEMA.sql", "3_CRIAR_TABELAS.sql"]:
+            self.log_html("🔍 Verificando pré-requisitos...")
+            db_exists = self.db_manager.check_database_exists("BANCO_OPERA", password, user, port)
+            if not db_exists:
+                error_msg = (
+                    "❌ ERRO CRÍTICO: Banco BANCO_OPERA não existe!\n\n"
+                    "Execute o script 1_CRIAR_BANCO.sql primeiro."
+                )
+                self.log_html(error_msg)
+                self.progress.setVisible(False)
+                QMessageBox.critical(self, "❌ Banco Não Encontrado", error_msg)
+                return
+
+        # 🧵 Thread de execução
+        self.worker = WorkerThread(
+            db_manager=self.db_manager,
+            task_type="install_script",
+            password=password,
+            script_name=script,
+            database=database,
+            user=user,
+            port=port,
+        )
+
+        # Conexões de sinal
+        self.worker.finished.connect(self.on_exec_finished)
+        self.worker.success_dialog.connect(self.show_success_dialog)
+        self.worker.switch_database.connect(self.switch_to_banco_opera)
+        self.worker.log_message.connect(self.log_html)
+        self.worker.progress_update.connect(self.on_progress_update)
+
+        # Inicia execução
+        self.log_html("⏳ Iniciando processo de execução.")
+        self.set_buttons_enabled(False)
+        self.worker.start()
+
+        # Timer de segurança
+        self.execution_timer = QTimer()
+        self.execution_timer.setSingleShot(True)
+        self.execution_timer.timeout.connect(self.on_execution_timeout)
+        self.execution_timer.start(300000)  # 5 minutos
+
     def log_html(self, msg: str):
         """Adiciona log colorido baseado no emoji inicial."""
         if msg.startswith("✅"):
@@ -1453,137 +1329,6 @@ class InstallerApp(QMainWindow):
         else:
             QMessageBox.warning(self, "⚠️ Banco Não Encontrado", message)
 
-    def execute_script(self):
-        """Executa o script SQL selecionado com banco automático correto"""
-        selected = self.scripts_list.currentItem()
-        if not selected:
-            QMessageBox.warning(self, "⚠️ Aviso", "Nenhum script selecionado!")
-            return
-
-        script = selected.text()
-        password = self.password_input.text().strip()
-        user = self.user_input.text().strip()
-        port = self.port_input.text().strip() or None
-
-        # 🔥 CORREÇÃO CRÍTICA: Determinar o banco CORRETO para cada script
-        # IGNORA a seleção atual do usuário e força o banco adequado
-        if script == "1_CRIAR_BANCO.sql":
-            database = "postgres"  # Script 1 SEMPRE no postgres
-            self.log_html("💡 Script 1: Executando no banco POSTGRES (criação do BANCO_OPERA)")
-        elif script == "2_CRIAR_SCHEMA.sql":
-            database = "BANCO_OPERA"  # Script 2 SEMPRE no BANCO_OPERA
-            self.log_html("💡 Script 2: Executando no banco BANCO_OPERA (configuração do schema)")
-        elif script == "3_CRIAR_TABELAS.sql":
-            database = "BANCO_OPERA"  # Script 3 SEMPRE no BANCO_OPERA
-            self.log_html("💡 Script 3: Executando no banco BANCO_OPERA (criação de tabelas)")
-        else:
-            # Para outros scripts, usa BANCO_OPERA por padrão
-            database = "BANCO_OPERA"
-            self.log_html(f"💡 Script personalizado: Executando no banco BANCO_OPERA")
-
-        # 🔄 ATUALIZAR VISUALMENTE o combobox para refletir o banco correto
-        current_displayed_db = self.db_combo.currentText()
-        if current_displayed_db != database:
-            self.db_combo.setCurrentText(database)
-            self.log_html(f"🔄 Banco alterado automaticamente: {current_displayed_db} → {database}")
-
-        self.log_html(f"🚀 INICIANDO EXECUÇÃO: {script}")
-        self.log_html(f"📁 Banco definido: {database}")
-        self.log_html(f"👤 Usuário: {user}")
-        self.log_html(f"🔌 Porta: {port or 'auto-detecção'}")
-
-        # Feedback específico e detalhado por script
-        if script == "1_CRIAR_BANCO.sql":
-            self.log_html("🎯 OBJETIVO: Criar banco de dados BANCO_OPERA")
-            self.log_html("💡 AÇÃO: Executando CREATE DATABASE no PostgreSQL")
-        elif script == "2_CRIAR_SCHEMA.sql":
-            self.log_html("🎯 OBJETIVO: Configurar schema OPERA no banco BANCO_OPERA")
-            self.log_html("💡 AÇÃO: Criar extensões, schema, usuários e permissões")
-        elif script == "3_CRIAR_TABELAS.sql":
-            self.log_html("🎯 OBJETIVO: Criar 46 tabelas do sistema Opera Fashion")
-            self.log_html("💡 AÇÃO: Executar CREATE TABLE para todas as tabelas do sistema")
-        else:
-            self.log_html(f"🎯 OBJETIVO: Executar script personalizado {script}")
-
-        # Mostrar barra de progresso indeterminada
-        self.progress.setVisible(True)
-        self.progress.setRange(0, 0)  # Progresso indeterminado
-        self.progress.setFormat(f"Executando {script}... %p%")
-
-        # 🔧 VERIFICAÇÃO PRÉ-EXECUÇÃO para scripts 2 e 3
-        if script in ["2_CRIAR_SCHEMA.sql", "3_CRIAR_TABELAS.sql"]:
-            self.log_html("🔍 Verificando pré-requisitos...")
-            # Verificar se o banco BANCO_OPERA existe
-            db_exists = self.db_manager.check_database_exists("BANCO_OPERA", password, user, port)
-            if not db_exists:
-                error_msg = f"❌ ERRO CRÍTICO: Banco BANCO_OPERA não existe!\n\nExecute o script 1_CRIAR_BANCO.sql primeiro."
-                self.log_html(error_msg)
-                self.progress.setVisible(False)
-                QMessageBox.critical(self, "❌ Banco Não Encontrado", error_msg)
-                return
-
-        # 🧵 CRIAR E CONFIGURAR THREAD DE EXECUÇÃO
-        self.worker = WorkerThread(
-            db_manager=self.db_manager,
-            task_type="install_script",
-            password=password,
-            script_name=script,
-            database=database,  # 🔥 Banco CORRETO forçado
-            user=user,
-            port=port
-        )
-
-        # 🔗 CONECTAR SINAIS DA THREAD (ATUALIZADO)
-        self.worker.finished.connect(self.on_exec_finished)
-        self.worker.success_dialog.connect(self.show_success_dialog)
-        self.worker.switch_database.connect(self.switch_to_banco_opera)
-        self.worker.log_message.connect(self.log_html)
-        self.worker.progress_update.connect(self.on_progress_update)
-
-        # 🚀 INICIAR EXECUÇÃO
-        self.log_html("⏳ Iniciando processo de execução...")
-
-        # Desabilitar botões durante execução
-        self.set_buttons_enabled(False)
-
-        self.worker.start()
-
-        # Timer para timeout (segurança)
-        self.execution_timer = QTimer()
-        self.execution_timer.setSingleShot(True)
-        self.execution_timer.timeout.connect(self.on_execution_timeout)
-        self.execution_timer.start(300000)  # 5 minutos timeout
-
-    def switch_to_banco_opera(self):
-        """Muda automaticamente para o banco BANCO_OPERA e atualiza UI"""
-        current_db = self.db_combo.currentText()
-        if current_db != "BANCO_OPERA":
-            self.db_combo.setCurrentText("BANCO_OPERA")
-            self.log_html("🔄 Banco alterado automaticamente para BANCO_OPERA")
-            self.log_html("💡 Agora você pode executar os scripts 2 e 3")
-
-        # Forçar atualização do status
-        self.update_database_status()
-
-    def set_buttons_enabled(self, enabled: bool):
-        """Habilita ou desabilita botões durante execução"""
-        self.btn_exec.setEnabled(enabled)
-        self.btn_test.setEnabled(enabled)
-        self.btn_check_db.setEnabled(enabled)
-        self.btn_config.setEnabled(enabled)
-        self.scripts_list.setEnabled(enabled)
-        self.db_combo.setEnabled(enabled)
-
-    def on_progress_update(self, message: str):
-        """Atualiza mensagem de progresso"""
-        self.progress.setFormat(f"{message}... %p%")
-
-    def on_execution_timeout(self):
-        """Timeout de segurança para execução muito longa"""
-        if self.worker.isRunning():
-            self.log_html("⏰ AVISO: Execução está demorando mais que o esperado...")
-            self.log_html("💡 Dica: Processos grandes podem levar alguns minutos")
-
     def on_exec_finished(self, success: bool, message: str):
         """Callback chamado quando a execução do script termina"""
         # Parar timer de timeout
@@ -1620,27 +1365,59 @@ class InstallerApp(QMainWindow):
                 self.log_html("🎉 Todas as tabelas criadas com sucesso!")
                 self.log_html("🚀 Sistema Opera Fashion pronto para uso!")
 
-            # Mostrar mensagem de sucesso
-            QMessageBox.information(self, "✅ Sucesso", f"Script executado com sucesso!\n\n{message}")
+            # ⚠️ AQUI FOI A MUDANÇA:
+            # Antes tinha um QMessageBox.information com “Script executado com sucesso”.
+            # Ele foi removido para evitar a confirmação dupla.
+            # O feedback visual de sucesso agora fica SOMENTE no SuccessDialog,
+            # disparado pelo sinal self.worker.success_dialog → self.show_success_dialog
 
         else:
             self.log_html("❌ EXECUÇÃO FALHOU!")
             self.log_html(f"📋 Erro: {message}")
 
             # Análise de erro mais detalhada
-            if "does not exist" in message and "BANCO_OPERA" in message:
+            msg_lower = message.lower()
+            if "does not exist" in msg_lower and "banco_opera" in msg_lower:
                 self.log_html("💡 SOLUÇÃO: Execute o script 1_CRIAR_BANCO.sql primeiro")
-            elif "password authentication failed" in message:
+            elif "password authentication failed" in msg_lower:
                 self.log_html("💡 SOLUÇÃO: Verifique a senha do PostgreSQL")
-            elif "cannot connect" in message:
+            elif "could not connect" in msg_lower or "cannot connect" in msg_lower:
                 self.log_html("💡 SOLUÇÃO: Verifique se o PostgreSQL está rodando")
+            elif "timeout" in msg_lower:
+                self.log_html("💡 SOLUÇÃO: Script muito longo, aumente o timeout")
 
-            # Mostrar mensagem de erro
+            # Mantém apenas UMA caixa de mensagem para ERRO
             QMessageBox.critical(self, "❌ Erro na Execução", message)
 
-        # Atualizar informações do sistema
-        self.update_system_info()
-        self.log_html("=" * 50)  # Separador visual
+    def switch_to_banco_opera(self):
+        """Muda automaticamente para o banco BANCO_OPERA e atualiza UI"""
+        current_db = self.db_combo.currentText()
+        if current_db != "BANCO_OPERA":
+            self.db_combo.setCurrentText("BANCO_OPERA")
+            self.log_html("🔄 Banco alterado automaticamente para BANCO_OPERA")
+            self.log_html("💡 Agora você pode executar os scripts 2 e 3")
+
+        # Forçar atualização do status
+        self.update_database_status()
+
+    def set_buttons_enabled(self, enabled: bool):
+        """Habilita ou desabilita botões durante execução"""
+        self.btn_exec.setEnabled(enabled)
+        self.btn_test.setEnabled(enabled)
+        self.btn_check_db.setEnabled(enabled)
+        self.btn_config.setEnabled(enabled)
+        self.scripts_list.setEnabled(enabled)
+        self.db_combo.setEnabled(enabled)
+
+    def on_progress_update(self, message: str):
+        """Atualiza mensagem de progresso"""
+        self.progress.setFormat(f"{message}... %p%")
+
+    def on_execution_timeout(self):
+        """Timeout de segurança para execução muito longa"""
+        if self.worker.isRunning():
+            self.log_html("⏰ AVISO: Execução está demorando mais que o esperado...")
+            self.log_html("💡 Dica: Processos grandes podem levar alguns minutos")
 
     def show_success_dialog(self, total_tabelas, message):
         """Mostra diálogo de sucesso para criação de tabelas"""
@@ -1657,8 +1434,6 @@ class InstallerApp(QMainWindow):
         self.log_area.clear()
         self.tech_log.clear()
         self.log_html("🧹 Logs limpos com sucesso!")
-
-
 
 if __name__ == "__main__":
     # Adiciona o diretório atual ao path
@@ -1693,3 +1468,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Erro crítico: {e}")
         input("Pressione Enter para sair...")
+#FINAL 11/12/2025
