@@ -1393,4 +1393,3 @@ BEGIN
     RAISE NOTICE '- Versao: 1.0 registrada em _schema_info';
     RAISE NOTICE '=========================================';
 END $$;
-NOVA VERSSAO 11/12/2025
