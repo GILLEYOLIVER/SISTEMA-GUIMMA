@@ -53,12 +53,10 @@ except Exception as e:
     print(f"❌ PostgreSQL indisponível: {e}")
     MENU_POSTGRES_AVAILABLE = False
 
-
-def get_conn():
+    def get_conn():
         raise RuntimeError("PostgreSQL indisponível")
 
-
-def get_schema():
+    def get_schema():
         return "opera"
 
 # ===== CONFIGURAÇÕES GLOBAIS =====
