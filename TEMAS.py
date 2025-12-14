@@ -2909,9 +2909,10 @@ class TemasPage(ctk.CTkFrame):
 
             # Salva preferência (padrão ou personalizado)
             is_custom = nome_tema in self.paletas.custom
-            self._salvar_preferencia_tema_atual(
+            paleta_custom = self.paletas.custom.get(nome_tema) if is_custom else None
+            self._persistir_preferencia_usuario(
                 nome_tema,
-                "personalizado" if is_custom else "padrao"
+                paleta_custom
             )
 
             print(f"🎉 Tema '{nome_tema}' aplicado completamente")
@@ -3177,7 +3178,7 @@ class TemasPage(ctk.CTkFrame):
             print(f"❌ Erro ao carregar preferência de tema: {e}")
             return None
 
-    def _salvar_preferencia_tema_atual(self, nome_tema, tipo_tema):
+    def _salvar_preferencia_tema_atual(self, nome_tema, tipo_tema, paleta_custom=None):
         """Salva preferência de tema no banco"""
         try:
             from BANCO_DE_DADOS_PG import get_conn, get_schema
@@ -3187,6 +3188,12 @@ class TemasPage(ctk.CTkFrame):
                 return False
 
             usar_tema_personalizado = tipo_tema == "personalizado"
+            paleta_json = None
+            if usar_tema_personalizado and paleta_custom:
+                try:
+                    paleta_json = json.dumps(paleta_custom)
+                except Exception:
+                    paleta_json = None
             schema = get_schema()
             conn = get_conn()
 
@@ -3194,14 +3201,15 @@ class TemasPage(ctk.CTkFrame):
                 cur.execute(
                     f"""
                     INSERT INTO {schema}.usuario_preferencias
-                        (usuario_id, tema_nome, usar_tema_personalizado, atualizado_em)
-                    VALUES (%s, %s, %s, NOW())
+                        (usuario_id, tema_nome, usar_tema_personalizado, tema_personalizado, atualizado_em)
+                    VALUES (%s, %s, %s, %s, NOW())
                     ON CONFLICT (usuario_id) DO UPDATE SET
                         tema_nome = EXCLUDED.tema_nome,
                         usar_tema_personalizado = EXCLUDED.usar_tema_personalizado,
+                        tema_personalizado = EXCLUDED.tema_personalizado,
                         atualizado_em = NOW()
                     """,
-                    (usuario_id, nome_tema, usar_tema_personalizado)
+                    (usuario_id, nome_tema, usar_tema_personalizado, paleta_json)
                 )
             conn.commit()
 
@@ -3210,6 +3218,47 @@ class TemasPage(ctk.CTkFrame):
 
         except Exception as e:
             print(f"❌ Erro ao salvar preferência de tema: {e}")
+            return False
+
+    def _persistir_preferencia_usuario(self, nome_tema, paleta_custom=None):
+        """Garante que o tema aplicado seja gravado na preferência do usuário."""
+        try:
+            usuario_id = getattr(self.app, "usuario_id", None)
+            if not usuario_id:
+                return False
+
+            # Tenta salvar via UserManager (preferido)
+            try:
+                user_manager = getattr(self.app, "user_manager", None)
+                if user_manager:
+                    if paleta_custom:
+                        import json
+                        user_manager.save_user_theme_personalizado(nome_tema, json.dumps(paleta_custom))
+                    else:
+                        user_manager.save_user_theme(nome_tema)
+
+                    # Atualiza fallbacks locais para futuros logins
+                    if hasattr(self.app, "tema_preferido_inicial"):
+                        self.app.tema_preferido_inicial = nome_tema
+                    if hasattr(self.app, "current_theme_name"):
+                        self.app.current_theme_name = nome_tema
+                    return True
+            except Exception as e_user_manager:
+                print(f"[Temas] Aviso: não foi possível salvar via UserManager ({e_user_manager}).")
+
+            # Fallback direto no banco (mantém comportamento anterior)
+            tipo = "personalizado" if paleta_custom else "padrao"
+            sucesso = self._salvar_preferencia_tema_atual(nome_tema, tipo, paleta_custom)
+
+            # Atualiza fallbacks locais mesmo quando usa o caminho direto
+            if sucesso and hasattr(self.app, "tema_preferido_inicial"):
+                self.app.tema_preferido_inicial = nome_tema
+            if sucesso and hasattr(self.app, "current_theme_name"):
+                self.app.current_theme_name = nome_tema
+            return sucesso
+
+        except Exception as e:
+            print(f"[Temas] Erro ao persistir preferência do usuário: {e}")
             return False
 
     def _mostrar_info(self, titulo, mensagem):
