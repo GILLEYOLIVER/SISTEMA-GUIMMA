@@ -327,6 +327,15 @@ class ThemeManager:
             print(f"[Tema] Erro ao aplicar tema em botões ttk: {e}")
 
         # ========== FUNÇÃO RECURSIVA ==========
+        def _describe_widget(widget) -> str:
+            try:
+                name = widget.winfo_name()
+                cls = widget.__class__.__name__
+                master = widget.master.winfo_name() if getattr(widget, "master", None) else "(sem master)"
+                return f"{cls}('{name}' em '{master}')"
+            except Exception:
+                return repr(widget)
+
         def _apply_to_all_widgets(widget):
             """Aplica tema a um widget e, se for container, aos filhos."""
             import customtkinter as ctk
@@ -388,6 +397,21 @@ class ThemeManager:
                     )
                     parar_recursao = True
 
+                elif isinstance(widget, ctk.CTkOptionMenu):
+                    try:
+                        widget.configure(
+                            fg_color=cor_secundaria,
+                            button_color=cor_primaria,
+                            button_hover_color=cor_hover_realcado,
+                            text_color=cor_texto,
+                            dropdown_fg_color=cor_secundaria,
+                            dropdown_text_color=cor_texto,
+                            dropdown_hover_color=cor_hover_realcado,
+                        )
+                    except Exception as e:
+                        print(f"[Tema][DEBUG] Falha ao ajustar CTkOptionMenu {_describe_widget(widget)}: {e}")
+                    parar_recursao = True
+
                 elif isinstance(widget, (ctk.CTkCheckBox, ctk.CTkSwitch)):
                     widget.configure(
                         fg_color=cor_secundaria,
@@ -398,6 +422,32 @@ class ThemeManager:
                         font=fonts["body"],
                     )
                     parar_recursao = True
+
+                elif isinstance(widget, ctk.CTkScrollbar):
+                    try:
+                        widget.configure(
+                            fg_color=cor_secundaria,
+                            button_color=cor_primaria,
+                            button_hover_color=cor_hover_realcado,
+                            progress_color=cor_primaria,
+                        )
+                    except Exception as e:
+                        print(f"[Tema][DEBUG] Falha ao ajustar CTkScrollbar {_describe_widget(widget)}: {e}")
+                    parar_recursao = True
+
+                elif isinstance(widget, ctk.CTk):
+                    try:
+                        widget.configure(fg_color=cor_fundo)
+                    except Exception as e:
+                        print(f"[Tema][DEBUG] Falha ao ajustar CTk root {_describe_widget(widget)}: {e}")
+                    parar_recursao = False
+
+                elif isinstance(widget, ctk.CTkToplevel):
+                    try:
+                        widget.configure(fg_color=cor_fundo)
+                    except Exception as e:
+                        print(f"[Tema][DEBUG] Falha ao ajustar CTkToplevel {_describe_widget(widget)}: {e}")
+                    parar_recursao = False
 
                 elif isinstance(widget, ctk.CTkTabview):
                     widget.configure(
@@ -423,6 +473,63 @@ class ThemeManager:
                     parar_recursao = True
 
                 # ====== BOTÕES / LABELS / FRAMES TK/TTK ======
+                elif isinstance(widget, ttk.Scrollbar):
+                    try:
+                        estilo_scroll = ttk.Style(widget)
+                        estilo_scroll.configure(
+                            "Opera.Vertical.TScrollbar",
+                            troughcolor=cor_secundaria,
+                            bordercolor=cor_borda,
+                            background=cor_primaria,
+                            arrowcolor=cor_texto,
+                        )
+                        estilo_scroll.configure(
+                            "Opera.Horizontal.TScrollbar",
+                            troughcolor=cor_secundaria,
+                            bordercolor=cor_borda,
+                            background=cor_primaria,
+                            arrowcolor=cor_texto,
+                        )
+                        estilo_scroll.map(
+                            "Opera.Vertical.TScrollbar",
+                            background=[("active", cor_hover_realcado)],
+                            arrowcolor=[("active", cor_texto)],
+                        )
+                        estilo_scroll.map(
+                            "Opera.Horizontal.TScrollbar",
+                            background=[("active", cor_hover_realcado)],
+                            arrowcolor=[("active", cor_texto)],
+                        )
+                        orient = widget.cget("orient")
+                        widget.configure(
+                            style=
+                            "Opera.Vertical.TScrollbar" if orient == "vertical" else "Opera.Horizontal.TScrollbar"
+                        )
+                    except Exception as e:
+                        print(f"[Tema][DEBUG] Falha ao ajustar ttk.Scrollbar {_describe_widget(widget)}: {e}")
+                    parar_recursao = True
+
+                elif isinstance(widget, tk.Scrollbar):
+                    try:
+                        widget.configure(
+                            bg=cor_fundo,
+                            activebackground=cor_hover,
+                            troughcolor=cor_secundaria,
+                            highlightthickness=0,
+                            bd=0,
+                            relief=tk.FLAT,
+                        )
+                    except Exception as e:
+                        print(f"[Tema][DEBUG] Falha ao ajustar tk.Scrollbar {_describe_widget(widget)}: {e}")
+                    parar_recursao = True
+
+                elif isinstance(widget, tk.Canvas):
+                    try:
+                        widget.configure(bg=cor_fundo, highlightthickness=0, bd=0)
+                    except Exception as e:
+                        print(f"[Tema][DEBUG] Falha ao ajustar tk.Canvas {_describe_widget(widget)}: {e}")
+                    parar_recursao = False
+
                 elif isinstance(widget, ttk.Button):
                     widget.configure(style="Opera.TButton")
                     parar_recursao = True  # normalmente ttk.Button não tem filhos
@@ -451,8 +558,11 @@ class ThemeManager:
                     widget.configure(bg=cor_fundo)
                     parar_recursao = False  # frames são containers normais
 
+                else:
+                    print(f"[Tema][DEBUG] Widget não tratado: {_describe_widget(widget)}")
+
             except Exception as e:
-                print(f"[Tema] Erro ao aplicar tema em widget {type(widget).__name__}: {e}")
+                print(f"[Tema] Erro ao aplicar tema em widget {_describe_widget(widget)}: {e}")
 
             # === Recursão apenas se não for widget complexo do CTk / ttk ===
             if not parar_recursao:
@@ -589,6 +699,7 @@ class UserManager:
         import json
         default_theme = "Noite Urbana"
         if not getattr(self.app, "usuario_id", None):
+            print("[UserManager][DEBUG] usuario_id não definido ao carregar tema completo; usando padrão")
             return default_theme, None
 
         schema = get_schema()
@@ -606,6 +717,10 @@ class UserManager:
             cur.execute(query, (default_theme, self.app.usuario_id))
             row = cur.fetchone()
             if not row:
+                print(
+                    f"[UserManager][DEBUG] Nenhum registro de preferências encontrado para usuario_id={self.app.usuario_id}; "
+                    "usando tema padrão"
+                )
                 return default_theme, None
 
             tema_nome, usar_custom, tema_json = row
@@ -615,46 +730,65 @@ class UserManager:
                     print(f"[Tema] Paleta personalizada carregada para {self.app.usuario_nome}.")
                     return tema_nome, paleta
                 except json.JSONDecodeError:
-                    print("[Tema] JSON inválido no tema_personalizado.")
+                    print(
+                        f"[Tema][ERRO] JSON inválido no tema_personalizado para usuario_id={self.app.usuario_id}: {tema_json}"
+                    )
             return tema_nome, None
 
     def save_user_theme(self, theme_name: str):
         """Salva o nome do tema (padrão) no banco."""
         if not getattr(self.app, "usuario_id", None):
+            print("[UserManager][DEBUG] usuario_id ausente ao salvar tema padrão; operação ignorada")
             return
 
         schema = get_schema()
-        with get_conn() as conn, conn.cursor() as cur:
-            cur.execute(f"""
-                INSERT INTO {schema}.usuario_preferencias
-                    (usuario_id, tema_nome, usar_tema_personalizado)
-                VALUES (%s, %s, FALSE)
-                ON CONFLICT (usuario_id)
-                DO UPDATE SET
-                    tema_nome = EXCLUDED.tema_nome,
-                    usar_tema_personalizado = FALSE,
-                    tema_personalizado = NULL
-            """, (self.app.usuario_id, theme_name))
-            conn.commit()
+        try:
+            print(
+                f"[UserManager][DEBUG] Gravando tema padrão '{theme_name}' para usuario_id={self.app.usuario_id} no schema {schema}"
+            )
+            with get_conn() as conn, conn.cursor() as cur:
+                cur.execute(f"""
+                    INSERT INTO {schema}.usuario_preferencias
+                        (usuario_id, tema_nome, usar_tema_personalizado)
+                    VALUES (%s, %s, FALSE)
+                    ON CONFLICT (usuario_id)
+                    DO UPDATE SET
+                        tema_nome = EXCLUDED.tema_nome,
+                        usar_tema_personalizado = FALSE,
+                        tema_personalizado = NULL
+                """, (self.app.usuario_id, theme_name))
+                conn.commit()
+            print("[UserManager][DEBUG] Tema padrão salvo com sucesso")
+        except Exception as e:
+            print(f"[UserManager][ERRO] Falha ao salvar tema padrão '{theme_name}': {e}")
 
     def save_user_theme_personalizado(self, theme_name: str, palette_json: str):
         """Salva tema personalizado com paleta JSON."""
         if not getattr(self.app, "usuario_id", None):
+            print("[UserManager][DEBUG] usuario_id ausente ao salvar tema personalizado; operação ignorada")
             return
 
         schema = get_schema()
-        with get_conn() as conn, conn.cursor() as cur:
-            cur.execute(f"""
-                INSERT INTO {schema}.usuario_preferencias
-                    (usuario_id, tema_nome, usar_tema_personalizado, tema_personalizado)
-                VALUES (%s, %s, TRUE, %s)
-                ON CONFLICT (usuario_id)
-                DO UPDATE SET
-                    tema_nome = EXCLUDED.tema_nome,
-                    usar_tema_personalizado = TRUE,
-                    tema_personalizado = EXCLUDED.tema_personalizado
-            """, (self.app.usuario_id, theme_name, palette_json))
-            conn.commit()
+        try:
+            print(
+                f"[UserManager][DEBUG] Gravando tema personalizado '{theme_name}' (len={len(palette_json) if palette_json else 0}) "
+                f"para usuario_id={self.app.usuario_id} no schema {schema}"
+            )
+            with get_conn() as conn, conn.cursor() as cur:
+                cur.execute(f"""
+                    INSERT INTO {schema}.usuario_preferencias
+                        (usuario_id, tema_nome, usar_tema_personalizado, tema_personalizado)
+                    VALUES (%s, %s, TRUE, %s)
+                    ON CONFLICT (usuario_id)
+                    DO UPDATE SET
+                        tema_nome = EXCLUDED.tema_nome,
+                        usar_tema_personalizado = TRUE,
+                        tema_personalizado = EXCLUDED.tema_personalizado
+                """, (self.app.usuario_id, theme_name, palette_json))
+                conn.commit()
+            print("[UserManager][DEBUG] Tema personalizado salvo com sucesso")
+        except Exception as e:
+            print(f"[UserManager][ERRO] Falha ao salvar tema personalizado '{theme_name}': {e}")
 
     def _is_admin(self) -> bool:
         """Retorna True se o usuário for administrador."""
@@ -3214,5 +3348,4 @@ if __name__ == "__main__":
     main()
     # fechado aqui
 
-#final
-#NOVA VERSSAO 10/12/2025
+#atual 14/12/2025
