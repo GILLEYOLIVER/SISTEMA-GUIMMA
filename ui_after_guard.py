@@ -14,6 +14,26 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 
+def reset_tk_default_root():
+    """Limpa ``tk._default_root`` se existir.
+
+    Em cenários onde uma instância Tk foi destruída, objetos que criam imagens
+    podem continuar referenciando o interpretador morto através do
+    ``_default_root`` global do Tkinter. Esta função zera essa referência de
+    forma segura para que a próxima janela crie um novo interpretador válido
+    em Windows e macOS.
+    """
+
+    try:
+        import tkinter as tk  # Import local para evitar dependência circular
+
+        if getattr(tk, "_default_root", None) is not None:
+            tk._default_root = None
+    except Exception:
+        # Não falhar durante o shutdown
+        pass
+
+
 def _resolve_root(owner, root_attr: Optional[str]):
     """Obtém o widget raiz para operações de ``after``.
 
@@ -71,3 +91,54 @@ def cancel_all_afters(owner, root_attr: Optional[str] = None):
 
     if hasattr(owner, "_after_ids"):
         owner._after_ids.clear()
+
+
+def cancel_all_after_info(owner, root_attr: Optional[str] = None):
+    """Cancela todos os callbacks listados em ``after info`` do Tk raiz.
+
+    Alguns widgets de terceiros (como CustomTkinter) podem registrar timers
+    internos que não ficam rastreados em ``_after_ids``. Este helper varre os
+    IDs retornados por ``after info`` e tenta cancelá-los silenciosamente,
+    evitando erros de *callback* ao destruir a janela, principalmente no
+    Windows.
+    """
+
+    root = _resolve_root(owner, root_attr)
+    if root is None:
+        return
+
+    try:
+        ids = root.tk.call("after", "info") or []
+    except Exception:
+        return
+
+    # Garantir estrutura iterável
+    if isinstance(ids, (str, bytes)):
+        ids = [ids]
+
+    for after_id in list(ids):
+        try:
+            root.after_cancel(after_id)
+        except Exception:
+            # Ignora erros para manter compatibilidade cross-platform
+            pass
+
+
+def safe_after_cancel(owner, after_id, root_attr: Optional[str] = None):
+    """Cancela um ``after`` específico e remove-o do rastreamento."""
+
+    if not after_id:
+        return
+
+    try:
+        root = _resolve_root(owner, root_attr)
+        if root and root.winfo_exists():
+            root.after_cancel(after_id)
+    except Exception:
+        # Ignora erros de cancelamento para manter compatibilidade
+        pass
+    finally:
+        try:
+            getattr(owner, "_after_ids", set()).discard(after_id)
+        except Exception:
+            pass
