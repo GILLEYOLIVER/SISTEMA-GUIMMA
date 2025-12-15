@@ -2708,6 +2708,8 @@ class CadastroModelosApp(ctk.CTkFrame):
         cor_fundo = getattr(self.sistema, 'cor_fundo', '#F5F5F5')
         cor_primaria = getattr(self.sistema, 'cor_primaria', '#007BFF')
         cor_texto = getattr(self.sistema, 'cor_texto', '#000000')
+        cor_borda = getattr(self.sistema, 'cor_borda', '#CED4DA')
+        cor_secundaria = getattr(self.sistema, 'cor_secundaria', '#E0E0E0')
         cor_sucesso = getattr(self.sistema, 'cor_sucesso', '#28A745')
         cor_destaque = getattr(self.sistema, 'cor_destaque', '#6C757D')
 
@@ -2716,10 +2718,10 @@ class CadastroModelosApp(ctk.CTkFrame):
         hover_sucesso = ajustar_hover(cor_sucesso)
         hover_destaque = ajustar_hover(cor_destaque)
 
-        dialog = ctk.CTkToplevel(master=self.root)
+        dialog = ctk.CTkToplevel(self.root)
         dialog.transient(self.root)
         dialog.grab_set()
-        centralizar_janela(dialog, 450, 550)
+        centralizar_janela(dialog, 420, 550)
         dialog.title("Adicionar Tecido")
         dialog.resizable(False, False)
         dialog.configure(fg_color=cor_fundo)
@@ -2739,6 +2741,29 @@ class CadastroModelosApp(ctk.CTkFrame):
             ("valor_total", "0,00"),
         ]
         entries = {}
+
+        def _aplicar_estilo_total(entry_total):
+            """Reaplica contraste no entry de total (após trocar state)."""
+            try:
+                bg_total = cor_secundaria if is_dark_color(cor_fundo) else "#F0F0F0"
+                txt_total = get_contraste_texto(bg_total)
+                try:
+                    entry_total.configure(
+                        fg_color=bg_total,
+                        border_color=cor_borda,
+                        text_color=txt_total,
+                        placeholder_text_color=txt_total,
+                        text_color_disabled=txt_total,
+                    )
+                except Exception:
+                    entry_total.configure(
+                        fg_color=bg_total,
+                        border_color=cor_borda,
+                        text_color=txt_total,
+                        placeholder_text_color=txt_total,
+                    )
+            except Exception:
+                pass
 
         # Preencher valores iniciais (exceto Metros/Peça)
         for i, (rotulo, default) in enumerate(campos):
@@ -2760,7 +2785,26 @@ class CadastroModelosApp(ctk.CTkFrame):
             entry.insert(0, inicial)
 
             if rotulo == "valor_total":
-                entry.configure(state="readonly", fg_color="#f0f0f0")
+                # --- CONTRASTE GARANTIDO NO CAMPO "valor_total" (tema claro/escuro) ---
+                bg_total = cor_secundaria if is_dark_color(cor_fundo) else "#F0F0F0"
+                txt_total = get_contraste_texto(bg_total)
+                try:
+                    entry.configure(
+                        state="readonly",
+                        fg_color=bg_total,
+                        border_color=cor_borda,
+                        text_color=txt_total,
+                        placeholder_text_color=txt_total,
+                        text_color_disabled=txt_total,
+                    )
+                except Exception:
+                    entry.configure(
+                        state="readonly",
+                        fg_color=bg_total,
+                        border_color=cor_borda,
+                        text_color=txt_total,
+                        placeholder_text_color=txt_total,
+                    )
             elif rotulo in ["Metros/Peça", "Valor Metro"]:
                 entry.configure(
                     validate="key",
@@ -2787,6 +2831,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                 entries["valor_total"].delete(0, tk.END)
                 entries["valor_total"].insert(0, formatar_para_exibicao(total))
                 entries["valor_total"].configure(state="readonly")
+                _aplicar_estilo_total(entries["valor_total"])  # <<< mantém contraste após trocar state
                 return True
 
             except Exception as e:
@@ -2905,6 +2950,8 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         calcular_total()
         dialog.wait_window()
+
+
 
     def remover_tecido(self):
         """Remove tecido selecionado."""
@@ -4332,3 +4379,5 @@ if __name__ == "__main__":
 
     sistema.root.mainloop()
     # fechado aqui
+
+#atual 14/12/2025
