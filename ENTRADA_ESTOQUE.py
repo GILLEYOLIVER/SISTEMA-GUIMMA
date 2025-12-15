@@ -161,9 +161,6 @@ try:
 
 except Exception as e:
     print(f"[ERRO] Falha ao listar tabelas e colunas: {e}")
-
-
-
 # =============================================================================
 # APLICAÇÃO PRINCIPAL
 # =============================================================================
@@ -549,8 +546,6 @@ class EntradaEstoqueApp(ctk.CTkFrame):
 
         self.status_label.configure(text=f"Código encontrado e carregado: {item['codigo']}", text_color="green")
 
-
-
     # --- FUNÇÃO CORRIGIDA ---
     def carregar_dados_existente(self):
         """
@@ -783,12 +778,15 @@ class EntradaEstoqueApp(ctk.CTkFrame):
     def salvar_entrada(self):
         """
         Salva fielmente todos os campos da interface na tabela correspondente ao tipo selecionado.
-        SEMPRE cria um novo registro se a COR for diferente, mesmo com o mesmo código.
-        Para registros com mesmo código E mesma cor, soma os valores numéricos.
-        BLOQUEIA salvamento se unidade contiver números nas abas específicas.
+
+        ✅ CORRIGE DATA:
+        - Converte 'DD/MM/AAAA' para date (Python) antes de enviar ao PostgreSQL.
+
+        ✅ MENSAGEM DE SUCESSO (AJUSTE PEDIDO):
+        - Mostra: CÓDIGO + DESCRIÇÃO/NOME + COR + QUANTIDADE (sem data).
         """
 
-        from datetime import datetime
+        from datetime import datetime, date
         from decimal import Decimal, InvalidOperation
         import os
         import customtkinter as ctk
@@ -804,33 +802,62 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                 return ""
 
         def _to_decimal(valor):
-            """
-            Converte valor textual em Decimal considerando regras de formatação BR.
-            """
+            """Converte texto BR para Decimal."""
             try:
                 if isinstance(valor, (int, float, Decimal)):
                     return Decimal(str(valor))
 
-                valor_str = str(valor).strip()
-                if not valor_str:
+                s = str(valor).strip()
+                if not s:
                     return Decimal("0")
 
-                if ',' in valor_str:
-                    valor_limpo = valor_str.replace('.', '').replace(',', '.')
-                    return Decimal(valor_limpo)
+                # 1.234,56 -> 1234.56
+                if "," in s:
+                    s = s.replace(".", "").replace(",", ".")
+                    return Decimal(s)
 
-                if '.' in valor_str:
-                    parts = valor_str.split('.')
+                # 1.234.567 -> 1234567 (milhar)
+                if "." in s:
+                    parts = s.split(".")
                     if all(len(p) == 3 for p in parts[1:]):
-                        valor_limpo = ''.join(parts)
-                        return Decimal(valor_limpo)
-                    else:
-                        valor_limpo = valor_str.replace(',', '.')
-                        return Decimal(valor_limpo)
+                        s = "".join(parts)
+                        return Decimal(s)
 
-                return Decimal(valor_str)
+                return Decimal(s)
             except (InvalidOperation, TypeError, ValueError):
                 return Decimal("0")
+
+        def _fmt_num_br(v):
+            """Formata Decimal/num para pt-BR (vírgula) sem zeros inúteis."""
+            if v is None:
+                return ""
+            try:
+                d = v if isinstance(v, Decimal) else Decimal(str(v))
+                s = format(d, "f")
+                if "." in s:
+                    s = s.rstrip("0").rstrip(".")
+                return s.replace(".", ",")
+            except Exception:
+                return str(v)
+
+        def _to_date(valor_texto):
+            """Converte 'DD/MM/AAAA' (ou 'AAAA-MM-DD') para date. Se vazio -> hoje."""
+            if isinstance(valor_texto, date) and not isinstance(valor_texto, datetime):
+                return valor_texto
+            if isinstance(valor_texto, datetime):
+                return valor_texto.date()
+
+            s = (valor_texto or "").strip()
+            if not s:
+                return date.today()
+
+            for fmt in ("%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d"):
+                try:
+                    return datetime.strptime(s, fmt).date()
+                except ValueError:
+                    pass
+
+            raise ValueError(f"Data inválida: '{s}'. Use DD/MM/AAAA.")
 
         def _validar_unidade_salvamento(unidade_texto, tipo):
             """Valida se a unidade não contém números para as abas específicas."""
@@ -867,206 +894,133 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             messagebox.showerror("❌ Erro", f"A tabela '{tabela_qual}' não existe.")
             return
 
-        # Colunas do banco
-        colunas_info = db.fetch_all("""
+        # Colunas reais do banco
+        colunas_info = db.fetch_all(
+            """
             SELECT column_name
             FROM information_schema.columns
             WHERE table_schema = %s AND table_name = %s
             ORDER BY ordinal_position
-        """, [schema, tabela_nome]) or []
+            """,
+            [schema, tabela_nome]
+        ) or []
         colunas_db = [r["column_name"] for r in colunas_info]
-        print(f"[DEBUG] Colunas do banco: {colunas_db}")
 
-        # Coleta TODOS os campos disponíveis na interface
+        # Coleta dados da UI
         dados = {}
-        unidade_valor = ""
         cor_valor = ""
+        unidade_valor = ""
 
         for campo, widget in self.entries.items():
-            # Ignora campo de pesquisa
-            if campo == 'pesquisa_codigo':
+            if campo == "pesquisa_codigo":
                 continue
 
-            # Pega o valor do widget
             valor = _get_val(widget)
 
-            # Guarda o valor da unidade para validação
+            if campo == "cor":
+                cor_valor = valor
             if campo == "unidade":
                 unidade_valor = valor
 
-            # Guarda o valor da cor para comparação
-            if campo == "cor":
-                cor_valor = valor
+            if campo not in colunas_db:
+                continue
 
-            # Se o campo existe no banco e tem valor, adiciona aos dados
-            if campo in colunas_db and valor != "":
-                # Para campos numéricos, aplica a conversão de formatação
-                if campo in ["metros", "kilos", "quantidade"]:
-                    dados[campo] = _to_decimal(valor)
-                else:
-                    dados[campo] = valor.strip()
+            # ✅ CORREÇÃO DA DATA (aqui)
+            if campo == "data_entrada":
+                try:
+                    dados[campo] = _to_date(valor)
+                except Exception as e:
+                    messagebox.showerror("❌ Data inválida", str(e))
+                    return
+                continue
 
-                print(f"[DEBUG] Campo '{campo}' = '{valor}' -> '{dados[campo]}'")
+            if campo in ["metros", "kilos", "quantidade"]:
+                dados[campo] = _to_decimal(valor)
+                continue
 
-        # VALIDAÇÃO CRÍTICA: Bloquear salvamento se unidade contiver números nas abas específicas
-        if not _validar_unidade_salvamento(unidade_valor, tipo_raw):
+            if valor != "":
+                dados[campo] = valor.strip()
+
+        # Se existir data_entrada no banco e não veio por algum motivo, usa hoje
+        if "data_entrada" in colunas_db and "data_entrada" not in dados:
+            dados["data_entrada"] = date.today()
+
+        # Validação unidade
+        if "unidade" in colunas_db and not _validar_unidade_salvamento(unidade_valor, tipo_raw):
             messagebox.showerror(
-                "❌ Erro de Validação",
-                f"**Não é possível salvar com números no campo 'Unidade'**\n\n"
-                f"📋 **Detalhes:**\n"
-                f"   • 🏷️  Tipo: {tipo_raw}\n"
-                f"   • 📦 Unidade informada: '{unidade_valor}'\n\n"
-                f"💡 **Solução:**\n"
-                f"Use apenas letras, ex: 'unidades', 'caixas', 'pacotes'"
+                "❌ Unidade inválida",
+                "Não é permitido usar números no campo 'Unidade' para este tipo.\n"
+                "Use apenas letras (ex: unidades, caixas, pacotes)."
             )
             return
 
-        # Adiciona timestamps automáticos se existirem
+        # timestamps (se existirem)
         agora = datetime.now()
         if "created_at" in colunas_db and "created_at" not in dados:
             dados["created_at"] = agora
-        if "updated_at" in colunas_db and "updated_at" not in dados:
+        if "updated_at" in colunas_db:
             dados["updated_at"] = agora
-
-        print(f"[DEBUG] Dados coletados: {dados}")
-        print(f"[DEBUG] Cor informada: '{cor_valor}'")
 
         if not dados:
             messagebox.showwarning("⚠️ Aviso", "Nenhum dado válido foi informado.")
             return
 
-        # Verifica se código já existe E tem a mesma cor
-        codigo = dados.get("codigo")
-        registros_existentes = None
-
-        if codigo and "codigo" in colunas_db and "cor" in colunas_db:
-            try:
-                # Busca TODOS os registros com o mesmo código
-                registros_existentes = db.fetch_all(f"SELECT * FROM {tabela_qual} WHERE codigo = %s", [codigo])
-                print(f"[DEBUG] Encontrados {len(registros_existentes)} registros com código {codigo}")
-
-                # Procura por registro com a MESMA cor
-                registro_mesma_cor = None
-                for registro in registros_existentes:
-                    cor_existente = registro.get("cor", "").strip().lower()
-                    cor_nova = cor_valor.strip().lower()
-                    print(f"[DEBUG] Comparando cores: '{cor_existente}' (existente) vs '{cor_nova}' (nova)")
-                    if cor_existente == cor_nova:
-                        registro_mesma_cor = registro
-                        break
-
-            except Exception as e:
-                print(f"[DEBUG] Erro ao buscar registros existentes: {e}")
-                registros_existentes = None
-                registro_mesma_cor = None
-
+        # INSERT
         try:
-            if registro_mesma_cor:
-                # MESMO CÓDIGO E MESMA COR: SOMA OS VALORES NUMÉRICOS
-                campos_numericos = ["metros", "kilos", "quantidade"]
-                campos_que_atualizam = ["unidade", "tipo", "localizacao"]  # Campos que sempre usam o novo valor
+            campos = list(dados.keys())
+            placeholders = ", ".join(["%s"] * len(campos))
+            valores = [dados[c] for c in campos]
 
-                novos_valores = {}
+            sql = f"INSERT INTO {tabela_qual} ({', '.join(campos)}) VALUES ({placeholders})"
+            db.execute(sql, valores)
 
-                for campo in colunas_db:
-                    if campo in dados:
-                        if campo in campos_numericos:
-                            # Soma o valor existente com o novo valor
-                            val_antigo = _to_decimal(registro_mesma_cor.get(campo, 0))
-                            val_novo = _to_decimal(dados[campo])
-                            soma = val_antigo + val_novo
-                            novos_valores[campo] = soma
-                            print(f"[DEBUG SOMA] Campo {campo}: {val_antigo} + {val_novo} = {soma}")
+            # ===========================
+            # ✅ AJUSTE PEDIDO: MENSAGEM
+            # ===========================
+            codigo_msg = (dados.get("codigo") or "").strip()
+            desc_msg = (dados.get("descricao") or dados.get("nome") or "").strip()
+            cor_msg = (dados.get("cor") or cor_valor or "").strip()
 
-                        elif campo in campos_que_atualizam:
-                            # Para campos que SEMPRE atualizam com o novo valor
-                            novos_valores[campo] = dados[campo]
-                            print(f"[DEBUG ATUALIZA] Campo {campo}: '{dados[campo]}' (sempre atualiza)")
+            qtd_msg = ""
+            if "quantidade" in dados:
+                qtd_msg = _fmt_num_br(dados.get("quantidade"))
+            elif "metros" in dados or "kilos" in dados:
+                # fallback p/ Tecidos
+                metros = _fmt_num_br(dados.get("metros")) if "metros" in dados else ""
+                kilos = _fmt_num_br(dados.get("kilos")) if "kilos" in dados else ""
+                partes = []
+                if metros not in ("", "0"):
+                    partes.append(f"{metros} m")
+                if kilos not in ("", "0"):
+                    partes.append(f"{kilos} kg")
+                qtd_msg = " / ".join(partes) if partes else "0"
 
-                        else:
-                            # Para outros campos textuais, mantém o valor existente se disponível
-                            if campo in registro_mesma_cor and registro_mesma_cor[campo]:
-                                novos_valores[campo] = registro_mesma_cor[campo]
-                                print(
-                                    f"[DEBUG MANTIDO] Campo {campo}: '{registro_mesma_cor[campo]}' (valor existente mantido)")
-                            else:
-                                novos_valores[campo] = dados[campo]
-                                print(f"[DEBUG NOVO] Campo {campo}: '{dados[campo]}' (novo valor usado)")
+            unidade_msg = (dados.get("unidade") or unidade_valor or "").strip()
+            if unidade_msg and "quantidade" in dados and qtd_msg:
+                qtd_msg = f"{qtd_msg} {unidade_msg}"
 
-                # Atualiza o timestamp
-                novos_valores["updated_at"] = agora
+            mensagem = (
+                "✅ Cadastro realizado com sucesso!\n\n"
+                f"📌 Código: {codigo_msg or '-'}\n"
+                f"📝 Descrição: {desc_msg or '-'}\n"
+                f"🎨 Cor: {cor_msg or '-'}\n"
+                f"📦 Quantidade: {qtd_msg or '-'}"
+            )
 
-                set_expr = ", ".join([f"{c} = %s" for c in novos_valores.keys()])
-                valores = list(novos_valores.values())
-                valores.append(codigo)
-                valores.append(cor_valor)  # Adiciona a cor para o WHERE
+            messagebox.showinfo("✅ Salvo", mensagem)
 
-                sql = f"UPDATE {tabela_qual} SET {set_expr} WHERE codigo = %s AND LOWER(cor) = LOWER(%s)"
-                print(f"[DEBUG SQL UPDATE] {sql}")
-                print(f"[DEBUG VALORES UPDATE] {valores}")
-
-                db.execute(sql, valores)
-
-                # MENSAGEM BONITA - ATUALIZAÇÃO
-                messagebox.showinfo(
-                    "✅ Estoque Atualizado",
-                    f"📦 **Código:** {codigo}\n"
-                    f"🎨 **Cor:** {cor_valor}\n"
-                    f"🔄 **Status:** Quantidades somadas ao registro existente!\n\n"
-                    f"📊 **Alterações realizadas:**\n"
-                    f"   • 📏 Valores numéricos → SOMADOS\n"
-                    f"   • 🏷️  Unidade/Tipo/Localização → ATUALIZADOS\n"
-                    f"   • 📝 Outros campos → MANTIDOS\n\n"
-                    f"⏰ **Data/hora:** {agora.strftime('%d/%m/%Y %H:%M')}"
-                )
-
-            else:
-                # NOVO REGISTRO (código não existe OU cor diferente)
-                campos = list(dados.keys())
-                placeholders = ", ".join(["%s"] * len(campos))
-                valores = [dados[c] for c in campos]
-
-                sql = f"INSERT INTO {tabela_qual} ({', '.join(campos)}) VALUES ({placeholders})"
-                print(f"[DEBUG SQL INSERT] {sql}")
-                print(f"[DEBUG VALORES INSERT] {valores}")
-
-                db.execute(sql, valores)
-
-                if registros_existentes and len(registros_existentes) > 0:
-                    # MENSAGEM BONITA - NOVA COR
-                    messagebox.showinfo(
-                        "🎨 Nova Cor Cadastrada",
-                        f"📦 **Código:** {codigo}\n"
-                        f"🎨 **Cor:** {cor_valor}\n"
-                        f"🆕 **Status:** Nova cor cadastrada com sucesso!\n\n"
-                        f"📋 **Detalhes:**\n"
-                        f"   • 📍 Categoria: {tipo_raw}\n"
-                        f"   • 🏷️  Descrição: {dados.get('descricao', 'N/A')}\n"
-                        f"   • 📊 Quantidade: {dados.get('quantidade', 0)}\n\n"
-                        f"💡 **Observação:** Este código já existe com outras cores.\n"
-                        f"⏰ **Data/hora:** {agora.strftime('%d/%m/%Y %H:%M')}"
-                    )
-                else:
-                    # MENSAGEM BONITA - NOVO CADASTRO COMPLETO
-                    messagebox.showinfo(
-                        "🎉 Novo Item Cadastrado",
-                        f"📦 **Código:** {codigo}\n"
-                        f"🎨 **Cor:** {cor_valor}\n"
-                        f"🆕 **Status:** Cadastrado com sucesso!\n\n"
-                        f"📋 **Detalhes:**\n"
-                        f"   • 📍 Categoria: {tipo_raw}\n"
-                        f"   • 🏷️  Descrição: {dados.get('descricao', 'N/A')}\n"
-                        f"   • 📊 Quantidade: {dados.get('quantidade', 0)}\n\n"
-                        f"⏰ **Data/hora:** {agora.strftime('%d/%m/%Y %H:%M')}"
-                    )
-
-            # Atualiza interface
-            self.carregar_dados_existente()
-            self.limpar_campos()
+            # Recarrega e limpa
+            try:
+                self.carregar_dados_existente()
+            except Exception:
+                pass
+            try:
+                self.limpar_campos()
+            except Exception:
+                pass
 
         except Exception as e:
-            print(f"[ERRO SQL] {e}")
-            messagebox.showerror("❌ Erro ao Salvar", f"Ocorreu um erro ao gravar no banco:\n{e}")
+            messagebox.showerror("Erro ao gravar no banco", f"Ocorreu um erro ao gravar no banco:\n{e}")
 
     def formatar_valor(self, valor, campo):
         if valor is None:
@@ -1122,7 +1076,6 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         except Exception:
             return str(valor)
 
-
 if __name__ == "__main__":
     app = ctk.CTk()
     app.geometry("1200x800")
@@ -1135,3 +1088,5 @@ if __name__ == "__main__":
         print(f'[ERRO FATAL] Não foi possível conectar ao banco de dados: {e}')
         ctk.CTkLabel(app, text=f"ERRO DE CONEXÃO:\n{e}", text_color="red", font=("Arial", 16)).pack(pady=50, padx=20)
     app.mainloop()
+
+#atual 14/12/2025
