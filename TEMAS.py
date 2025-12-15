@@ -3397,4 +3397,4 @@ else:
     # Quando importado como módulo
     print("📦 Módulo de Temas carregado para o sistema Opera")
 
-#atual 14/12/2025
+#15/12/2025
