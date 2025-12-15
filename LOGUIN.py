@@ -12,7 +12,12 @@ try:
 except Exception:
     Image = ImageTk = None
 
-from ui_after_guard import cancel_all_afters, initialize_after_guard
+from ui_after_guard import (
+    cancel_all_after_info,
+    cancel_all_afters,
+    initialize_after_guard,
+    reset_tk_default_root,
+)
 
 
 # ============================================================
@@ -291,8 +296,12 @@ class SistemaLoginModerno:
             # Fecha janela de login
             if hasattr(self, "root") and self.root:
                 try:
+                    self._fechando = True
+                    cancel_all_afters(self, root_attr="root")
+                    cancel_all_after_info(self, root_attr="root")
                     self.root.quit()
                     self.root.destroy()
+                    reset_tk_default_root()
                 except Exception:
                     pass
 
@@ -673,8 +682,8 @@ class SistemaLoginModerno:
             except Exception:
                 pass
 
-        self.root.bind("<Map>", lambda evento: self.root.after(50, _forcar_foco))
-        self.root.after(250, _forcar_foco)
+        self.root.bind("<Map>", lambda evento: self._agendar_after(50, _forcar_foco))
+        self._agendar_after(250, _forcar_foco)
 
         self.entrada_usuario.bind("<Return>", lambda evento: self.entrar_no_sistema())
         self.entrada_senha.bind("<Return>", lambda evento: self.entrar_no_sistema())
@@ -794,6 +803,7 @@ class SistemaLoginModerno:
         self._fechando = True
         try:
             cancel_all_afters(self, root_attr="root")
+            cancel_all_after_info(self, root_attr="root")
         except Exception:
             pass
         try:
@@ -816,6 +826,7 @@ class SistemaLoginModerno:
         """Compatibilidade: método chamado por menus externos."""
         try:
             cancel_all_afters(self, root_attr="root")
+            cancel_all_after_info(self, root_attr="root")
         except Exception:
             pass
         try:
@@ -843,3 +854,5 @@ if __name__ == "__main__":
     aplicacao = SistemaLoginModerno(root)
     root.protocol("WM_DELETE_WINDOW", aplicacao.ao_fechar)
     root.mainloop()
+
+#15/12/2025
