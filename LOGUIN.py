@@ -12,6 +12,8 @@ try:
 except Exception:
     Image = ImageTk = None
 
+from ui_after_guard import cancel_all_afters, initialize_after_guard
+
 
 # ============================================================
 # Configuração: carrega config.json e exporta OPERA_PG_DSN/OPERA_PG_SCHEMA
@@ -59,42 +61,6 @@ except ImportError:
 
 
 # ============================================================
-# Utilitários de after() e fechamento seguro
-# ============================================================
-def _inicializar_guard_after(self):
-    if not hasattr(self, "_after_ids"):
-        self._after_ids = set()
-    if not hasattr(self, "_fechando"):
-        self._fechando = False
-
-    def _agendar_after(milissegundos, callback):
-        try:
-            root = getattr(self, "root", None)
-            if root is None or not root.winfo_exists() or getattr(self, "_fechando", False):
-                return None
-            after_id = root.after(milissegundos, callback)
-            self._after_ids.add(after_id)
-            return after_id
-        except Exception:
-            return None
-
-    self._agendar_after = _agendar_after
-
-
-def _cancelar_todos_afters_seguro(self):
-    """Cancela todos os after() registrados"""
-    for after_id in list(getattr(self, "_after_ids", set())):
-        try:
-            root = getattr(self, "root", None)
-            if root and root.winfo_exists():
-                root.after_cancel(after_id)
-        except Exception:
-            pass
-    if hasattr(self, "_after_ids"):
-        self._after_ids.clear()
-
-
-# ============================================================
 # Aplicação
 # ============================================================
 class SistemaLoginModerno:
@@ -107,7 +73,7 @@ class SistemaLoginModerno:
         except Exception:
             self.root.geometry("1024x700")
 
-        _inicializar_guard_after(self)
+        initialize_after_guard(self, root_attr="root")
 
         self.cores = {
             "primary": "#2c3e50",
@@ -827,7 +793,7 @@ class SistemaLoginModerno:
             return
         self._fechando = True
         try:
-            _cancelar_todos_afters_seguro(self)
+            cancel_all_afters(self, root_attr="root")
         except Exception:
             pass
         try:
@@ -849,7 +815,7 @@ class SistemaLoginModerno:
     def fechar_aplicacao(self):
         """Compatibilidade: método chamado por menus externos."""
         try:
-            _cancelar_todos_afters_seguro(self)
+            cancel_all_afters(self, root_attr="root")
         except Exception:
             pass
         try:

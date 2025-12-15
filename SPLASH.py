@@ -4,6 +4,8 @@ from PIL import Image, ImageEnhance
 import tkinter as tk
 import platform
 
+from ui_after_guard import cancel_all_afters, initialize_after_guard
+
 # ===================== ESQUEMAS DE CORES =====================
 
 COLOR_SCHEMES = {
@@ -46,6 +48,9 @@ class SplashScreenHD(ctk.CTkToplevel):
         self.angle = 0
         self._auto_mode = False
         self._auto_job = None
+
+        # Controle seguro de after() para evitar erros em Windows
+        initialize_after_guard(self)
 
         # Aplicar tema
         self._aplicar_tema(tema_preferido)
@@ -366,7 +371,7 @@ class SplashScreenHD(ctk.CTkToplevel):
             return
         self.angle = (self.angle + 10) % 360
         self._draw_spinner()
-        self.after(50, self._animate_spinner)
+        self._agendar_after(50, self._animate_spinner)
 
     def update_progress(self, fraction: float, message: str = None):
         """Atualizar progresso"""
@@ -415,11 +420,13 @@ class SplashScreenHD(ctk.CTkToplevel):
         if message:
             self.set_status_message(message)
         self.update_progress(1.0)
-        self.after(delay_ms, self._finish)
+        self._agendar_after(delay_ms, self._finish)
 
     def _finish(self):
         """Finalizar splash"""
         self._auto_mode = False
+        self._fechando = True
+        cancel_all_afters(self)
         try:
             if self.on_complete is not None:
                 self.on_complete()
