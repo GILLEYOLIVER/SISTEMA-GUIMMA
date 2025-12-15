@@ -916,6 +916,41 @@ class DashboardPage(ctk.CTkFrame):
             )
             fallback_label.pack(expand=True)
 
+    def atualizar_grafico_dashboard(self):
+        """Atualiza o gráfico principal com diagnósticos detalhados."""
+        print("[Dashboard][DEBUG] atualizar_grafico_dashboard chamado")
+
+        if not getattr(self, "grafico_container", None):
+            print("[Dashboard][WARN] grafico_container não inicializado; recriando gráfico básico")
+            try:
+                self.criar_grafico_dashboard()
+            except Exception as e:
+                print(f"[Dashboard][ERRO] Falha ao recriar grafico_container: {e}")
+            return
+
+        try:
+            selecao = []
+            if hasattr(self, "tree_and"):
+                try:
+                    selecao = list(self.tree_and.selection())
+                except Exception as e:
+                    print(f"[Dashboard][DEBUG] Não foi possível ler seleção da tree: {e}")
+
+            print(f"[Dashboard][DEBUG] Linhas selecionadas na tree: {len(selecao)}")
+
+            # Como não há implementação detalhada do gráfico, refazemos o gráfico padrão
+            self.criar_grafico_dashboard()
+
+            if hasattr(self, "lbl_info_grafico"):
+                texto = "Selecione um item na tabela" if not selecao else "Gráfico atualizado"
+                try:
+                    self.lbl_info_grafico.configure(text=texto)
+                except Exception:
+                    pass
+
+        except Exception as e:
+            print(f"[Dashboard][ERRO] Falha ao atualizar gráfico principal: {e}")
+
     def atualizar_grafico_tempo_modelo(self):
         """Mostra progresso temporal real da ordem selecionada."""
         if not getattr(self, "ax_grafico", None):
@@ -1536,3 +1571,5 @@ if __name__ == "__main__":
         import traceback
 
         traceback.print_exc()
+
+#atual 14/12/2025
