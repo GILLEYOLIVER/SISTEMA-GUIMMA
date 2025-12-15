@@ -26,6 +26,13 @@ from TEMAS import (
     padronizar_treeview,
     remover_bordas_botoes_tema,
 )
+from ui_after_guard import (
+    cancel_all_after_info,
+    cancel_all_afters,
+    initialize_after_guard,
+    reset_tk_default_root,
+    safe_after_cancel,
+)
 
 
 
@@ -676,7 +683,7 @@ class ThemeManager:
 
             # Recarrega página atual se existir
             if hasattr(app, 'current_page') and app.current_page:
-                app.after(500, lambda: app.open_page(app.current_page))
+                app._agendar_after(500, lambda: app.open_page(app.current_page))
 
         except Exception as e:
             print(f"[Tema] Erro ao reconstruir interface: {e}")
@@ -1016,8 +1023,12 @@ class OperaMenuApp(ctk.CTk):
     }
 
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
+        reset_tk_default_root()
         super().__init__()
         print("🚀 Iniciando sistema OPERA...")
+
+        # Guardar e cancelar callbacks after de forma segura (compatível macOS/Windows)
+        initialize_after_guard(self)
 
         # === INICIALIZAR CORES PADRÃO ===
         self.cor_fundo = "#1e1e1e"
@@ -1101,7 +1112,7 @@ class OperaMenuApp(ctk.CTk):
 
         self._open_initial_page()
         self._ativar_backup_silencioso()
-        self.after(100, self._update_user_display)
+        self._agendar_after(100, self._update_user_display)
 
         print(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         print(f"🎨 Tema aplicado: {self.current_theme_name}")
@@ -1146,6 +1157,26 @@ class OperaMenuApp(ctk.CTk):
         """Pergunta se o usuário deseja sair."""
         if messagebox.askyesno("Sair", "Deseja realmente sair do sistema?"):
             self.destroy()
+
+    def destroy(self):
+        """Finaliza a aplicação cancelando timers pendentes."""
+        try:
+            self._closing = True
+            self._fechando = True
+        except Exception:
+            pass
+
+        cancel_all_afters(self)
+        cancel_all_after_info(self)
+        try:
+            return super().destroy()
+        except Exception:
+            # Em alguns ambientes o Tk pode tentar deletar comandos já removidos
+            # durante o fechamento. Ignorar esses erros garante encerramento
+            # silencioso no Windows e macOS.
+            return None
+        finally:
+            reset_tk_default_root()
 
     # ===== CONFIGURAÇÃO DE TECLADO =====
     def _setup_bindings(self):
@@ -1659,7 +1690,7 @@ class OperaMenuApp(ctk.CTk):
 
         # Inicia o relógio apenas se o label existir
         if hasattr(self, 'user_info_label'):
-            self.after(1000, self._tick_clock)
+            self._agendar_after(1000, self._tick_clock)
 
     def _update_user_info_once(self):
         """Atualiza as informações do usuário uma vez (sem loop)."""
@@ -1698,7 +1729,7 @@ class OperaMenuApp(ctk.CTk):
             return
 
         # Agenda próxima atualização
-        self.after(1000, self._tick_clock)
+        self._agendar_after(1000, self._tick_clock)
 
     # ===== GERENCIAMENTO DO MENU =====
     def _build_menu_content(self):
@@ -1991,7 +2022,7 @@ class OperaMenuApp(ctk.CTk):
         """Agenda fechamento do submenu."""
         job = self._submenu_close_jobs.get(categoria)
         if job:
-            self.after_cancel(job)
+            safe_after_cancel(self, job)
 
         def close():
             if self._active_submenu == categoria:
@@ -2023,13 +2054,13 @@ class OperaMenuApp(ctk.CTk):
                         frame.place_forget()
                         self._active_submenu = None
 
-        self._submenu_close_jobs[categoria] = self.after(300, close)
+        self._submenu_close_jobs[categoria] = self._agendar_after(300, close)
 
     def _cancel_submenu_close(self, categoria: str):
         """Cancela o fechamento agendado do submenu."""
         job = self._submenu_close_jobs.get(categoria)
         if job:
-            self.after_cancel(job)
+            safe_after_cancel(self, job)
             self._submenu_close_jobs[categoria] = None
 
     def _load_user_permissions(self):
@@ -2125,7 +2156,7 @@ class OperaMenuApp(ctk.CTk):
     # ===== GERENCIAMENTO DE PÁGINAS =====
     def _open_initial_page(self):
         """Abre página inicial após carregamento."""
-        self.after(100, self._open_dashboard_automatico)
+        self._agendar_after(100, self._open_dashboard_automatico)
 
 
     # ==============================================================
@@ -2202,7 +2233,7 @@ class OperaMenuApp(ctk.CTk):
                         self.open_page(pagina)
                         break
         else:
-            self.after(500, self._open_dashboard_automatico)
+            self._agendar_after(500, self._open_dashboard_automatico)
 
     def open_page(self, page_name: str, categoria: str | None = None):
         """Abre uma página no conteúdo principal com verificação de permissão."""
@@ -2316,10 +2347,10 @@ class OperaMenuApp(ctk.CTk):
                         corrigir_labels_pagina_temas(frame)
 
                         # 2. Após 200ms (durante a renderização)
-                        self.after(200, lambda f=frame: corrigir_labels_pagina_temas(f))
+                        self._agendar_after(200, lambda f=frame: corrigir_labels_pagina_temas(f))
 
                         # 3. Após 500ms (após renderização completa)
-                        self.after(500, lambda f=frame: corrigir_labels_pagina_temas(f))
+                        self._agendar_after(500, lambda f=frame: corrigir_labels_pagina_temas(f))
 
                         print("🔧 Correções visuais aplicadas na página de Temas")
 
@@ -2446,7 +2477,7 @@ class OperaMenuApp(ctk.CTk):
             self.title_label.configure(text="Acesso Restrito")
 
             # Agenda o retorno ao Dashboard
-            self.after(duration, self._return_to_dashboard)
+            self._agendar_after(duration, self._return_to_dashboard)
 
         except Exception as e:
             print(f"Erro ao exibir mensagem temporária: {e}")
@@ -3348,4 +3379,4 @@ if __name__ == "__main__":
     main()
     # fechado aqui
 
-#atual 14/12/2025
+#15/12/2025
