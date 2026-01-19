@@ -440,49 +440,47 @@ class SplashScreenHD(ctk.CTkToplevel):
 
 def rodar_menu_com_splash(usuario_id, usuario_nome, hierarquia, tema_preferido="Noite Urbana"):
     """
-    Função principal para integrar login com menu via splash
+    Função principal para integrar login com menu via splash (SEM 2 mainloops).
+    Corrige:
+    - invalid command name ...update / check_dpi_scaling
+    - segunda instância aparecendo ao fechar
     """
     try:
         print(f"[SPLASH] Iniciando sistema para: {usuario_nome}")
         print(f"[SPLASH] Tema preferido: {tema_preferido}")
 
-        # Criar janela raiz
         root = ctk.CTk()
         root.title("SISTEMA ÓPERA")
         root.withdraw()
 
+        # ativa guard de after no root também
+        try:
+            initialize_after_guard(root)
+        except Exception:
+            pass
+
+        abrir_menu = {"ok": False}
+
         def quando_splash_terminar():
-            """Callback quando o splash terminar"""
-            print("[SPLASH] Abrindo menu principal...")
+            """Callback quando o splash terminar (só marca e encerra o loop do splash)."""
+            print("[SPLASH] Splash finalizado. Encerrando loop do splash...")
+            abrir_menu["ok"] = True
 
-            # Fechar splash e root
             try:
-                splash.destroy()
-            except:
+                cancel_all_afters(splash)
+            except Exception:
                 pass
             try:
-                root.destroy()
-            except:
+                cancel_all_afters(root)
+            except Exception:
                 pass
 
-            # Abrir menu principal
+            # encerra o mainloop atual (não abre outro aqui dentro!)
             try:
-                from MENU_PRINCIPAL import OperaMenuApp
+                root.quit()
+            except Exception:
+                pass
 
-                app = OperaMenuApp(
-                    usuario_id=usuario_id,
-                    usuario_nome=usuario_nome,
-                    usuario_hierarquia=hierarquia,
-                    tema_preferido=tema_preferido
-                )
-                app.mainloop()
-
-            except Exception as e:
-                print(f"[SPLASH] Erro ao abrir menu: {e}")
-                import traceback
-                traceback.print_exc()
-
-        # Criar splash
         splash = SplashScreenHD(
             parent=root,
             usuario_nome=usuario_nome,
@@ -490,29 +488,68 @@ def rodar_menu_com_splash(usuario_id, usuario_nome, hierarquia, tema_preferido="
             on_complete=quando_splash_terminar
         )
 
-        # Simular carregamento
         def simular_carregamento():
-            if splash.winfo_exists():
-                messages = [
-                    ("🔧 Inicializando módulos do sistema...", 0.2),
-                    ("📦 Carregando bibliotecas essenciais...", 0.4),
-                    ("🔌 Conectando ao banco de dados...", 0.6),
-                    ("🎨 Preparando interface gráfica...", 0.8),
-                    ("✨ Finalizando preparação...", 0.95)
-                ]
+            if not splash.winfo_exists():
+                return
 
-                def next_step(index=0):
-                    if index < len(messages):
-                        msg, progress = messages[index]
-                        splash.update_progress(progress, msg)
+            messages = [
+                ("🔧 Inicializando módulos do sistema...", 0.2),
+                ("📦 Carregando bibliotecas essenciais...", 0.4),
+                ("🔌 Conectando ao banco de dados...", 0.6),
+                ("🎨 Preparando interface gráfica...", 0.8),
+                ("✨ Finalizando preparação...", 0.95)
+            ]
+
+            def next_step(index=0):
+                if not splash.winfo_exists():
+                    return
+
+                if index < len(messages):
+                    msg, progress = messages[index]
+                    splash.update_progress(progress, msg)
+
+                    # usa after guard do root (se existir)
+                    try:
+                        root._agendar_after(800, lambda: next_step(index + 1))
+                    except Exception:
                         root.after(800, lambda: next_step(index + 1))
-                    else:
-                        splash.complete("✅ Sistema pronto! Abrindo...", 800)
+                else:
+                    splash.complete("✅ Sistema pronto! Abrindo...", 800)
 
-                next_step()
+            next_step()
 
-        root.after(500, simular_carregamento)
+        try:
+            root._agendar_after(500, simular_carregamento)
+        except Exception:
+            root.after(500, simular_carregamento)
+
+        # roda SOMENTE o loop do splash
         root.mainloop()
+
+        # terminou o loop do splash → destrói root com segurança
+        try:
+            if splash.winfo_exists():
+                splash.destroy()
+        except Exception:
+            pass
+
+        try:
+            root.destroy()
+        except Exception:
+            pass
+
+        # abre menu principal (AGORA FORA do mainloop do splash)
+        if abrir_menu["ok"]:
+            print("[SPLASH] Abrindo menu principal...")
+            from MENU_PRINCIPAL import OperaMenuApp
+
+            app = OperaMenuApp(
+                usuario_id=usuario_id,
+                usuario_nome=usuario_nome,
+                usuario_hierarquia=hierarquia,
+                tema_preferido=tema_preferido
+            )
+            app.mainloop()
 
     except Exception as e:
         print(f"[SPLASH] Erro crítico: {e}")
@@ -531,6 +568,7 @@ def rodar_menu_com_splash(usuario_id, usuario_nome, hierarquia, tema_preferido="
             app.mainloop()
         except Exception as fallback_error:
             print(f"[SPLASH] Erro no fallback: {fallback_error}")
+
 
 
 if __name__ == "__main__":

@@ -1103,9 +1103,6 @@ class OperaMenuApp(ctk.CTk):
 
         self._preload_complete = True
         self.deiconify()
-        self._build_topbar()
-        self._add_theme_switch_to_topbar()
-
 
         # Atualizar display do usuário
 
@@ -1156,7 +1153,7 @@ class OperaMenuApp(ctk.CTk):
     def ask_quit(self, event=None):
         """Pergunta se o usuário deseja sair."""
         if messagebox.askyesno("Sair", "Deseja realmente sair do sistema?"):
-            self.destroy()
+            self.destroy()  # ✅ sempre destroy
 
     def destroy(self):
         """Finaliza a aplicação cancelando timers pendentes."""
@@ -1166,32 +1163,49 @@ class OperaMenuApp(ctk.CTk):
         except Exception:
             pass
 
-        cancel_all_afters(self)
-        cancel_all_after_info(self)
         try:
-            return super().destroy()
+            cancel_all_afters(self)
+            cancel_all_after_info(self)
         except Exception:
-            # Em alguns ambientes o Tk pode tentar deletar comandos já removidos
-            # durante o fechamento. Ignorar esses erros garante encerramento
-            # silencioso no Windows e macOS.
-            return None
-        finally:
-            reset_tk_default_root()
+            pass
+
+        # ✅ fecha de verdade a janela
+        try:
+            super().destroy()
+        except Exception:
+            pass
+
+        # ✅ garante encerramento total
+        try:
+            import sys
+            sys.exit(0)
+        except Exception:
+            pass
 
     # ===== CONFIGURAÇÃO DE TECLADO =====
     def _setup_bindings(self):
-        """Configura atalhos de teclado."""
+        """Configura atalhos de teclado (fechamento correto)."""
+
+        # Recarregar página
         self.bind("<F5>", lambda e: self.reload_current_page())
 
-        # Atalhos para fullscreen
+        # Fullscreen
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
+
+        # ✅ FECHAR SEMPRE COM DESTROY (nunca quit)
         if IS_WIN:
-            self.bind("<Escape>",
-                      lambda e: self.quit() if messagebox.askyesno("Sair", "Deseja sair do sistema?") else None)
+            self.bind("<Escape>", lambda e: self.ask_quit())
+            self.bind("<Control-q>", lambda e: self.ask_quit())
         elif IS_MAC:
-            self.bind("<Command-q>",
-                      lambda e: self.quit() if messagebox.askyesno("Sair", "Deseja sair do sistema?") else None)
+            self.bind("<Escape>", lambda e: self.ask_quit())
+            self.bind("<Command-q>", lambda e: self.ask_quit())
             self.bind("<Command-f>", lambda e: self.toggle_fullscreen())
+
+        # ✅ Botão X do Windows/macOS fecha corretamente
+        try:
+            self.protocol("WM_DELETE_WINDOW", self.ask_quit)
+        except Exception:
+            pass
 
     # ===== GERENCIAMENTO DE TEMAS =====
     def _load_initial_theme(self):
@@ -1497,9 +1511,8 @@ class OperaMenuApp(ctk.CTk):
         self._build_user_widget()  # ⬅️ fonte do usuário maior
 
     def _build_utility_buttons(self):
-        """Constrói os botões da topbar com hover moderno, cantos arredondados e sem cartão fixo."""
+        """Constrói os botões da topbar com hover moderno e ícones confiáveis."""
 
-        # Frame com altura fixa para impedir expansão
         button_frame = ctk.CTkFrame(
             self.topbar,
             fg_color=self.cor_primaria,
@@ -1510,28 +1523,9 @@ class OperaMenuApp(ctk.CTk):
         button_frame.grid(row=0, column=1, sticky="e", padx=10, pady=10)
         button_frame.grid_propagate(False)
 
-        # ================================
-        # ÍCONE TROCA_USUARIO (22px)
-        # ================================
-        try:
-            icon_path = os.path.join(ICONS_DIR, "TROCAR_USUARIO.png")
-            img = Image.open(icon_path)
-
-            self.icon_switch_user = ctk.CTkImage(
-                light_image=img,
-                dark_image=img,
-                size=(22, 22)
-            )
-        except Exception as e:
-            print("Erro ao carregar TROCAR_USUARIO.png:", e)
-            self.icon_switch_user = None
-
-        # ==========
-        # HOVER CONFIG
-        # ==========
         base_bg = "transparent"
-        hover_bg = self.cor_terciaria  # <<< AGORA USANDO A COR TERCIÁRIA
-        hover_radius = 12  # <<< CANTOS ARREDONDADOS (igual ao padrão do sistema)
+        hover_bg = self.cor_terciaria
+        hover_radius = 12
 
         def on_enter(widget):
             widget.configure(fg_color=hover_bg, corner_radius=hover_radius)
@@ -1539,25 +1533,57 @@ class OperaMenuApp(ctk.CTk):
         def on_leave(widget):
             widget.configure(fg_color=base_bg, corner_radius=0)
 
-        # =================
-        # Botão Atualizar
-        # =================
-        lbl_refresh = ctk.CTkLabel(
-            button_frame,
-            text="⟳",
-            font=("Arial", 23, "bold"),
-            text_color=self.cor_texto,
-            fg_color=base_bg,
-            corner_radius=0
-        )
+        # =========================
+        # ÍCONE ATUALIZAR (PNG)
+        # =========================
+        self.icon_refresh = None
+        for nome in ["ATUALIZAR.png", "REFRESH.png", "RELOAD.png", "ATUALIZAR_PAGINA.png"]:
+            try:
+                p = os.path.join(ICONS_DIR, nome)
+                if os.path.exists(p):
+                    img = Image.open(p).convert("RGBA")
+                    self.icon_refresh = ctk.CTkImage(light_image=img, dark_image=img, size=(22, 22))
+                    break
+            except Exception:
+                pass
+
+        if self.icon_refresh:
+            lbl_refresh = ctk.CTkLabel(
+                button_frame,
+                text="",
+                image=self.icon_refresh,
+                fg_color=base_bg,
+                corner_radius=0
+            )
+        else:
+            # fallback seguro (bem mais compatível que ⟳)
+            lbl_refresh = ctk.CTkLabel(
+                button_frame,
+                text="↻",
+                font=("Segoe UI", 22, "bold"),
+                text_color=self.cor_texto,
+                fg_color=base_bg,
+                corner_radius=0
+            )
+
         lbl_refresh.pack(side="left", padx=16, pady=0)
         lbl_refresh.bind("<Button-1>", lambda e: self.reload_current_page())
         lbl_refresh.bind("<Enter>", lambda e, w=lbl_refresh: on_enter(w))
         lbl_refresh.bind("<Leave>", lambda e, w=lbl_refresh: on_leave(w))
 
-        # ======================
-        # Botão Trocar Usuário
-        # ======================
+        # ================================
+        # ÍCONE TROCAR USUÁRIO (PNG)
+        # ================================
+        self.icon_switch_user = None
+        try:
+            icon_path = os.path.join(ICONS_DIR, "TROCAR_USUARIO.png")
+            if os.path.exists(icon_path):
+                img = Image.open(icon_path).convert("RGBA")
+                self.icon_switch_user = ctk.CTkImage(light_image=img, dark_image=img, size=(22, 22))
+        except Exception as e:
+            print("Erro ao carregar TROCAR_USUARIO.png:", e)
+            self.icon_switch_user = None
+
         lbl_user = ctk.CTkLabel(
             button_frame,
             text="",

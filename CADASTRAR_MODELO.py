@@ -3018,6 +3018,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         cor_texto = getattr(self.sistema, 'cor_texto', '#000000')
         cor_sucesso = getattr(self.sistema, 'cor_sucesso', '#28A745')
         cor_destaque = getattr(self.sistema, 'cor_destaque', '#6C757D')
+        cor_borda = getattr(self.sistema, 'cor_borda', '#CED4DA')
 
         hover_primaria = ajustar_hover(cor_primaria)
         hover_sucesso = ajustar_hover(cor_sucesso)
@@ -3033,6 +3034,22 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         main_frame = ctk.CTkFrame(dialog, fg_color=cor_fundo)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # ====== ESTILO CORRETO DO TOTAL (CONTRASTE GARANTIDO) ======
+        # Se o fundo do sistema for escuro, usamos um fundo bem claro no total
+        bg_total = "#FFFFFF" if is_dark_color(cor_fundo) else "#F0F0F0"
+        txt_total = get_contraste_texto(bg_total)
+
+        def _aplicar_estilo_total(entry_total):
+            """Garante contraste do campo total em qualquer tema."""
+            try:
+                entry_total.configure(
+                    fg_color=bg_total,
+                    text_color=txt_total,
+                    border_color=cor_borda,
+                )
+            except Exception:
+                pass
 
         campos = [
             ("Código", ""),
@@ -3058,11 +3075,11 @@ class CadastroModelosApp(ctk.CTkFrame):
             entry = ctk.CTkEntry(main_frame, font=("Arial", 12), width=250)
 
             inicial = prefill.get(rotulo, default)
-
             entry.insert(0, inicial)
 
             if rotulo == "valor_total":
-                entry.configure(state="readonly", fg_color="#f0f0f0")
+                entry.configure(state="readonly")
+                _aplicar_estilo_total(entry)  # <<< CONTRASTE APLICADO AQUI
             elif rotulo in ["Quantidade", "Valor Unidade"]:
                 entry.configure(
                     validate="key",
@@ -3085,10 +3102,12 @@ class CadastroModelosApp(ctk.CTkFrame):
                     valor_unidade = formatar_valor(valor_unidade_texto)
                     total = quantidade * valor_unidade
 
+                # Atualiza o campo total e GARANTE CONTRASTE depois
                 entries["valor_total"].configure(state="normal")
                 entries["valor_total"].delete(0, tk.END)
                 entries["valor_total"].insert(0, formatar_para_exibicao(total))
                 entries["valor_total"].configure(state="readonly")
+                _aplicar_estilo_total(entries["valor_total"])  # <<< mantém contraste após trocar state
                 return True
 
             except Exception as e:
@@ -3232,6 +3251,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         cor_texto = getattr(self.sistema, 'cor_texto', '#000000')
         cor_sucesso = getattr(self.sistema, 'cor_sucesso', '#28A745')
         cor_destaque = getattr(self.sistema, 'cor_destaque', '#6C757D')
+        cor_borda = getattr(self.sistema, 'cor_borda', '#CED4DA')
 
         hover_primaria = ajustar_hover(cor_primaria)
         hover_sucesso = ajustar_hover(cor_sucesso)
@@ -3247,6 +3267,21 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         main_frame = ctk.CTkFrame(dlg, fg_color=cor_fundo)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # ====== ESTILO CORRETO DO TOTAL (CONTRASTE GARANTIDO) ======
+        bg_total = "#FFFFFF" if is_dark_color(cor_fundo) else "#F0F0F0"
+        txt_total = get_contraste_texto(bg_total)
+
+        def _aplicar_estilo_total(entry_total):
+            """Garante contraste do campo total em qualquer tema."""
+            try:
+                entry_total.configure(
+                    fg_color=bg_total,
+                    text_color=txt_total,
+                    border_color=cor_borda,
+                )
+            except Exception:
+                pass
 
         campos = [
             ("Código", ""),
@@ -3299,8 +3334,10 @@ class CadastroModelosApp(ctk.CTkFrame):
                     validate="key",
                     validatecommand=(dlg.register(validar_entrada_monetaria), "%P"),
                 )
+
             if rot == "valor_total":
-                e.configure(state="readonly", fg_color="#f0f0f0")
+                e.configure(state="readonly")
+                _aplicar_estilo_total(e)  # <<< CONTRASTE APLICADO AQUI
 
             e.grid(row=i, column=1, padx=10, pady=5, sticky="w")
             entries[rot] = e
@@ -3311,10 +3348,13 @@ class CadastroModelosApp(ctk.CTkFrame):
                 qtd = formatar_valor(entries["Quantidade"].get())
                 preco = formatar_valor(entries["Preço"].get())
                 total = qtd * preco
+
                 entries["valor_total"].configure(state="normal")
                 entries["valor_total"].delete(0, "end")
                 entries["valor_total"].insert(0, formatar_para_exibicao(total))
                 entries["valor_total"].configure(state="readonly")
+
+                _aplicar_estilo_total(entries["valor_total"])  # <<< mantém contraste após trocar state
                 return True
             except Exception as e:
                 print(f"Erro ao calcular total (outros): {e}")
