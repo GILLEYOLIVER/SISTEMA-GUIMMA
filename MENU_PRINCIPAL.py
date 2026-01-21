@@ -909,9 +909,9 @@ class OperaMenuApp(ctk.CTk):
         "MODELOS": ["Cadastrar Modelo", "Imprimir Ficha Técnica"],
         "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
+        "MÃO DE OBRA": ["Controle de Mão de Obra"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
         "FACÇÕES": ["Cadastro de Facções", "Pesquisar Serviço"],
-        "MÃO DE OBRA": ["Controle de Mão de Obra"],
         "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento"],
         "FINANCEIRO": [
             "Pagamento de Serviços", "Custo Produto", "Folha Pagamento",
