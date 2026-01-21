@@ -907,9 +907,9 @@ class OperaMenuApp(ctk.CTk):
     MENU_ESTRUTURA = {
         "Dashboard": ["Dashboard"],
         "MODELOS": ["Cadastrar Modelo", "Imprimir Ficha Técnica"],
-        "FACÇÕES": ["Cadastro de Facções", "Pesquisar Serviço"],
-        "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
         "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
+        "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
+        "FACÇÕES": ["Cadastro de Facções", "Pesquisar Serviço"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
         "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento"],
@@ -932,7 +932,7 @@ class OperaMenuApp(ctk.CTk):
             "Imprimir Ficha Técnica": "IMPRESSORA.png",
         },
         "ORDENS DE CORTE": {
-            "Nova Ordem": "ORDEM_CORTE.png",
+            "Nova Ordem": "NOVA_ORDEM.png",
             "Ordens de Corte Impressão": "IMPRESSORA.png",
         },
         "REGISTRO DE CORTE": {

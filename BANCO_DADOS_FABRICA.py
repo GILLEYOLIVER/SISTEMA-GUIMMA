@@ -687,7 +687,8 @@ class GerenciadorBancoDados:
             frame.pack(fill="x", pady=5)
             info = next((c for c in colunas_info if c["column_name"] == coluna), None)
             tipo = info["data_type"] if info else "TEXT"
-            obrig = " (OBRIGATÓRIO)" if info and info["is_nullable"] == "NO" else ""
+            nullable_raw = info.get("is_nullable", info.get("nullable", "YES")) if info else "YES"
+            obrig = " (OBRIGATÓRIO)" if str(nullable_raw).strip().upper() in ("NO", "FALSE", "F", "0", "N", "NAO", "NÃO") else ""
             ctk.CTkLabel(frame, text=f"{coluna}{obrig} ({tipo}):").pack(side="left", padx=5)
             e = ctk.CTkEntry(frame);
             e.pack(side="right", fill="x", expand=True, padx=5);
@@ -698,7 +699,8 @@ class GerenciadorBancoDados:
             for coluna, e in entries.items():
                 valor = e.get().strip()
                 info = next((c for c in colunas_info if c["column_name"] == coluna), None)
-                if info and info["is_nullable"] == "NO" and not valor:
+                nullable_raw = info.get("is_nullable", info.get("nullable", "YES")) if info else "YES"
+                if str(nullable_raw).strip().upper() in ("NO", "FALSE", "F", "0", "N", "NAO", "NÃO") and not valor:
                     messagebox.showerror("Erro", f"O campo {coluna} é obrigatório!");
                     return
                 valores[coluna] = valor
@@ -1350,12 +1352,28 @@ class GerenciadorBancoDados:
         schema = db.get_schema()
         colunas = db.list_columns(self.current_table, schema)
         for i, col in enumerate(colunas):
+            col_name = col.get("column_name") or col.get("name") or col.get("coluna") or ""
+            col_type = col.get("data_type") or col.get("type") or col.get("udt_name") or ""
+            col_default = col.get("column_default") or col.get("default") or ""
+
+            raw_nullable = col.get("is_nullable", col.get("nullable", "YES"))
+            if isinstance(raw_nullable, bool):
+                nullable_disp = "YES" if raw_nullable else "NO"
+            else:
+                nullable_disp = str(raw_nullable).strip().upper()
+                if nullable_disp in ("TRUE", "T", "SIM", "S", "1"):
+                    nullable_disp = "YES"
+                elif nullable_disp in ("FALSE", "F", "NAO", "NÃO", "N", "0"):
+                    nullable_disp = "NO"
+                elif nullable_disp not in ("YES", "NO"):
+                    nullable_disp = "YES"
+
             tree_estrutura.insert("", "end", values=(
                 i + 1,
-                col["column_name"],
-                col["data_type"],
-                "NO" if col["is_nullable"] == "NO" else "YES",
-                col["column_default"] or "",
+                col_name,
+                col_type,
+                nullable_disp,
+                col_default,
                 ""  # PK info não disponível na função atual
             ))
 

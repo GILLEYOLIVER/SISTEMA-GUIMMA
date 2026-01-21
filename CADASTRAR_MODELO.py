@@ -158,23 +158,54 @@ class CadastroModelosPDF(FPDF):
     """Classe para geração de PDF do cadastro de modelos."""
 
     def header(self):
+        # Barra azul do topo
         self.set_fill_color(0, 51, 102)
         self.rect(0, 0, 210, 28, "F")
-        if os.path.exists(LOGO_PATH):
-            self.image(LOGO_PATH, x=10, y=3.5, h=20)
+
+        # Logo (se existir)
+        try:
+            if os.path.exists(LOGO_PATH):
+                self.image(LOGO_PATH, x=10, y=3.5, h=20)
+        except Exception:
+            pass
+
+        # Título centralizado corretamente
+        titulo = "CADASTRO DE MODELOS DE PRODUTO"
+
         self.set_font("helvetica", "B", 14)
         self.set_text_color(255, 255, 255)
-        self.set_xy(70, 10)
-        self.cell(0, 8, "CADASTRO DE MODELOS DE PRODUTO")
+
+        # Centraliza o título baseado na largura da página
+        title_w = self.get_string_width(titulo) + 6
+        page_w = self.w
+        x = (page_w - title_w) / 2
+
+        self.set_xy(x, 10)
+        self.cell(title_w, 8, titulo, border=0, ln=0, align="C")
+
+        # Linha separadora
         self.set_draw_color(169, 190, 215)
         self.set_line_width(0.6)
         self.line(10, 30, 200, 30)
+
+        # Posição inicial do conteúdo (dados do modelo)
         self.set_y(32)
+
+        # Reset básico (para não afetar o resto do PDF)
+        self.set_text_color(0, 0, 0)
+        self.set_line_width(0.2)
 
     def footer(self):
         self.set_y(-10)
         self.set_font("helvetica", "I", 7)
-        self.cell(0, 6, f"Gerado em {datetime.now():%d/%m/%Y %H:%M}", 0, 0, "C")
+        self.set_text_color(90, 90, 90)
+
+        texto = f"Gerado em {datetime.now():%d/%m/%Y %H:%M}   |   Página {self.page_no()}"
+        self.cell(0, 6, texto, 0, 0, "C")
+
+        # Reset
+        self.set_text_color(0, 0, 0)
+
 
 
 def _table(pdf: FPDF, headers, rows, col_w):
@@ -209,53 +240,69 @@ def _images_row(pdf: FPDF, images, size=18, per_row=6):
 
 
 def add_data_block(pdf: FPDF, data: dict):
-    """Adiciona bloco de dados principais no PDF."""
+    """Adiciona bloco de dados principais no PDF (AGORA COM GASTO/PEÇA)."""
+
     lh = 4
     xL, xR = 10, 108
 
+    # ---------------- LEFT COLUMN ----------------
     left = [
-        ("Código:", data["Codigo"]),
-        ("Coleção:", data["Colecao"]),
-        ("Modelista:", data["Modelista"]),
-        ("Grade disp.:", data["grade_disponivel"]),
+        ("Código:", data.get("Codigo", "")),
+        ("Coleção:", data.get("Colecao", "")),
+        ("Modelista:", data.get("Modelista", "")),
+        ("Grade disp.:", data.get("grade_disponivel", "")),
+        ("Gasto/Peça:", data.get("GastoPeca", "")),   # ✅ NOVO
     ]
+
+    pdf.set_xy(xL, 32)  # garante topo fixo
     for lab, val in left:
         pdf.set_x(xL)
         pdf.set_font("helvetica", "B", 8)
         pdf.cell(28, lh, lab)
         pdf.set_font("helvetica", "", 8)
-        pdf.cell(60, lh, val, ln=1)
+        pdf.multi_cell(75, lh, str(val))
 
-    start_right = 32
-    pdf.set_xy(xR, start_right)
+    y_left_end = pdf.get_y()
+
+    # ---------------- RIGHT COLUMN ----------------
+    pdf.set_xy(xR, 32)  # topo fixo também no lado direito
     right = [
-        ("Descrição:", data["Desc"]),
-        ("Tam. Base:", data["Tam"]),
-        ("Custo R$:", data["Custo"]),
-        ("Pilotista:", data["Piloto"]),
+        ("Descrição:", data.get("Desc", "")),
+        ("Tam. Base:", data.get("Tam", "")),
+        ("Custo R$:", data.get("Custo", "")),
+        ("Pilotista:", data.get("Piloto", "")),
     ]
+
     for lab, val in right:
         pdf.set_font("helvetica", "B", 8)
         pdf.cell(28, lh, lab)
         pdf.set_font("helvetica", "", 8)
-        pdf.multi_cell(62, lh, val)
+        pdf.multi_cell(62, lh, str(val))
         pdf.set_x(xR)
 
-    pdf.ln(1)
+    y_right_end = pdf.get_y()
+
+    # ✅ garante que o próximo bloco desça o suficiente (sem "comer" o layout)
+    pdf.set_y(max(y_left_end, y_right_end) + 1)
+
+    # ---------------- DATA / DIFICULDADE ----------------
     pdf.set_x(xL)
     pdf.set_font("helvetica", "B", 8)
     pdf.cell(16, lh, "Data:")
     pdf.set_font("helvetica", "", 8)
-    pdf.cell(28, lh, data["Data"])
+    pdf.cell(28, lh, str(data.get("Data", "")))
+
     pdf.set_font("helvetica", "B", 8)
     pdf.cell(22, lh, "Dificuldade:")
     pdf.set_font("helvetica", "", 8)
-    pdf.cell(0, lh, data["Dif"], ln=1)
+    pdf.cell(0, lh, str(data.get("Dif", "")), ln=1)
 
+    # Linha separadora
     pdf.set_draw_color(0)
     pdf.set_line_width(0.4)
     pdf.line(10, pdf.get_y() + 1, 200, pdf.get_y() + 1)
     pdf.ln(4)
+
 
 
 def gerar_pdf_cadastro_modelo(
@@ -268,22 +315,38 @@ def gerar_pdf_cadastro_modelo(
         imagens_aviamentos: list,
         imagens_outros: list,
 ) -> str:
-    """Gera PDF completo do cadastro do modelo - VERSÃO CORRIGIDA"""
+    """Gera PDF completo do cadastro do modelo - COM GASTO/PEÇA NO CABEÇALHO"""
+
     try:
         print("🔄 Iniciando geração do PDF...")
 
-        # Criar PDF
+        # ✅ segurança para não quebrar se vier None
+        dados = dados or {}
+        tecidos = tecidos or []
+        aviamentos = aviamentos or []
+        outros = outros or []
+        imagens_modelo = imagens_modelo or {"frente": None, "costas": None}
+        imagens_tecidos = imagens_tecidos or []
+        imagens_aviamentos = imagens_aviamentos or []
+        imagens_outros = imagens_outros or []
+
+        # ✅ Criar PDF
         pdf = CadastroModelosPDF()
         pdf.add_page()
+
+        # ✅ Garante que a chave exista (mesmo que venha vazia)
+        if "GastoPeca" not in dados:
+            dados["GastoPeca"] = ""
 
         print("📝 Adicionando dados principais...")
         add_data_block(pdf, dados)
 
-        # Imagem do modelo - COM TRATAMENTO DE ERRO
+        # ===================== IMAGEM DO MODELO =====================
         try:
             pdf.set_font("helvetica", "B", 8)
             pdf.ln(2)
             pdf.cell(0, 5, "IMAGEM DO MODELO", 0, 1, "C")
+
             y0 = pdf.get_y()
             frame_w, frame_h = 50, 70
             positions = [("frente", 30), ("costas", 120)]
@@ -292,6 +355,7 @@ def gerar_pdf_cadastro_modelo(
                 pdf.set_xy(x, y0)
                 pdf.set_font("helvetica", "B", 7)
                 pdf.cell(frame_w, 4, label.upper(), 0, 1, "C")
+
                 img = imagens_modelo.get(label)
                 if img and os.path.isfile(img):
                     try:
@@ -302,68 +366,86 @@ def gerar_pdf_cadastro_modelo(
                         pdf.rect(x, y0 + 4, frame_w, frame_h)
                 else:
                     pdf.rect(x, y0 + 4, frame_w, frame_h)
+
             pdf.ln(frame_h + 6)
+
         except Exception as e:
             print(f"⚠️ Erro na seção de imagens do modelo: {e}")
             pdf.ln(80)
 
-        # Tecidos - COM TRATAMENTO
+        # ===================== TECIDOS =====================
         try:
             pdf.set_font("helvetica", "B", 8)
             pdf.cell(0, 4, "TECIDOS UTILIZADOS", 0, 1, "L")
-            headers_t = ["Código", "Descrição", "Cor", "Forn.", "Comp.", "metros_peca", "valor_unidade", "Total"]
+
+            headers_t = ["Código", "Descrição", "Cor", "Forn.", "Comp.", "Metros/Peça", "Valor Metro", "Total"]
             col_t = [18, 28, 12, 20, 20, 18, 18, 18]
-            rows_t = [
-                [
+
+            rows_t = []
+            for t in tecidos:
+                t = t or {}
+                rows_t.append([
                     t.get("Código", t.get("codigo", "")),
                     t.get("Descrição", t.get("descricao", "")),
                     t.get("Cor", t.get("cor", "")),
                     t.get("Fornecedor", t.get("fornecedor", "")),
                     t.get("Composição", t.get("composicao", "")),
-                    t.get("Metros/Peça", t.get("m_peca", "")),
-                    t.get("Valor Metro", t.get("valor", "")),
+                    t.get("Metros/Peça", t.get("m_peca", t.get("metros_peca", ""))),
+                    t.get("Valor Metro", t.get("valor", t.get("valor_metro", ""))),
                     t.get("valor_total", t.get("total", "")),
-                ]
-                for t in tecidos
-            ]
+                ])
+
             _table(pdf, headers_t, rows_t, col_t)
 
             pdf.cell(0, 4, "IMAGENS DOS TECIDOS", 0, 1, "L")
             _images_row(pdf, imagens_tecidos, size=18)
+
         except Exception as e:
             print(f"⚠️ Erro na seção de tecidos: {e}")
 
-        # Aviamentos - COM TRATAMENTO
+        # ===================== AVIAMENTOS =====================
         try:
+            pdf.ln(1)
+            pdf.set_font("helvetica", "B", 8)
             pdf.cell(0, 4, "AVIAMENTOS UTILIZADOS", 0, 1, "L")
-            headers_a = ["Código", "Descrição", "Cor", "Forn.", "Qtd", "valor_unidade", "Total"]
+
+            headers_a = ["Código", "Descrição", "Cor", "Forn.", "Qtd", "Valor Unid.", "Total"]
             col_a = [18, 32, 14, 24, 14, 18, 18]
-            rows_a = [
-                [
+
+            rows_a = []
+            for a in aviamentos:
+                a = a or {}
+                rows_a.append([
                     a.get("Código", a.get("codigo", "")),
                     a.get("Descrição", a.get("descricao", "")),
                     a.get("Cor", a.get("cor", "")),
                     a.get("Fornecedor", a.get("fornecedor", "")),
                     a.get("Quantidade", a.get("quantidade", "")),
-                    a.get("Valor Unidade", a.get("preco", "")),
+                    a.get("Valor Unidade", a.get("preco", a.get("valor", ""))),
                     a.get("valor_total", a.get("total", "")),
-                ]
-                for a in aviamentos
-            ]
+                ])
+
             _table(pdf, headers_a, rows_a, col_a)
 
             pdf.cell(0, 4, "IMAGENS DOS AVIAMENTOS", 0, 1, "L")
             _images_row(pdf, imagens_aviamentos, size=18)
+
         except Exception as e:
             print(f"⚠️ Erro na seção de aviamentos: {e}")
 
-        # Outros - COM TRATAMENTO
+        # ===================== OUTROS =====================
         try:
+            pdf.ln(1)
+            pdf.set_font("helvetica", "B", 8)
             pdf.cell(0, 4, "OUTROS ITENS UTILIZADOS", 0, 1, "L")
+
             headers_o = ["Código", "Descrição", "Cor", "Unid.", "Forn.", "Preço", "Qtd", "Total"]
             col_o = [18, 32, 14, 12, 24, 18, 14, 18]
-            rows_o = [
-                [
+
+            rows_o = []
+            for o in outros:
+                o = o or {}
+                rows_o.append([
                     o.get("codigo", ""),
                     o.get("descricao", ""),
                     o.get("cor", ""),
@@ -372,25 +454,41 @@ def gerar_pdf_cadastro_modelo(
                     o.get("preco", ""),
                     o.get("quantidade", ""),
                     o.get("total", ""),
-                ]
-                for o in outros
-            ]
+                ])
+
             _table(pdf, headers_o, rows_o, col_o)
 
             pdf.cell(0, 4, "IMAGENS DOS OUTROS", 0, 1, "L")
             _images_row(pdf, imagens_outros, size=18)
+
         except Exception as e:
             print(f"⚠️ Erro na seção de outros: {e}")
 
-        # Garante existência da pasta de saída
-        os.makedirs("BANCO_DE_DADOS", exist_ok=True)
-        filename = f"cadastro_modelo_{dados.get('Codigo', 'modelo')}.pdf"
-        path = os.path.join("BANCO_DE_DADOS", filename)
+        # ===================== SALVAR PDF =====================
+        # pasta padrão do seu projeto
+        os.makedirs("BANCO_DE_DADOS/PDFs", exist_ok=True)
+
+        codigo_safe = str(dados.get("Codigo", "modelo")).strip()
+        if not codigo_safe:
+            codigo_safe = "modelo"
+
+        # evita caracteres inválidos
+        codigo_safe = codigo_safe.replace("/", "-").replace("\\", "-").replace(":", "-")
+
+        filename = f"cadastro_modelo_{codigo_safe}.pdf"
+        path = os.path.join("BANCO_DE_DADOS", "PDFs", filename)
+
+        # ✅ se já existir, cria versão incremental
+        contador = 1
+        base_path = path
+        while os.path.exists(path):
+            path = base_path.replace(".pdf", f"_{contador}.pdf")
+            contador += 1
 
         print(f"💾 Salvando PDF em: {path}")
         pdf.output(path)
-        print("✅ PDF gerado com sucesso!")
 
+        print("✅ PDF gerado com sucesso!")
         return path
 
     except Exception as e:
@@ -859,13 +957,33 @@ class CadastroModelosApp(ctk.CTkFrame):
                         hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF')).pack(side="left")
 
         # =================== LINHA 4: Grade disponível ===================
+        # ===================== GASTO / PEÇA (Tecido) =====================
         linha4 = ctk.CTkFrame(header_frame, fg_color="transparent", height=28)
         linha4.pack(fill="x", pady=1)
         linha4.pack_propagate(False)
 
-        ctk.CTkLabel(linha4, text="Grade disp.:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha4, text="Gasto/Peça:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
 
-        grade_frame = ctk.CTkFrame(linha4, fg_color="transparent")
+        self.gasto_peca_entry = ctk.CTkEntry(
+            linha4,
+            width=520,
+            height=28,
+            fg_color=getattr(self.sistema, 'cor_fundo_entry', '#FFFFFF'),
+            border_color=cor_borda,
+            text_color=cor_texto,
+            font=("Arial", 11),
+            placeholder_text="(T1 - 1,65) (T2 - 1,24) ...",
+        )
+        self.gasto_peca_entry.pack(side="left", padx=(0, 10))
+
+        # ===================== Grade disponível =====================
+        linha5 = ctk.CTkFrame(header_frame, fg_color="transparent", height=28)
+        linha5.pack(fill="x", pady=1)
+        linha5.pack_propagate(False)
+
+        ctk.CTkLabel(linha5, text="Grade disp.:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+
+        grade_frame = ctk.CTkFrame(linha5, fg_color="transparent")
         grade_frame.pack(side="left")
 
         # TODOS OS TAMANHOS NA MESMA LINHA - ULTRA COMPACTO
@@ -1847,7 +1965,8 @@ class CadastroModelosApp(ctk.CTkFrame):
             print("📝 Limpando campos de texto...")
             campos_entrada = [
                 self.codigo_entry, self.descricao_entry, self.colecao_entry,
-                self.modelista_entry, self.pilotista_entry
+                self.modelista_entry, self.pilotista_entry,
+                getattr(self, 'gasto_peca_entry', None)
             ]
 
             for entry in campos_entrada:
@@ -2015,7 +2134,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                         UPDATE {schema}.cadastro_modelos_cabecalho 
                         SET descricao=%s, colecao=%s, tamanho_base=%s, dificuldade=%s, 
                             modelista=%s, pilotista=%s, pronto_producao=%s, grade_disponivel=%s,
-                            custo_total=%s, data_atualizacao=NOW()
+                            gasto_por_peca=%s, custo_total=%s, data_atualizacao=NOW()
                         WHERE codigo=%s
                         """,
                         (
@@ -2027,6 +2146,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                             self.pilotista_entry.get().strip(),
                             bool(self.pronto_prod_var.get()),
                             ",".join([t for t in self.tamanhos if self.grade_vars[t].get() == 1]),
+                            (self.gasto_peca_entry.get().strip() if hasattr(self, 'gasto_peca_entry') and self.gasto_peca_entry else ''),
                             formatar_valor(self.custo_entry.get()),
                             codigo
                         )
@@ -2039,8 +2159,8 @@ class CadastroModelosApp(ctk.CTkFrame):
                         f"""
                         INSERT INTO {schema}.cadastro_modelos_cabecalho 
                         (codigo, descricao, colecao, tamanho_base, dificuldade, modelista, 
-                         pilotista, pronto_producao, grade_disponivel, custo_total)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                         pilotista, pronto_producao, grade_disponivel, gasto_por_peca, custo_total)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
                         (
                             codigo,
@@ -2052,6 +2172,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                             self.pilotista_entry.get().strip(),
                             bool(self.pronto_prod_var.get()),
                             ",".join([t for t in self.tamanhos if self.grade_vars[t].get() == 1]),
+                            (self.gasto_peca_entry.get().strip() if hasattr(self, 'gasto_peca_entry') and self.gasto_peca_entry else ''),
                             formatar_valor(self.custo_entry.get())
                         )
                     )
@@ -2481,6 +2602,15 @@ class CadastroModelosApp(ctk.CTkFrame):
             self.modelista_entry.insert(0, hdr.get("modelista", ""))
             self.pilotista_entry.insert(0, hdr.get("pilotista", ""))
 
+            # Gasto/Peça (OPÇÃO 2) - Se existir no banco
+            try:
+                if hasattr(self, 'gasto_peca_entry') and self.gasto_peca_entry:
+                    self.gasto_peca_entry.delete(0, tk.END)
+                    self.gasto_peca_entry.insert(0, hdr.get('gasto_por_peca', '') or '')
+            except Exception as e:
+                print(f"⚠️ Erro ao carregar gasto/peça: {e}")
+
+
             # Configurar variáveis
             self.tamanho_base_var.set(hdr.get("tamanho_base", "M"))
             self.dificuldade_var.set(hdr.get("dificuldade", "Médio"))
@@ -2841,6 +2971,21 @@ class CadastroModelosApp(ctk.CTkFrame):
         entries["Metros/Peça"].bind("<KeyRelease>", calcular_total)
         entries["Valor Metro"].bind("<KeyRelease>", calcular_total)
 
+        # Atualiza preview do Gasto/Peça no cabeçalho enquanto digita (OPÇÃO 2)
+        def _preview_gasto_por_peca(_evt=None):
+            try:
+                metros_txt = entries["Metros/Peça"].get().strip()
+                # Monta lista: tecidos atuais + (novo tecido em digitação)
+                lista_prev = list(self.tecidos)
+                if metros_txt:
+                    lista_prev = lista_prev + [{"Metros/Peça": metros_txt}]
+                texto_prev = self.montar_texto_gasto_por_peca(lista_prev)
+                self.atualizar_gasto_por_peca_header(texto_prev)
+            except Exception:
+                pass
+
+        entries["Metros/Peça"].bind("<KeyRelease>", _preview_gasto_por_peca, add="+")
+
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.grid(row=len(campos) + 1, column=0, columnspan=2, pady=20)
 
@@ -2910,6 +3055,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             self.tecidos.append(tecido)
             self.atualizar_tabela_tecidos()
             self.atualizar_totais()
+            self.atualizar_gasto_por_peca_header()
 
             self._auto_message(f"Tecido {codigo} adicionado com sucesso!")
             dialog.destroy()
@@ -2950,8 +3096,6 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         calcular_total()
         dialog.wait_window()
-
-
 
     def remover_tecido(self):
         """Remove tecido selecionado."""
@@ -3685,8 +3829,39 @@ class CadastroModelosApp(ctk.CTkFrame):
             self.custo_entry.insert(0, formatar_para_exibicao(total))
             self.custo_entry.configure(state="readonly")
 
+            # Atualiza texto de gasto por peça no cabeçalho (OPÇÃO 2)
+            self.atualizar_gasto_por_peca_header()
+
         except Exception as e:
             print(f"Erro ao atualizar totais: {e}")
+
+    def montar_texto_gasto_por_peca(self, tecidos_lista=None):
+        """Monta texto no formato (T1 - 1,65) (T2 - 1,24) ..."""
+        tecidos_lista = tecidos_lista if tecidos_lista is not None else self.tecidos
+        partes = []
+        try:
+            for i, t in enumerate(tecidos_lista, start=1):
+                metros = (t.get("Metros/Peça") or "").strip()
+                if not metros:
+                    continue
+                partes.append(f"(T{i} - {metros})")
+        except Exception:
+            pass
+        return " ".join(partes).strip()
+
+    def atualizar_gasto_por_peca_header(self, texto=None):
+        """Aplica o gasto/peça no entry do cabeçalho (se existir)."""
+        try:
+            if not hasattr(self, "gasto_peca_entry") or not self.gasto_peca_entry:
+                return
+
+            if texto is None:
+                texto = self.montar_texto_gasto_por_peca()
+
+            self.gasto_peca_entry.delete(0, tk.END)
+            self.gasto_peca_entry.insert(0, texto or "")
+        except Exception as e:
+            print(f"⚠️ Erro ao atualizar gasto/peça no cabeçalho: {e}")
 
     # =================== MÉTODOS AUXILIARES ===================
     def _mostrar_resultado_pesquisa(self, rows, titulo, callback_adicionar):
@@ -3923,6 +4098,57 @@ class CadastroModelosApp(ctk.CTkFrame):
         tabela.focus_set()
         jan.wait_window()
 
+    def _to_float(self, v):
+        try:
+            return float(str(v).replace(",", ".").strip())
+        except Exception:
+            return None
+
+    def montar_texto_gasto_peca(self) -> str:
+        """
+        Monta automaticamente:
+        (T1 - 1,65) (T2 - 1,24) ...
+        lendo os Metros/Peça dos tecidos do modelo.
+        """
+        partes = []
+        contador = 1
+
+        for item in getattr(self, "tecidos", []):
+            if not isinstance(item, dict):
+                continue
+
+            metros = (
+                    item.get("Metros/Peça")
+                    or item.get("m_peca")
+                    or item.get("metros_peca")
+                    or item.get("metros_por_peca")
+                    or item.get("metros_por_peça")
+            )
+
+            valor = self._to_float(metros)
+            if valor is None:
+                continue
+
+            partes.append(f"(T{contador} - {valor:.2f})".replace(".", ","))
+            contador += 1
+
+        return " ".join(partes)
+
+    def atualizar_gasto_peca_entry(self):
+        """Atualiza o Entry do cabeçalho com base nos tecidos (em tempo real)."""
+        if not hasattr(self, "gasto_peca_entry") or self.gasto_peca_entry is None:
+            return
+
+        texto = self.montar_texto_gasto_peca()
+
+        try:
+            self.gasto_peca_entry.configure(state="normal")
+            self.gasto_peca_entry.delete(0, "end")
+            self.gasto_peca_entry.insert(0, texto)
+            self.gasto_peca_entry.configure(state="readonly")
+        except Exception as e:
+            print(f"⚠️ Erro ao atualizar gasto/peça no cabeçalho: {e}")
+
     # =================== MÉTODOS DE AÇÃO ===================
     def on_click_imprimir(self):
         """Gera e abre o PDF do cadastro - VERSÃO CORRIGIDA"""
@@ -3947,6 +4173,8 @@ class CadastroModelosApp(ctk.CTkFrame):
                 "Piloto": self.pilotista_entry.get().strip(),
                 "Custo": self.custo_entry.get().strip(),
                 "grade_disponivel": ", ".join([t for t in self.tamanhos if self.grade_vars[t].get() == 1]),
+                "GastoPeca": self.gasto_peca_entry.get().strip() if hasattr(self,
+                                                                            "gasto_peca_entry") else self.montar_texto_gasto_peca(),
                 "Data": datetime.now().strftime("%d/%m/%Y"),
             }
 

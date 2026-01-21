@@ -202,6 +202,8 @@ CREATE TABLE IF NOT EXISTS opera.cadastro_modelos_cabecalho (
     modelista VARCHAR(100),
     pilotista VARCHAR(100),
     custo_total NUMERIC(12,2) DEFAULT 0,
+    gasto_por_peca TEXT DEFAULT '',
+    gasto_total_por_peca NUMERIC(12,4) DEFAULT 0,
     pronto_producao BOOLEAN DEFAULT FALSE,
     grade_disponivel TEXT,
     data_criacao TIMESTAMP DEFAULT NOW(),
@@ -209,6 +211,7 @@ CREATE TABLE IF NOT EXISTS opera.cadastro_modelos_cabecalho (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
 
 -- [TABELA 08] cadastro_modelos_tecidos - Tecidos dos modelos
 CREATE TABLE IF NOT EXISTS opera.cadastro_modelos_tecidos (
