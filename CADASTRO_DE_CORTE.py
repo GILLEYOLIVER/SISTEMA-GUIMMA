@@ -1897,9 +1897,30 @@ class CadastroOrdemCorte(ctk.CTkFrame):
     def salvar_ordem(self):
         import traceback
 
+        conn = None
         try:
             conn = _pg_connect()
             with conn.cursor() as cur:
+
+                # ========================================================
+                # (0) BLOQUEIO DE DUPLICIDADE (NÃO PERMITE SALVAR A MESMA OC)
+                # ========================================================
+                numero_ordem = (self._get_text("numero_ordem_entry") or "").strip()
+                if not numero_ordem:
+                    messagebox.showwarning("Aviso", "Informe o Nº ORDEM antes de salvar.")
+                    return
+
+                # Verifica se já existe no banco (case-insensitive)
+                cur.execute(
+                    "SELECT 1 FROM cadastro_de_corte WHERE UPPER(numero_ordem) = UPPER(%s) LIMIT 1",
+                    (numero_ordem,)
+                )
+                if cur.fetchone():
+                    messagebox.showwarning(
+                        "Corte já existe",
+                        f"A Ordem de Corte {numero_ordem} já existe no sistema e não pode ser salva novamente."
+                    )
+                    return
 
                 # ========================================================
                 # (1) INSERT NO CABEÇALHO DA ORDEM
@@ -1930,33 +1951,40 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 for item in self.tree.get_children():
                     valores = self.tree.item(item, "values")
                     for i, t in enumerate(self.tamanhos):
-                        total_grade[t.lower()] += int(valores[10 + i])
+                        try:
+                            total_grade[t.lower()] += int(str(valores[10 + i]).strip() or 0)
+                        except Exception:
+                            total_grade[t.lower()] += 0
 
+                # Monta dados do cabeçalho
                 dados_cab = {
-                    "numero_ordem": self.numero_ordem_entry.get(),
-                    "codigo": self.codigo_entry.get(),
-                    "descricao": self.descricao_entry.get(),
-                    "data": datetime.strptime(self.data_entry.get(), "%d/%m/%Y"),
-                    "comprimento": float(self.comprimento_entry.get().replace(",", ".")),
-                    "largura": float(self.largura_entry.get().replace(",", ".")),
-                    "cortador": self.cortador_entry.get(),
-                    "ajudante": self.ajudante_entry.get(),
+                    "numero_ordem": numero_ordem,
+                    "codigo": self._get_text("codigo_entry"),
+                    "descricao": self._get_text("descricao_entry"),
+                    "data": datetime.strptime(
+                        self._get_text("data_entry") or datetime.now().strftime("%d/%m/%Y"),
+                        "%d/%m/%Y"
+                    ),
+                    "comprimento": float((self._get_text("comprimento_entry") or "0").replace(",", ".")),
+                    "largura": float((self._get_text("largura_entry") or "0").replace(",", ".")),
+                    "cortador": self._get_text("cortador_entry"),
+                    "ajudante": self._get_text("ajudante_entry"),
                     "auxiliar": None,
-                    "total_folhas": int(self.total_folhas_var.get()),
-                    "metros": float(self.metros_utilizados_var.get()),
-                    "bobinas": float(self.bobinas_utilizadas_var.get() or 0),
+                    "total_folhas": int(self._get_text("total_folhas_var", default="0") or 0),
+                    "metros": float((self._get_text("metros_utilizados_var", default="0") or "0").replace(",", ".")),
+                    "bobinas": float((self._get_text("bobinas_utilizadas_var", default="0") or "0").replace(",", ".")),
                     "composicao": "",
-                    "pp": total_grade["pp"],
-                    "p": total_grade["p"],
-                    "m": total_grade["m"],
-                    "g": total_grade["g"],
-                    "gg": total_grade["gg"],
-                    "g1": total_grade["g1"],
-                    "g2": total_grade["g2"],
-                    "g3": total_grade["g3"],
-                    "total": int(self.total_pecas_var.get()),
-                    "rendimento": float(self.rendimento_var.get().replace(",", ".")),
-                    "obs": self.obs_entry.get()
+                    "pp": total_grade.get("pp", 0),
+                    "p": total_grade.get("p", 0),
+                    "m": total_grade.get("m", 0),
+                    "g": total_grade.get("g", 0),
+                    "gg": total_grade.get("gg", 0),
+                    "g1": total_grade.get("g1", 0),
+                    "g2": total_grade.get("g2", 0),
+                    "g3": total_grade.get("g3", 0),
+                    "total": int(self._get_text("total_pecas_var", default="0") or 0),
+                    "rendimento": float((self._get_text("rendimento_var", default="0") or "0").replace(",", ".")),
+                    "obs": self._get_text("obs_entry"),
                 }
 
                 cur.execute(sql_cab, dados_cab)
@@ -1973,30 +2001,47 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                     "total_pecas"
                     ") VALUES ("
                     "%s, %s, %s, %s, "
-                    "%s, %s, "
-                    "%s, %s, %s, %s, %s, %s, %s, %s, "
+                    "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
                     "%s"
                     ")"
                 )
 
+                def _to_float(v):
+                    try:
+                        s = str(v).strip().replace(",", ".")
+                        return float(s) if s else 0.0
+                    except Exception:
+                        return 0.0
+
+                def _to_int(v):
+                    try:
+                        s = str(v).strip()
+                        return int(float(s)) if s else 0
+                    except Exception:
+                        return 0
+
                 for item in self.tree.get_children():
                     v = self.tree.item(item, "values")
-                    quant = [int(v[10 + i]) for i in range(8)]
+
+                    quant = [_to_int(v[10 + i]) for i in range(8)]
                     total_item = sum(quant)
 
-                    cur.execute(sql_tecidos, (
-                        cadastro_id,
-                        v[0],  # tecido
-                        v[2],  # cor
-                        v[4],  # composicao
-                        float(v[6]),  # bobinas
-                        float(v[8]),  # folhas
-                        *quant,  # pp, p, m, g, gg, g1, g2, g3
-                        total_item
-                    ))
+                    cur.execute(
+                        sql_tecidos,
+                        (
+                            cadastro_id,
+                            v[0],  # tecido
+                            v[2],  # cor
+                            v[4],  # composicao
+                            _to_float(v[6]),  # bobinas
+                            _to_float(v[8]),  # folhas
+                            *quant,
+                            total_item,
+                        ),
+                    )
 
                 # ========================================================
-                # (3) INSERT DOS LOTES (CORRIGIDO — 16 PLACEHOLDERS)
+                # (3) INSERT DOS LOTES
                 # ========================================================
                 sql_lotes = (
                     "INSERT INTO cadastro_de_corte_lotes ("
@@ -2014,28 +2059,33 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
                 for item in self.lotes_tree.get_children():
                     v = self.lotes_tree.item(item, "values")
-                    quant = [int(v[11 + i]) for i in range(8)]
+
+                    quant = [_to_int(v[11 + i]) for i in range(8)]
                     total_item = sum(quant)
 
-                    cur.execute(sql_lotes, (
-                        cadastro_id,
-                        v[0],  # lote
-                        v[1],  # tecido
-                        v[3],  # cor
-                        v[5],  # composicao
-                        float(v[7]),  # bobinas
-                        float(v[9]),  # folhas
-                        *quant,
-                        total_item
-                    ))
+                    cur.execute(
+                        sql_lotes,
+                        (
+                            cadastro_id,
+                            v[0],  # lote
+                            v[1],  # tecido
+                            v[3],  # cor
+                            v[5],  # composicao
+                            _to_float(v[7]),  # bobinas
+                            _to_float(v[9]),  # folhas
+                            *quant,
+                            total_item,
+                        ),
+                    )
 
             conn.commit()
             messagebox.showinfo("Sucesso", "Ordem salva com sucesso!")
 
-        except Exception as e:
+        except Exception:
             try:
-                conn.rollback()
-            except:
+                if conn is not None:
+                    conn.rollback()
+            except Exception:
                 pass
 
             erro_completo = traceback.format_exc()
@@ -2044,6 +2094,13 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             print("=============================================\n")
 
             messagebox.showerror("ERRO ao salvar", erro_completo)
+
+        finally:
+            try:
+                if conn is not None:
+                    conn.close()
+            except Exception:
+                pass
 
     def gerar_pdf_em_buffer(self):
         buffer = BytesIO()
