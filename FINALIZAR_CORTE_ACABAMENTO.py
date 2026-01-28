@@ -110,7 +110,12 @@ class FinalizacaoCortes(ctk.CTkFrame):
             self.cor_hover = "#2e4a66"
 
     def configurar_treeview_theme(self):
-        """Configura as cores da Treeview baseado no tema atual - MESMO ESTILO DO CADASTRO_DE_CORTE"""
+        """Configura as cores da Treeview baseado no tema atual.
+
+        Ajuste de contraste:
+        - Em alguns temas, `self.cor_texto` pode ficar escuro demais para a Treeview.
+        - Aqui forçamos uma cor de texto com alto contraste por modo (Dark/Light).
+        """
         self.style = ttk.Style()
         self.style.theme_use('default')
 
@@ -118,33 +123,44 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
         if tema_atual == "Dark":
             cor_fundo = self.cor_secundaria
-            cor_texto = self.cor_texto
+            cor_texto = "#F8FAFC"          # texto bem claro (alto contraste)
             cor_campo = self.cor_secundaria
             cor_selecao = self.cor_primaria
+            cor_heading_fg = "#FFFFFF"
         else:
             cor_fundo = "#f0f0f0"
-            cor_texto = "black"
+            cor_texto = "#0B1220"          # texto bem escuro (alto contraste)
             cor_campo = "#f0f0f0"
             cor_selecao = self.cor_primaria
+            cor_heading_fg = "#FFFFFF"
 
-        self.style.configure("Custom.Treeview",
-                             background=cor_fundo,
-                             foreground=cor_texto,
-                             fieldbackground=cor_campo,
-                             borderwidth=0,
-                             highlightthickness=0,
-                             rowheight=25)
+        # guarda para reuso nas tags das linhas
+        self._tree_fg = cor_texto
 
-        self.style.configure("Custom.Treeview.Heading",
-                             background=self.cor_primaria,
-                             foreground=self.cor_texto,
-                             relief="flat",
-                             borderwidth=1,
-                             font=('Arial', 10, 'bold'))
+        self.style.configure(
+            "Custom.Treeview",
+            background=cor_fundo,
+            foreground=cor_texto,
+            fieldbackground=cor_campo,
+            borderwidth=0,
+            highlightthickness=0,
+            rowheight=25,
+        )
 
-        self.style.map('Custom.Treeview',
-                       background=[('selected', cor_selecao)],
-                       foreground=[('selected', "white")])
+        self.style.configure(
+            "Custom.Treeview.Heading",
+            background=self.cor_primaria,
+            foreground=cor_heading_fg,
+            relief="flat",
+            borderwidth=1,
+            font=('Arial', 10, 'bold'),
+        )
+
+        self.style.map(
+            'Custom.Treeview',
+            background=[('selected', cor_selecao)],
+            foreground=[('selected', 'white')],
+        )
 
     def _recolor_labels_frame(self, frame):
         for widget in frame.winfo_children():
@@ -152,6 +168,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 widget.configure(text_color=self.cor_texto)
             if hasattr(widget, "winfo_children"):
                 self._recolor_labels_frame(widget)
+
 
     # ----------------------------- UI -----------------------------
     def _build_ui(self):
@@ -277,8 +294,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         try:
             self.retornos_tree.tag_configure('status_conferencia', background='#FFF9C4', foreground='black')
             self.retornos_tree.tag_configure('status_finalizado', background='#C8E6C9', foreground='black')
-            self.retornos_tree.tag_configure("oddrow", background=cor_linha_impar)
-            self.retornos_tree.tag_configure("evenrow", background=cor_linha_par)
+            self.retornos_tree.tag_configure("oddrow", background=cor_linha_impar, foreground=getattr(self, '_tree_fg', self.cor_texto))
+            self.retornos_tree.tag_configure("evenrow", background=cor_linha_par, foreground=getattr(self, '_tree_fg', self.cor_texto))
         except Exception:
             pass
 
@@ -563,21 +580,37 @@ class FinalizacaoCortes(ctk.CTkFrame):
         """, (schema, table_name))
         return {r[0] for r in cur.fetchall()}
 
+    def _col_type(self, cur, schema, table_name, column_name):
+        """Retorna (data_type, udt_name) de uma coluna (PostgreSQL), ou (None, None) se não existir."""
+        cur.execute(
+            """
+            SELECT data_type, udt_name
+              FROM information_schema.columns
+             WHERE table_schema = %s
+               AND table_name   = %s
+               AND column_name  = %s
+            """,
+            (schema, table_name, column_name),
+        )
+        r = cur.fetchone()
+        if not r:
+            return None, None
+        return r[0], r[1]
+
     def carregar_retornos_pendentes(self):
         """
-        Carrega na grade todos os RETORNOS registrados em controle_retorno_cortes
-        vinculados aos envios em envios_cortes.
+        Mostra APENAS cortes em conferência para finalizar.
+        (Aceita "Em Conferencia" e "Em Conferência")
 
-        - Mostra ordem, código, descrição, prestador, data de chegada, status e qtd total.
-        - Se "Mostrar Finalizados" estiver desmarcado, oculta status_envio = 'Finalizado'.
-        - Cria um mapa retorno_id -> envio_id para uso em _carregar_detalhes_retorno().
+        Se "Mostrar Finalizados" estiver marcado, também mostra "Finalizado".
         """
-        print("\n================ carregar_retornos_pendentes() ================")
         try:
             termo = (self.busca_entry.get() or "").strip()
+
+            # limpa tabela (NOME CERTO)
             self.retornos_tree.delete(*self.retornos_tree.get_children())
 
-            # mapa retorno -> envio (usado depois)
+            # mapa retorno -> envio
             self.mapa_retorno_envio = {}
 
             conn = get_conn()
@@ -585,85 +618,97 @@ class FinalizacaoCortes(ctk.CTkFrame):
             schema = get_schema()
             self._set_search_path(cur, schema)
 
+            # detecta colunas reais (pra não quebrar)
+            cols_env = self._cols(cur, schema, "envios_cortes")
+            status_col = "status_envio" if "status_envio" in cols_env else ("status" if "status" in cols_env else None)
+            total_col = "total_pecas" if "total_pecas" in cols_env else (
+                "quantidade_total" if "quantidade_total" in cols_env else None)
+
+            # prestador: prioriza cadastro_faccoes se existir prestador_id
+            has_prestador_id = "prestador_id" in cols_env
+            prestador_expr = "COALESCE(f.nome,'')"
+            if not has_prestador_id:
+                # fallback por texto, se existir
+                cand = []
+                if "costureira" in cols_env: cand.append("e.costureira")
+                if "faccao" in cols_env: cand.append("e.faccao")
+                prestador_expr = "COALESCE(" + (", ".join(cand) + ", ''" if cand else "''") + ")"
+
+            if not status_col:
+                messagebox.showerror("Erro",
+                                     "A tabela envios_cortes não possui coluna de status (status_envio/status).")
+                conn.close()
+                return
+
+            status_expr = f"COALESCE(e.{status_col}, '')"
+            qtd_expr = f"COALESCE(e.{total_col}, 0)" if total_col else "0"
+
             sql = f"""
                 SELECT
-                    r.id                        AS retorno_id,
-                    r.envio_id                  AS envio_id,
-                    COALESCE(e.ordem_corte, '') AS ordem_corte,
-                    COALESCE(e.codigo_corte, '') AS codigo_corte,
-                    COALESCE(e.descricao_corte, '') AS descricao_corte,
-                    COALESCE(f.nome, '')        AS prestador,
-                    r.data_chegada              AS data_chegada,
-                    COALESCE(e.status_envio, '') AS status_envio,
-                    COALESCE(e.total_pecas, 0)  AS qtd_total
+                    r.id                                   AS retorno_id,
+                    r.envio_id                             AS envio_id,
+                    COALESCE(e.ordem_corte, c.numero_ordem, c.ordem_corte, '')       AS ordem_corte,
+                    COALESCE(e.codigo_corte, c.codigo, '')                           AS codigo_corte,
+                    COALESCE(e.descricao_corte, c.descricao_corte, c.descricao, '')  AS descricao_corte,
+                    {prestador_expr}                       AS prestador,
+                    r.data_chegada                         AS data_chegada,
+                    {status_expr}                          AS status_envio,
+                    {qtd_expr}                             AS qtd_total
                 FROM {schema}.controle_retorno_cortes r
-                JOIN {schema}.envios_cortes e
-                  ON e.id = r.envio_id
-                LEFT JOIN {schema}.cadastro_faccoes f
-                  ON f.id = e.prestador_id
+                JOIN {schema}.envios_cortes e ON e.id = r.envio_id
+                {"LEFT JOIN " + schema + ".cadastro_faccoes f ON f.id = e.prestador_id" if has_prestador_id else ""}
+                LEFT JOIN {schema}.cadastro_de_corte c ON c.id = e.corte_id
             """
 
             where = []
             params = []
 
-            # checkbox "Mostrar Finalizados"
-            self.mostrar_finalizados = bool(self.cb_mostrar_finalizados.get())
-            if not self.mostrar_finalizados:
-                where.append("COALESCE(e.status_envio,'') <> 'Finalizado'")
+            mostrar_finalizados = bool(self.cb_mostrar_finalizados.get())
+
+            # ✅ filtro correto
+            if mostrar_finalizados:
+                where.append(
+                    f"({status_expr} ILIKE 'em conferen%%' OR {status_expr} ILIKE 'em conferên%%' OR {status_expr} = 'Finalizado')")
+            else:
+                where.append(f"({status_expr} ILIKE 'em conferen%%' OR {status_expr} ILIKE 'em conferên%%')")
 
             if termo:
                 like = f"%{termo}%"
                 where.append("""
                     (
-                        e.ordem_corte     ILIKE %s OR
-                        e.codigo_corte    ILIKE %s OR
-                        e.descricao_corte ILIKE %s OR
-                        f.nome            ILIKE %s
+                        COALESCE(e.ordem_corte,'')     ILIKE %s OR
+                        COALESCE(e.codigo_corte,'')    ILIKE %s OR
+                        COALESCE(e.descricao_corte,'') ILIKE %s OR
+                        COALESCE(c.codigo,'')          ILIKE %s OR
+                        COALESCE(c.descricao,'')       ILIKE %s
                     )
                 """)
-                params.extend([like, like, like, like])
+                params.extend([like, like, like, like, like])
 
             if where:
                 sql += " WHERE " + " AND ".join(where)
 
             sql += " ORDER BY r.data_chegada DESC, r.id DESC"
 
-            print("[DEBUG] SQL carregar_retornos_pendentes:")
-            print(sql)
-            print("[DEBUG] Parâmetros:", params)
-
             cur.execute(sql, tuple(params))
             rows = cur.fetchall()
             conn.close()
 
-            print(f"[DEBUG] Retornos encontrados: {len(rows)}")
-
             for i, row in enumerate(rows):
-                (
-                    retorno_id,
-                    envio_id,
-                    ordem,
-                    codigo,
-                    descricao,
-                    prestador,
-                    data_chegada,
-                    status_envio,
-                    qtd_total,
-                ) = row
+                (retorno_id, envio_id, ordem, codigo, descricao, prestador, data_chegada, status_envio, qtd_total) = row
 
-                # guarda o vínculo em memória
                 self.mapa_retorno_envio[int(retorno_id)] = int(envio_id)
 
-                status_envio = (status_envio or "").strip()
+                # status tolerante
+                st = (status_envio or "").strip()
+                st_norm = st.lower().replace("ê", "e").replace("í", "i")
 
-                # tags de status
                 tag_status = ()
-                if status_envio == "Em Conferência":
+                if st_norm.startswith("em conferencia"):
                     tag_status = ("status_conferencia",)
-                elif status_envio == "Finalizado":
+                elif st == "Finalizado":
                     tag_status = ("status_finalizado",)
 
-                # linha alternada
                 row_tag = "evenrow" if i % 2 == 0 else "oddrow"
                 tags = tag_status + (row_tag,) if tag_status else (row_tag,)
 
@@ -680,10 +725,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
                         status_envio,
                         qtd_total,
                     ),
-                    tags=tags,
+                    tags=tags
                 )
-
-            print(f"[DEBUG] mapa_retorno_envio: {self.mapa_retorno_envio}")
 
         except Exception as e:
             import traceback
@@ -836,6 +879,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
             self._set_search_path(cur, schema)
 
             # 1) DETALHE DO ENVIO (envio_detalhes_tamanho)
+            # Primeiro tenta carregar via tabela de detalhes. Caso não haja registro,
+            # recorre à tabela envios_cortes diretamente.
             cur.execute(
                 f"""
                 SELECT tamanho,
@@ -850,27 +895,62 @@ class FinalizacaoCortes(ctk.CTkFrame):
             envio_rows = cur.fetchall()
             print(f"[DEBUG] Linhas em envio_detalhes_tamanho: {len(envio_rows)}")
 
-            for tamanho, quantidade, pilotos, valor_peca in envio_rows:
-                if tamanho not in self.tamanhos:
-                    continue
+            if envio_rows:
+                # Popula dados com base na tabela de detalhes
+                for tamanho, quantidade, pilotos, valor_peca in envio_rows:
+                    if tamanho not in self.tamanhos:
+                        continue
 
-                qtd_env = safe_int(quantidade)
-                qtd_pil = safe_int(pilotos)
-                val_uni = float(valor_peca or 0)
+                    qtd_env = safe_int(quantidade)
+                    qtd_pil = safe_int(pilotos)
+                    val_uni = float(valor_peca or 0)
 
-                total_enviado = qtd_env + qtd_pil
+                    total_enviado = qtd_env + qtd_pil
 
-                self.enviado_por_tam[tamanho] = total_enviado
-                self.pilotos_por_tam[tamanho] = qtd_pil
-                self.valor_por_tam[tamanho] = val_uni
+                    self.enviado_por_tam[tamanho] = total_enviado
+                    self.pilotos_por_tam[tamanho] = qtd_pil
+                    self.valor_por_tam[tamanho] = val_uni
 
-                self.grade_widgets[tamanho]["enviado"].configure(text=str(total_enviado))
-                self.grade_widgets[tamanho]["valor"].configure(text=fmt_moeda(val_uni))
+                    self.grade_widgets[tamanho]["enviado"].configure(text=str(total_enviado))
+                    self.grade_widgets[tamanho]["valor"].configure(text=fmt_moeda(val_uni))
 
-                print(
-                    f"[DEBUG] ENVIO tam={tamanho} | qtd={qtd_env} | pilotos={qtd_pil} "
-                    f"| total_enviado={total_enviado} | valor={val_uni}"
+                    print(
+                        f"[DEBUG] ENVIO tam={tamanho} | qtd={qtd_env} | pilotos={qtd_pil} "
+                        f"| total_enviado={total_enviado} | valor={val_uni}"
+                    )
+            else:
+                # Não há registro em envio_detalhes_tamanho; calcular a partir de envios_cortes
+                print("[DEBUG] Nenhum detalhe em envio_detalhes_tamanho. Consultando envios_cortes...")
+                cur.execute(
+                    f"""
+                    SELECT
+                        qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3,
+                        piloto_pp, piloto_p, piloto_m, piloto_g, piloto_gg, piloto_g1, piloto_g2, piloto_g3,
+                        valor_pp, valor_p, valor_m, valor_g, valor_gg, valor_g1, valor_g2, valor_g3
+                    FROM {schema}.envios_cortes
+                    WHERE id = %s
+                    """,
+                    (envio_id,),
                 )
+                row_envio = cur.fetchone()
+                if row_envio:
+                    # Mapear índices para tamanhos
+                    qtd_indices = {t: i for i, t in enumerate(["PP","P","M","G","GG","G1","G2","G3"])}
+                    pil_indices = {t: i+8 for i, t in enumerate(["PP","P","M","G","GG","G1","G2","G3"])}
+                    val_indices = {t: i+16 for i, t in enumerate(["PP","P","M","G","GG","G1","G2","G3"])}
+                    for tam in self.tamanhos:
+                        qtd_env = safe_int(row_envio[qtd_indices[tam]])
+                        qtd_pil = safe_int(row_envio[pil_indices[tam]])
+                        val_uni = float(row_envio[val_indices[tam]] or 0)
+                        total_enviado = qtd_env + qtd_pil
+                        self.enviado_por_tam[tam] = total_enviado
+                        self.pilotos_por_tam[tam] = qtd_pil
+                        self.valor_por_tam[tam] = val_uni
+                        self.grade_widgets[tam]["enviado"].configure(text=str(total_enviado))
+                        self.grade_widgets[tam]["valor"].configure(text=fmt_moeda(val_uni))
+                        print(
+                            f"[DEBUG] ENVIO tam={tam} | qtd={qtd_env} | pilotos={qtd_pil} | total_enviado={total_enviado} | valor={val_uni}"
+                        )
 
             # 2) DETALHE DO RETORNO (retorno_detalhes_tamanho)
             cur.execute(
@@ -1101,7 +1181,14 @@ class FinalizacaoCortes(ctk.CTkFrame):
         return d
 
     def _gerar_html_relatorio(self, d):
-        logo_html = f'<img src="file:///{d["logo"].replace("\\\\", "/")}" style="height:70px;">' if d["logo"] else ""
+        # Ajuste: evitar escape de barra invertida em f-string. Calcula caminho do logo fora do f-string
+        logo_path = None
+        if d.get("logo"):
+            try:
+                logo_path = d["logo"].replace("\\", "/")
+            except Exception:
+                logo_path = d["logo"]
+        logo_html = f'<img src="file:///{logo_path}" style="height:70px;">' if logo_path else ""
         linhas_html = []
         for r in d["linhas"]:
             linhas_html.append(f"""
@@ -1193,115 +1280,55 @@ class FinalizacaoCortes(ctk.CTkFrame):
             f.write(html)
         if auto_open:
             try:
-                webbrowser.open(f"file:///{path.replace('\\', '/')}")
+                # Evita backslashes em f-string computando caminho seguro
+                safe_path = path.replace("\\", "/")
+                webbrowser.open(f"file:///{safe_path}")
             except Exception:
                 pass
         if imprimir:
             try:
                 os.startfile(path, "print")  # Windows
             except Exception:
-                webbrowser.open(f"file:///{path.replace('\\', '/')}")
+                # Em sistemas que não suportam os.startfile, abre no navegador
+                try:
+                    safe_path = path.replace("\\", "/")
+                    webbrowser.open(f"file:///{safe_path}")
+                except Exception:
+                    pass
         return path
 
     # ----------------------------- Ações de Banco -----------------------------
     def finalizar_completo(self):
-        if not self.retorno_selecionado:
+        """Finaliza o corte selecionado e deixa disponível para PAGAMENTO.
+
+        Ajustes importantes:
+        - Não usa mais `entrada_acabamento` (tabela antiga).
+        - Usa `controle_retorno_cortes.envio_id` (via mapa retorno->envio).
+        - Consolida `retorno_detalhes_tamanho` conforme os valores da tela.
+        - Marca `envios_cortes.status_envio = 'Finalizado'`.
+        - Registra/atualiza uma linha em `cortes_finalizados` para a tela de PAGAMENTO_SERVICOS
+          encontrar o corte em "Cortes a Pagar".
+        """
+        if not getattr(self, "retorno_selecionado", None):
             messagebox.showwarning("Aviso", "Selecione um retorno na lista.")
             return
 
-        if messagebox.askyesno("Confirmar", "Deseja realmente finalizar este corte?"):
-            try:
-                conn = get_conn()
-                cur = conn.cursor()
-                schema = get_schema()
-                self._set_search_path(cur, schema)
+        try:
+            retorno_id = int(self.retorno_selecionado["id"])
+        except Exception:
+            messagebox.showerror("Erro", "ID de retorno inválido.")
+            return
 
-                # Descobre envio_id
-                cur.execute(f"""
-                    SELECT envio_id
-                      FROM {schema}.entrada_acabamento
-                     WHERE id = %s
-                """, (self.retorno_selecionado["id"],))
-                row = cur.fetchone()
-                if not row:
-                    conn.close()
-                    messagebox.showerror("Erro", "Não foi possível localizar o envio desta entrada.")
-                    return
+        if not messagebox.askyesno("Confirmar", "Deseja realmente finalizar este corte?"):
+            return
 
-                envio_id = row[0]
+        # pega envio_id via mapa (preenchido em carregar_retornos_pendentes)
+        envio_id = None
+        if hasattr(self, "mapa_retorno_envio"):
+            envio_id = self.mapa_retorno_envio.get(retorno_id)
 
-                # Recalcula totais
-                total_entregue = 0
-                total_copias = 0
-                total_defeitos = 0
-                total_faltantes = 0
-                total_regulares = 0
-                valor_total = 0.0
-
-                for t in self.tamanhos:
-                    entregue = safe_int(self.entregues_vars[t].get())
-                    copias = safe_int(self.copias_vars[t].get())
-                    defeitos = safe_int(self.defeitos_vars[t].get())
-                    faltantes = safe_int(self.faltantes_vars[t].get())
-                    regulares = max(0, entregue - defeitos - faltantes)
-                    subtotal = regulares * float(self.valor_por_tam.get(t, 0.0))
-
-                    total_entregue += entregue
-                    total_copias += copias
-                    total_defeitos += defeitos
-                    total_faltantes += faltantes
-                    total_regulares += regulares
-                    valor_total += subtotal
-
-                obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
-                bonif = self.bonif_final_var.get()
-                bonif_aplicada = (bonif == "sim")
-
-                # Atualiza entrada_acabamento como finalizada
-                cur.execute(f"""
-                    UPDATE {schema}.entrada_acabamento
-                       SET total_entregue  = %s,
-                           total_defeitos  = %s,
-                           total_faltantes = %s,
-                           total_regulares = %s,
-                           valor_total     = %s,
-                           observacoes_finalizacao = %s,
-                           bonificacao_aplicada    = %s,
-                           data_finalizacao        = %s
-                     WHERE id = %s
-                """, (total_entregue, total_defeitos, total_faltantes,
-                      total_regulares, valor_total, obs_finalizacao,
-                      bonif_aplicada, datetime.now().date(),
-                      self.retorno_selecionado["id"]))
-
-                # Marca envio como finalizado
-                # (usa status_envio se existir, senão tenta status)
-                cols_envio = self._cols(cur, schema, "envios_cortes")
-                if "status_envio" in cols_envio:
-                    cur.execute(f"""
-                        UPDATE {schema}.envios_cortes
-                           SET status_envio = 'Finalizado'
-                         WHERE id = %s
-                    """, (envio_id,))
-                elif "status" in cols_envio:
-                    cur.execute(f"""
-                        UPDATE {schema}.envios_cortes
-                           SET status = 'Finalizado'
-                         WHERE id = %s
-                    """, (envio_id,))
-
-                conn.commit()
-                conn.close()
-
-                messagebox.showinfo("Sucesso", "Corte finalizado com sucesso.")
-                self.limpar_campos()
-                self.carregar_retornos_pendentes()
-            except Exception as e:
-                messagebox.showerror("Erro", f"Falha ao finalizar corte: {e}")
-
-    def salvar_baixa_parcial(self):
-        if not self.retorno_selecionado:
-            messagebox.showwarning("Aviso", "Selecione um retorno na lista.")
+        if not envio_id:
+            messagebox.showerror("Erro", "Não foi possível localizar o envio desta entrada.")
             return
 
         try:
@@ -1310,29 +1337,17 @@ class FinalizacaoCortes(ctk.CTkFrame):
             schema = get_schema()
             self._set_search_path(cur, schema)
 
-            # Descobre envio_id a partir da entrada
-            cur.execute(f"""
-                SELECT envio_id
-                  FROM {schema}.entrada_acabamento
-                 WHERE id = %s
-            """, (self.retorno_selecionado["id"],))
-            row = cur.fetchone()
-            if not row:
-                conn.close()
-                messagebox.showerror("Erro", "Não foi possível localizar o envio desta entrada.")
-                return
+            # (1) Consolida detalhes por tamanho conforme a tela
+            totals = {
+                "entregue": 0,
+                "copias": 0,
+                "defeitos": 0,
+                "faltantes": 0,
+                "regulares": 0,
+                "valor_total": 0.0,
+            }
+            reg_por_tam = {}
 
-            envio_id = row[0]
-
-            # Recalcula totais com base nos campos atuais
-            total_entregue = 0
-            total_copias = 0
-            total_defeitos = 0
-            total_faltantes = 0
-            total_regulares = 0
-            valor_total = 0.0
-
-            # Limpa detalhes antigos para este envio
             cur.execute(f"DELETE FROM {schema}.retorno_detalhes_tamanho WHERE envio_id = %s", (envio_id,))
 
             for t in self.tamanhos:
@@ -1342,53 +1357,368 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 faltantes = safe_int(self.faltantes_vars[t].get())
 
                 regulares = max(0, entregue - defeitos - faltantes)
-                subtotal = regulares * float(self.valor_por_tam.get(t, 0.0))
+                reg_por_tam[t] = int(regulares)
 
-                if any([entregue, copias, defeitos, faltantes, regulares, subtotal]):
+                valor_peca = float(self.valor_por_tam.get(t, 0.0) or 0.0)
+                subtotal = regulares * valor_peca
+
+                if any([entregue, copias, defeitos, faltantes, regulares]) or subtotal > 0:
                     cur.execute(f"""
                         INSERT INTO {schema}.retorno_detalhes_tamanho
-                            (envio_id, tamanho, entregue, copias, defeitos,
-                             faltantes, regulares, subtotal)
+                            (envio_id, tamanho, entregue, copias, defeitos, faltantes, regulares, subtotal)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (envio_id, t, entregue, copias, defeitos,
-                          faltantes, regulares, subtotal))
+                    """, (envio_id, t, entregue, copias, defeitos, faltantes, regulares, subtotal))
 
-                total_entregue += entregue
-                total_copias += copias
-                total_defeitos += defeitos
-                total_faltantes += faltantes
-                total_regulares += regulares
-                valor_total += subtotal
+                totals["entregue"] += entregue
+                totals["copias"] += copias
+                totals["defeitos"] += defeitos
+                totals["faltantes"] += faltantes
+                totals["regulares"] += regulares
+                totals["valor_total"] += float(subtotal or 0.0)
 
-            # Atualiza entrada_acabamento com os novos totais e observações
+            # (2) Atualiza o cabeçalho do retorno (controle_retorno_cortes)
             obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
 
+            cols_ret = self._cols(cur, schema, "controle_retorno_cortes")
+            if "observacoes_finalizacao" in cols_ret:
+                cur.execute(f"""
+                    UPDATE {schema}.controle_retorno_cortes
+                       SET observacoes_finalizacao = %s,
+                           total_entregue = %s,
+                           total_copias = %s,
+                           total_defeitos = %s,
+                           total_faltantes = %s,
+                           total_regulares = %s,
+                           valor_total = %s
+                     WHERE id = %s
+                """, (obs_finalizacao, totals["entregue"], totals["copias"], totals["defeitos"],
+                        totals["faltantes"], totals["regulares"], totals["valor_total"], retorno_id))
+            else:
+                if "observacoes_gerais" in cols_ret:
+                    cur.execute(f"""
+                        UPDATE {schema}.controle_retorno_cortes
+                           SET observacoes_gerais = %s,
+                               total_entregue = %s,
+                               total_copias = %s,
+                               total_defeitos = %s,
+                               total_faltantes = %s,
+                               total_regulares = %s,
+                               valor_total = %s
+                         WHERE id = %s
+                    """, (obs_finalizacao, totals["entregue"], totals["copias"], totals["defeitos"],
+                            totals["faltantes"], totals["regulares"], totals["valor_total"], retorno_id))
+                else:
+                    cur.execute(f"""
+                        UPDATE {schema}.controle_retorno_cortes
+                           SET total_entregue = %s,
+                               total_copias = %s,
+                               total_defeitos = %s,
+                               total_faltantes = %s,
+                               total_regulares = %s,
+                               valor_total = %s
+                         WHERE id = %s
+                    """, (totals["entregue"], totals["copias"], totals["defeitos"],
+                            totals["faltantes"], totals["regulares"], totals["valor_total"], retorno_id))
+
+            # (3) Marca o envio como FINALIZADO
+            cols_envio = self._cols(cur, schema, "envios_cortes")
+            if "status_envio" in cols_envio:
+                cur.execute(f"""
+                    UPDATE {schema}.envios_cortes
+                       SET status_envio = 'Finalizado'
+                     WHERE id = %s
+                """, (envio_id,))
+            elif "status" in cols_envio:
+                cur.execute(f"""
+                    UPDATE {schema}.envios_cortes
+                       SET status = 'Finalizado'
+                     WHERE id = %s
+                """, (envio_id,))
+
+            # (4) Registra/atualiza em cortes_finalizados para o PAGAMENTO_SERVICOS listar
+            # dados base (puxando do envio)
             cur.execute(f"""
-                UPDATE {schema}.entrada_acabamento
-                   SET total_entregue  = %s,
-                       total_defeitos  = %s,
-                       total_faltantes = %s,
-                       total_regulares = %s,
-                       valor_total     = %s,
-                       observacoes_finalizacao = %s
-                 WHERE id = %s
-            """, (total_entregue, total_defeitos, total_faltantes,
-                  total_regulares, valor_total, obs_finalizacao,
-                  self.retorno_selecionado["id"]))
+                SELECT
+                    COALESCE(e.codigo_corte, ''),
+                    COALESCE(e.descricao_corte, ''),
+                    COALESCE(e.data_envio, NULL),
+                    COALESCE(r.data_chegada, NULL),
+                    COALESCE(f.nome, '')
+                FROM {schema}.envios_cortes e
+                JOIN {schema}.controle_retorno_cortes r ON r.id = %s
+                LEFT JOIN {schema}.cadastro_faccoes f ON f.id = e.prestador_id
+                WHERE e.id = %s
+                LIMIT 1
+            """, (retorno_id, envio_id))
+            row = cur.fetchone() or ("", "", None, None, "")
+            codigo_corte, desc_corte, data_envio, data_chegada, prestador_nome = row
+
+            # tenta ler tipo de serviço do envio (se existir)
+            tipo_servico = ""
+            try:
+                if "tipo_servico" in cols_envio:
+                    cur.execute(f"SELECT COALESCE(tipo_servico,'') FROM {schema}.envios_cortes WHERE id=%s", (envio_id,))
+                    r2 = cur.fetchone()
+                    tipo_servico = (r2[0] if r2 else "") or ""
+            except Exception:
+                tipo_servico = ""
+
+            # bonificação: guarda valor se o usuário marcou "sim" e tiver campo de valor na tela
+            bonif_valor = 0.0
+            try:
+                bonif_aplicada = (self.bonif_final_var.get() == "sim")
+            except Exception:
+                bonif_aplicada = False
+            if bonif_aplicada:
+                try:
+                    bonif_valor = float((self.valor_bonif_entry.get() or "0").replace(",", "."))
+                except Exception:
+                    bonif_valor = 0.0
+
+            # monta payload adaptando às colunas existentes
+            try:
+                cols_cf = self._cols(cur, schema, "cortes_finalizados")
+            except Exception:
+                cols_cf = set()
+
+            if cols_cf:
+                # procura registro existente para este envio
+                existing_id = None
+                if "envio_id" in cols_cf:
+                    cur.execute(f"""
+                        SELECT id
+                          FROM {schema}.cortes_finalizados
+                         WHERE envio_id = %s
+                      ORDER BY id DESC LIMIT 1
+                    """, (envio_id,))
+                    rr = cur.fetchone()
+                    existing_id = rr[0] if rr else None
+                else:
+                    # fallback pelo código (menos ideal)
+                    cur.execute(f"""
+                        SELECT id
+                          FROM {schema}.cortes_finalizados
+                         WHERE codigo = %s
+                      ORDER BY id DESC LIMIT 1
+                    """, (codigo_corte,))
+                    rr = cur.fetchone()
+                    existing_id = rr[0] if rr else None
+
+                # mapeia tamanhos -> sufixos da tabela (qtd_pp, qtd_p, ...)
+                mapa_sufixo = {"PP": "pp", "P": "p", "M": "m", "G": "g", "GG": "gg", "G1": "g1", "G2": "g2", "G3": "g3"}
+
+                data_payload = {}
+                if "envio_id" in cols_cf: data_payload["envio_id"] = envio_id
+                if "retorno_id" in cols_cf: data_payload["retorno_id"] = retorno_id
+                if "tipo_servico" in cols_cf: data_payload["tipo_servico"] = tipo_servico
+                if "codigo" in cols_cf: data_payload["codigo"] = codigo_corte
+                if "descricao" in cols_cf: data_payload["descricao"] = desc_corte
+                if "costureira" in cols_cf: data_payload["costureira"] = prestador_nome
+                if "data_envio" in cols_cf: data_payload["data_envio"] = data_envio
+                if "data_chegada" in cols_cf: data_payload["data_chegada"] = data_chegada
+                if "valor_total" in cols_cf: data_payload["valor_total"] = totals["valor_total"]
+                if "bonificacao" in cols_cf:
+                    # Compatibilidade: alguns bancos têm bonificacao BOOLEAN (apenas flag),
+                    # outros têm bonificacao NUMERIC (valor). Ajusta automaticamente.
+                    dt, _udt = self._col_type(cur, schema, "cortes_finalizados", "bonificacao")
+                    if dt == "boolean":
+                        data_payload["bonificacao"] = bool(bonif_aplicada)
+                        # se existir coluna para armazenar o valor, gravamos também
+                        for cand in ("valor_bonificacao", "bonificacao_valor", "bonificacao_rs", "valor_bonificacao_rs"):
+                            if cand in cols_cf:
+                                data_payload[cand] = float(bonif_valor or 0.0)
+                                break
+                    else:
+                        data_payload["bonificacao"] = float(bonif_valor or 0.0)
+
+
+                for tam, suf in mapa_sufixo.items():
+                    col = f"qtd_{suf}"
+                    if col in cols_cf:
+                        data_payload[col] = int(reg_por_tam.get(tam, 0))
+
+                # por padrão, não marca pago aqui
+                if existing_id:
+                    sets = ", ".join([f"{k} = %s" for k in data_payload.keys()])
+                    vals = list(data_payload.values())
+                    vals.append(existing_id)
+                    cur.execute(f"""
+                        UPDATE {schema}.cortes_finalizados
+                           SET {sets}
+                         WHERE id = %s
+                    """, tuple(vals))
+                else:
+                    # cria defaults de pago, se existir
+                    if "pago" in cols_cf:
+                        data_payload["pago"] = False
+                    cols = ", ".join(data_payload.keys())
+                    placeholders = ", ".join(["%s"] * len(data_payload))
+                    cur.execute(f"""
+                        INSERT INTO {schema}.cortes_finalizados ({cols})
+                        VALUES ({placeholders})
+                    """, tuple(data_payload.values()))
 
             conn.commit()
             conn.close()
 
-            # Atualiza labels na tela
-            self.lbl_total_entregue.configure(text=str(total_entregue))
-            self.lbl_total_copias.configure(text=str(total_copias))
-            self.lbl_total_defeito.configure(text=str(total_defeitos))
-            self.lbl_total_faltante.configure(text=str(total_faltantes))
-            self.lbl_total_regulares.configure(text=str(total_regulares))
-            self.lbl_valor_total.configure(text=fmt_moeda(valor_total))
+            messagebox.showinfo("Sucesso", "Corte finalizado com sucesso.")
+            self.limpar_campos()
+            self.carregar_retornos_pendentes()
+
+        except Exception as e:
+            try:
+                conn.rollback()
+                conn.close()
+            except Exception:
+                pass
+            messagebox.showerror("Erro", f"Falha ao finalizar corte: {e}")
+
+    def salvar_baixa_parcial(self):
+        """Salva a conferência atual (baixa parcial) SEM marcar como Finalizado.
+
+        Ajuste importante:
+        - Antes este método tentava localizar envio_id em `entrada_acabamento` (tabela antiga).
+        - Agora ele usa o vínculo correto `controle_retorno_cortes.envio_id` (via mapa retorno->envio),
+          e persiste os detalhes em `retorno_detalhes_tamanho` (consolidando os valores que estão na tela).
+        """
+        if not getattr(self, "retorno_selecionado", None):
+            messagebox.showwarning("Aviso", "Selecione um retorno na lista.")
+            return
+
+        try:
+            retorno_id = int(self.retorno_selecionado["id"])
+        except Exception:
+            messagebox.showerror("Erro", "ID de retorno inválido.")
+            return
+
+        # pega envio_id via mapa (preenchido em carregar_retornos_pendentes)
+        envio_id = None
+        if hasattr(self, "mapa_retorno_envio"):
+            envio_id = self.mapa_retorno_envio.get(retorno_id)
+
+        if not envio_id:
+            messagebox.showerror("Erro", "Não foi possível localizar o envio desta entrada.")
+            return
+
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            self._set_search_path(cur, schema)
+
+            # (1) Consolida detalhes por tamanho conforme a tela
+            totals = {
+                "entregue": 0,
+                "copias": 0,
+                "defeitos": 0,
+                "faltantes": 0,
+                "regulares": 0,
+                "valor_total": 0.0,
+            }
+
+            # Importante: aqui fazemos consolidação (replace) para garantir consistência do pagamento.
+            cur.execute(f"DELETE FROM {schema}.retorno_detalhes_tamanho WHERE envio_id = %s", (envio_id,))
+
+            for t in self.tamanhos:
+                entregue = safe_int(self.entregues_vars[t].get())
+                copias = safe_int(self.copias_vars[t].get())
+                defeitos = safe_int(self.defeitos_vars[t].get())
+                faltantes = safe_int(self.faltantes_vars[t].get())
+
+                regulares = max(0, entregue - defeitos - faltantes)
+                valor_peca = float(self.valor_por_tam.get(t, 0.0) or 0.0)
+                subtotal = regulares * valor_peca
+
+                # grava somente linhas com algum dado
+                if any([entregue, copias, defeitos, faltantes, regulares]) or subtotal > 0:
+                    cur.execute(f"""
+                        INSERT INTO {schema}.retorno_detalhes_tamanho
+                            (envio_id, tamanho, entregue, copias, defeitos, faltantes, regulares, subtotal)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (envio_id, t, entregue, copias, defeitos, faltantes, regulares, subtotal))
+
+                totals["entregue"] += entregue
+                totals["copias"] += copias
+                totals["defeitos"] += defeitos
+                totals["faltantes"] += faltantes
+                totals["regulares"] += regulares
+                totals["valor_total"] += float(subtotal or 0.0)
+
+            # (2) Atualiza o cabeçalho do retorno (controle_retorno_cortes)
+            obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
+
+            cols_ret = self._cols(cur, schema, "controle_retorno_cortes")
+            # tenta gravar em coluna dedicada, se existir; senão, reaproveita observacoes_gerais
+            if "observacoes_finalizacao" in cols_ret:
+                cur.execute(f"""
+                    UPDATE {schema}.controle_retorno_cortes
+                       SET observacoes_finalizacao = %s,
+                           total_entregue = %s,
+                           total_copias = %s,
+                           total_defeitos = %s,
+                           total_faltantes = %s,
+                           total_regulares = %s,
+                           valor_total = %s
+                     WHERE id = %s
+                """, (obs_finalizacao, totals["entregue"], totals["copias"], totals["defeitos"],
+                        totals["faltantes"], totals["regulares"], totals["valor_total"], retorno_id))
+            else:
+                # fallback: mantém observações gerais
+                if "observacoes_gerais" in cols_ret:
+                    cur.execute(f"""
+                        UPDATE {schema}.controle_retorno_cortes
+                           SET observacoes_gerais = %s,
+                               total_entregue = %s,
+                               total_copias = %s,
+                               total_defeitos = %s,
+                               total_faltantes = %s,
+                               total_regulares = %s,
+                               valor_total = %s
+                         WHERE id = %s
+                    """, (obs_finalizacao, totals["entregue"], totals["copias"], totals["defeitos"],
+                            totals["faltantes"], totals["regulares"], totals["valor_total"], retorno_id))
+                else:
+                    # se não houver coluna de observações, atualiza somente totais
+                    cur.execute(f"""
+                        UPDATE {schema}.controle_retorno_cortes
+                           SET total_entregue = %s,
+                               total_copias = %s,
+                               total_defeitos = %s,
+                               total_faltantes = %s,
+                               total_regulares = %s,
+                               valor_total = %s
+                         WHERE id = %s
+                    """, (totals["entregue"], totals["copias"], totals["defeitos"],
+                            totals["faltantes"], totals["regulares"], totals["valor_total"], retorno_id))
+
+            # (3) Mantém status do envio como "Em Conferência"
+            cols_envio = self._cols(cur, schema, "envios_cortes")
+            if "status_envio" in cols_envio:
+                cur.execute(f"""
+                    UPDATE {schema}.envios_cortes
+                       SET status_envio = 'Em Conferência'
+                     WHERE id = %s
+                """, (envio_id,))
+            elif "status" in cols_envio:
+                cur.execute(f"""
+                    UPDATE {schema}.envios_cortes
+                       SET status = 'Em Conferência'
+                     WHERE id = %s
+                """, (envio_id,))
+
+            conn.commit()
+            conn.close()
 
             messagebox.showinfo("Sucesso", "Baixa parcial salva com sucesso.")
+            self.limpar_campos()
+            self.carregar_retornos_pendentes()
+
         except Exception as e:
+            try:
+                conn.rollback()
+                conn.close()
+            except Exception:
+                pass
             messagebox.showerror("Erro", f"Falha ao salvar baixa parcial: {e}")
 
     def limpar_campos(self):

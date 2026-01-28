@@ -24,3 +24,32 @@ Traceback (most recent call last):
     return codecs.charmap_encode(input,errors,encoding_table)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 204: character maps to <undefined>
+2026-01-28 15:02:22 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro grave em SQL
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\BANCO_DADOS_FABRICA.py", line 978, in executar_sql
+    self.cursor.execute(comando)
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\psycopg2\extras.py", line 236, in execute
+    return super().execute(query, vars)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.DatatypeMismatch: ERRO:  valor padrão para coluna "bonificacao" não pode ser convertido automaticamente para tipo numeric
+
+2026-01-28 15:02:43 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro grave em SQL
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\BANCO_DADOS_FABRICA.py", line 978, in executar_sql
+    self.cursor.execute(comando)
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\psycopg2\extras.py", line 236, in execute
+    return super().execute(query, vars)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.DatatypeMismatch: ERRO:  valor padrão para coluna "bonificacao" não pode ser convertido automaticamente para tipo numeric
+
+2026-01-28 15:33:34 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro grave em SQL
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\BANCO_DADOS_FABRICA.py", line 978, in executar_sql
+    self.cursor.execute(comando)
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\psycopg2\extras.py", line 236, in execute
+    return super().execute(query, vars)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 12, in encode
+    return codecs.charmap_encode(input,errors,encoding_table)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 794: character maps to <undefined>

@@ -533,6 +533,18 @@ class HistoricoServicosPage(ctk.CTkFrame):
             except Exception:
                 pass
 
+            # De envios_cortes (por prestador_id)
+            try:
+                cur.execute(
+                    f"""SELECT DISTINCT cf.nome
+                           FROM {schema}.envios_cortes ec
+                           JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
+                           WHERE cf.nome IS NOT NULL"""
+                )
+                prestadores.update(r[0] for r in cur.fetchall())
+            except Exception:
+                pass
+
             prestadores_list = sorted(list(prestadores))
             self.prestador_combo.configure(values=prestadores_list)
 
@@ -598,6 +610,79 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     registros += 1
             except Exception as e:
                 print(f"Erro em envios: {e}")
+
+            # 1b. ENVIOS (envios_cortes)
+            try:
+                # Consultar envios registrados na nova tabela envios_cortes.
+                # Aqui buscamos o nome do prestador via join com cadastro_faccoes e
+                # agregamos as quantidades e valores por tamanho para calcular o total.
+                sql_envios2 = f"""
+                    SELECT
+                        ec.data_envio,
+                        ec.tipo_servico,
+                        COALESCE(cc.codigo, ec.codigo_corte) as codigo_corte,
+                        COALESCE(cc.descricao, ec.descricao_corte) as descricao_corte,
+                        COALESCE(ec.qtd_pp, 0) as qtd_pp,
+                        COALESCE(ec.qtd_p, 0) as qtd_p,
+                        COALESCE(ec.qtd_m, 0) as qtd_m,
+                        COALESCE(ec.qtd_g, 0) as qtd_g,
+                        COALESCE(ec.qtd_gg, 0) as qtd_gg,
+                        COALESCE(ec.qtd_g1, 0) as qtd_g1,
+                        COALESCE(ec.qtd_g2, 0) as qtd_g2,
+                        COALESCE(ec.qtd_g3, 0) as qtd_g3,
+                        COALESCE(ec.valor_pp, 0) as valor_pp,
+                        COALESCE(ec.valor_p, 0) as valor_p,
+                        COALESCE(ec.valor_m, 0) as valor_m,
+                        COALESCE(ec.valor_g, 0) as valor_g,
+                        COALESCE(ec.valor_gg, 0) as valor_gg,
+                        COALESCE(ec.valor_g1, 0) as valor_g1,
+                        COALESCE(ec.valor_g2, 0) as valor_g2,
+                        COALESCE(ec.valor_g3, 0) as valor_g3,
+                        COALESCE(ec.status_envio, 'Enviado') as status_envio
+                    FROM {schema}.envios_cortes ec
+                    LEFT JOIN {schema}.cadastro_de_corte cc ON ec.corte_id = cc.id
+                    JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
+                    WHERE ec.data_envio BETWEEN %s AND %s
+                      AND cf.nome = %s
+                      AND (%s = 'Todos' OR ec.tipo_servico = %s)
+                    ORDER BY ec.data_envio
+                """
+                cur.execute(sql_envios2, (ini, fim, prestador, servico, servico))
+                for row in cur.fetchall():
+                    (
+                        data, serv, codigo, desc,
+                        qpp, qp, qm, qg, qgg, qg1, qg2, qg3,
+                        vpp, vp, vm, vg, vgg, vg1, vg2, vg3,
+                        status_envio
+                    ) = row
+                    # Somar quantidades de todas as colunas de tamanho
+                    qtd = (
+                        (qpp or 0) + (qp or 0) + (qm or 0) + (qg or 0) +
+                        (qgg or 0) + (qg1 or 0) + (qg2 or 0) + (qg3 or 0)
+                    )
+                    # Calcular valor total do envio multiplicando quantidades pelos respectivos valores
+                    valor_total_envio = (
+                        (qpp or 0) * (vpp or 0) +
+                        (qp or 0) * (vp or 0) +
+                        (qm or 0) * (vm or 0) +
+                        (qg or 0) * (vg or 0) +
+                        (qgg or 0) * (vgg or 0) +
+                        (qg1 or 0) * (vg1 or 0) +
+                        (qg2 or 0) * (vg2 or 0) +
+                        (qg3 or 0) * (vg3 or 0)
+                    )
+                    # Valor unitário médio ponderado (evita divisão por zero)
+                    valor_unit_medio = (valor_total_envio / qtd) if qtd > 0 else 0
+                    tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
+                    self.tree.insert("", "end", values=(
+                        data, "ENVIO", serv, codigo or "-", desc or "-", qtd,
+                        f"R$ {valor_unit_medio:.2f}", f"R$ {valor_total_envio:.2f}", status_envio or ""
+                    ), tags=(tag,))
+                    total_envios += qtd
+                    total_valor += valor_total_envio
+                    registros += 1
+            except Exception as e:
+                print(f"Erro em envios (envios_cortes): {e}")
 
             # 2. RETORNOS/ENTRADAS
             try:

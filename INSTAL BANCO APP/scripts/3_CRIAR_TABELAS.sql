@@ -508,6 +508,16 @@ CREATE TABLE IF NOT EXISTS opera.envios_cortes (
     qtd_g1 INTEGER DEFAULT 0,
     qtd_g2 INTEGER DEFAULT 0,
     qtd_g3 INTEGER DEFAULT 0,
+
+    -- NOVO: cópias retiradas do corte (por tamanho)
+    copias_pp INTEGER DEFAULT 0,
+    copias_p  INTEGER DEFAULT 0,
+    copias_m  INTEGER DEFAULT 0,
+    copias_g  INTEGER DEFAULT 0,
+    copias_gg INTEGER DEFAULT 0,
+    copias_g1 INTEGER DEFAULT 0,
+    copias_g2 INTEGER DEFAULT 0,
+    copias_g3 INTEGER DEFAULT 0,
     piloto_pp INTEGER DEFAULT 0,
     piloto_p INTEGER DEFAULT 0,
     piloto_m INTEGER DEFAULT 0,
@@ -528,6 +538,9 @@ CREATE TABLE IF NOT EXISTS opera.envios_cortes (
     total_pilotos INTEGER DEFAULT 0,
     valor_total_envio NUMERIC(12,2) DEFAULT 0,
     resumo_pilotos TEXT,
+
+    -- NOVO: coluna para registrar também o "resumo/registro" de cópias do corte
+    copias_do_corte TEXT,
     aviamentos TEXT,
     outros TEXT,
     observacoes TEXT,
@@ -543,9 +556,12 @@ CREATE TABLE IF NOT EXISTS opera.envios_cortes (
 ----------------------------------------
 -- [TABELA 23] envio_detalhes_tamanho - Detalhes por tamanho do envio
 CREATE TABLE IF NOT EXISTS opera.envio_detalhes_tamanho (
-    envio_id INTEGER NOT NULL REFERENCES opera.controle_envio_cortes(id) ON DELETE CASCADE,
+    envio_id INTEGER NOT NULL REFERENCES opera.envios_cortes(id) ON DELETE CASCADE,
     tamanho VARCHAR(10) NOT NULL,
     quantidade INTEGER DEFAULT 0,
+
+    -- NOVO: cópias retiradas do corte (por tamanho)
+    copias_do_corte INTEGER DEFAULT 0,
     quantidade_pilotos INTEGER DEFAULT 0,
     valor_peca NUMERIC(12,2) DEFAULT 0,
     PRIMARY KEY (envio_id, tamanho)
@@ -623,6 +639,9 @@ CREATE TABLE IF NOT EXISTS opera.cortes_finalizados (
     id SERIAL PRIMARY KEY,
     corte_id INTEGER REFERENCES opera.cadastro_de_corte(id),
     entrada_id INTEGER,
+    envio_id INTEGER REFERENCES opera.envios_cortes(id) ON DELETE SET NULL,
+    retorno_id INTEGER REFERENCES opera.controle_retorno_cortes(id) ON DELETE SET NULL,
+    tipo_servico VARCHAR(100),
     codigo VARCHAR(100),
     descricao TEXT,
     costureira VARCHAR(200),
@@ -636,7 +655,7 @@ CREATE TABLE IF NOT EXISTS opera.cortes_finalizados (
     status VARCHAR(50),
     data_conferencia TIMESTAMP,
     valor_peca NUMERIC(12,2),
-    bonificacao BOOLEAN DEFAULT FALSE,
+    bonificacao NUMERIC(12,2) DEFAULT 0.00,  -- CORRIGIDO: era BOOLEAN, agora NUMERIC
     pago BOOLEAN DEFAULT FALSE,
     data_pagamento DATE,
     qtd_pp INTEGER DEFAULT 0,
@@ -655,8 +674,15 @@ CREATE TABLE IF NOT EXISTS opera.cortes_finalizados (
     qtd_defeito_g1 INTEGER DEFAULT 0,
     qtd_defeito_g2 INTEGER DEFAULT 0,
     qtd_defeito_g3 INTEGER DEFAULT 0,
+    valor_total NUMERIC(12,2) DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    -- Adicionando índices para melhor performance
+    CONSTRAINT fk_cortes_finalizados_envio FOREIGN KEY (envio_id)
+        REFERENCES opera.envios_cortes(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cortes_finalizados_retorno FOREIGN KEY (retorno_id)
+        REFERENCES opera.controle_retorno_cortes(id) ON DELETE SET NULL
 );
 
 -- [TABELA 29] cortes_finalizados_completo - Cortes finalizados completos

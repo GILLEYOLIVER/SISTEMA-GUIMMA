@@ -47,12 +47,30 @@ def safe_int(v, default=0):
 
 
 def parse_valor(s):
-    """'1.234,56' | '1234.56' | '' -> float"""
+    """Converte uma string de valor monetário (brasileiro ou internacional) em float.
+
+    Exemplos:
+        '1.234,56' -> 1234.56
+        '1234,56'  -> 1234.56
+        '1234.56'  -> 1234.56
+        '15,00'    -> 15.0
+        '15.00'    -> 15.0
+        '' ou None -> 0.0
+    """
     try:
         s = (s or "").strip().replace("R$", "").replace(" ", "")
         if not s:
             return 0.0
-        return float(s.replace(".", "").replace(",", "."))
+        # Primeiro, tente interpretar diretamente (dot decimal)
+        try:
+            return float(s)
+        except Exception:
+            pass
+        # Caso contrário, trate ponto como separador de milhar e vírgula como decimal
+        try:
+            return float(s.replace(".", "").replace(",", "."))
+        except Exception:
+            return 0.0
     except Exception:
         return 0.0
 
@@ -126,14 +144,27 @@ class EnvioCortes(ctk.CTkFrame):
         self.configuracao = {"label_empresa": "Empresa:", "label_telefone": "Telefone empresa:"}
 
         # Variáveis da grade
+        # Quantidades originais informadas pelo usuário (por tamanho)
         self.quantidades = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        # Número de cópias retiradas diretamente do corte para cada tamanho (piloto automático)
+        # Esses valores serão subtraídos das quantidades enviadas e somados aos pilotos
+        self.copias_do_corte = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        # Pilotos informados manualmente via o campo "Registrar".
+        # Por simplicidade, trataremos a coluna "Pilotos" como editável. O valor exibido representa
+        # o número total de pilotos que serão enviados deste tamanho. Quando o usuário ajusta o
+        # valor de pilotos, o sistema irá recalcular a quantidade de cópias restantes do corte.
+        # `pilotos` armazena o valor mostrado no campo da grade (pilotos a serem enviados).
         self.pilotos = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        # Armazenamos o número original de cópias digitadas para cada tamanho.
+        # Este valor é usado para recalcular as cópias restantes quando o número de pilotos é alterado.
+        self.copias_original = {t: 0 for t in self.tamanhos}
+        # Valor unitário (como string) para cada tamanho
         self.valores = {t: tk.StringVar(value="") for t in self.tamanhos}
 
         # Valor único
         self.valor_unico_var = tk.IntVar(value=0)
 
-        # Piloto (tam + qtd)
+        # Piloto (tam + qtd) - usado para registrar pilotos extras via o painel lateral
         self.piloto_tam_var = tk.StringVar(value=self.tamanhos[0])
         self.piloto_qtd_var = ctk.IntVar(value=0)
 
@@ -212,25 +243,27 @@ class EnvioCortes(ctk.CTkFrame):
                                                                                                   padx=(0, 6))
 
         # Combobox de costureira - COM TEMA
+        # Combobox de costureira usando CTkComboBox com callback adequado
+        # Valores serão carregados dinamicamente em _carregar_prestadores
         self.prestador_busca_cb = ctk.CTkComboBox(
             linha,
             width=360,
-            values=["Digite para buscar..."],
+            values=[],
             state="normal",
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
             button_color=self.cor_primaria, button_hover_color=self.cor_hover,
             text_color=self.cor_texto, dropdown_fg_color=self.cor_secundaria,
-            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover
+            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover,
+            command=self._on_prestador_change  # CTkComboBox usa `command` para callback
         )
         self.prestador_busca_cb.set("")
         self.prestador_busca_cb.pack(side="left")
 
-        # Configurar eventos após o combobox ser criado
+        # Configurar eventos de digitação e perda de foco
+        # O evento de seleção é tratado pelo argumento `command` acima
         self.prestador_busca_cb.bind("<KeyRelease>", lambda e: self._filtrar_combo_prestador())
         self.prestador_busca_cb.bind("<Return>", self._on_costureira_selected)
         self.prestador_busca_cb.bind("<FocusOut>", self._on_costureira_selected)
-        self.prestador_busca_cb.bind("<<ComboboxSelected>>",
-                                     lambda e: self._on_prestador_change(self.prestador_busca_cb.get()))
 
         ctk.CTkLabel(linha, text="Serviço:", width=80, text_color=self.cor_texto).pack(side="left", padx=(20, 6))
 
@@ -414,8 +447,16 @@ class EnvioCortes(ctk.CTkFrame):
         header_g = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         header_g.pack(fill="x")
 
-        for h, w in [("Tam.", 60), ("Disponível", 90), ("Enviar", 90), ("Pilotos", 90), ("Valor/Peça (R$)", 120),
-                     ("Subtotal", 110)]:
+        # Cabeçalho da grade, agora com coluna adicional "Cópias Ret. Corte"
+        for h, w in [
+            ("Tam.", 60),
+            ("Disponível", 90),
+            ("Cópias Ret. Corte", 90),
+            ("Enviar", 90),
+            ("Pilotos", 90),
+            ("Valor/Peça (R$)", 120),
+            ("Subtotal", 110),
+        ]:
             ctk.CTkLabel(header_g, text=h, width=w, text_color=self.cor_texto).pack(side="left", padx=2)
 
         self.grade_widgets = {}
@@ -423,32 +464,53 @@ class EnvioCortes(ctk.CTkFrame):
             row = ctk.CTkFrame(left, fg_color=self.cor_fundo)
             row.pack(fill="x", pady=2)
 
+            # Coluna do tamanho
             ctk.CTkLabel(row, text=tam, width=60, text_color=self.cor_texto).pack(side="left", padx=2)
 
+            # Disponível
             lbl_disp = ctk.CTkLabel(row, text="0", width=90, text_color=self.cor_texto)
             lbl_disp.pack(side="left", padx=2)
 
+            # Cópias retiradas do corte: representa o número de cópias removidas do corte para este tamanho.
+            # Este campo é editável; quando alterado, armazenamos o valor digitado em `copias_original` e
+            # recalculamos o saldo de cópias restantes subtraindo o número de pilotos definidos.
+            ent_cop = ctk.CTkEntry(row, width=90, textvariable=self.copias_do_corte[tam],
+                                   fg_color=self.cor_terciaria, border_color=self.cor_borda, text_color=self.cor_texto)
+            ent_cop.pack(side="left", padx=2)
+            # Ao editar o campo de cópias, atualize o valor original e recalcule o saldo de cópias
+            ent_cop.bind("<KeyRelease>", lambda e, T=tam: self._on_copias_edit(T))
+
+            # Quantidade a enviar (depois de subtrair cópias)
             ent_qtd = ctk.CTkEntry(row, width=90, textvariable=self.quantidades[tam],
                                    fg_color=self.cor_terciaria, border_color=self.cor_borda, text_color=self.cor_texto)
             ent_qtd.pack(side="left", padx=2)
+            ent_qtd.bind("<KeyRelease>", self._recalcular)
 
+            # Pilotos: campo editável. O valor digitado representa o número de pilotos que serão enviados.
             ent_pil = ctk.CTkEntry(row, width=90, textvariable=self.pilotos[tam],
                                    fg_color=self.cor_terciaria, border_color=self.cor_borda, text_color=self.cor_texto)
             ent_pil.pack(side="left", padx=2)
+            # Ao editar o campo de pilotos, recalcula o saldo de cópias restantes
+            ent_pil.bind("<KeyRelease>", lambda e, T=tam: self._on_pilotos_edit(T))
 
+            # Valor unitário
             ent_val = ctk.CTkEntry(row, width=120, textvariable=self.valores[tam], placeholder_text="0,00",
                                    fg_color=self.cor_terciaria, border_color=self.cor_borda, text_color=self.cor_texto,
                                    placeholder_text_color="#888888")
             ent_val.pack(side="left", padx=2)
+            # Recalcular subtotais ao editar valor
             ent_val.bind("<KeyRelease>", lambda e, T=tam: self._on_valor_edit(T))
 
-            ent_qtd.bind("<KeyRelease>", self._recalcular)
-            ent_pil.bind("<KeyRelease>", lambda e: (self._recalcular(), self._update_piloto_resumo()))
-
+            # Subtotal
             lbl_total = ctk.CTkLabel(row, text=fmt_moeda(0), width=110, text_color=self.cor_texto)
             lbl_total.pack(side="left", padx=2)
 
-            self.grade_widgets[tam] = {"disp": lbl_disp, "sub": lbl_total, "ent_val": ent_val}
+            # Armazenar widgets relevantes
+            self.grade_widgets[tam] = {
+                "disp": lbl_disp,
+                "sub": lbl_total,
+                "ent_val": ent_val,
+            }
 
         # Totais - COM TEMA
         totais = ctk.CTkFrame(left, fg_color=self.cor_fundo)
@@ -580,9 +642,11 @@ class EnvioCortes(ctk.CTkFrame):
             nomes = []
             self._prestador_map = {}
             for pid, nome, tel, tipo in rows:
-                visivel = (nome or "").strip()
-                nomes.append(visivel)
-                self._prestador_map[visivel.lower()] = pid
+                # Normaliza o nome removendo espaços duplicados
+                visivel = " ".join((nome or "").split())
+                if visivel:
+                    nomes.append(visivel)
+                    self._prestador_map[visivel.lower()] = pid
 
             self._prestadores_full = rows
             self.prestadores_filtrados = rows
@@ -662,38 +726,67 @@ class EnvioCortes(ctk.CTkFrame):
         self.prestador_busca_cb.configure(values=filtrados)
 
     def _on_costureira_selected(self, event=None):
-        """Quando uma costureira é selecionada no combobox"""
-        nome = self.prestador_busca_cb.get().strip()
+        """
+        Quando uma costureira é selecionada no combobox.
+        Este método é chamado tanto pelo parâmetro `command` do CTkComboBox
+        quanto por eventos de teclado (Return e FocusOut).
+        Ele normaliza o nome, obtém o ID correspondente e chama
+        _preencher_banco para carregar os dados.
+        """
+        # Normalizar o nome (remove múltiplos espaços e pontas) para comparação
+        nome = " ".join((self.prestador_busca_cb.get() or "").split()).strip()
 
-        if nome.startswith("Nenhum prestador"):
+        # Se for indicação de nenhum prestador ou campo vazio, limpar
+        if not nome or nome.startswith("Nenhum prestador"):
             self.prestador_busca_cb.set("")
             self._preencher_banco(None)
             return
 
-        if not nome:
-            self._preencher_banco(None)
-            return
-
+        # Tentar obter o ID pelo mapa (nomes normalizados e minúsculos)
         pid = self._prestador_map.get(nome.lower())
         if pid:
             self._preencher_banco(pid)
         else:
+            # Fallback: procurar na lista de prestadores filtrados
             for prestador in self.prestadores_filtrados:
-                if len(prestador) > 1 and prestador[1] and prestador[1].lower() == nome.lower():
-                    self._prestador_map[nome.lower()] = prestador[0]
-                    self._preencher_banco(prestador[0])
-                    return
-
+                if len(prestador) > 1:
+                    n = " ".join((prestador[1] or "").split())
+                    if n.lower() == nome.lower():
+                        pid = prestador[0]
+                        self._prestador_map[nome.lower()] = pid
+                        self._preencher_banco(pid)
+                        return
+            # Se não encontrar
             messagebox.showwarning("Aviso", "Prestador não encontrado.")
             self._preencher_banco(None)
 
     def _on_prestador_change(self, choice):
-        """Callback do combobox quando seleciona um item da lista."""
-        if choice and not choice.startswith("Nenhum prestador"):
-            self._on_costureira_selected()
+        """
+        Callback do CTkComboBox quando um item é selecionado.
+        Este método é disparado via parâmetro `command` do CTkComboBox.
+        Ele normaliza o texto selecionado, atualiza o campo do combobox e
+        chama a rotina de seleção para carregar os dados bancários.
+        """
+        # Se não há escolha (usuário limpou o campo), limpar dados
+        if not choice:
+            self._preencher_banco(None)
+            return
+
+        # Normalizar espaços duplicados e atualizar a seleção
+        nome = " ".join(str(choice).split())
+        self.prestador_busca_cb.set(nome)
+
+        # Se for indicação de nenhum prestador, limpar
+        if nome.startswith("Nenhum prestador"):
+            self._preencher_banco(None)
+            return
+
+        # Chamar rotina padrão de seleção
+        self._on_costureira_selected()
 
     def _preencher_banco(self, prestador_id):
         """Preenche os dados bancários do prestador selecionado"""
+        # Se nenhum prestador foi selecionado, limpar os campos
         if not prestador_id:
             self._prestador_id = None
             self._prestador_nome = ""
@@ -706,14 +799,41 @@ class EnvioCortes(ctk.CTkFrame):
 
         try:
             from BANCO_DE_DADOS_PG import get_conn, get_schema
-
+            schema = get_schema()
+            # Garantir que prestador_id é inteiro
+            try:
+                prestador_id = int(prestador_id)
+            except Exception:
+                pass
             with get_conn() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(f"SET LOCAL search_path = {get_schema()};")
-                    cur.execute(f"""
-                        SELECT nome, telefone, cpf, banco, agencia, conta, chave_pix, titular_da_conta
-                        FROM {get_schema()}.cadastro_faccoes WHERE id=%s AND ativo = TRUE
-                    """, (prestador_id,))
+                    cur.execute(f"SET LOCAL search_path = {schema};")
+                    # Detectar colunas existentes para PIX (pix ou chave_pix) e ativo
+                    cur.execute("""
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_schema = %s AND table_name = 'cadastro_faccoes'
+                    """, (schema,))
+                    cols = {r[0] for r in cur.fetchall()}
+                    pix_col = "pix" if "pix" in cols else ("chave_pix" if "chave_pix" in cols else None)
+                    ativo_filter = " AND ativo = TRUE" if "ativo" in cols else ""
+                    if not pix_col:
+                        raise Exception("A tabela cadastro_faccoes não possui coluna PIX (pix/chave_pix).")
+                    # Consulta dinâmica com coluna de pix
+                    query = f"""
+                        SELECT
+                            COALESCE(nome,'') AS nome,
+                            COALESCE(telefone,'') AS telefone,
+                            COALESCE(cpf,'') AS cpf,
+                            COALESCE(banco,'') AS banco,
+                            COALESCE(agencia,'') AS agencia,
+                            COALESCE(conta,'') AS conta,
+                            COALESCE({pix_col},'') AS pix,
+                            COALESCE(titular_da_conta,'') AS titular_da_conta
+                        FROM {schema}.cadastro_faccoes
+                        WHERE id=%s {ativo_filter}
+                    """
+                    cur.execute(query, (prestador_id,))
                     row = cur.fetchone()
 
             if not row:
@@ -723,7 +843,6 @@ class EnvioCortes(ctk.CTkFrame):
             nome, tel, cpf, banco, agencia, conta, pix, titular = row
             self._prestador_id = prestador_id
             self._prestador_nome = nome or ""
-
             campos = [
                 (self.telefone_entry, tel or ""),
                 (self.cpf_entry, cpf or ""),
@@ -733,13 +852,11 @@ class EnvioCortes(ctk.CTkFrame):
                 (self.pix_entry, pix or ""),
                 (self.titular_entry, titular or "")
             ]
-
             for w, v in campos:
                 w.configure(state="normal")
                 w.delete(0, "end")
                 w.insert(0, v)
                 w.configure(state="disabled")
-
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao carregar dados bancários: {e}")
 
@@ -954,19 +1071,91 @@ class EnvioCortes(ctk.CTkFrame):
                 self.valores[t].set(v)
         self._recalcular()
 
+    # ----------------------------- Edição de Cópias e Pilotos -----------------------------
+    def _on_copias_edit(self, tam):
+        """
+        Ao editar o campo de cópias retiradas do corte, armazena o valor original digitado e
+        recalcula o saldo de cópias restantes subtraindo o número de pilotos definidos para esse tamanho.
+
+        :param tam: Tamanho (string) da peça (ex.: "P", "M", etc.).
+        """
+        try:
+            # Valor digitado no campo de cópias
+            new_copias = safe_int(self.copias_do_corte[tam].get())
+            # Armazena o valor original para referência futura
+            self.copias_original[tam] = new_copias
+            # Número atual de pilotos definidos para esse tamanho
+            current_pilotos = safe_int(self.pilotos[tam].get())
+            # Cálculo do saldo de cópias restantes (não negativas)
+            leftover = max(self.copias_original[tam] - current_pilotos, 0)
+            # Atualiza o campo de cópias com o saldo
+            self.copias_do_corte[tam].set(leftover)
+        except Exception:
+            # Se ocorrer algum erro de conversão, mantenha o valor atual
+            pass
+        # Recalcular totais após ajuste
+        try:
+            self._recalcular()
+        except Exception:
+            pass
+
+    def _on_pilotos_edit(self, tam):
+        """
+        Ao editar o campo de pilotos, recalcula o saldo de cópias restantes com base no
+        valor original de cópias digitado para esse tamanho.
+
+        :param tam: Tamanho (string) da peça (ex.: "P", "M", etc.).
+        """
+        try:
+            # Número de pilotos digitado
+            new_pilotos = safe_int(self.pilotos[tam].get())
+            # Valor original de cópias informado anteriormente (se não existir, assume 0)
+            orig_copies = self.copias_original.get(tam, 0)
+            # Recalcula o saldo de cópias restantes
+            leftover = max(orig_copies - new_pilotos, 0)
+            # Atualiza o campo de cópias com o saldo recalculado
+            self.copias_do_corte[tam].set(leftover)
+        except Exception:
+            # Se ocorrer algum erro de conversão, ignore
+            pass
+        # Recalcular totais após ajuste
+        try:
+            self._recalcular()
+        except Exception:
+            pass
+
     def _recalcular(self, event=None):
         total_pecas = 0
         total_valor = 0.0
         for tam in self.tamanhos:
-            qtd = safe_int(self.quantidades[tam].get())
-            pil = safe_int(self.pilotos[tam].get())
+            # Quantidade informada pelo usuário (peças regulares)
+            qtd_original = safe_int(self.quantidades[tam].get())
+            # Número de pilotos definidos (digitados ou registrados via painel)
+            pilotos = safe_int(self.pilotos[tam].get())
+            # Valor unitário da peça
             val = parse_valor(self.valores[tam].get())
-            sub = (qtd + pil) * val
-            self.grade_widgets[tam]["sub"].configure(text=fmt_moeda(sub))
-            total_pecas += qtd + pil
+            # Número total de peças a enviar = regulares + pilotos
+            qtd_envio = qtd_original + pilotos
+            # Subtotal = total de peças * valor unitário
+            sub = qtd_envio * val
+            # Atualiza subtotal na UI
+            try:
+                self.grade_widgets[tam]["sub"].configure(text=fmt_moeda(sub))
+            except Exception:
+                pass
+            total_pecas += qtd_envio
             total_valor += sub
-        self.lbl_total_pecas.configure(text=str(total_pecas))
-        self.lbl_valor_total.configure(text=fmt_moeda(total_valor))
+        # Atualiza totais na UI
+        try:
+            self.lbl_total_pecas.configure(text=str(total_pecas))
+            self.lbl_valor_total.configure(text=fmt_moeda(total_valor))
+        except Exception:
+            pass
+        # Atualiza o resumo de pilotos
+        try:
+            self._update_piloto_resumo()
+        except Exception:
+            pass
 
     def _update_piloto_resumo(self):
         pils = [(t, safe_int(self.pilotos[t].get())) for t in self.tamanhos]
@@ -978,17 +1167,34 @@ class EnvioCortes(ctk.CTkFrame):
         self.piloto_resumo_lbl.configure(text=txt)
 
     def _registrar_piloto(self):
+        """
+        Registra pilotos adicionais via painel lateral.
+        Ao registrar, incrementa o valor da coluna "Pilotos" para o tamanho selecionado e
+        atualiza automaticamente o saldo de cópias restantes.
+        """
         tam = self.piloto_tam_var.get()
         qtd = safe_int(self.piloto_qtd_var.get())
         if not qtd:
             return
-        self.pilotos[tam].set(self.pilotos[tam].get() + qtd)
+        # Incrementa o valor de pilotos para o tamanho escolhido
+        try:
+            current = safe_int(self.pilotos[tam].get())
+        except Exception:
+            current = 0
+        self.pilotos[tam].set(current + qtd)
+        # Limpa o campo de entrada após registrar
         self.piloto_qtd_var.set(0)
-        self._recalcular()
-        self._update_piloto_resumo()
+        # Atualiza o saldo de cópias restantes considerando o novo valor de pilotos
+        try:
+            self._on_pilotos_edit(tam)
+        except Exception:
+            pass
 
     # ----------------------------- Métodos de Ação -----------------------------
     def _abrir_calendario(self, entry):
+        from datetime import datetime
+        import calendar as _cal
+
         def setar_data(d):
             entry.delete(0, "end")
             entry.insert(0, d.strftime("%d/%m/%Y"))
@@ -996,7 +1202,30 @@ class EnvioCortes(ctk.CTkFrame):
 
         top = ctk.CTkToplevel(self)
         top.title("Calendário")
-        top.geometry("300x300")
+        top.resizable(False, False)
+
+        # ===== POSIÇÃO (abre abaixo do entry, como na imagem) =====
+        W, H = 300, 300
+        self.update_idletasks()
+        top.update_idletasks()
+
+        ex = entry.winfo_rootx()
+        ey = entry.winfo_rooty()
+        eh = entry.winfo_height()
+
+        x = ex
+        y = ey + eh + 6
+
+        sw = top.winfo_screenwidth()
+        sh = top.winfo_screenheight()
+        if x + W > sw:
+            x = sw - W - 10
+        if y + H > sh:
+            y = ey - H - 6
+
+        top.geometry(f"{W}x{H}+{x}+{y}")
+        # =========================================================
+
         top.transient(self)
         top.grab_set()
 
@@ -1007,14 +1236,17 @@ class EnvioCortes(ctk.CTkFrame):
         # Navegação
         nav = ctk.CTkFrame(top)
         nav.pack(fill="x", padx=10, pady=5)
+
+        lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
         ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
-        ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14)).pack(side="left", expand=True)
+        lbl_mes.pack(side="left", expand=True)
         ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         # Dias da semana
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
         frame_dias.pack(fill="both", expand=True, padx=10, pady=5)
+
         for i, dia in enumerate(dias_semana):
             lbl = ctk.CTkLabel(frame_dias, text=dia, width=30, height=30)
             lbl.grid(row=0, column=i, padx=2, pady=2)
@@ -1028,7 +1260,7 @@ class EnvioCortes(ctk.CTkFrame):
             elif mes < 1:
                 mes = 12
                 ano -= 1
-            ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14)).pack(side="left", expand=True)
+            lbl_mes.configure(text=f"{_cal.month_name[mes]} {ano}")
             desenhar_calendario()
 
         def desenhar_calendario():
@@ -1041,8 +1273,13 @@ class EnvioCortes(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = ctk.CTkButton(frame_dias, text=str(dia), width=30, height=30,
-                                        command=lambda d=dia: setar_data(datetime(ano, mes, d)))
+                    btn = ctk.CTkButton(
+                        frame_dias,
+                        text=str(dia),
+                        width=30,
+                        height=30,
+                        command=lambda d=dia: setar_data(datetime(ano, mes, d))
+                    )
                     btn.grid(row=i + 1, column=j, padx=2, pady=2)
 
         desenhar_calendario()
@@ -1069,9 +1306,22 @@ class EnvioCortes(ctk.CTkFrame):
         self.descricao_entry.configure(state="disabled")
         self.ordem_entry.configure(state="disabled")
         for tam in self.tamanhos:
+            # Zera todas as quantidades informadas
             self.quantidades[tam].set(0)
+            # Zera as cópias retiradas do corte
+            self.copias_do_corte[tam].set(0)
+            # Zera o total de pilotos visíveis
             self.pilotos[tam].set(0)
+            # Zera o número original de cópias digitadas
+            self.copias_original[tam] = 0
+            # Zera pilotos manuais (mantém compatibilidade, embora não seja usado)
+            try:
+                self.pilotos_manual[tam] = 0
+            except Exception:
+                pass
+            # Limpa o valor unitário
             self.valores[tam].set("")
+            # Reseta o display da coluna "Disponível" e "Subtotal"
             self.grade_widgets[tam]["disp"].configure(text="0")
             self.grade_widgets[tam]["sub"].configure(text=fmt_moeda(0))
         self.lbl_total_pecas.configure(text="0")
@@ -1080,8 +1330,583 @@ class EnvioCortes(ctk.CTkFrame):
         self.outros_entry.delete("1.0", "end")
         self.obs_text.delete("1.0", "end")
         self.piloto_resumo_lbl.configure(text="Nenhum.")
+        # Zera a quantidade de piloto a registrar
+        try:
+            self.piloto_qtd_var.set(0)
+        except Exception:
+            pass
+        # Deseleciona valor único e restaura campos de valor unitário
         self.valor_unico_var.set(0)
         self._on_toggle_valor_unico()
+
+    def _gerar_pdf(self, caminho_pdf: str | None = None, dados: dict | None = None, abrir_pdf: bool = False) -> str:
+        """
+        Gera o PDF profissional do "CONTROLE DE MÃO DE OBRA — Envio de Cortes"
+        (versão compacta para caber em 1 página).
+
+        - Se `caminho_pdf` for None: cria um arquivo temporário.
+        - Se `dados` for None: coleta automaticamente os dados da tela atual (best effort).
+        - Se `abrir_pdf` for True: abre o PDF no visualizador padrão.
+
+        Retorna o caminho do PDF gerado.
+        """
+        from datetime import datetime, date
+        import os
+        import re
+        import sys
+        import tempfile
+        import webbrowser
+
+        # ReportLab
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
+        )
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+
+        # ----------------------------
+        # Helpers
+        # ----------------------------
+        def _t(v):
+            if v is None:
+                return ""
+            if isinstance(v, (date, datetime)):
+                try:
+                    return v.strftime("%d/%m/%Y")
+                except Exception:
+                    return str(v)
+            return str(v).strip()
+
+        def _p(text):
+            """Para Paragraph: converte quebras de linha para <br/> (ReportLab)."""
+            txt = _t(text)
+            txt = txt.replace("\r\n", "\n").replace("\r", "\n")
+            txt = re.sub(r"\n{3,}", "\n\n", txt)
+            txt = txt.replace("\n", "<br/>")
+            return txt.strip() if txt.strip() else "-"
+
+        def _int(v, default=0):
+            try:
+                if v is None or v == "":
+                    return int(default)
+                if isinstance(v, (int, float)):
+                    return int(v)
+                s = str(v).strip()
+                if not s:
+                    return int(default)
+                return int(float(s.replace(".", "").replace(",", ".")))
+            except Exception:
+                return int(default)
+
+        def _num(v, default=0.0):
+            try:
+                if v is None or v == "":
+                    return float(default)
+                if isinstance(v, (int, float)):
+                    return float(v)
+                s = str(v).strip().replace("R$", "").replace(" ", "")
+                if not s:
+                    return float(default)
+                try:
+                    return float(s)
+                except Exception:
+                    return float(s.replace(".", "").replace(",", "."))
+            except Exception:
+                return float(default)
+
+        def fmt_moeda(v):
+            val = float(_num(v, 0.0))
+            s = f"{val:,.2f}"
+            return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+        def fmt_data(v):
+            s = _t(v)
+            return s if s else "-"
+
+        def _find_logo_path(candidate: str | None):
+            c = (candidate or "").strip()
+            if c and os.path.exists(c):
+                return c
+            # tenta variável global do arquivo (se existir)
+            try:
+                lp = globals().get("LOGO_PATH", "")
+                if lp and os.path.exists(lp):
+                    return lp
+            except Exception:
+                pass
+            return None
+
+        def _open_pdf(path_pdf: str):
+            try:
+                abs_path = os.path.abspath(path_pdf)
+                if sys.platform.startswith("win"):
+                    url = "file:///" + abs_path.replace("\\", "/")
+                else:
+                    url = "file://" + abs_path
+                webbrowser.open(url)
+            except Exception:
+                pass
+
+        # ----------------------------
+        # Caminho do PDF
+        # ----------------------------
+        if not caminho_pdf:
+            fd, caminho_pdf = tempfile.mkstemp(suffix=".pdf", prefix="envio_corte_")
+            os.close(fd)
+
+        # ----------------------------
+        # Coleta automática (se não vier dados)
+        # ----------------------------
+        if dados is None:
+            # Tenta ler entries mais comuns; se algum não existir, segue vazio
+            def _get_entry(attr):
+                try:
+                    w = getattr(self, attr, None)
+                    return w.get() if w is not None else ""
+                except Exception:
+                    return ""
+
+            def _get_text(attr):
+                try:
+                    w = getattr(self, attr, None)
+                    return w.get("1.0", "end-1c") if w is not None else ""
+                except Exception:
+                    return ""
+
+            prestador = {
+                "nome": _get_entry("prestador_nome_entry") or _get_entry("nome_entry") or getattr(self,
+                                                                                                  "_prestador_nome",
+                                                                                                  "") or "",
+                "telefone": _get_entry("telefone_entry"),
+                "banco": _get_entry("banco_entry"),
+                "agencia": _get_entry("agencia_entry"),
+                "conta": _get_entry("conta_entry"),
+                "pix": _get_entry("pix_entry"),
+                "titular": _get_entry("titular_entry"),
+            }
+
+            corte = {
+                "codigo": _get_entry("codigo_entry"),
+                "descricao": _get_entry("descricao_entry"),
+                "ordem_corte": _get_entry("ordem_entry") or _get_entry("ordem_corte_entry"),
+            }
+
+            envio = {
+                "data_envio": _get_entry("data_entry") or _get_entry("data_envio_entry"),
+                "previsao_entrega": _get_entry("previsao_entry") or _get_entry("previsao_entrega_entry"),
+                "tel_encarregado": _get_entry("tel_encarregado_entry"),
+                "tel_acabamento": _get_entry("tel_acabamento_entry"),
+            }
+
+            aviamentos = _get_text("aviamentos_entry")
+            outros = _get_text("outros_entry")
+            observacoes = _get_text("obs_text") or _get_text("observacoes_text")
+
+            tamanhos = getattr(self, "tamanhos", ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"])
+
+            itens = []
+            total_geral = 0.0
+
+            for tam in tamanhos:
+                qtd = 0
+                piloto = 0
+                valor_peca = 0.0
+
+                try:
+                    if hasattr(self, "quantidades") and tam in self.quantidades:
+                        qtd = _int(self.quantidades[tam].get(), 0)
+                except Exception:
+                    pass
+
+                try:
+                    if hasattr(self, "pilotos") and tam in self.pilotos:
+                        piloto = _int(self.pilotos[tam].get(), 0)
+                except Exception:
+                    pass
+
+                try:
+                    if hasattr(self, "valores") and tam in self.valores:
+                        valor_peca = _num(self.valores[tam].get(), 0.0)
+                except Exception:
+                    pass
+
+                subtotal = (qtd + piloto) * valor_peca
+                total_geral += subtotal
+
+                itens.append({
+                    "tam": tam,
+                    "qtd": qtd,
+                    "piloto": piloto,
+                    "valor_peca": valor_peca,
+                    "subtotal": subtotal,
+                })
+
+            dados = {
+                "prestador": prestador,
+                "corte": corte,
+                "envio": envio,
+                "itens": itens,
+                "totais": {"total_geral": total_geral},
+                "campos_texto": {"aviamentos": aviamentos, "outros": outros, "observacoes": observacoes},
+                "meta": {
+                    "logo_path": globals().get("LOGO_PATH", ""),
+                    "gerado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "empresa_nome": "OPERA / EMPRESA",
+                },
+            }
+
+        # ----------------------------
+        # Normaliza dados
+        # ----------------------------
+        prestador = dados.get("prestador", {}) or {}
+        corte = dados.get("corte", {}) or {}
+        envio = dados.get("envio", {}) or {}
+        itens = dados.get("itens", []) or []
+        totais = dados.get("totais", {}) or {}
+        campos_texto = dados.get("campos_texto", {}) or {}
+        meta = dados.get("meta", {}) or {}
+
+        # Recalcula total (garante consistência)
+        itens_norm = []
+        total_geral = 0.0
+        for it in itens:
+            tam = _t(it.get("tam")) or "-"
+            qtd = _int(it.get("qtd"), 0)
+            piloto = _int(it.get("piloto"), 0)
+            valor_peca = _num(it.get("valor_peca"), 0.0)
+            subtotal = it.get("subtotal")
+            if subtotal is None or subtotal == "":
+                subtotal = (qtd + piloto) * valor_peca
+            subtotal = _num(subtotal, 0.0)
+
+            total_geral += subtotal
+            itens_norm.append({
+                "tam": tam, "qtd": qtd, "piloto": piloto, "valor_peca": valor_peca, "subtotal": subtotal
+            })
+
+        if totais.get("total_geral") not in (None, ""):
+            total_geral = _num(totais.get("total_geral"), total_geral)
+
+        titulo = "CONTROLE DE MÃO DE OBRA — Envio de Cortes"
+        gerado_em = _t(meta.get("gerado_em")) or datetime.now().strftime("%d/%m/%Y %H:%M")
+        logo_path = _find_logo_path(meta.get("logo_path"))
+        empresa_nome = (_t(meta.get("empresa_nome")) or "OPERA / EMPRESA").strip()
+
+        # ----------------------------
+        # Documento (margens ok, mas espaçamentos compactos)
+        # ----------------------------
+        doc = SimpleDocTemplate(
+            caminho_pdf,
+            pagesize=A4,
+            leftMargin=16 * mm,
+            rightMargin=16 * mm,
+            topMargin=14 * mm,
+            bottomMargin=14 * mm,
+            title=titulo,
+            author="Ópera Fashion",
+        )
+
+        styles = getSampleStyleSheet()
+
+        style_title = ParagraphStyle(
+            "OPERA_Title",
+            parent=styles["Heading1"],
+            fontName="Helvetica-Bold",
+            fontSize=13,
+            leading=15,
+            alignment=TA_LEFT,
+            spaceAfter=2,
+        )
+        style_sub = ParagraphStyle(
+            "OPERA_Sub",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#444444"),
+            alignment=TA_LEFT,
+        )
+        style_value = ParagraphStyle(
+            "OPERA_Value",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#222222"),
+        )
+        style_box_title = ParagraphStyle(
+            "OPERA_BoxTitle",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            leading=11,
+            textColor=colors.HexColor("#111111"),
+            spaceAfter=2,
+        )
+        style_total = ParagraphStyle(
+            "OPERA_Total",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=10,
+            leading=12,
+            alignment=TA_RIGHT,
+            textColor=colors.HexColor("#111111"),
+        )
+        style_small = ParagraphStyle(
+            "OPERA_Small",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=7,
+            leading=9,
+            textColor=colors.HexColor("#666666"),
+        )
+
+        def build_footer(canvas, _doc):
+            canvas.saveState()
+            canvas.setFont("Helvetica", 7)
+            canvas.setFillColor(colors.HexColor("#666666"))
+            canvas.drawString(16 * mm, 9 * mm, "SISTEMA OPERA — Impressão")
+            canvas.drawRightString(210 * mm - 16 * mm, 9 * mm, f"Página {canvas.getPageNumber()}")
+            canvas.restoreState()
+
+        def kv_table(title_left: str, rows_left, title_right: str, rows_right):
+            left_parts = [Paragraph(title_left, style_box_title)]
+            for k, v in rows_left:
+                left_parts.append(Paragraph(f"{_t(k)}: <b>{_p(v)}</b>", style_value))
+
+            right_parts = [Paragraph(title_right, style_box_title)]
+            for k, v in rows_right:
+                right_parts.append(Paragraph(f"{_t(k)}: <b>{_p(v)}</b>", style_value))
+
+            t = Table([[left_parts, right_parts]], colWidths=[(doc.width * 0.5) - 4, (doc.width * 0.5) - 4])
+            t.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("BOX", (0, 0), (0, 0), 0.6, colors.HexColor("#D0D0D0")),
+                ("BOX", (1, 0), (1, 0), 0.6, colors.HexColor("#D0D0D0")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FAFAFA")),
+            ]))
+            return t
+
+        def text_box_compacto(title: str, body: str):
+            # caixa compacta: padding menor
+            elements = [
+                Paragraph(title, style_box_title),
+                Paragraph(_p(body), style_value),
+            ]
+            t = Table([[elements]], colWidths=[doc.width])
+            t.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#D0D0D0")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFFFFF")),
+            ]))
+            return t
+
+        story = []
+
+        # ----------------------------
+        # Cabeçalho
+        # ----------------------------
+        header_left = [
+            Paragraph(titulo, style_title),
+            Paragraph(f"Gerado em: {gerado_em}", style_sub),
+        ]
+
+        header_right = []
+        if logo_path:
+            try:
+                img = RLImage(logo_path)
+                img.drawHeight = 16 * mm
+                img.drawWidth = 42 * mm
+                header_right.append(img)
+            except Exception:
+                header_right.append(
+                    Paragraph("ÓPERA FASHION", ParagraphStyle("LogoTxt", parent=style_title, alignment=TA_RIGHT)))
+        else:
+            header_right.append(
+                Paragraph("ÓPERA FASHION", ParagraphStyle("LogoTxt", parent=style_title, alignment=TA_RIGHT)))
+
+        header_tbl = Table([[header_left, header_right]], colWidths=[doc.width * 0.70, doc.width * 0.30])
+        header_tbl.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+        story.append(header_tbl)
+        story.append(Spacer(1, 1.5 * mm))
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#222222")))
+        story.append(Spacer(1, 4 * mm))
+
+        # ----------------------------
+        # Blocos (dados)
+        # ----------------------------
+        story.append(kv_table(
+            "Dados do Prestador",
+            [
+                ("Nome", prestador.get("nome")),
+                ("Telefone", prestador.get("telefone")),
+                ("Banco", prestador.get("banco")),
+                ("Agência", prestador.get("agencia")),
+                ("Conta", prestador.get("conta")),
+                ("PIX", prestador.get("pix")),
+                ("Titular", prestador.get("titular")),
+            ],
+            "Dados do Corte / Envio",
+            [
+                ("Código", corte.get("codigo")),
+                ("Descrição", corte.get("descricao")),
+                ("Nº Ordem", corte.get("ordem_corte")),
+                ("Data", fmt_data(envio.get("data_envio"))),
+                ("Previsão de Entrega", fmt_data(envio.get("previsao_entrega"))),
+                ("Tel. Encarregado", envio.get("tel_encarregado")),
+                ("Tel. Acabamento", envio.get("tel_acabamento")),
+            ],
+        ))
+        story.append(Spacer(1, 4 * mm))
+
+        # ----------------------------
+        # Tabela Itens (COMPACTA para 1 página)
+        # ----------------------------
+        story.append(Paragraph("Itens do Envio", style_box_title))
+        story.append(Spacer(1, 1.5 * mm))
+
+        table_data = [["Tam.", "Qtd", "Piloto", "Valor/Peça", "Subtotal"]]
+        for it in itens_norm:
+            table_data.append([
+                it["tam"],
+                str(it["qtd"]),
+                str(it["piloto"]),
+                fmt_moeda(it["valor_peca"]),
+                fmt_moeda(it["subtotal"]),
+            ])
+
+        # colunas um pouco menores (compacta)
+        col_widths = [18 * mm, 16 * mm, 16 * mm, 28 * mm, 28 * mm]
+        # altura fixa pra reduzir “crescimento” (header + linhas)
+        row_heights = [6 * mm] + [4.6 * mm] * (len(table_data) - 1)
+
+        itens_tbl = Table(table_data, colWidths=col_widths, rowHeights=row_heights, repeatRows=1)
+        itens_tbl.setStyle(TableStyle([
+            # Cabeçalho
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#222222")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+            ("TOPPADDING", (0, 0), (-1, 0), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
+
+            # Corpo
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D0D0")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+            ("ALIGN", (0, 1), (0, -1), "CENTER"),
+            ("ALIGN", (1, 1), (2, -1), "CENTER"),
+            ("ALIGN", (3, 1), (4, -1), "RIGHT"),
+
+            # padding MÍNIMO (principal pra caber 1 página)
+            ("LEFTPADDING", (0, 1), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 1), (-1, -1), 3),
+            ("TOPPADDING", (0, 1), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 1), (-1, -1), 1),
+
+            # zebra
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F7F7F7")]),
+        ]))
+        story.append(itens_tbl)
+        story.append(Spacer(1, 2.5 * mm))
+
+        # TOTAL (compacto)
+        total_tbl = Table(
+            [[Paragraph("TOTAL GERAL:", style_value), Paragraph(fmt_moeda(total_geral), style_total)]],
+            colWidths=[doc.width * 0.7, doc.width * 0.3]
+        )
+        total_tbl.setStyle(TableStyle([
+            ("LINEABOVE", (0, 0), (-1, 0), 1.0, colors.HexColor("#222222")),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ]))
+        story.append(total_tbl)
+        story.append(Spacer(1, 3 * mm))
+
+        # ----------------------------
+        # Caixas (compactas) — Aviamentos / Outros / Observações
+        # ----------------------------
+        story.append(text_box_compacto("Aviamentos", campos_texto.get("aviamentos", "")))
+        story.append(Spacer(1, 2 * mm))
+        story.append(text_box_compacto("Outros", campos_texto.get("outros", "")))
+        story.append(Spacer(1, 2 * mm))
+        story.append(text_box_compacto("Observações", campos_texto.get("observacoes", "")))
+        story.append(Spacer(1, 3 * mm))
+
+        # ----------------------------
+        # Assinaturas (compactas e na mesma página)
+        # ----------------------------
+        nome_prest = (_t(prestador.get("nome")) or "").strip()
+        if not nome_prest:
+            nome_prest = "______________________________"
+
+        assin_tbl = Table(
+            [
+                ["Assinatura do Prestador", "Assinatura da Empresa"],
+                ["______________________________", "______________________________"],
+                [f"Nome: {nome_prest}", f"Nome: {empresa_nome}"],
+                ["Data: ____/____/________", "Data: ____/____/________"],
+            ],
+            colWidths=[doc.width * 0.5, doc.width * 0.5],
+            rowHeights=[5 * mm, 7 * mm, 5 * mm, 5 * mm]
+        )
+        assin_tbl.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+
+            ("ALIGN", (0, 1), (-1, 1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+            ("LINEABOVE", (0, 0), (-1, 0), 1.0, colors.HexColor("#222222")),
+            ("BOX", (0, 0), (0, -1), 0.6, colors.HexColor("#D0D0D0")),
+            ("BOX", (1, 0), (1, -1), 0.6, colors.HexColor("#D0D0D0")),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#FAFAFA")),
+
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ]))
+        story.append(assin_tbl)
+
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph("Documento gerado automaticamente pelo Sistema Ópera.", style_small))
+
+        # ----------------------------
+        # Build
+        # ----------------------------
+        doc.build(story, onFirstPage=build_footer, onLaterPages=build_footer)
+
+        if abrir_pdf:
+            _open_pdf(caminho_pdf)
+
+        return caminho_pdf
 
     def _validar_envio(self):
         if not self._prestador_id:
@@ -1138,9 +1963,23 @@ class EnvioCortes(ctk.CTkFrame):
 
         return True
 
-    def _debitar_do_corte(self, cur, corte_id: int, qtds: dict, pils: dict):
+    def _debitar_do_corte(self, cur, corte_id: int, qtds: dict, copias: dict):
         """
-        Debita do cadastro_de_corte as quantidades enviadas (qtds) e pilotos (pils).
+        Debita do cadastro_de_corte as quantidades enviadas (qtds) e as cópias retiradas do corte.
+
+        O débito de estoque considera que cada peça retirada do corte é removida do saldo de peças disponíveis.  Isso
+        inclui tanto as peças regulares a serem enviadas quanto as cópias retiradas do corte (independentemente de
+        serem utilizadas como pilotos).  As cópias utilizadas como pilotos e as cópias remanescentes já são todas
+        contabilizadas na quantidade total de peças retiradas.  Portanto, para cada tamanho o débito total é:
+
+            débito = quantidade_enviada + copias_original
+
+        onde ``copias_original`` representa o número de cópias digitadas pelo usuário para aquele tamanho.
+
+        :param cur: cursor do banco de dados
+        :param corte_id: id do corte no cadastro_de_corte
+        :param qtds: dict com quantidades regulares a enviar por tamanho (PP, P, ..., G3)
+        :param copias: dict com o número de cópias originais retiradas para cada tamanho (PP, P, ..., G3)
         """
         from BANCO_DE_DADOS_PG import get_schema
 
@@ -1174,7 +2013,11 @@ class EnvioCortes(ctk.CTkFrame):
         debito_total = 0
         for tam in tamanhos_cols:
             TAM = tam.upper()
-            enviar = int(qtds.get(TAM, 0)) + int(pils.get(TAM, 0))
+            # quantidade regular a enviar
+            qtd = int(qtds.get(TAM, 0))
+            # cópias originais retiradas do corte
+            cop = int(copias.get(TAM, 0))
+            enviar = qtd + cop
             debito_total += enviar
             if enviar > atual[TAM]:
                 raise ValueError(f"Saldo insuficiente para {TAM}. Tentando debitar {enviar}, saldo {atual[TAM]}.")
@@ -1202,9 +2045,33 @@ class EnvioCortes(ctk.CTkFrame):
                 with conn.cursor() as cur:
                     cur.execute(f"SET LOCAL search_path = {get_schema()};")
                     # 1. Debita do corte
-                    qtds = {t: safe_int(self.quantidades[t].get()) for t in self.tamanhos}
-                    pils = {t: safe_int(self.pilotos[t].get()) for t in self.tamanhos}
-                    self._debitar_do_corte(cur, self.corte_selecionado, qtds, pils)
+                    # Para cada tamanho, calcula a quantidade efetivamente enviada (quantidade informada - cópias retiradas)
+                    # e o número total de pilotos (cópias retiradas + manuais). As cópias retiradas são subtraídas das
+                    # quantidades enviadas e adicionadas aos pilotos. O dicionário "pilotos" armazena o total de pilotos
+                    # (automáticos + manuais), pois a coluna de pilotos da grade exibe este valor.
+                    qtds = {}
+                    pils = {}
+                    for t in self.tamanhos:
+                        # Quantidade regular a enviar
+                        qtds[t] = safe_int(self.quantidades[t].get())
+                        # Número de pilotos enviados
+                        pils[t] = safe_int(self.pilotos[t].get())
+                    # Debitar do corte com quantidades enviadas e cópias originais
+                    # O débito considera a soma de quantidades regulares e cópias retiradas do corte.
+                    copias_orig = {}
+                    # Também calcula as cópias remanescentes para cada tamanho (cópias originais - pilotos).  Essas
+                    # cópias remanescentes serão armazenadas em colunas separadas na tabela de envios e usadas para
+                    # futuras operações.
+                    leftover_copies = {}
+                    for t in self.tamanhos:
+                        # ``copias_original`` armazena o número de cópias informadas pelo usuário para cada tamanho.
+                        # Se o usuário não informou cópias, o valor será 0.
+                        orig = int(self.copias_original.get(t, 0)) if isinstance(self.copias_original, dict) else 0
+                        pil = int(self.pilotos[t].get())
+                        copias_orig[t] = orig
+                        # Cópi as remanescentes (não utilizadas como pilotos) não podem ser negativas
+                        leftover_copies[t] = max(orig - pil, 0)
+                    self._debitar_do_corte(cur, self.corte_selecionado, qtds, copias_orig)
 
                     # 2. Insere na tabela de envios
                     cur.execute("""
@@ -1214,46 +2081,114 @@ class EnvioCortes(ctk.CTkFrame):
                         )
                     """, (get_schema(),))
                     if not cur.fetchone()[0]:
-                        # Criar tabela se não existir
+                        # Criar tabela se não existir.  Esta definição inclui todas as colunas necessárias
+                        # para registrar quantidades, cópias retiradas, pilotos, valores e informações adicionais
+                        # do envio.
                         cur.execute(f"""
                             CREATE TABLE {get_schema()}.envios_cortes (
                                 id SERIAL PRIMARY KEY,
-                                data_envio DATE,
-                                prestador_id INTEGER,
+                                data_envio DATE NOT NULL,
+                                hora_envio TIME,
+                                prestador_id INTEGER REFERENCES {get_schema()}.cadastro_faccoes(id),
                                 tipo_servico TEXT,
-                                corte_id INTEGER,
+                                corte_id INTEGER REFERENCES {get_schema()}.cadastro_de_corte(id),
+                                ordem_corte VARCHAR(50),
+                                codigo_corte VARCHAR(100),
+                                descricao_corte TEXT,
+                                colecao VARCHAR(100),
+                                material VARCHAR(100),
+                                cliente VARCHAR(200),
+                                cores TEXT,
+                                prioridade VARCHAR(30),
+                                forma_pagamento VARCHAR(50),
+                                status_envio VARCHAR(30) DEFAULT 'Enviado',
+                                -- Quantidades enviadas por tamanho
                                 qtd_pp INTEGER DEFAULT 0,
-                                qtd_p INTEGER DEFAULT 0,
-                                qtd_m INTEGER DEFAULT 0,
-                                qtd_g INTEGER DEFAULT 0,
+                                qtd_p  INTEGER DEFAULT 0,
+                                qtd_m  INTEGER DEFAULT 0,
+                                qtd_g  INTEGER DEFAULT 0,
                                 qtd_gg INTEGER DEFAULT 0,
                                 qtd_g1 INTEGER DEFAULT 0,
                                 qtd_g2 INTEGER DEFAULT 0,
                                 qtd_g3 INTEGER DEFAULT 0,
+                                -- Cópias remanescentes por tamanho (após descontar os pilotos)
+                                copias_pp INTEGER DEFAULT 0,
+                                copias_p  INTEGER DEFAULT 0,
+                                copias_m  INTEGER DEFAULT 0,
+                                copias_g  INTEGER DEFAULT 0,
+                                copias_gg INTEGER DEFAULT 0,
+                                copias_g1 INTEGER DEFAULT 0,
+                                copias_g2 INTEGER DEFAULT 0,
+                                copias_g3 INTEGER DEFAULT 0,
+                                -- Pilotos enviados por tamanho
                                 piloto_pp INTEGER DEFAULT 0,
-                                piloto_p INTEGER DEFAULT 0,
-                                piloto_m INTEGER DEFAULT 0,
-                                piloto_g INTEGER DEFAULT 0,
+                                piloto_p  INTEGER DEFAULT 0,
+                                piloto_m  INTEGER DEFAULT 0,
+                                piloto_g  INTEGER DEFAULT 0,
                                 piloto_gg INTEGER DEFAULT 0,
                                 piloto_g1 INTEGER DEFAULT 0,
                                 piloto_g2 INTEGER DEFAULT 0,
                                 piloto_g3 INTEGER DEFAULT 0,
+                                -- Valores unitários por tamanho
                                 valor_pp NUMERIC(10,2) DEFAULT 0,
-                                valor_p NUMERIC(10,2) DEFAULT 0,
-                                valor_m NUMERIC(10,2) DEFAULT 0,
-                                valor_g NUMERIC(10,2) DEFAULT 0,
+                                valor_p  NUMERIC(10,2) DEFAULT 0,
+                                valor_m  NUMERIC(10,2) DEFAULT 0,
+                                valor_g  NUMERIC(10,2) DEFAULT 0,
                                 valor_gg NUMERIC(10,2) DEFAULT 0,
                                 valor_g1 NUMERIC(10,2) DEFAULT 0,
                                 valor_g2 NUMERIC(10,2) DEFAULT 0,
                                 valor_g3 NUMERIC(10,2) DEFAULT 0,
+                                total_pecas INTEGER DEFAULT 0,
+                                total_pilotos INTEGER DEFAULT 0,
+                                valor_total_envio NUMERIC(12,2) DEFAULT 0,
+                                resumo_pilotos TEXT,
+                                copias_do_corte TEXT,
                                 aviamentos TEXT,
                                 outros TEXT,
                                 observacoes TEXT,
                                 tel_encarregado TEXT,
                                 tel_acabamento TEXT,
-                                previsao_entrega DATE
+                                previsao_entrega DATE,
+                                created_at TIMESTAMP DEFAULT NOW(),
+                                updated_at TIMESTAMP DEFAULT NOW()
                             )
                         """)
+                    else:
+                        # Se a tabela já existe, verifique se as colunas adicionais existem e as adicione se necessário
+                        # Lista de colunas esperadas para cópias e campos extras
+                        expected_cols = [
+                            'copias_pp', 'copias_p', 'copias_m', 'copias_g', 'copias_gg', 'copias_g1', 'copias_g2',
+                            'copias_g3',
+                            'copias_do_corte', 'hora_envio', 'colecao', 'material', 'cliente', 'cores', 'prioridade',
+                            'forma_pagamento', 'status_envio'
+                        ]
+                        for col in expected_cols:
+                            cur.execute("""
+                                SELECT column_name
+                                FROM information_schema.columns
+                                WHERE table_schema = %s AND table_name = 'envios_cortes' AND column_name = %s
+                            """, (get_schema(), col))
+                            if not cur.fetchone():
+                                # Adiciona a coluna com um tipo adequado
+                                if col.startswith('copias_'):
+                                    cur.execute(
+                                        f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} INTEGER DEFAULT 0")
+                                elif col in ('hora_envio',):
+                                    cur.execute(f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} TIME")
+                                elif col in ('colecao', 'material'):
+                                    cur.execute(
+                                        f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} VARCHAR(100)")
+                                elif col == 'cliente':
+                                    cur.execute(
+                                        f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} VARCHAR(200)")
+                                elif col in ('cores', 'copias_do_corte', 'observacoes', 'aviamentos', 'outros'):
+                                    cur.execute(f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} TEXT")
+                                elif col in ('prioridade', 'forma_pagamento', 'status_envio'):
+                                    cur.execute(
+                                        f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} VARCHAR(30)")
+                                else:
+                                    # fallback
+                                    cur.execute(f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} TEXT")
 
                     # Inserir dados
                     data_envio = datetime.now().date()
@@ -1265,35 +2200,102 @@ class EnvioCortes(ctk.CTkFrame):
                         except Exception:
                             pass
 
+                    # -----------------------------------------------------------------
+                    # Compute totals: number of pieces, pilots and total value
+                    # total_pecas -> soma de quantidades enviadas + pilotos totais
+                    # total_pilotos -> soma de pilotos totais
+                    # valor_total_envio -> (quantidade enviada + pilotos totais) * valor unitário de cada tamanho
+                    tamanhos_lista = list(self.tamanhos)
+                    total_pecas = 0
+                    total_pilotos = 0
+                    valor_total_envio = 0.0
+                    for t in tamanhos_lista:
+                        q = qtds.get(t, 0)
+                        p = pils.get(t, 0)
+                        total_pecas += q + p
+                        total_pilotos += p
+                        v = parse_valor(self.valores[t].get())
+                        valor_total_envio += (q + p) * v
+                    # resumo de pilotos para visualização (ex: "PP:2; P:1")
+                    resumo_parts = []
+                    for t in tamanhos_lista:
+                        pt = pils.get(t, 0)
+                        if pt:
+                            resumo_parts.append(f"{t}:{pt}")
+                    resumo_pilotos = "; ".join(resumo_parts) if resumo_parts else None
+                    # resumo de cópias retiradas do corte (ex: "PP:1; M:2")
+                    copias_parts = []
+                    for t in tamanhos_lista:
+                        cp = safe_int(self.copias_do_corte[t].get())
+                        if cp:
+                            copias_parts.append(f"{t}:{cp}")
+                    copias_do_corte_str = "; ".join(copias_parts) if copias_parts else None
+
+                    # Inserir dados e retornar o id
+                    # Recuperar informações de ordem, código e descrição do corte selecionado
+                    # Estas informações são utilizadas nas páginas de retorno para exibir corretamente
+                    # o número de ordem, o código do corte e a descrição no histórico.
+                    corte_ordem = (self.ordem_entry.get() or "").strip()
+                    corte_codigo = (self.codigo_entry.get() or "").strip()
+                    corte_desc = (self.descricao_entry.get() or "").strip()
                     cur.execute(f"""
                         INSERT INTO {get_schema()}.envios_cortes (
-                            data_envio, prestador_id, tipo_servico, corte_id,
+                            data_envio, hora_envio, prestador_id, tipo_servico, corte_id, ordem_corte, codigo_corte, descricao_corte,
                             qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3,
+                            copias_pp, copias_p, copias_m, copias_g, copias_gg, copias_g1, copias_g2, copias_g3,
                             piloto_pp, piloto_p, piloto_m, piloto_g, piloto_gg, piloto_g1, piloto_g2, piloto_g3,
                             valor_pp, valor_p, valor_m, valor_g, valor_gg, valor_g1, valor_g2, valor_g3,
-                            aviamentos, outros, observacoes, tel_encarregado, tel_acabamento, previsao_entrega
+                            aviamentos, outros, observacoes, tel_encarregado, tel_acabamento, previsao_entrega,
+                            total_pecas, total_pilotos, valor_total_envio, resumo_pilotos, copias_do_corte
                         ) VALUES (
-                            %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
-                            %s, %s, %s, %s, %s, %s
+                            %s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s
                         )
-                    """, (
-                        data_envio, self._prestador_id, self._tipo_servico, self.corte_selecionado,
-                        qtds["PP"], qtds["P"], qtds["M"], qtds["G"], qtds["GG"], qtds["G1"], qtds["G2"], qtds["G3"],
-                        pils["PP"], pils["P"], pils["M"], pils["G"], pils["GG"], pils["G1"], pils["G2"], pils["G3"],
-                        parse_valor(self.valores["PP"].get()), parse_valor(self.valores["P"].get()),
-                        parse_valor(self.valores["M"].get()), parse_valor(self.valores["G"].get()),
-                        parse_valor(self.valores["GG"].get()), parse_valor(self.valores["G1"].get()),
-                        parse_valor(self.valores["G2"].get()), parse_valor(self.valores["G3"].get()),
-                        self.aviamentos_entry.get("1.0", "end-1c"),
-                        self.outros_entry.get("1.0", "end-1c"),
-                        self.obs_text.get("1.0", "end-1c"),
-                        self.tel_encarregado_entry.get(),
-                        self.tel_acabamento_entry.get(),
-                        previsao
-                    ))
+                        RETURNING id
+                    """,
+                                (
+                                    data_envio,
+                                    datetime.now().time(),
+                                    self._prestador_id,
+                                    self._tipo_servico,
+                                    self.corte_selecionado,
+                                    corte_ordem,
+                                    corte_codigo,
+                                    corte_desc,
+                                    # Quantidades a enviar
+                                    qtds["PP"], qtds["P"], qtds["M"], qtds["G"], qtds["GG"], qtds["G1"], qtds["G2"],
+                                    qtds["G3"],
+                                    # Cópias remanescentes (cópias originais - pilotos)
+                                    leftover_copies["PP"], leftover_copies["P"], leftover_copies["M"],
+                                    leftover_copies["G"], leftover_copies["GG"], leftover_copies["G1"],
+                                    leftover_copies["G2"], leftover_copies["G3"],
+                                    # Pilotos enviados
+                                    pils["PP"], pils["P"], pils["M"], pils["G"], pils["GG"], pils["G1"], pils["G2"],
+                                    pils["G3"],
+                                    # Valores unitários
+                                    parse_valor(self.valores["PP"].get()), parse_valor(self.valores["P"].get()),
+                                    parse_valor(self.valores["M"].get()), parse_valor(self.valores["G"].get()),
+                                    parse_valor(self.valores["GG"].get()), parse_valor(self.valores["G1"].get()),
+                                    parse_valor(self.valores["G2"].get()), parse_valor(self.valores["G3"].get()),
+                                    # Textos diversos e dados adicionais
+                                    self.aviamentos_entry.get("1.0", "end-1c"),
+                                    self.outros_entry.get("1.0", "end-1c"),
+                                    self.obs_text.get("1.0", "end-1c"),
+                                    self.tel_encarregado_entry.get(),
+                                    self.tel_acabamento_entry.get(),
+                                    previsao,
+                                    # Totais calculados
+                                    total_pecas, total_pilotos, valor_total_envio,
+                                    resumo_pilotos,
+                                    copias_do_corte_str
+                                ))
+                    # Obter ID do envio recém inserido
+                    envio_id_inserted = cur.fetchone()[0]
 
                     conn.commit()
 
@@ -1378,163 +2380,6 @@ class EnvioCortes(ctk.CTkFrame):
             messagebox.showinfo("Sucesso", f"PDF salvo em: {pdf_path}")
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao exportar PDF: {e}")
-
-    def _gerar_pdf(self, output_path=None):
-        try:
-            from reportlab.pdfgen import canvas
-            from reportlab.lib.pagesizes import A4
-            from reportlab.lib.units import mm
-        except ImportError:
-            messagebox.showerror("Erro", "Biblioteca reportlab não instalada.")
-            return
-
-        if not output_path:
-            fd, output_path = tempfile.mkstemp(suffix=".pdf", prefix="envio_corte_")
-            os.close(fd)
-
-        # Dados do prestador
-        prest_nome = self._prestador_nome
-        prest_tel = self.telefone_entry.get()
-        prest_banco = self.banco_entry.get()
-        prest_agencia = self.agencia_entry.get()
-        prest_conta = self.conta_entry.get()
-        prest_pix = self.pix_entry.get()
-        prest_titular = self.titular_entry.get()
-
-        # Dados do corte
-        corte_codigo = self.codigo_entry.get()
-        corte_desc = self.descricao_entry.get()
-        corte_ordem = self.ordem_entry.get()
-
-        # Outros dados
-        data_envio = self.data_entry.get()
-        previsao = self.previsao_entry.get()
-        tel_enc = self.tel_encarregado_entry.get()
-        tel_acab = self.tel_acabamento_entry.get()
-        aviamentos = self.aviamentos_entry.get("1.0", "end-1c")
-        outros = self.outros_entry.get("1.0", "end-1c")
-        obs = self.obs_text.get("1.0", "end-1c")
-
-        # Quantidades e valores
-        qtds = {t: safe_int(self.quantidades[t].get()) for t in self.tamanhos}
-        pils = {t: safe_int(self.pilotos[t].get()) for t in self.tamanhos}
-        vals = {t: parse_valor(self.valores[t].get()) for t in self.tamanhos}
-        totais = {t: (qtds[t] + pils[t]) * vals[t] for t in self.tamanhos}
-        total_geral = sum(totais.values())
-
-        # Criar PDF
-        c = canvas.Canvas(output_path, pagesize=A4)
-        width, height = A4
-
-        # Logo
-        if PIL_OK and os.path.exists(LOGO_PATH):
-            try:
-                img = Image.open(LOGO_PATH)
-                w, h = img.size
-                max_w = 50 * mm
-                scale = max_w / w
-                c.drawImage(LOGO_PATH, width - 60 * mm, height - 30 * mm, width=w * scale, height=h * scale)
-            except Exception:
-                pass
-
-        # Título
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(30 * mm, height - 30 * mm, "CONTROLE DE MÃO DE OBRA — Envio de Cortes")
-
-        # Dados do prestador
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(30 * mm, height - 45 * mm, "Dados do Prestador:")
-        c.setFont("Helvetica", 10)
-        c.drawString(30 * mm, height - 52 * mm, f"Nome: {prest_nome}")
-        c.drawString(30 * mm, height - 59 * mm, f"Telefone: {prest_tel}")
-        c.drawString(30 * mm, height - 66 * mm, f"Banco: {prest_banco}")
-        c.drawString(30 * mm, height - 73 * mm, f"Agência: {prest_agencia}")
-        c.drawString(30 * mm, height - 80 * mm, f"Conta: {prest_conta}")
-        c.drawString(30 * mm, height - 87 * mm, f"PIX: {prest_pix}")
-        c.drawString(30 * mm, height - 94 * mm, f"Titular: {prest_titular}")
-
-        # Dados do corte
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(30 * mm, height - 110 * mm, "Dados do Corte:")
-        c.setFont("Helvetica", 10)
-        c.drawString(30 * mm, height - 117 * mm, f"Código: {corte_codigo}")
-        c.drawString(30 * mm, height - 124 * mm, f"Descrição: {corte_desc}")
-        c.drawString(30 * mm, height - 131 * mm, f"Nº Ordem: {corte_ordem}")
-
-        # Detalhes do envio
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(30 * mm, height - 147 * mm, "Detalhes do Envio:")
-        c.setFont("Helvetica", 10)
-        c.drawString(30 * mm, height - 154 * mm, f"Data: {data_envio}")
-        c.drawString(30 * mm, height - 161 * mm, f"Previsão de Entrega: {previsao}")
-        c.drawString(30 * mm, height - 168 * mm, f"Tel. Encarregado: {tel_enc}")
-        c.drawString(30 * mm, height - 175 * mm, f"Tel. Acabamento: {tel_acab}")
-
-        # Tabela de quantidades
-        y_table = height - 200 * mm
-        c.setFont("Helvetica-Bold", 10)
-        headers = ["Tam.", "Qtd", "Piloto", "Valor/Peça", "Subtotal"]
-        col_widths = [20 * mm, 20 * mm, 20 * mm, 25 * mm, 25 * mm]
-        x = 30 * mm
-        for i, h in enumerate(headers):
-            c.drawString(x, y_table, h)
-            x += col_widths[i]
-
-        y_table -= 6 * mm
-        c.setFont("Helvetica", 9)
-        for tam in self.tamanhos:
-            x = 30 * mm
-            c.drawString(x, y_table, tam)
-            x += col_widths[0]
-            c.drawString(x, y_table, str(qtds[tam]))
-            x += col_widths[1]
-            c.drawString(x, y_table, str(pils[tam]))
-            x += col_widths[2]
-            c.drawString(x, y_table, fmt_dec2_br(vals[tam]))
-            x += col_widths[3]
-            c.drawString(x, y_table, fmt_dec2_br(totais[tam]))
-            y_table -= 5 * mm
-
-        # Total geral
-        y_table -= 5 * mm
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, y_table, "TOTAL GERAL:")
-        c.drawString(30 * mm + sum(col_widths[:4]), y_table, fmt_dec2_br(total_geral))
-
-        # Aviamentos, outros, observações
-        y_text = y_table - 15 * mm
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, y_text, "Aviamentos:")
-        c.setFont("Helvetica", 9)
-        c.drawString(30 * mm, y_text - 6 * mm, aviamentos[:100] + "..." if len(aviamentos) > 100 else aviamentos)
-
-        y_text -= 12 * mm
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, y_text, "Outros:")
-        c.setFont("Helvetica", 9)
-        c.drawString(30 * mm, y_text - 6 * mm, outros[:100] + "..." if len(outros) > 100 else outros)
-
-        y_text -= 12 * mm
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30 * mm, y_text, "Observações:")
-        c.setFont("Helvetica", 9)
-        # Quebra de linha para observações
-        obs_lines = []
-        line = ""
-        for word in obs.split():
-            if len(line + " " + word) <= 100:
-                line += " " + word
-            else:
-                obs_lines.append(line)
-                line = word
-        if line:
-            obs_lines.append(line)
-
-        for i, line in enumerate(obs_lines[:5]):
-            c.drawString(30 * mm, y_text - 6 * mm - (i * 4 * mm), line.strip())
-
-        c.save()
-        return output_path
 
 
 if __name__ == "__main__":

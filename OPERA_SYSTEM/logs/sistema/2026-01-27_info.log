@@ -1,0 +1,2 @@
+{"timestamp": "2026-01-27 15:49:50.031", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "Sistema", "hierarquia": "", "pagina": "MenuPrincipal", "mensagem": "[PAGINA] Entrada de Estoque: inicialização concluída com sucesso.", "detalhes": {}}
+{"timestamp": "2026-01-27 15:50:53.177", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "desconhecido", "hierarquia": "default", "pagina": "MenuPrincipal", "mensagem": "Sistema OPERA inicializado", "detalhes": {"versao": "1.0", "usuario": "desconhecido"}}

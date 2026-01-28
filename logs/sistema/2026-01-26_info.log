@@ -1,0 +1,4 @@
+{"timestamp": "2026-01-26 13:25:35.268", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "admin", "hierarquia": "ADMINISTRADOR", "pagina": "BANCO_DADOS_FABRICA", "mensagem": "Conectado com privilégios de SUPER ADMIN", "detalhes": {}}
+{"timestamp": "2026-01-26 13:25:35.357", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "admin", "hierarquia": "ADMINISTRADOR", "pagina": "BANCO_DADOS_FABRICA", "mensagem": "Lista de tabelas atualizada", "detalhes": {"total": 50}}
+{"timestamp": "2026-01-26 13:54:44.661", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "admin", "hierarquia": "ADMINISTRADOR", "pagina": "BANCO_DADOS_FABRICA", "mensagem": "Conectado com privilégios de SUPER ADMIN", "detalhes": {}}
+{"timestamp": "2026-01-26 13:54:44.718", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "admin", "hierarquia": "ADMINISTRADOR", "pagina": "BANCO_DADOS_FABRICA", "mensagem": "Lista de tabelas atualizada", "detalhes": {"total": 50}}

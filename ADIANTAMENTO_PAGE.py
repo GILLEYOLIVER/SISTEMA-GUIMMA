@@ -14,6 +14,7 @@ try:
     import BANCO_DE_DADOS_PG as db  # exige OPERA_PG_DSN e OPERA_PG_SCHEMA
 except ModuleNotFoundError:
     import importlib.util
+
     CANDIDATES = [
         os.path.join(os.path.dirname(__file__), "BANCO_DE_DADOS_PG.py"),
         os.path.join(os.path.dirname(__file__), "..", "BANCO_DE_DADOS_PG.py"),
@@ -56,7 +57,6 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             )
             raise SystemExit(1)
 
-
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=1)
@@ -78,20 +78,65 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         search_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         search_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
 
-        ctk.CTkLabel(search_frame, text="Código do Modelo:", text_color=self.C("cor_texto")
-                     ).pack(side="left", padx=(0, 10))
+        # --- filtros de busca ---
+        ctk.CTkLabel(search_frame, text="Tipo:", text_color=self.C("cor_texto")
+                     ).pack(side="left", padx=(0, 6))
 
-        self.entry_codigo_modelo = ctk.CTkEntry(
-            search_frame, width=150,
+        self.tipo_busca_var = ctk.StringVar(value="Todos")
+        self.combo_tipo_busca = ctk.CTkComboBox(
+            search_frame,
+            variable=self.tipo_busca_var,
+            values=["Todos"],
+            width=140,
+            command=lambda _v=None: self._on_tipo_busca_changed(),
             fg_color=self.C("cor_secundaria"),
             border_color=self.C("cor_borda"),
-            text_color=self.C("cor_texto")
+            button_color=self.C("cor_primaria"),
+            button_hover_color=self.C("cor_hover"),
+            text_color=self.C("cor_texto"),
+            dropdown_fg_color=self.C("cor_secundaria"),
+            dropdown_hover_color=self.C("cor_hover"),
+            dropdown_text_color=self.C("cor_texto")
+        )
+        self.combo_tipo_busca.pack(side="left", padx=(0, 10))
+
+        ctk.CTkLabel(search_frame, text="Prestador:", text_color=self.C("cor_texto")
+                     ).pack(side="left", padx=(0, 6))
+
+        self.prestador_busca_var = ctk.StringVar(value="")
+        self.combo_prestador_busca = ctk.CTkComboBox(
+            search_frame,
+            variable=self.prestador_busca_var,
+            values=[""],
+            width=220,
+            command=lambda _v=None: None,
+            fg_color=self.C("cor_secundaria"),
+            border_color=self.C("cor_borda"),
+            button_color=self.C("cor_primaria"),
+            button_hover_color=self.C("cor_hover"),
+            text_color=self.C("cor_texto"),
+            dropdown_fg_color=self.C("cor_secundaria"),
+            dropdown_hover_color=self.C("cor_hover"),
+            dropdown_text_color=self.C("cor_texto")
+        )
+        self.combo_prestador_busca.pack(side="left", padx=(0, 10))
+
+        ctk.CTkLabel(search_frame, text="Busca:", text_color=self.C("cor_texto")
+                     ).pack(side="left", padx=(0, 6))
+
+        # Mantém o mesmo nome para reaproveitar a lógica já existente
+        self.entry_codigo_modelo = ctk.CTkEntry(
+            search_frame, width=200,
+            fg_color=self.C("cor_secundaria"),
+            border_color=self.C("cor_borda"),
+            text_color=self.C("cor_texto"),
+            placeholder_text="Código/ordem/descrição..."
         )
         self.entry_codigo_modelo.pack(side="left", padx=(0, 10))
         self.entry_codigo_modelo.bind("<Return>", lambda e: self.buscar_cortes())
 
         btn_buscar = ctk.CTkButton(
-            search_frame, text="Buscar", command=self.buscar_cortes, width=80,
+            search_frame, text="Buscar", command=self.buscar_cortes, width=90,
             fg_color=self.C("cor_destaque"),
             hover_color=self.C("cor_hover"),
             text_color=self.C("cor_texto"),
@@ -107,14 +152,23 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
 
         self.tree_cortes = ttk.Treeview(
             self.tree_frame,
-            columns=("ID", "Código", "Facção", "Data Envio", "Qtd Peças"),
+            columns=("ID", "Código", "Prestador", "Tipo", "Serviço", "Status", "Data Envio", "Qtd Peças"),
             show="headings",
             height=8
         )
         self.tree_cortes.grid(row=0, column=0, sticky="nsew")
-        for col, width in [("ID", 80), ("Código", 120), ("Facção", 220), ("Data Envio", 140), ("Qtd Peças", 90)]:
+        for col, width, anchor in [
+            ("ID", 80, "center"),
+            ("Código", 110, "center"),
+            ("Prestador", 220, "w"),
+            ("Tipo", 110, "center"),
+            ("Serviço", 140, "w"),
+            ("Status", 110, "center"),
+            ("Data Envio", 130, "center"),
+            ("Qtd Peças", 90, "center"),
+        ]:
             self.tree_cortes.heading(col, text=col)
-            self.tree_cortes.column(col, width=width, anchor="center")
+            self.tree_cortes.column(col, width=width, anchor=anchor)
 
         scrollbar = ttk.Scrollbar(self.tree_frame, orient="vertical", command=self.tree_cortes.yview)
         scrollbar.grid(row=0, column=1, sticky="ns")
@@ -127,17 +181,48 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
 
         ctk.CTkLabel(adiantamento_frame, text="DADOS DO ADIANTAMENTO",
                      font=ctk.CTkFont(weight="bold"), text_color=self.C("cor_texto")
-                     ).grid(row=0, column=0, columnspan=3, pady=(0, 10), sticky="w")
+                     ).grid(row=0, column=0, columnspan=4, pady=(0, 10), sticky="w")
 
-        ctk.CTkLabel(adiantamento_frame, text="Facção:", text_color=self.C("cor_texto")
+        ctk.CTkLabel(adiantamento_frame, text="Tipo Prestador:", text_color=self.C("cor_texto")
                      ).grid(row=1, column=0, sticky="e", padx=5, pady=2)
-        self.entry_faccao = ctk.CTkEntry(
-            adiantamento_frame, width=250,
+
+        self.tipo_form_var = ctk.StringVar(value="Todos")
+        self.combo_tipo_form = ctk.CTkComboBox(
+            adiantamento_frame,
+            variable=self.tipo_form_var,
+            values=["Todos"],
+            width=150,
+            command=lambda _v=None: self._on_tipo_form_changed(),
             fg_color=self.C("cor_secundaria"),
             border_color=self.C("cor_borda"),
-            text_color=self.C("cor_texto")
+            button_color=self.C("cor_primaria"),
+            button_hover_color=self.C("cor_hover"),
+            text_color=self.C("cor_texto"),
+            dropdown_fg_color=self.C("cor_secundaria"),
+            dropdown_hover_color=self.C("cor_hover"),
+            dropdown_text_color=self.C("cor_texto")
         )
-        self.entry_faccao.grid(row=1, column=1, columnspan=2, sticky="w", padx=5, pady=2)
+        self.combo_tipo_form.grid(row=1, column=1, sticky="w", padx=5, pady=2)
+
+        ctk.CTkLabel(adiantamento_frame, text="Costureira/Prestador:", text_color=self.C("cor_texto")
+                     ).grid(row=1, column=2, sticky="e", padx=5, pady=2)
+
+        self.prestador_form_var = ctk.StringVar(value="")
+        self.combo_prestador_form = ctk.CTkComboBox(
+            adiantamento_frame,
+            variable=self.prestador_form_var,
+            values=[""],
+            width=250,
+            fg_color=self.C("cor_secundaria"),
+            border_color=self.C("cor_borda"),
+            button_color=self.C("cor_primaria"),
+            button_hover_color=self.C("cor_hover"),
+            text_color=self.C("cor_texto"),
+            dropdown_fg_color=self.C("cor_secundaria"),
+            dropdown_hover_color=self.C("cor_hover"),
+            dropdown_text_color=self.C("cor_texto")
+        )
+        self.combo_prestador_form.grid(row=1, column=3, sticky="w", padx=5, pady=2)
 
         ctk.CTkLabel(adiantamento_frame, text="Código do Modelo:", text_color=self.C("cor_texto")
                      ).grid(row=2, column=0, sticky="e", padx=5, pady=2)
@@ -240,6 +325,9 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         )
         self.btn_limpar.pack(side="left", padx=5)
 
+        # Carrega tipos/prestadores para busca e formulário (facção, bordado, etc.)
+        self._init_prestadores_ui()
+
         self.atualizar_data_hora()
 
         try:
@@ -274,32 +362,233 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         """Wrapper para db.execute mantendo compatibilidade"""
         return db.execute(sql, params)
 
+    # ---------- prestadores (facção / costureira / bordado etc.) ----------
+
+    def _db_has_column(self, table_qualified: str, column: str) -> bool:
+        """Checa se uma coluna existe (evita quebrar quando o schema muda)."""
+        try:
+            schema = "public"
+            table = table_qualified
+            if "." in table_qualified:
+                schema, table = table_qualified.split(".", 1)
+            r = db.fetch_one(
+                """
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = %s AND table_name = %s AND column_name = %s
+                LIMIT 1
+                """,
+                (schema, table, column)
+            )
+            return bool(r)
+        except Exception:
+            # se falhar, assume que não existe (mantém compatibilidade)
+            return False
+
+    def _load_tipos_prestador(self):
+        """Carrega os tipos cadastrados em opera.cadastro_faccoes (tipo_prestador)."""
+        tipos = ["Todos"]
+        try:
+            # tenta schema opera
+            has_tipo = self._db_has_column("opera.cadastro_faccoes", "tipo_prestador")
+            if has_tipo:
+                rows = db.fetch_all(
+                    "SELECT DISTINCT tipo_prestador AS t FROM opera.cadastro_faccoes "
+                    "WHERE COALESCE(ativo, TRUE) = TRUE AND COALESCE(tipo_prestador,'') <> '' "
+                    "ORDER BY 1"
+                )
+                for r in rows or []:
+                    t = (r.get("t") or "").strip()
+                    if t and t not in tipos:
+                        tipos.append(t)
+        except Exception:
+            pass
+
+        # fallback mínimo (caso tabela não tenha a coluna ou esteja vazia)
+        if len(tipos) == 1:
+            tipos += ["Faccao", "Bordado", "Lavanderia", "Passadoria", "Corte", "Acabamento"]
+
+        return tipos
+
+    def _load_prestadores(self, tipo: str):
+        """Carrega nomes de prestadores por tipo (ou todos) e mantém um mapa nome->id."""
+        tipo = (tipo or "Todos").strip()
+        nomes = [""]  # permite “vazio”
+
+        # mapa global (evita depender de JOIN por nome em outras telas)
+        if not hasattr(self, "_prestador_id_by_nome"):
+            self._prestador_id_by_nome = {}
+
+        try:
+            has_tipo = self._db_has_column("opera.cadastro_faccoes", "tipo_prestador")
+            has_ativo = self._db_has_column("opera.cadastro_faccoes", "ativo")
+
+            where = []
+            params = []
+
+            if has_ativo:
+                where.append("COALESCE(ativo, TRUE) = TRUE")
+
+            if tipo and tipo != "Todos" and has_tipo:
+                where.append("tipo_prestador = %s")
+                params.append(tipo)
+
+            where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+            rows = db.fetch_all(
+                f"SELECT id, nome FROM opera.cadastro_faccoes {where_sql} ORDER BY nome",
+                tuple(params) if params else None
+            )
+
+            for r in rows or []:
+                n = (r.get("nome") or "").strip()
+                pid = r.get("id")
+                if n:
+                    nomes.append(n)
+                    if pid is not None:
+                        self._prestador_id_by_nome[n] = pid
+        except Exception:
+            pass
+
+        return nomes
+
+    def _init_prestadores_ui(self):
+        """Inicializa os combos de tipo/prestador (busca e formulário)."""
+        tipos = self._load_tipos_prestador()
+
+        try:
+            self.combo_tipo_busca.configure(values=tipos)
+        except Exception:
+            pass
+        try:
+            self.combo_tipo_form.configure(values=tipos)
+        except Exception:
+            pass
+
+        # Carrega prestadores iniciais (Todos)
+        self._on_tipo_busca_changed()
+        self._on_tipo_form_changed()
+
+    def _on_tipo_busca_changed(self):
+        tipo = (self.tipo_busca_var.get() or "Todos").strip()
+        nomes = self._load_prestadores(tipo)
+        try:
+            self.combo_prestador_busca.configure(values=nomes)
+        except Exception:
+            pass
+        # se o valor atual não existir mais, limpa
+        try:
+            if self.prestador_busca_var.get() not in nomes:
+                self.prestador_busca_var.set("")
+        except Exception:
+            pass
+
+    def _on_tipo_form_changed(self):
+        tipo = (self.tipo_form_var.get() or "Todos").strip()
+        nomes = self._load_prestadores(tipo)
+        try:
+            self.combo_prestador_form.configure(values=nomes)
+        except Exception:
+            pass
+        try:
+            if self.prestador_form_var.get() not in nomes:
+                self.prestador_form_var.set("")
+        except Exception:
+            pass
+
     # ---------- dados (PostgreSQL) ----------
 
     def buscar_cortes(self):
-        codigo = (self.entry_codigo_modelo.get() or "").strip()
-        if not codigo:
-            messagebox.showwarning("Aviso", "Digite um código de modelo para buscar.")
-            return
+        """
+        Busca SERVIÇOS do prestador (o que ele fez / está fazendo).
+        Fonte correta: opera.envios_cortes (liga pelo prestador_id).
+        """
+        termo = (self.entry_codigo_modelo.get() or "").strip()
+        tipo = (getattr(self, "tipo_busca_var", None).get() if hasattr(self, "tipo_busca_var") else "Todos") or "Todos"
+        tipo = (tipo or "Todos").strip()
+        prestador_nome = (getattr(self, "prestador_busca_var", None).get() if hasattr(self,
+                                                                                      "prestador_busca_var") else "") or ""
+        prestador_nome = prestador_nome.strip()
+
+        where_parts = []
+        params = []
+
+        prestador_id = None
         try:
-            rows = db.fetch_all(
-                "SELECT c.id AS corte_id, c.codigo_corte, c.destino, c.data_envio, c.total_pecas "
-                "FROM controle_envio_cortes c "
-                "WHERE c.codigo_corte ILIKE %s "
-                "ORDER BY c.data_envio DESC NULLS LAST",
-                (f"%{codigo}%",)
+            prestador_id = getattr(self, "_prestador_id_by_nome", {}).get(prestador_nome) if prestador_nome else None
+        except Exception:
+            prestador_id = None
+
+        if prestador_id is not None:
+            where_parts.append("e.prestador_id = %s")
+            params.append(prestador_id)
+        elif prestador_nome:
+            where_parts.append("COALESCE(cf.nome,'') ILIKE %s")
+            params.append(f"%{prestador_nome}%")
+
+        if termo:
+            like = f"%{termo}%"
+            where_parts.append(
+                "(COALESCE(e.codigo_corte,'') ILIKE %s OR "
+                "COALESCE(e.ordem_corte,'') ILIKE %s OR "
+                "COALESCE(e.descricao_corte,'') ILIKE %s OR "
+                "COALESCE(e.tipo_servico,'') ILIKE %s)"
             )
+            params += [like, like, like, like]
+
+        if tipo and tipo != "Todos" and self._db_has_column("opera.cadastro_faccoes", "tipo_prestador"):
+            where_parts.append("COALESCE(cf.tipo_prestador,'') = %s")
+            params.append(tipo)
+
+        where_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+
+        sql = f"""
+                SELECT
+                    e.corte_id,
+                    e.codigo_corte,
+                    COALESCE(cf.nome,'') AS prestador,
+                    COALESCE(cf.tipo_prestador,'') AS tipo,
+                    COALESCE(e.tipo_servico,'') AS servico,
+                    CASE
+                        WHEN r.id IS NOT NULL THEN 'Retornado'
+                        WHEN COALESCE(e.status_envio,'') <> '' THEN e.status_envio
+                        ELSE 'Em andamento'
+                    END AS status,
+                    e.data_envio,
+                    COALESCE(e.total_pecas, 0) AS qtd_pecas
+                FROM opera.envios_cortes e
+                LEFT JOIN opera.cadastro_faccoes cf ON cf.id = e.prestador_id
+                LEFT JOIN opera.controle_retorno_cortes r ON r.envio_id = e.id
+                {where_sql}
+                ORDER BY e.data_envio DESC NULLS LAST, e.id DESC
+                LIMIT 500
+            """
+
+        try:
+            rows = db.fetch_all(sql, tuple(params) if params else None)
 
             for item in self.tree_cortes.get_children():
                 self.tree_cortes.delete(item)
+
             for r in rows or []:
                 codigo_corte = r.get("codigo_corte")
-                if isinstance(codigo_corte, (int, float)) or (isinstance(codigo_corte, str) and codigo_corte.isdigit()):
+                if isinstance(codigo_corte, (int, float)) or (
+                        isinstance(codigo_corte, str) and str(codigo_corte).isdigit()):
                     codigo_corte = str(codigo_corte).zfill(4)
-                new_row = (r.get("corte_id"), codigo_corte, r.get("destino"), r.get("data_envio"), r.get("total_pecas"))
+
+                new_row = (
+                    r.get("corte_id"),
+                    codigo_corte,
+                    r.get("prestador") or "",
+                    r.get("tipo") or "",
+                    r.get("servico") or "",
+                    r.get("status") or "",
+                    r.get("data_envio"),
+                    r.get("qtd_pecas"),
+                )
                 self.tree_cortes.insert("", "end", values=new_row)
+
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao buscar cortes:\n{e}")
+            messagebox.showerror("Erro", f"Falha ao buscar serviços:\n{e}")
 
     def buscar_descricao_modelo(self, codigo_modelo):
         desc = ""
@@ -359,8 +648,37 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         self.entry_codigo_modelo.delete(0, "end")
         self.entry_codigo_modelo.insert(0, codigo)
 
-        self.entry_faccao.delete(0, "end")
-        self.entry_faccao.insert(0, corte_data[2])
+        # Preenche prestador/tipo (quando disponível)
+        try:
+            prestador = corte_data[2] if len(corte_data) > 2 else ""
+            tipo = corte_data[3] if len(corte_data) > 3 else "Todos"
+
+            if prestador is None:
+                prestador = ""
+            if tipo is None or str(tipo).strip() == "":
+                tipo = "Todos"
+
+            # combos do formulário
+            try:
+                self.tipo_form_var.set(str(tipo))
+            except Exception:
+                pass
+            try:
+                self.prestador_form_var.set(str(prestador))
+            except Exception:
+                pass
+
+            # combos da busca (facilita “achar os cortes delas”)
+            try:
+                self.tipo_busca_var.set(str(tipo))
+            except Exception:
+                pass
+            try:
+                self.prestador_busca_var.set(str(prestador))
+            except Exception:
+                pass
+        except Exception:
+            pass
 
         try:
             self.entry_codigo_modelo_selecionado.configure(state="normal")
@@ -385,10 +703,14 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         self.entry_parcelas.insert(0, "1")
         self.atualizar_visibilidade_parcelas()
 
-        try: self.btn_imprimir.configure(state="normal")
-        except Exception: pass
-        try: self.btn_salvar.configure(state="normal")
-        except Exception: pass
+        try:
+            self.btn_imprimir.configure(state="normal")
+        except Exception:
+            pass
+        try:
+            self.btn_salvar.configure(state="normal")
+        except Exception:
+            pass
 
     def atualizar_visibilidade_parcelas(self, event=None):
         if self.pagamento_var.get() == "Parcelado":
@@ -400,7 +722,23 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
 
     def limpar_campos(self):
         self.entry_codigo_modelo.delete(0, "end")
-        self.entry_faccao.delete(0, "end")
+        # limpa filtros/seleções de prestador
+        try:
+            self.tipo_busca_var.set("Todos")
+        except Exception:
+            pass
+        try:
+            self.prestador_busca_var.set("")
+        except Exception:
+            pass
+        try:
+            self.tipo_form_var.set("Todos")
+        except Exception:
+            pass
+        try:
+            self.prestador_form_var.set("")
+        except Exception:
+            pass
         self.entry_codigo_modelo_selecionado.configure(state="normal")
         self.entry_codigo_modelo_selecionado.delete(0, "end")
         self.entry_codigo_modelo_selecionado.configure(state="disabled")
@@ -470,7 +808,8 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
                 "INSERT INTO adiantamento_faccao (corte_id, codigo_modelo, faccao, valor, forma_pagamento, parcelas, data_hora) "
                 "VALUES (%s, %s, %s, %s, %s, %s, %s)",
                 (
-                corte_id, str(codigo_modelo), str(faccao), float(valor), str(forma_pagamento), int(parcelas), data_hora)
+                    corte_id, str(codigo_modelo), str(faccao), float(valor), str(forma_pagamento), int(parcelas),
+                    data_hora)
             )
 
             if resultado > 0:
@@ -562,7 +901,8 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
 
             styles = getSampleStyleSheet()
 
-            def safe_str(v): return "" if v is None else str(v).strip()
+            def safe_str(v):
+                return "" if v is None else str(v).strip()
 
             def format_currency(valor_local):
                 try:
@@ -671,12 +1011,11 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             pass
         self.after(1000, self.atualizar_data_hora)
 
-
 if __name__ == "__main__":
-    ctk.set_appearance_mode("dark")
-    root = ctk.CTk()
-    root.geometry("900x600")
-    root.title("Controle de Adiantamentos para Facções (PG)")
-    app = PagamentoAdiantamentoPage(root, sistema=None)
-    app.pack(fill="both", expand=True)
-    root.mainloop()
+        ctk.set_appearance_mode("dark")
+        root = ctk.CTk()
+        root.geometry("900x600")
+        root.title("Controle de Adiantamentos para Facções (PG)")
+        app = PagamentoAdiantamentoPage(root, sistema=None)
+        app.pack(fill="both", expand=True)
+        root.mainloop()

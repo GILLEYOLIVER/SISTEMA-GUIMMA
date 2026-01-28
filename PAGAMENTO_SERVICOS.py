@@ -101,6 +101,21 @@ def _columns_of(table: str):
     return {r[0] for r in rows}
 
 
+
+def _column_type(table: str, column: str):
+    """Retorna (data_type, udt_name) para uma coluna (ou (None,None) se não existir)."""
+    row = _select_one("""
+        SELECT data_type, udt_name
+          FROM information_schema.columns
+         WHERE table_schema = current_schema()
+           AND table_name = %s
+           AND column_name = %s
+    """, (table, column))
+    if not row:
+        return None, None
+    return row[0], row[1]
+
+
 def _table_exists(table: str) -> bool:
     row = _select_one("""
         SELECT EXISTS(
@@ -229,42 +244,70 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.card_bg = self.cor_secundaria
         self.accent_color = self.cor_primaria
 
+
     def configurar_treeview_theme(self):
-        """Configura as cores da Treeview baseado no tema atual - MESMO ESTILO DO CADASTRO_DE_CORTE"""
+        """Configura a Treeview com contraste alto (linhas + cabeçalho), independente do tema."""
         self.style = ttk.Style()
-        self.style.theme_use('default')
+        try:
+            self.style.theme_use('default')
+        except Exception:
+            pass
 
         tema_atual = ctk.get_appearance_mode()
 
         if tema_atual == "Dark":
-            cor_fundo = self.cor_secundaria
-            cor_texto = self.cor_texto
-            cor_campo = self.cor_secundaria
-            cor_selecao = self.cor_primaria
+            bg_even = self.cor_fundo
+            bg_odd = self.cor_secundaria
+            fg = get_contraste_texto(bg_even)
+            field_bg = self.cor_fundo
+            sel_bg = self.cor_primaria
+            head_bg = self.cor_primaria
+            head_fg = get_contraste_texto(head_bg)
         else:
-            cor_fundo = "#f0f0f0"
-            cor_texto = "black"
-            cor_campo = "#f0f0f0"
-            cor_selecao = self.cor_primaria
+            bg_even = "#ffffff"
+            bg_odd = "#f3f4f6"
+            fg = "#111111"
+            field_bg = "#ffffff"
+            sel_bg = self.cor_primaria
+            head_bg = self.cor_primaria
+            head_fg = get_contraste_texto(head_bg)
 
-        self.style.configure("Custom.Treeview",
-                             background=cor_fundo,
-                             foreground=cor_texto,
-                             fieldbackground=cor_campo,
-                             borderwidth=0,
-                             highlightthickness=0,
-                             rowheight=25)
+        # salva para usar nas tags (odd/even)
+        self._tree_colors = {
+            "even": bg_even,
+            "odd": bg_odd,
+            "fg": fg,
+            "sel_bg": sel_bg,
+            "sel_fg": get_contraste_texto(sel_bg),
+            "head_bg": head_bg,
+            "head_fg": head_fg,
+        }
 
-        self.style.configure("Custom.Treeview.Heading",
-                             background=self.cor_primaria,
-                             foreground=self.cor_texto,
-                             relief="flat",
-                             borderwidth=1,
-                             font=('Arial', 10, 'bold'))
+        self.style.configure(
+            "Custom.Treeview",
+            background=bg_even,
+            foreground=fg,
+            fieldbackground=field_bg,
+            borderwidth=0,
+            highlightthickness=0,
+            rowheight=26,
+            font=('Arial', 10)
+        )
 
-        self.style.map('Custom.Treeview',
-                       background=[('selected', cor_selecao)],
-                       foreground=[('selected', "white")])
+        self.style.configure(
+            "Custom.Treeview.Heading",
+            background=head_bg,
+            foreground=head_fg,
+            relief="flat",
+            borderwidth=1,
+            font=('Arial', 10, 'bold')
+        )
+
+        self.style.map(
+            'Custom.Treeview',
+            background=[('selected', sel_bg)],
+            foreground=[('selected', get_contraste_texto(sel_bg))]
+        )
 
     def _apply_ttk_theme(self):
         """Aplica o tema ttk - MESMO ESTILO DO CADASTRO_DE_CORTE"""
@@ -480,16 +523,16 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.tree.bind("<Double-1>", self._on_select_item)
         self.tree.bind("<Return>", self._on_select_item)
 
-        # Configurar cores das linhas alternadas - MESMO PADRÃO DO CADASTRO_DE_CORTE
-        if ctk.get_appearance_mode() == "Dark":
-            cor_linha_par = self.cor_fundo
-            cor_linha_impar = self.cor_secundaria
-        else:
-            cor_linha_par = "#ffffff"
-            cor_linha_impar = "#f0f0f0"
 
-        self.tree.tag_configure("oddrow", background=cor_linha_impar)
-        self.tree.tag_configure("evenrow", background=cor_linha_par)
+        # Configurar cores das linhas alternadas (alto contraste)
+        colors = getattr(self, "_tree_colors", None) or {}
+        cor_linha_par = colors.get("even", "#ffffff")
+        cor_linha_impar = colors.get("odd", "#f3f4f6")
+        cor_texto = colors.get("fg", self.cor_texto)
+
+        self.tree.tag_configure("oddrow", background=cor_linha_impar, foreground=cor_texto)
+        self.tree.tag_configure("evenrow", background=cor_linha_par, foreground=cor_texto)
+
 
         # painel direito (resumo e formulários)
         right_panel = ctk.CTkFrame(content_frame, fg_color=self.main_bg, corner_radius=0)
@@ -959,6 +1002,77 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             pass
 
+
+    def _buscar_envio_id(self, finalizado_id: int | None = None, codigo: str | None = None):
+        """Tenta obter envio_id do corte finalizado (se a coluna existir)."""
+        if not _table_exists("cortes_finalizados"):
+            return None
+
+        cols_cf = _columns_of("cortes_finalizados")
+        if "envio_id" not in cols_cf:
+            return None
+
+        try:
+            if finalizado_id is not None:
+                r = _select_one("SELECT envio_id FROM cortes_finalizados WHERE id = %s LIMIT 1", (finalizado_id,))
+            elif codigo:
+                r = _select_one("SELECT envio_id FROM cortes_finalizados WHERE codigo = %s ORDER BY id DESC LIMIT 1", (codigo,))
+            else:
+                r = None
+            if r and r[0] is not None:
+                return int(r[0])
+        except Exception:
+            pass
+        return None
+
+    def _buscar_valor_peca(self, codigo: str, finalizado_id: int | None = None) -> float:
+        """Busca o valor por peça no fluxo novo (envios_cortes) e cai no antigo se necessário."""
+        # 1) se cortes_finalizados já tiver valor_peca/valor_por_peca, usa direto
+        try:
+            cols_cf = _columns_of("cortes_finalizados") if _table_exists("cortes_finalizados") else set()
+            for col in ("valor_peca", "valor_por_peca"):
+                if col in cols_cf:
+                    if finalizado_id is not None:
+                        r = _select_one(f"SELECT {col} FROM cortes_finalizados WHERE id=%s LIMIT 1", (finalizado_id,))
+                    else:
+                        r = _select_one(f"SELECT {col} FROM cortes_finalizados WHERE codigo=%s ORDER BY id DESC LIMIT 1", (codigo,))
+                    if r and r[0] is not None:
+                        return float(r[0])
+        except Exception:
+            pass
+
+        # 2) tenta via envios_cortes (mais confiável no fluxo novo)
+        envio_id = self._buscar_envio_id(finalizado_id=finalizado_id, codigo=codigo)
+        if envio_id and _table_exists("envios_cortes"):
+            cols_env = _columns_of("envios_cortes")
+            col_val = "valor_peca" if "valor_peca" in cols_env else ("valor_por_peca" if "valor_por_peca" in cols_env else None)
+            if col_val:
+                try:
+                    r = _select_one(f"SELECT {col_val} FROM envios_cortes WHERE id=%s LIMIT 1", (envio_id,))
+                    if r and r[0] is not None:
+                        return float(r[0])
+                except Exception:
+                    pass
+
+        # 3) fallback fluxo antigo
+        if _table_exists("controle_envio_cortes"):
+            cols_old = _columns_of("controle_envio_cortes")
+            if "valor_peca" in cols_old and ("codigo_corte" in cols_old or "codigo" in cols_old):
+                col_cod = "codigo_corte" if "codigo_corte" in cols_old else "codigo"
+                try:
+                    r = _select_one(f"""
+                        SELECT valor_peca
+                          FROM controle_envio_cortes
+                         WHERE {col_cod} = %s
+                      ORDER BY id DESC LIMIT 1
+                    """, (codigo,))
+                    if r and r[0] is not None:
+                        return float(r[0])
+                except Exception:
+                    pass
+
+        return 0.0
+
     def _carregar_bonificacao_por_corte(self, codigo: str) -> None:
         """Define rádio Sim/Não conforme coluna bonificacao (>0 => Sim) em cortes_finalizados."""
         valor_flag = 0.0
@@ -1077,23 +1191,15 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             pass
 
-        # valor peça
-        try:
-            r = _select_one("""
-                SELECT valor_peca
-                  FROM controle_envio_cortes
-                 WHERE codigo_corte = %s
-              ORDER BY id DESC LIMIT 1
-            """, (codigo,))
-            valor_peca = float(r[0]) if r and r[0] is not None else 0.0
-        except Exception:
-            valor_peca = 0.0
 
-        self.valor_por_peca = valor_peca
+        # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
+        valor_peca = self._buscar_valor_peca(codigo=codigo)
+        self.valor_por_peca = float(valor_peca or 0.0)
         self.valor_peca_entry.configure(state="normal")
         self.valor_peca_entry.delete(0, "end")
-        self.valor_peca_entry.insert(0, f"{valor_peca:.2f}")
+        self.valor_peca_entry.insert(0, f"{self.valor_por_peca:.2f}")
         self.valor_peca_entry.configure(state="readonly")
+
 
         # último pagamento salvo
         try:
@@ -1140,6 +1246,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.recalcular()
 
     # ===================== Fluxos principais =====================
+
     def pesquisar_finalizados(self):
         def map_origem(val):
             m = {
@@ -1171,29 +1278,88 @@ class PagamentoModernUI(ctk.CTkFrame):
         like = f"%{termo}%"
         rows = []
 
-        if origem == "Finalizados":  # CORTES A PAGAR
-            sql = """
+        if origem == "Finalizados":  # CORTES A PAGAR (fluxo novo)
+            if not _table_exists("cortes_finalizados"):
+                return
+
+            cols_cf = _columns_of("cortes_finalizados")
+
+            # expressões compatíveis com diferentes esquemas
+            codigo_expr = "cf.codigo" if "codigo" in cols_cf else ("cf.codigo_corte" if "codigo_corte" in cols_cf else "''")
+            desc_expr = "cf.descricao" if "descricao" in cols_cf else ("cf.descricao_corte" if "descricao_corte" in cols_cf else "''")
+            cost_expr = "cf.costureira" if "costureira" in cols_cf else ("cf.destino" if "destino" in cols_cf else "''")
+            envio_expr = "cf.data_envio" if "data_envio" in cols_cf else ("cf.data_saida" if "data_saida" in cols_cf else "NULL")
+            chegada_expr = "cf.data_chegada" if "data_chegada" in cols_cf else ("cf.data_retorno" if "data_retorno" in cols_cf else "NULL")
+
+            # soma de quantidades (usa as colunas que existirem)
+            def _q(col_new, col_old):
+                if col_new in cols_cf:
+                    return f"COALESCE(cf.{col_new},0)"
+                if col_old in cols_cf:
+                    return f"COALESCE(cf.{col_old},0)"
+                return "0"
+
+            total_qtd_expr = " + ".join([
+                _q("qtd_pp", "pp"),
+                _q("qtd_p", "p"),
+                _q("qtd_m", "m"),
+                _q("qtd_g", "g"),
+                _q("qtd_gg", "gg"),
+                _q("qtd_g1", "g1"),
+                _q("qtd_g2", "g2"),
+                _q("qtd_g3", "g3"),
+            ])
+
+            join_sql = ""
+            tipo_expr = "'Facção'"
+
+            # tipo/serviço preferencialmente vem de cortes_finalizados (fluxo novo)
+            if "tipo_servico" in cols_cf:
+                tipo_expr = "COALESCE(cf.tipo_servico, 'Facção')"
+            elif "servico" in cols_cf:
+                tipo_expr = "COALESCE(cf.servico, 'Facção')"
+            else:
+                # tenta via envios_cortes (se houver envio_id)
+                if "envio_id" in cols_cf and _table_exists("envios_cortes"):
+                    cols_env = _columns_of("envios_cortes")
+                    join_sql = " LEFT JOIN envios_cortes e ON e.id = cf.envio_id "
+                    if "servico" in cols_env:
+                        tipo_expr = "COALESCE(e.servico, 'Facção')"
+                    elif "tipo_servico" in cols_env:
+                        tipo_expr = "COALESCE(e.tipo_servico, 'Facção')"
+                # fallback fluxo antigo
+                if tipo_expr == "'Facção'" and _table_exists("controle_envio_cortes"):
+                    cols_old = _columns_of("controle_envio_cortes")
+                    if ("codigo_corte" in cols_old or "codigo" in cols_old) and "servico" in cols_old:
+                        col_cod = "codigo_corte" if "codigo_corte" in cols_old else "codigo"
+                        join_sql = f" LEFT JOIN controle_envio_cortes cec ON cec.{col_cod} = {codigo_expr} "
+                        tipo_expr = "COALESCE(cec.servico, 'Facção')"
+
+            # pago flag (boolean/int)
+            pago_expr = "COALESCE(cf.pago, FALSE)" if "pago" in cols_cf else "FALSE"
+
+            sql = f"""
                 SELECT
                     cf.id,
-                    COALESCE(cec.servico, 'Facção') AS tipo_servico,
-                    cf.codigo,
-                    cf.descricao,
-                    cf.costureira,
-                    cf.data_envio,
-                    cf.data_chegada,
-                    (COALESCE(cf.qtd_pp,0)+COALESCE(cf.qtd_p,0)+COALESCE(cf.qtd_m,0)+COALESCE(cf.qtd_g,0)+
-                     COALESCE(cf.qtd_gg,0)+COALESCE(cf.qtd_g1,0)+COALESCE(cf.qtd_g2,0)+COALESCE(cf.qtd_g3,0)) AS total_qtd
+                    {tipo_expr} AS tipo_servico,
+                    {codigo_expr} AS codigo,
+                    {desc_expr} AS descricao,
+                    {cost_expr} AS costureira,
+                    {envio_expr} AS data_envio,
+                    {chegada_expr} AS data_chegada,
+                    ({total_qtd_expr}) AS total_qtd
                   FROM cortes_finalizados cf
-             LEFT JOIN controle_envio_cortes cec
-                    ON cec.codigo_corte = cf.codigo
-                 WHERE COALESCE(cf.pago, FALSE) = FALSE
-                   AND (cf.codigo ILIKE %s OR cf.descricao ILIKE %s OR cf.costureira ILIKE %s)
-                   AND (%s = 'Todos' OR COALESCE(cec.servico,'') = %s)
+                  {join_sql}
+                 WHERE {pago_expr} = FALSE
+                   AND ({codigo_expr} ILIKE %s OR {desc_expr} ILIKE %s OR {cost_expr} ILIKE %s)
+                   AND (%s = 'Todos' OR {tipo_expr} = %s)
                  ORDER BY cf.id DESC
-                 LIMIT 200
+                 LIMIT 400
             """
             rows = _select_all(sql, (like, like, like, filtro_servico, filtro_servico))
         else:  # origem == "Entradas" -> CORTES PAGOS
+            if not _table_exists("pagamento_corte_acabamento"):
+                return
             sql = """
                 SELECT
                     id,                -- id do pagamento
@@ -1208,7 +1374,7 @@ class PagamentoModernUI(ctk.CTkFrame):
                  WHERE (codigo ILIKE %s OR descricao ILIKE %s OR costureira ILIKE %s)
                    AND (%s = 'Todos' OR tipo_servico = %s)
                  ORDER BY COALESCE(data_pagamento, now()) DESC NULLS LAST
-                 LIMIT 400
+                 LIMIT 600
             """
             rows = _select_all(sql, (like, like, like, filtro_servico, filtro_servico))
 
@@ -1216,43 +1382,69 @@ class PagamentoModernUI(ctk.CTkFrame):
             tag = 'evenrow' if len(self.tree.get_children()) % 2 == 0 else 'oddrow'
             self.tree.insert("", "end", values=r, tags=(tag,))
 
+
     def _carregar_dados_bancarios_prestador(self, destino: str, servico: str) -> None:
-        """Preenche campos bancários do prestador (último pagamento ou último envio)."""
+        """Preenche campos bancários do prestador (último pagamento -> envios_cortes -> cadastro_faccoes)."""
 
         def _tem_algo(row):
             return bool(row and any((v is not None and str(v).strip() != "") for v in row))
 
-        # 1) último pagamento do prestador nesse serviço
-        row = _select_one("""
-            SELECT titular_conta, cpf, banco, agencia, conta, pix
-              FROM pagamento_corte_acabamento
-             WHERE costureira = %s AND tipo_servico = %s
-          ORDER BY id DESC LIMIT 1
-        """, (destino, servico))
+        destino = (destino or "").strip()
+        servico = (servico or "").strip()
 
-        # 2) fallback: último envio
-        if not _tem_algo(row):
+        row = None
+
+        # 1) último pagamento do prestador nesse serviço
+        try:
             row = _select_one("""
                 SELECT titular_conta, cpf, banco, agencia, conta, pix
-                  FROM controle_envio_cortes
-                 WHERE destino = %s AND servico = %s
+                  FROM pagamento_corte_acabamento
+                 WHERE costureira = %s AND tipo_servico = %s
               ORDER BY id DESC LIMIT 1
             """, (destino, servico))
+        except Exception:
+            row = None
+
+        # 2) fallback: último envio (fluxo novo)
+        if not _tem_algo(row) and _table_exists("envios_cortes"):
+            cols_env = _columns_of("envios_cortes")
+            # nomes possíveis
+            col_prest = "destino" if "destino" in cols_env else ("prestador" if "prestador" in cols_env else ("costureira" if "costureira" in cols_env else None))
+            col_serv = "servico" if "servico" in cols_env else ("tipo_servico" if "tipo_servico" in cols_env else None)
+            needed = ["titular_conta", "cpf", "banco", "agencia", "conta", "pix"]
+            if col_prest and col_serv and all(c in cols_env for c in needed):
+                try:
+                    row = _select_one(f"""
+                        SELECT titular_conta, cpf, banco, agencia, conta, pix
+                          FROM envios_cortes
+                         WHERE {col_prest} = %s AND {col_serv} = %s
+                      ORDER BY id DESC LIMIT 1
+                    """, (destino, servico))
+                except Exception:
+                    row = None
+
+        # 3) fallback: cadastro de facções (quando for Facção)
+        if not _tem_algo(row) and servico.lower() == "facção".lower() and _table_exists("cadastro_faccoes"):
+            cols_f = _columns_of("cadastro_faccoes")
+            if all(c in cols_f for c in ["titular_da_conta", "cpf", "banco", "agencia", "conta", "pix", "nome"]):
+                try:
+                    row = _select_one("""
+                        SELECT titular_da_conta, cpf, banco, agencia, conta, pix
+                          FROM cadastro_faccoes
+                         WHERE nome ILIKE %s OR codigo ILIKE %s
+                      ORDER BY id DESC LIMIT 1
+                    """, (destino, destino))
+                except Exception:
+                    row = None
 
         vals = row if _tem_algo(row) else ("", "", "", "", "", "")
         try:
-            self.titular_entry.delete(0, "end");
-            self.titular_entry.insert(0, vals[0] or "")
-            self.cpf_entry.delete(0, "end");
-            self.cpf_entry.insert(0, vals[1] or "")
-            self.banco_entry.delete(0, "end");
-            self.banco_entry.insert(0, vals[2] or "")
-            self.agencia_entry.delete(0, "end");
-            self.agencia_entry.insert(0, vals[3] or "")
-            self.conta_entry.delete(0, "end");
-            self.conta_entry.insert(0, vals[4] or "")
-            self.pix_entry.delete(0, "end");
-            self.pix_entry.insert(0, vals[5] or "")
+            self.titular_entry.delete(0, "end"); self.titular_entry.insert(0, vals[0] or "")
+            self.cpf_entry.delete(0, "end"); self.cpf_entry.insert(0, vals[1] or "")
+            self.banco_entry.delete(0, "end"); self.banco_entry.insert(0, vals[2] or "")
+            self.agencia_entry.delete(0, "end"); self.agencia_entry.insert(0, vals[3] or "")
+            self.conta_entry.delete(0, "end"); self.conta_entry.insert(0, vals[4] or "")
+            self.pix_entry.delete(0, "end"); self.pix_entry.insert(0, vals[5] or "")
         except Exception:
             pass
 
@@ -1311,23 +1503,17 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.data_chegada.insert(0, vals[6] or "");
         self.data_chegada.configure(state="readonly")
 
-        # valor peça
-        try:
-            r = _select_one("""
-                SELECT valor_peca
-                  FROM controle_envio_cortes
-                 WHERE codigo_corte = %s
-              ORDER BY id DESC LIMIT 1
-            """, (mapping["codigo"],))
-            valor_peca = float(r[0]) if r and r[0] is not None else 0.0
-        except Exception:
-            valor_peca = 0.0
 
-        self.valor_por_peca = valor_peca
+
+        # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
+        valor_peca = self._buscar_valor_peca(codigo=mapping["codigo"], finalizado_id=int(vals[0]) if vals and vals[0] is not None else None)
+        self.valor_por_peca = float(valor_peca or 0.0)
         self.valor_peca_entry.configure(state="normal")
         self.valor_peca_entry.delete(0, "end")
-        self.valor_peca_entry.insert(0, f"{valor_peca:.2f}")
+        self.valor_peca_entry.insert(0, f"{self.valor_por_peca:.2f}")
         self.valor_peca_entry.configure(state="readonly")
+
+
 
         # tentar puxar dados bancários de fluxo antigo (se existirem)
         try:
@@ -1611,6 +1797,15 @@ class PagamentoModernUI(ctk.CTkFrame):
             "observacoes_defeito": obs_defeito,
             "estornado": 0,
         }
+
+        # compatibilidade: bonificacao pode ser BOOLEAN em alguns esquemas
+        try:
+            dt, udt = _column_type("pagamento_corte_acabamento", "bonificacao")
+            if dt == "boolean":
+                payload["bonificacao"] = bool(float(bonificacao or 0) > 0)
+        except Exception:
+            pass
+
         cols = [c for c in payload.keys() if c in cols_exist]
         vals = [payload[c] for c in cols]
         marcadores = ", ".join(["%s"] * len(cols))

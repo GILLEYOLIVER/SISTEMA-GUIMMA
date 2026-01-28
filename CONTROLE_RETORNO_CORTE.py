@@ -10,8 +10,6 @@ import customtkinter as ctk
 from BANCO_DE_DADOS_PG import get_conn, get_schema
 
 # ---------- CONFIGURAÇÃO ----------
-LOGO_PATH = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
-
 # ============================== Utils ==============================
 def safe_int(v, default=0):
     try:
@@ -21,6 +19,8 @@ def safe_int(v, default=0):
         return int(float(s.replace(".", "").replace(",", ".")))
     except Exception:
         return default
+
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
 
 def parse_valor(s):
     try:
@@ -145,6 +145,16 @@ class RetornoCortes(ctk.CTkFrame):
         self.defeitos = {t: tk.StringVar(value="0") for t in self.tamanhos}
         self.faltantes = {t: tk.StringVar(value="0") for t in self.tamanhos}
 
+        # Quantidades já entregues (acumuladas de devoluções anteriores) por tamanho.
+        # Estes valores são preenchidos quando os detalhes do envio são carregados
+        # em ``_carregar_detalhes_envio``.  Eles representam o total de peças
+        # devolvidas em retornos anteriores e são usados para calcular o
+        # saldo pendente (faltantes) quando o usuário informa novas quantidades
+        # entregues.  Sem essa variável, o campo "faltantes" não é atualizado
+        # automaticamente ao digitar no campo "Entregue".  Consulte
+        # ``_recalcular`` para mais detalhes.
+        self.entregues_prev = {t: 0 for t in self.tamanhos}
+
         # Dados por tamanho
         self.enviado_por_tam = {t: 0 for t in self.tamanhos}
         self.valor_por_tam = {t: 0.0 for t in self.tamanhos}
@@ -155,7 +165,8 @@ class RetornoCortes(ctk.CTkFrame):
 
         # Variáveis de controle
         self.piloto_entregue_var = ctk.BooleanVar(value=True)
-        self.incluir_conferencia_var = ctk.BooleanVar(value=True)
+        self.incluir_conferencia_var = ctk.BooleanVar(value=False)
+
 
         # Widgets principais (serão criados no _build_ui)
         self.busca_entry = None
@@ -690,12 +701,10 @@ class RetornoCortes(ctk.CTkFrame):
     # ----------------------------- Loaders -----------------------------
     def carregar_envios_pendentes(self):
         """
-        Carrega lista de envios a partir da tabela envios_cortes,
-        MOSTRANDO APENAS cortes que AINDA NÃO POSSUEM RETORNO REGISTRADO.
+        Carrega lista de envios a partir da tabela ``envios_cortes``.
 
-        Regra:
-          - e.status_envio != 'Finalizado'
-          - NÃO EXISTE registro em controle_retorno_cortes para esse envio_id
+        - Sempre oculta "Finalizado"
+        - Só mostra "Em Conferencia/Em Conferência" se a caixa estiver marcada
         """
         try:
             termo = (self.busca_entry.get() or "").strip()
@@ -703,17 +712,24 @@ class RetornoCortes(ctk.CTkFrame):
 
             params = []
 
-            # Só exibe envios NÃO finalizados E que ainda NÃO têm retorno registrado
+            # Base: esconder somente finalizados
             where = [
-                "e.status_envio != 'Finalizado'",
-                f"NOT EXISTS (SELECT 1 FROM {get_schema()}.controle_retorno_cortes r WHERE r.envio_id = e.id)"
+                "e.status_envio != 'Finalizado'"
             ]
+
+            # ✅ AQUI É O AJUSTE:
+            # Se a caixa NÃO estiver marcada, esconda os envios em conferência
+            if not self.incluir_conferencia_var.get():
+                where.append(
+                    "(COALESCE(e.status_envio,'') NOT ILIKE 'Em Conferen%%' "
+                    "AND COALESCE(e.status_envio,'') NOT ILIKE 'Em Conferên%%')"
+                )
 
             if termo:
                 like = f"%{termo}%"
                 where.append("""
-                    (e.ordem_corte ILIKE %s 
-                     OR e.codigo_corte ILIKE %s 
+                    (e.ordem_corte ILIKE %s
+                     OR e.codigo_corte ILIKE %s
                      OR e.descricao_corte ILIKE %s
                      OR f.nome ILIKE %s
                      OR e.colecao ILIKE %s
@@ -752,75 +768,35 @@ class RetornoCortes(ctk.CTkFrame):
                     COALESCE(e.qtd_gg, 0)                    AS qtd_gg,
                     COALESCE(e.qtd_g1, 0)                    AS qtd_g1,
                     COALESCE(e.qtd_g2, 0)                    AS qtd_g2,
-                    COALESCE(e.qtd_g3, 0)                    AS qtd_g3,
-                    COALESCE(e.valor_pp, 0)                  AS valor_pp,
-                    COALESCE(e.valor_p, 0)                   AS valor_p,
-                    COALESCE(e.valor_m, 0)                   AS valor_m,
-                    COALESCE(e.valor_g, 0)                   AS valor_g,
-                    COALESCE(e.valor_gg, 0)                  AS valor_gg,
-                    COALESCE(e.valor_g1, 0)                  AS valor_g1,
-                    COALESCE(e.valor_g2, 0)                  AS valor_g2,
-                    COALESCE(e.valor_g3, 0)                  AS valor_g3,
-                    COALESCE(e.piloto_pp, 0)                 AS piloto_pp,
-                    COALESCE(e.piloto_p, 0)                  AS piloto_p,
-                    COALESCE(e.piloto_m, 0)                  AS piloto_m,
-                    COALESCE(e.piloto_g, 0)                  AS piloto_g,
-                    COALESCE(e.piloto_gg, 0)                 AS piloto_gg,
-                    COALESCE(e.piloto_g1, 0)                 AS piloto_g1,
-                    COALESCE(e.piloto_g2, 0)                 AS piloto_g2,
-                    COALESCE(e.piloto_g3, 0)                 AS piloto_g3,
-                    COALESCE(e.resumo_pilotos, '')           AS resumo_pilotos,
-                    COALESCE(e.aviamentos, '')               AS aviamentos,
-                    COALESCE(e.outros, '')                   AS outros,
-                    COALESCE(e.observacoes, '')              AS observacoes,
-                    COALESCE(e.tel_encarregado, '')          AS tel_encarregado,
-                    COALESCE(e.tel_acabamento, '')           AS tel_acabamento,
-                    COALESCE(e.total_pecas, 0)               AS qtd_total
+                    COALESCE(e.qtd_g3, 0)                    AS qtd_g3
                 FROM {get_schema()}.envios_cortes e
                 LEFT JOIN {get_schema()}.cadastro_faccoes f ON f.id = e.prestador_id
                 WHERE {where_sql}
-                ORDER BY e.data_envio DESC, e.id DESC
+                ORDER BY e.id DESC
             """
 
-            print("\n[DEBUG] SQL carregar_envios_pendentes:")
-            print(sql)
-            print(f"[DEBUG] Parâmetros = {params}")
+            rows = db.fetch_all(sql, tuple(params)) or []
 
-            result = db.fetch_all(sql, tuple(params))
-            print(f"[DEBUG] Registros retornados para lista de envios pendentes = {len(result)}")
-
-            incluir_conf = bool(self.incluir_conferencia_var.get())
-
-            for i, row in enumerate(result):
-                status = (row.get("status") or "").strip()
-
-                # Se quisermos ainda ocultar "Em Conferência" via checkbox, mantemos essa regra
-                if status == "Em Conferência" and not incluir_conf:
-                    continue
-
-                tags = ()
-                if status == "Enviado":
-                    tags = ("status_enviado",)
-                elif status == "Em Conferência":
-                    tags = ("status_conferencia",)
-                elif status == "Finalizado":
-                    tags = ("status_finalizado",)
+            for row in rows:
+                qtd_total = (
+                        int(row.get("qtd_pp", 0)) + int(row.get("qtd_p", 0)) + int(row.get("qtd_m", 0)) +
+                        int(row.get("qtd_g", 0)) + int(row.get("qtd_gg", 0)) + int(row.get("qtd_g1", 0)) +
+                        int(row.get("qtd_g2", 0)) + int(row.get("qtd_g3", 0))
+                )
 
                 self.envios_tree.insert(
                     "",
                     "end",
-                    iid=row["id"],
                     values=(
-                        row["id"],
-                        row["ordem_corte"],
-                        row["codigo_corte"],
-                        row["descricao_corte"],
-                        row["destino"],
-                        row["data_envio"],
-                        row["status"],
-                        row["qtd_total"],
-                    ),
-                    tags=tags,
+                        row.get("id"),
+                        row.get("ordem_corte"),
+                        row.get("codigo_corte"),
+                        row.get("descricao_corte"),
+                        row.get("destino"),
+                        row.get("data_envio"),
+                        row.get("status"),
+                        qtd_total
+                    )
                 )
 
         except Exception as e:
@@ -1018,6 +994,47 @@ class RetornoCortes(ctk.CTkFrame):
                 pass  # Ignora erro se não existir retorno
 
             # Recalcula totais
+            # Antes de recalcular, carregue a quantidade já entregue em retornos
+            # para cada tamanho.  Isto permite mostrar ao usuário quantas peças
+            # ainda restam a serem devolvidas.  A tabela ``retorno_detalhes_tamanho``
+            # acumula todas as devoluções parciais; somamos as colunas
+            # ``entregue`` para obter o total já devolvido.  Em seguida,
+            # calculamos o saldo pendente subtraindo do valor originalmente
+            # enviado (qtd_*) em ``envios_cortes``.  Esse saldo é então
+            # exibido no campo "faltantes" de cada tamanho.
+            try:
+                # Obter soma de peças já entregues por tamanho nas devoluções
+                sql_sum = f"""
+                    SELECT tamanho, SUM(entregue) AS total_entregue
+                    FROM {get_schema()}.retorno_detalhes_tamanho
+                    WHERE envio_id = %s
+                    GROUP BY tamanho
+                """
+                entregas = db.fetch_all(sql_sum, (envio_id,))
+                entregas_map = {str(r["tamanho"]).upper(): int(r["total_entregue"] or 0) for r in entregas}
+
+                # Para cada tamanho, armazenar o total entregue acumulado e
+                # calcular o saldo pendente = enviado - entregue_acumulado.
+                # Esses valores de ``entregues_prev`` serão usados em
+                # ``_recalcular`` para atualizar o campo "faltantes" quando
+                # o usuário digitar novas quantidades no campo "Entregue".
+                for tam in self.tamanhos:
+                    enviado = self.enviado_por_tam.get(tam, 0)
+                    acumulado = entregas_map.get(tam, 0)
+                    # Armazena o total de peças já entregues em devoluções anteriores
+                    self.entregues_prev[tam] = acumulado or 0
+                    pendente = enviado - (acumulado or 0)
+                    if pendente < 0:
+                        pendente = 0
+                    try:
+                        # Atualiza variável StringVar para refletir saldo restante
+                        self.faltantes[tam].set(str(pendente))
+                    except Exception:
+                        pass
+            except Exception as e:
+                # Se falhar, apenas ignora e mantém faltantes conforme inicial
+                print(f"[DEBUG] Falha ao calcular pendentes: {e}")
+
             self._recalcular()
 
         except Exception as e:
@@ -1125,13 +1142,30 @@ class RetornoCortes(ctk.CTkFrame):
         valor_total = 0.0
 
         for tam in self.tamanhos:
+            # Quantidade informada nesta entrada
             entregue = safe_int(self.entregues[tam].get())
             copias = safe_int(self.copias[tam].get())
             defeitos = safe_int(self.defeitos[tam].get())
-            faltantes = safe_int(self.faltantes[tam].get())
 
-            # Regulares = entregue - defeitos - faltantes
-            regulares = max(0, entregue - defeitos - faltantes)
+            # Atualizar automaticamente o saldo pendente (faltantes)
+            # O total enviado por tamanho é armazenado em ``self.enviado_por_tam``.
+            # ``self.entregues_prev`` contém o total de peças já devolvidas em
+            # retornos anteriores.  Para calcular o saldo pendente, subtraímos
+            # o total entregue acumulado e a quantidade informada nesta entrada.
+            try:
+                enviado_total = self.enviado_por_tam.get(tam, 0)
+                acumulado = self.entregues_prev.get(tam, 0)
+                pendente = enviado_total - acumulado - entregue
+                if pendente < 0:
+                    pendente = 0
+                # Atualiza o StringVar de faltantes para refletir o saldo atual
+                self.faltantes[tam].set(str(pendente))
+            except Exception:
+                # Se ocorrer qualquer erro, não atualiza o campo faltantes
+                pass
+
+            # Regulares = entregue - defeitos (não descontamos faltantes)
+            regulares = max(0, entregue - defeitos)
             self.grade_widgets[tam]["regulares"].configure(text=str(regulares))
 
             # Subtotal = regulares * valor_unitario
@@ -1151,11 +1185,11 @@ class RetornoCortes(ctk.CTkFrame):
     # ----------------------------- Ações -----------------------------
     def registrar_entrada(self):
         """
-        Registra a ENTRADA (retorno) de um envio, de forma ÚNICA.
-        - Se já existir retorno para o envio, NÃO deixa registrar novamente.
-        - Grava cabeçalho em controle_retorno_cortes
-        - Grava detalhes em retorno_detalhes_tamanho
-        - Atualiza status do envio em envios_cortes
+        Registra a ENTRADA (retorno) de um envio.
+        - Permite múltiplas entradas para o mesmo envio (devoluções parciais).
+        - Grava cabeçalho em {schema}.controle_retorno_cortes
+        - Grava detalhes em {schema}.retorno_detalhes_tamanho
+        - Atualiza status do envio em {schema}.envios_cortes
         - Remove o corte da lista (recarrega somente pendentes)
         """
         print("\n================ INÍCIO registrar_entrada() ================\n")
@@ -1168,20 +1202,13 @@ class RetornoCortes(ctk.CTkFrame):
         envio_id = self.envio_selecionado["id"]
         print(f"[DEBUG] registrar_entrada: envio_id selecionado = {envio_id}")
 
+        # ✅ FIX: define schema UMA vez
+        schema = get_schema()
+        print(f"[DEBUG] schema ativo = {schema}")
+
         try:
-            # 1) Verificar se já existe retorno para esse envio
-            result = db.fetch_one(
-                "SELECT id FROM controle_retorno_cortes WHERE envio_id=%s LIMIT 1",
-                (envio_id,)
-            )
-            if result:
-                print(f"[DEBUG] registrar_entrada: já existe retorno_id={result['id']} para envio_id={envio_id}")
-                messagebox.showwarning(
-                    "Atenção",
-                    "Este corte já possui entrada registrada.\n"
-                    "Cada envio só pode registrar retorno uma única vez."
-                )
-                return
+            # 1) Permitir múltiplas entradas para o mesmo envio
+            # (devoluções parciais) -> NÃO bloqueia entradas repetidas
 
             # 2) Coletar dados da tela
             data_chegada_str = (self.data_chegada_entry.get() or "").strip()
@@ -1223,7 +1250,10 @@ class RetornoCortes(ctk.CTkFrame):
                 copias = safe_int(self.copias[tam].get())
                 defeitos = safe_int(self.defeitos[tam].get())
                 faltantes = safe_int(self.faltantes[tam].get())
-                regulares = max(0, entregue - defeitos - faltantes)
+
+                # Regulares desta entrada: entregue - defeitos (não subtrai faltantes)
+                regulares = max(0, entregue - defeitos)
+
                 valor_unit = float(self.valor_por_tam.get(tam, 0.0) or 0.0)
                 subtotal = regulares * valor_unit
 
@@ -1251,8 +1281,8 @@ class RetornoCortes(ctk.CTkFrame):
             # 4) Inserir cabeçalho em controle_retorno_cortes
             print("[DEBUG] INSERT em controle_retorno_cortes...")
             result = db.fetch_one(
-                """
-                INSERT INTO controle_retorno_cortes
+                f"""
+                INSERT INTO {schema}.controle_retorno_cortes
                 (envio_id, data_chegada, telefone_encarregado, telefone_acabamento,
                  resumo_piloto, aviamentos_recebidos, outros_recebidos, observacoes_gerais,
                  total_entregue, total_copias, total_defeitos, total_faltantes,
@@ -1271,19 +1301,19 @@ class RetornoCortes(ctk.CTkFrame):
             print(f"[DEBUG] controle_retorno_cortes.id gerado = {retorno_id}")
 
             # 5) Gravar detalhes por tamanho em retorno_detalhes_tamanho
-            print("[DEBUG] Limpando detalhes antigos em retorno_detalhes_tamanho (por segurança)...")
-            db.execute("DELETE FROM retorno_detalhes_tamanho WHERE envio_id=%s", (envio_id,))
-
+            # Mantém histórico: NÃO faz DELETE
             print("[DEBUG] Inserindo novos detalhes em retorno_detalhes_tamanho...")
             for tam in self.tamanhos:
                 entregue = safe_int(self.entregues[tam].get())
                 copias = safe_int(self.copias[tam].get())
                 defeitos = safe_int(self.defeitos[tam].get())
                 faltantes = safe_int(self.faltantes[tam].get())
-                regulares = max(0, entregue - defeitos - faltantes)
+
+                regulares = max(0, entregue - defeitos)
                 valor_unit = float(self.valor_por_tam.get(tam, 0.0) or 0.0)
                 subtotal = regulares * valor_unit
 
+                # Só grava se houver alguma quantidade nesta entrada
                 if entregue > 0 or copias > 0 or defeitos > 0 or faltantes > 0:
                     print(
                         f"[DEBUG] INSERT retorno_detalhes_tamanho | envio_id={envio_id}, "
@@ -1292,8 +1322,8 @@ class RetornoCortes(ctk.CTkFrame):
                         f"regulares={regulares}, subtotal={subtotal}"
                     )
                     db.execute(
-                        """
-                        INSERT INTO retorno_detalhes_tamanho
+                        f"""
+                        INSERT INTO {schema}.retorno_detalhes_tamanho
                         (envio_id, tamanho, entregue, copias, defeitos, faltantes, regulares, subtotal)
                         VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                         """,
@@ -1301,18 +1331,63 @@ class RetornoCortes(ctk.CTkFrame):
                     )
 
             # 6) Atualizar status do envio na tabela envios_cortes
-            print("[DEBUG] Atualizando status do envio em envios_cortes para 'Em Conferência'...")
-            db.execute(
-                "UPDATE envios_cortes SET status_envio = 'Em Conferência' WHERE id = %s",
-                (envio_id,)
-            )
+            # Verifica se total entregue acumulado >= enviado por tamanho
+            try:
+                sql_orig = f"""
+                    SELECT COALESCE(qtd_pp,0) AS pp, COALESCE(qtd_p,0) AS p, COALESCE(qtd_m,0) AS m,
+                           COALESCE(qtd_g,0) AS g, COALESCE(qtd_gg,0) AS gg,
+                           COALESCE(qtd_g1,0) AS g1, COALESCE(qtd_g2,0) AS g2, COALESCE(qtd_g3,0) AS g3
+                      FROM {schema}.envios_cortes
+                     WHERE id = %s
+                """
+                orig = db.fetch_one(sql_orig, (envio_id,)) or {}
+
+                sql_sum = f"""
+                    SELECT tamanho, SUM(entregue) AS total_entregue
+                      FROM {schema}.retorno_detalhes_tamanho
+                     WHERE envio_id = %s
+                     GROUP BY tamanho
+                """
+                soma = db.fetch_all(sql_sum, (envio_id,)) or []
+                soma_map = {str(r["tamanho"]).upper(): int(r["total_entregue"] or 0) for r in soma}
+
+                mapa_env = {
+                    "PP": orig.get("pp", 0),
+                    "P": orig.get("p", 0),
+                    "M": orig.get("m", 0),
+                    "G": orig.get("g", 0),
+                    "GG": orig.get("gg", 0),
+                    "G1": orig.get("g1", 0),
+                    "G2": orig.get("g2", 0),
+                    "G3": orig.get("g3", 0),
+                }
+
+                finalizado = True
+                for tam, qtd_env in mapa_env.items():
+                    entregues_tot = soma_map.get(tam, 0)
+                    if entregues_tot < int(qtd_env or 0):
+                        finalizado = False
+                        break
+
+                # ✅ PADRÃO sem acento para bater com filtros do sistema
+                novo_status = "Finalizado" if finalizado else "Em Conferencia"
+                print(f"[DEBUG] Atualizando status do envio {envio_id} para '{novo_status}'...")
+
+                db.execute(
+                    f"UPDATE {schema}.envios_cortes SET status_envio = %s WHERE id = %s",
+                    (novo_status, envio_id,)
+                )
+
+            except Exception as e:
+                print(f"[WARN] Falha ao atualizar status do envio: {e}")
 
             # 7) Zerar pilotos se marcado (baixa de piloto)
             if self.piloto_entregue_var.get():
                 print("[DEBUG] piloto_entregue_var = True -> zerando quantidade_pilotos em envio_detalhes_tamanho...")
+
                 db.execute(
-                    """
-                    UPDATE envio_detalhes_tamanho
+                    f"""
+                    UPDATE {schema}.envio_detalhes_tamanho
                        SET quantidade_pilotos = 0
                      WHERE envio_id = %s
                        AND quantidade_pilotos > 0
