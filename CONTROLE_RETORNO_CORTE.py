@@ -165,7 +165,7 @@ class RetornoCortes(ctk.CTkFrame):
 
         # Variáveis de controle
         self.piloto_entregue_var = ctk.BooleanVar(value=True)
-        self.incluir_conferencia_var = ctk.BooleanVar(value=False)
+        self.incluir_conferencia_var = tk.BooleanVar(value=False)
 
 
         # Widgets principais (serão criados no _build_ui)
@@ -321,6 +321,8 @@ class RetornoCortes(ctk.CTkFrame):
             busca,
             text="Mostrar 'Em Conferência'",
             variable=self.incluir_conferencia_var,
+            onvalue=True,
+            offvalue=False,
             command=self.carregar_envios_pendentes,
             fg_color=self.cor_selecao,
             hover_color=self.cor_hover,
