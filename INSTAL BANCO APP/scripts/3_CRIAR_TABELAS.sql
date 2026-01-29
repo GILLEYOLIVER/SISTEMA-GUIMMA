@@ -255,8 +255,8 @@ CREATE TABLE IF NOT EXISTS opera.cadastro_modelos_outros (
     fornecedor VARCHAR(100),
     unidade VARCHAR(20),
     quantidade NUMERIC(12,4) DEFAULT 0,
-    preco NUMERIC(12,2) DEFAULT 0,
-    total NUMERIC(12,2) DEFAULT 0,
+    valor_unidade NUMERIC(12,2) DEFAULT 0,
+    valor_total NUMERIC(12,2) DEFAULT 0,
     observacoes TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
@@ -266,14 +266,14 @@ CREATE TABLE IF NOT EXISTS opera.cadastro_modelos_outros_servicos (
     id SERIAL PRIMARY KEY,
     codigo_modelo VARCHAR(100) NOT NULL,
     cadastro_id INTEGER REFERENCES opera.cadastro_modelos_cabecalho(id) ON DELETE CASCADE,
-    codigo VARCHAR(100),
+    codigo_servico VARCHAR(100),
     descricao TEXT,
-    cor VARCHAR(50),
+    tipo_servico VARCHAR(100),
     fornecedor VARCHAR(100),
     unidade VARCHAR(20),
     quantidade NUMERIC(12,4) DEFAULT 0,
-    preco NUMERIC(12,2) DEFAULT 0,
-    total NUMERIC(12,2) DEFAULT 0,
+    valor_unidade NUMERIC(12,2) DEFAULT 0,
+    valor_total NUMERIC(12,2) DEFAULT 0,
     observacoes TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
