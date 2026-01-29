@@ -542,10 +542,23 @@ class RetornoCortes(ctk.CTkFrame):
         header_g = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         header_g.pack(fill="x")
 
-        for h, w in [("Tam.", 60), ("Enviado", 80), ("Entregue", 90), ("Cópias", 80), ("Defeito", 80), ("Faltante", 80),
-                     ("Regulares (pagas)", 120), ("Valor/Peça", 100), ("Subtotal", 110)]:
-            ctk.CTkLabel(header_g, text=h, width=w, anchor="center",
-                         text_color=self.cor_texto).pack(side="left", padx=2)
+        header_specs = [
+            ("Tam.", 60),
+            ("Enviado", 80),
+            ("Entregue", 90),
+            ("Cópias", 80),
+            ("Defeito", 80),
+            ("Faltante", 80),
+            ("Regulares (pagas)", 120),
+            ("Valor/Peça", 100),
+            ("Subtotal", 110),
+        ]
+        for h, w in header_specs:
+            lbl = ctk.CTkLabel(header_g, text=h, width=w, anchor="center",
+                               text_color=self.cor_texto)
+            if h == "Entregue":
+                self.header_entregue_label = lbl
+            lbl.pack(side="left", padx=2)
 
         self.grade_widgets = {}
         for tam in self.tamanhos:
@@ -1184,6 +1197,16 @@ class RetornoCortes(ctk.CTkFrame):
         self.lbl_total_regulares.configure(text=str(total_regulares))
         self.lbl_valor_total.configure(text=fmt_moeda(valor_total))
 
+        # Ajusta o título da coluna conforme entrada parcial
+        try:
+            if getattr(self, "header_entregue_label", None):
+                if total_entregue > 0:
+                    self.header_entregue_label.configure(text="ENTR/PARCIAL")
+                else:
+                    self.header_entregue_label.configure(text="Entregue")
+        except Exception:
+            pass
+
     # ----------------------------- Ações -----------------------------
     def registrar_entrada(self):
         """
@@ -1279,6 +1302,18 @@ class RetornoCortes(ctk.CTkFrame):
             print(f"total_faltantes = {total_faltantes}")
             print(f"total_regulares = {total_regulares}")
             print(f"valor_total     = {valor_total}\n")
+
+            if (
+                total_entregue == 0
+                and total_copias == 0
+                and total_defeitos == 0
+                and total_faltantes == 0
+            ):
+                if not messagebox.askyesno(
+                    "Salvar corte completo?",
+                    "Nenhuma quantidade informada. Deseja salvar corte completo?",
+                ):
+                    return
 
             # 4) Inserir cabeçalho em controle_retorno_cortes
             print("[DEBUG] INSERT em controle_retorno_cortes...")
@@ -1443,6 +1478,8 @@ class RetornoCortes(ctk.CTkFrame):
         self.lbl_total_copias.configure(text="0")
         self.lbl_total_regulares.configure(text="0")
         self.lbl_valor_total.configure(text=fmt_moeda(0))
+        if getattr(self, "header_entregue_label", None):
+            self.header_entregue_label.configure(text="Entregue")
 
         self.prestador_entry.configure(state="normal")
         self.prestador_entry.delete(0, tk.END)
