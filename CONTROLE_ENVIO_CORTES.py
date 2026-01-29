@@ -1928,24 +1928,6 @@ class EnvioCortes(ctk.CTkFrame):
             with get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(f"SET LOCAL search_path = {get_schema()};")
-                    # Bloquear envio duplicado para o mesmo prestador e corte
-                    cur.execute(
-                        f"""
-                        SELECT 1
-                          FROM {get_schema()}.envios_cortes
-                         WHERE prestador_id = %s
-                           AND corte_id = %s
-                           AND status_envio IN ('Enviado', 'Em Conferencia')
-                         LIMIT 1
-                        """,
-                        (self._prestador_id, self.corte_selecionado),
-                    )
-                    if cur.fetchone():
-                        messagebox.showwarning(
-                            "Envio duplicado",
-                            "Já existe um envio em aberto para esta costureira e este corte.",
-                        )
-                        return False
                     # Obter colunas disponíveis
                     cur.execute("""
                         SELECT column_name 
@@ -2105,6 +2087,7 @@ class EnvioCortes(ctk.CTkFrame):
                         cur.execute(f"""
                             CREATE TABLE {get_schema()}.envios_cortes (
                                 id SERIAL PRIMARY KEY,
+                                remessa_id UUID,
                                 data_envio DATE NOT NULL,
                                 hora_envio TIME,
                                 prestador_id INTEGER REFERENCES {get_schema()}.cadastro_faccoes(id),
@@ -2207,6 +2190,15 @@ class EnvioCortes(ctk.CTkFrame):
                                 else:
                                     # fallback
                                     cur.execute(f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} TEXT")
+                        cur.execute("""
+                            SELECT column_name
+                            FROM information_schema.columns
+                            WHERE table_schema = %s AND table_name = 'envios_cortes' AND column_name = 'remessa_id'
+                        """, (get_schema(),))
+                        if not cur.fetchone():
+                            cur.execute(
+                                f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN remessa_id UUID"
+                            )
 
                     # Inserir dados
                     data_envio = datetime.now().date()
@@ -2256,9 +2248,11 @@ class EnvioCortes(ctk.CTkFrame):
                     corte_ordem = (self.ordem_entry.get() or "").strip()
                     corte_codigo = (self.codigo_entry.get() or "").strip()
                     corte_desc = (self.descricao_entry.get() or "").strip()
+                    import uuid
+                    remessa_id = str(uuid.uuid4())
                     cur.execute(f"""
                         INSERT INTO {get_schema()}.envios_cortes (
-                            data_envio, hora_envio, prestador_id, tipo_servico, corte_id, ordem_corte, codigo_corte, descricao_corte,
+                            remessa_id, data_envio, hora_envio, prestador_id, tipo_servico, corte_id, ordem_corte, codigo_corte, descricao_corte,
                             qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3,
                             copias_pp, copias_p, copias_m, copias_g, copias_gg, copias_g1, copias_g2, copias_g3,
                             piloto_pp, piloto_p, piloto_m, piloto_g, piloto_gg, piloto_g1, piloto_g2, piloto_g3,
@@ -2266,7 +2260,7 @@ class EnvioCortes(ctk.CTkFrame):
                             aviamentos, outros, observacoes, tel_encarregado, tel_acabamento, previsao_entrega,
                             total_pecas, total_pilotos, valor_total_envio, resumo_pilotos, copias_do_corte
                         ) VALUES (
-                            %s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
@@ -2277,6 +2271,7 @@ class EnvioCortes(ctk.CTkFrame):
                         RETURNING id
                     """,
                                 (
+                                    remessa_id,
                                     data_envio,
                                     datetime.now().time(),
                                     self._prestador_id,
