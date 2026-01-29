@@ -145,16 +145,16 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Variáveis da grade
         # Quantidades originais informadas pelo usuário (por tamanho)
-        self.quantidades = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.quantidades = {t: tk.StringVar(value="0") for t in self.tamanhos}
         # Número de cópias retiradas diretamente do corte para cada tamanho (piloto automático)
         # Esses valores serão subtraídos das quantidades enviadas e somados aos pilotos
-        self.copias_do_corte = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.copias_do_corte = {t: tk.StringVar(value="0") for t in self.tamanhos}
         # Pilotos informados manualmente via o campo "Registrar".
         # Por simplicidade, trataremos a coluna "Pilotos" como editável. O valor exibido representa
         # o número total de pilotos que serão enviados deste tamanho. Quando o usuário ajusta o
         # valor de pilotos, o sistema irá recalcular a quantidade de cópias restantes do corte.
         # `pilotos` armazena o valor mostrado no campo da grade (pilotos a serem enviados).
-        self.pilotos = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.pilotos = {t: tk.StringVar(value="0") for t in self.tamanhos}
         # Armazenamos o número original de cópias digitadas para cada tamanho.
         # Este valor é usado para recalcular as cópias restantes quando o número de pilotos é alterado.
         self.copias_original = {t: 0 for t in self.tamanhos}
@@ -166,7 +166,7 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Piloto (tam + qtd) - usado para registrar pilotos extras via o painel lateral
         self.piloto_tam_var = tk.StringVar(value=self.tamanhos[0])
-        self.piloto_qtd_var = ctk.IntVar(value=0)
+        self.piloto_qtd_var = tk.StringVar(value="0")
 
         # Esquema de cadastro_de_corte detectado
         self._corte_schema = None
@@ -1040,8 +1040,8 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Limpa quantidades enviadas
         for tam in self.tamanhos:
-            self.quantidades[tam].set(0)
-            self.pilotos[tam].set(0)
+            self.quantidades[tam].set("0")
+            self.pilotos[tam].set("0")
             self.valores[tam].set("")
 
         self._recalcular()
@@ -1089,7 +1089,7 @@ class EnvioCortes(ctk.CTkFrame):
             # Cálculo do saldo de cópias restantes (não negativas)
             leftover = max(self.copias_original[tam] - current_pilotos, 0)
             # Atualiza o campo de cópias com o saldo
-            self.copias_do_corte[tam].set(leftover)
+            self.copias_do_corte[tam].set(str(leftover))
         except Exception:
             # Se ocorrer algum erro de conversão, mantenha o valor atual
             pass
@@ -1114,7 +1114,7 @@ class EnvioCortes(ctk.CTkFrame):
             # Recalcula o saldo de cópias restantes
             leftover = max(orig_copies - new_pilotos, 0)
             # Atualiza o campo de cópias com o saldo recalculado
-            self.copias_do_corte[tam].set(leftover)
+            self.copias_do_corte[tam].set(str(leftover))
         except Exception:
             # Se ocorrer algum erro de conversão, ignore
             pass
@@ -1181,9 +1181,9 @@ class EnvioCortes(ctk.CTkFrame):
             current = safe_int(self.pilotos[tam].get())
         except Exception:
             current = 0
-        self.pilotos[tam].set(current + qtd)
+        self.pilotos[tam].set(str(current + qtd))
         # Limpa o campo de entrada após registrar
-        self.piloto_qtd_var.set(0)
+        self.piloto_qtd_var.set("0")
         # Atualiza o saldo de cópias restantes considerando o novo valor de pilotos
         try:
             self._on_pilotos_edit(tam)
@@ -1307,11 +1307,11 @@ class EnvioCortes(ctk.CTkFrame):
         self.ordem_entry.configure(state="disabled")
         for tam in self.tamanhos:
             # Zera todas as quantidades informadas
-            self.quantidades[tam].set(0)
+            self.quantidades[tam].set("0")
             # Zera as cópias retiradas do corte
-            self.copias_do_corte[tam].set(0)
+            self.copias_do_corte[tam].set("0")
             # Zera o total de pilotos visíveis
-            self.pilotos[tam].set(0)
+            self.pilotos[tam].set("0")
             # Zera o número original de cópias digitadas
             self.copias_original[tam] = 0
             # Zera pilotos manuais (mantém compatibilidade, embora não seja usado)
@@ -1332,7 +1332,7 @@ class EnvioCortes(ctk.CTkFrame):
         self.piloto_resumo_lbl.configure(text="Nenhum.")
         # Zera a quantidade de piloto a registrar
         try:
-            self.piloto_qtd_var.set(0)
+            self.piloto_qtd_var.set("0")
         except Exception:
             pass
         # Deseleciona valor único e restaura campos de valor unitário
@@ -2067,7 +2067,7 @@ class EnvioCortes(ctk.CTkFrame):
                         # ``copias_original`` armazena o número de cópias informadas pelo usuário para cada tamanho.
                         # Se o usuário não informou cópias, o valor será 0.
                         orig = int(self.copias_original.get(t, 0)) if isinstance(self.copias_original, dict) else 0
-                        pil = int(self.pilotos[t].get())
+                        pil = safe_int(self.pilotos[t].get())
                         copias_orig[t] = orig
                         # Cópi as remanescentes (não utilizadas como pilotos) não podem ser negativas
                         leftover_copies[t] = max(orig - pil, 0)
