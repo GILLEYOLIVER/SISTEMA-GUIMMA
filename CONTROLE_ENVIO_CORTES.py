@@ -1928,6 +1928,24 @@ class EnvioCortes(ctk.CTkFrame):
             with get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(f"SET LOCAL search_path = {get_schema()};")
+                    # Bloquear envio duplicado para o mesmo prestador e corte
+                    cur.execute(
+                        f"""
+                        SELECT 1
+                          FROM {get_schema()}.envios_cortes
+                         WHERE prestador_id = %s
+                           AND corte_id = %s
+                           AND status_envio IN ('Enviado', 'Em Conferencia')
+                         LIMIT 1
+                        """,
+                        (self._prestador_id, self.corte_selecionado),
+                    )
+                    if cur.fetchone():
+                        messagebox.showwarning(
+                            "Envio duplicado",
+                            "Já existe um envio em aberto para esta costureira e este corte.",
+                        )
+                        return False
                     # Obter colunas disponíveis
                     cur.execute("""
                         SELECT column_name 
@@ -2302,6 +2320,7 @@ class EnvioCortes(ctk.CTkFrame):
             messagebox.showinfo("Sucesso", "Envio confirmado e saldo debitado.")
             self._atualizar_saldo_pos_envio(self.corte_selecionado)
             self._recarregar_lista_cortes()
+            self._limpar()
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao confirmar envio: {e}")
