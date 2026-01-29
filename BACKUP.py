@@ -1613,3 +1613,4 @@ if __name__ == "__main__":
 
     root.mainloop()
 
+#teste saber se esta igual
