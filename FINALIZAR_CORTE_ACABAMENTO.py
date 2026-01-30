@@ -1068,12 +1068,13 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 entregue = 0
                 self.entregues_vars[t].set("")
 
-            if entregue + defeito > enviado:
-                entregue = max(enviado - defeito, 0)
+            if entregue > enviado:
+                entregue = enviado
                 self._set_var_if_zero(self.entregues_vars[t], entregue)
 
-            # Faltante sempre recalculado com base em Enviado, Entregue e Defeito
-            faltante = max(enviado - entregue - defeito, 0)
+            # Faltante sempre recalculado com base em Enviado e Entregue
+            # (defeitos fazem parte do entregue)
+            faltante = max(enviado - entregue, 0)
             self._set_var_if_zero(self.faltantes_vars[t], faltante)
 
             # Cópias não excedem entregue
@@ -1087,7 +1088,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
             self.grade_widgets[t]["regulares"].configure(text=str(reg))
             self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(subtotal))
 
-            informado = entregue + defeito + faltante
+            informado = entregue + faltante
             if informado > 0:
                 tem_informado = True
             if informado != enviado:
