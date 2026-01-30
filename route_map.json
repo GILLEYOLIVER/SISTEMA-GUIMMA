@@ -35,7 +35,7 @@
   },
 
    "Ordens de Corte Impressão": {
-    "file": "ORDENS_CORTE_IMPRESSAO.py",
+    "file": "REIMPRIMIR-ORDENS-DE-CORTE.py",
     "class": "OrdensCorteImpressao"
   },
 

@@ -427,13 +427,12 @@ class CadastroFaccoesView(ctk.CTkFrame):
             conn = get_conn()
             cur = conn.cursor()
 
-            # Data de exibição (texto), compatível com schemas antigos
-            now_txt = datetime.now().strftime("%d/%m/%Y %H:%M")
+            # ✅ coluna 'data' é DATE, então salvamos DATE de verdade (sem string)
+            now_date = datetime.now().date()
 
             if self.modo_edicao and self.faccao_selecionada:
                 codigo_alvo = str(self.faccao_selecionada[0]).strip()
 
-                # UPDATE (mantém campo 'data' como histórico visível; atualiza data_atualizacao)
                 cur.execute(
                     f"""
                     UPDATE {schema}.cadastro_faccoes SET
@@ -447,7 +446,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
                         conta=%s,
                         pix=%s,
                         data=%s,
-                        data_atualizacao=CURRENT_TIMESTAMP
+                        data_atualizacao=CURRENT_DATE
                     WHERE codigo=%s
                     """,
                     (
@@ -458,21 +457,18 @@ class CadastroFaccoesView(ctk.CTkFrame):
                         norm(dados.get("agencia")),
                         norm(dados.get("conta")),
                         norm(dados.get("pix")),
-                        now_txt,
+                        now_date,
                         codigo_alvo,
                     ),
                 )
                 msg = "Facção atualizada!"
             else:
                 # Gera próximo código: ignora vazios e converte para int com segurança
-                cur.execute(
-                    f"SELECT MAX(NULLIF(codigo,'')::int) FROM {schema}.cadastro_faccoes"
-                )
+                cur.execute(f"SELECT MAX(NULLIF(codigo,'')::int) FROM {schema}.cadastro_faccoes")
                 max_int = cur.fetchone()[0]
                 proximo_codigo = 1 if max_int is None else int(max_int) + 1
                 codigo_final = str(proximo_codigo).zfill(3)
 
-                # INSERT
                 cur.execute(
                     f"""
                     INSERT INTO {schema}.cadastro_faccoes (
@@ -489,7 +485,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
                         norm(dados.get("agencia")),
                         norm(dados.get("conta")),
                         norm(dados.get("pix")),
-                        now_txt,
+                        now_date,
                     ),
                 )
                 msg = "Facção cadastrada!"

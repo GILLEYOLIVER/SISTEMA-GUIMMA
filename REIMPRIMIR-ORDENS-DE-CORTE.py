@@ -305,7 +305,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
 
         titulo = ctk.CTkLabel(
             header,
-            text="ORDENS DE CORTE – IMPRESSÃO",
+            text="REIMPRIMIR-ORDENS",
             font=("Arial", 18, "bold"),
             text_color=self.cor_texto,
         )
