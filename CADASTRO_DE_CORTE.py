@@ -342,7 +342,14 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         try:
             conn = _pg_connect()
             with conn.cursor() as cur:
-                cur.execute("SELECT grade_disponivel FROM ficha_tecnica_cabecalho LIMIT 1")
+                cur.execute(
+                    """
+                    SELECT grade_disponivel
+                    FROM cadastro_modelos_cabecalho
+                    WHERE grade_disponivel IS NOT NULL AND grade_disponivel <> ''
+                    LIMIT 1
+                    """
+                )
                 resultado = cur.fetchone()
             conn.close()
             if resultado and resultado[0]:
