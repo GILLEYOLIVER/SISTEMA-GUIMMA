@@ -177,7 +177,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         if digits == "":
             return 0
         valor = int(digits)
-        if valor > max_value:
+        if max_value > 0 and valor > max_value:
             valor = max_value
             var.set(str(valor))
         return valor
