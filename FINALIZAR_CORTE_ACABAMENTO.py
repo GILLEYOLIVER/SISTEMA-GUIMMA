@@ -522,17 +522,29 @@ class FinalizacaoCortes(ctk.CTkFrame):
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         botoes.pack(fill="x", pady=(2, 8))
 
-        ctk.CTkButton(botoes, text="Finalizar Corte Completo", width=180,
-                      command=self.finalizar_completo,
-                      fg_color=self.cor_primaria,
-                      hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
+        self.btn_finalizar = ctk.CTkButton(
+            botoes,
+            text="Finalizar Corte Completo",
+            width=180,
+            command=self.finalizar_completo,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            state="disabled",
+        )
+        self.btn_finalizar.pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Salvar Baixa Parcial", width=150,
-                      command=self.salvar_baixa_parcial,
-                      fg_color=self.cor_primaria,
-                      hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
+        self.btn_baixa_parcial = ctk.CTkButton(
+            botoes,
+            text="Salvar Baixa Parcial",
+            width=150,
+            command=self.salvar_baixa_parcial,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            state="disabled",
+        )
+        self.btn_baixa_parcial.pack(side="left", padx=4)
 
         ctk.CTkButton(botoes, text="Limpar", width=120,
                       command=self.limpar_campos,
@@ -999,6 +1011,9 @@ class FinalizacaoCortes(ctk.CTkFrame):
         total_faltante = 0
         total_regulares = 0
         valor_total = 0.0
+        completo = True
+        tem_envio = False
+        tem_informado = False
 
         for t in self.tamanhos:
             enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
@@ -1007,10 +1022,33 @@ class FinalizacaoCortes(ctk.CTkFrame):
             defeito = safe_int(self.defeitos_vars[t].get())
             faltante = safe_int(self.faltantes_vars[t].get())
 
-            # Não exceder enviado
-            if entregue + defeito + faltante > enviado:
-                max_possivel = max(0, enviado - defeito - faltante)
-                self.entregues_vars[t].set(min(entregue, max_possivel))
+            if enviado > 0:
+                tem_envio = True
+
+            # Normaliza valores para não exceder o enviado
+            if defeito < 0:
+                defeito = 0
+                self.defeitos_vars[t].set(0)
+            if faltante < 0:
+                faltante = 0
+                self.faltantes_vars[t].set(0)
+            if defeito > enviado:
+                defeito = enviado
+                self.defeitos_vars[t].set(enviado)
+            if faltante > enviado:
+                faltante = enviado
+                self.faltantes_vars[t].set(enviado)
+
+            if defeito + faltante > enviado:
+                faltante = max(enviado - defeito, 0)
+                self.faltantes_vars[t].set(faltante)
+
+            max_possivel = max(0, enviado - defeito - faltante)
+            if entregue < 0:
+                entregue = 0
+                self.entregues_vars[t].set(0)
+            if entregue > max_possivel:
+                self.entregues_vars[t].set(max_possivel)
                 entregue = safe_int(self.entregues_vars[t].get())
 
             # Cópias não excedem entregue
@@ -1023,6 +1061,12 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
             self.grade_widgets[t]["regulares"].configure(text=str(reg))
             self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(subtotal))
+
+            informado = entregue + defeito + faltante
+            if informado > 0:
+                tem_informado = True
+            if informado != enviado:
+                completo = False
 
             total_entregue += entregue
             total_copias += copias
@@ -1045,6 +1089,19 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.lbl_total_faltante.configure(text=str(total_faltante))
         self.lbl_total_regulares.configure(text=str(total_regulares))
         self.lbl_valor_total.configure(text=fmt_moeda(valor_total))
+
+        try:
+            if tem_envio and completo:
+                self.btn_finalizar.configure(state="normal")
+                self.btn_baixa_parcial.configure(state="disabled")
+            elif tem_informado:
+                self.btn_finalizar.configure(state="disabled")
+                self.btn_baixa_parcial.configure(state="normal")
+            else:
+                self.btn_finalizar.configure(state="disabled")
+                self.btn_baixa_parcial.configure(state="disabled")
+        except Exception:
+            pass
 
     # ----------------------------- Relatório -----------------------------
     def abrir_relatorio(self):
