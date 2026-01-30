@@ -167,6 +167,7 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Valor único
         self.valor_unico_var = tk.IntVar(value=0)
+        self._atualizando_valor = False
 
         # Piloto (tam + qtd) - usado para registrar pilotos extras via o painel lateral
         self.piloto_tam_var = tk.StringVar(value=self.tamanhos[0])
@@ -519,6 +520,8 @@ class EnvioCortes(ctk.CTkFrame):
             ent_val.pack(side="left", padx=2)
             # Recalcular subtotais ao editar valor
             ent_val.bind("<KeyRelease>", lambda e, T=tam: self._on_valor_edit(T))
+            ent_val.bind("<FocusOut>", lambda e, T=tam: self._on_valor_edit(T))
+            self.valores[tam].trace_add("write", lambda *_args, T=tam: self._on_valor_edit(T))
 
             # Subtotal
             lbl_total = ctk.CTkLabel(row, text=fmt_moeda(0), width=110, text_color=self.cor_texto)
@@ -1095,11 +1098,17 @@ class EnvioCortes(ctk.CTkFrame):
                 self.grade_widgets[tam]["ent_val"].configure(state="normal")
 
     def _on_valor_edit(self, tam):
-        if self.valor_unico_var.get():
-            v = self.valores[tam].get()
-            for t in self.tamanhos:
-                self.valores[t].set(v)
-        self._recalcular()
+        if self._atualizando_valor:
+            return
+        self._atualizando_valor = True
+        try:
+            if self.valor_unico_var.get():
+                v = self.valores[tam].get()
+                for t in self.tamanhos:
+                    self.valores[t].set(v)
+            self._recalcular()
+        finally:
+            self._atualizando_valor = False
 
     def _set_quantidade_envio(self, tam, valor, bloquear=False):
         try:
