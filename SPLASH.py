@@ -1,604 +1,682 @@
+# SPLASH.py
 import os
-import customtkinter as ctk
-from PIL import Image, ImageEnhance
+import math
 import tkinter as tk
-import platform
 
-from ui_after_guard import cancel_all_afters, initialize_after_guard
+import customtkinter as ctk
+from PIL import Image, ImageEnhance, ImageFilter
+
+# Se você tiver o guard, ele entra. Se não tiver, roda normal.
+try:
+    from ui_after_guard import cancel_all_afters, initialize_after_guard
+except Exception:
+    def initialize_after_guard(_):  # fallback
+        pass
+
+    def cancel_all_afters(_):  # fallback
+        pass
+
 
 # ===================== ESQUEMAS DE CORES =====================
 
 COLOR_SCHEMES = {
     "profissional": {
-        "accent_primary": "#00D4AA",
-        "accent_secondary": "#1A1A1A",
-        "text_primary": "#FFFFFF",
-        "text_secondary": "#CCCCCC",
+        "accent_primary": "#4F8CFF",
+        "accent_secondary": "#0B1220",
+        "text_primary": "#F8FAFC",
+        "text_secondary": "#CBD5E1",
+        "glass_bg": "#0B1220",
+        "glass_border": "#243246",
+        "track_bg": "#101B2E",
+        "muted": "#94A3B8",
     },
     "azul_oceano": {
-        "accent_primary": "#00D4AA",
-        "accent_secondary": "#1A1A1A",
-        "text_primary": "#FFFFFF",
-        "text_secondary": "#CCCCCC",
+        "accent_primary": "#38BDF8",
+        "accent_secondary": "#07101F",
+        "text_primary": "#F8FAFC",
+        "text_secondary": "#CBD5E1",
+        "glass_bg": "#0B1220",
+        "glass_border": "#243246",
+        "track_bg": "#0E2230",
+        "muted": "#94A3B8",
     },
     "verde_moderno": {
-        "accent_primary": "#00D4AA",
-        "accent_secondary": "#1A1A1A",
-        "text_primary": "#FFFFFF",
-        "text_secondary": "#CCCCCC",
-    }
+        "accent_primary": "#22C55E",
+        "accent_secondary": "#071A12",
+        "text_primary": "#F8FAFC",
+        "text_secondary": "#D1FAE5",
+        "glass_bg": "#071A12",
+        "glass_border": "#1F3A2E",
+        "track_bg": "#0B2A1C",
+        "muted": "#A7F3D0",
+    },
 }
 
+DEFAULT_STEPS = [
+    "Carregando módulos essenciais",
+    "Verificando configurações do ambiente",
+    "Inicializando tema e componentes visuais",
+    "Conectando serviços e auditoria",
+    "Preparando interface principal",
+    "Conectando ao banco de dados",
+]
 
-class SplashScreenHD(ctk.CTkToplevel):
+
+class SplashScreenModern(ctk.CTkToplevel):
     """
-    Splash screen em tela cheia
+    Splash screen moderna e profissional (sem opção de pular).
+      - Fade-in / Fade-out
+      - Spinner premium em Canvas (suave e estável)
+      - Progresso automático com etapas
+      - Barra de progresso + porcentagem
+      - Fundo/ícone opcionais (FUNDO_SPLASH.* / contabilidade.* / ICONE_SISTEMA.*)
+      - Melhor compatibilidade com macOS (lift/focus com after)
     """
 
-    def __init__(self, parent, usuario_nome="Usuário", tema_preferido="profissional", on_complete=None):
+    def __init__(
+        self,
+        parent,
+        usuario_nome="Usuário",
+        tema_preferido="profissional",
+        on_complete=None,
+        steps=None,
+        duration_ms=2800,
+        allow_skip=False,   # mantido por compatibilidade, mas FORÇADO OFF
+        block_close=True,   # bloqueia fechar no X
+    ):
         super().__init__(parent)
 
+        # parâmetros
         self.on_complete = on_complete
         self.usuario_nome = usuario_nome
         self.tema_preferido = tema_preferido
+        self.steps = list(steps) if steps else list(DEFAULT_STEPS)
+        self.duration_ms = max(800, int(duration_ms))
+        self.allow_skip = False  # força OFF
+        self.block_close = bool(block_close)
 
-        # Estado do progresso
-        self.progress = 0
-        self._progress_fraction = 0.0
-        self.angle = 0
+        # estado
+        self._finished = False
         self._auto_mode = False
         self._auto_job = None
+        self._spinner_job = None
+        self._fade_job = None
+        self._alpha = 0.0
+        self._supports_alpha = True
+        self._progress = 0.0
+        self._angle = 0.0
+        self._step_index = 0
 
-        # Controle seguro de after() para evitar erros em Windows
         initialize_after_guard(self)
+        self._aplicar_tema(self.tema_preferido)
 
-        # Aplicar tema
-        self._aplicar_tema(tema_preferido)
-
-        # Configurar janela
+        # janela
         self.title("SISTEMA ÓPERA")
         self.configure(fg_color=self.accent_secondary)
-
-        # Obter dimensões da tela
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-
-        # Ajustar para não cobrir dock/barra de tarefas
-        system = platform.system().lower()
-        if system == "darwin":  # macOS
-            screen_height -= 80  # Espaço para dock
-        elif system == "windows":
-            screen_height -= 40  # Espaço para barra de tarefas
-
-        self.geometry(f"{screen_width}x{screen_height}+0+0")
         self.overrideredirect(True)
 
+        screen_w = self.winfo_screenwidth()
+        try:
+            screen_h = self.winfo_vrootheight()
+        except Exception:
+            screen_h = self.winfo_screenheight()
+
+        self.geometry(f"{screen_w}x{screen_h}+0+0")
+
+        # topmost
         try:
             self.attributes("-topmost", True)
         except Exception:
             pass
 
-        # Bind ESC para fechar
-        self.bind("<Escape>", lambda e: self._finish())
+        # alpha (fade)
+        try:
+            self.attributes("-alpha", 0.0)
+        except Exception:
+            self._supports_alpha = False
 
-        # Carregar fundo
-        self.bg_image_ctk = self._load_background_hd(screen_width, screen_height)
+        # bloquear fechar no X
+        if self.block_close:
+            try:
+                self.protocol("WM_DELETE_WINDOW", lambda: None)
+            except Exception:
+                pass
 
-        # Criar interface
-        self._create_widgets()
+        # assets
+        self.bg_image_ctk = self._load_background_hd(screen_w, screen_h)
+        self.icon_ctk = self._load_icon_any(size=(138, 138))
 
-        # Iniciar animações
-        self._animate_spinner()
+        # UI
+        self._build_ui()
 
-        self.lift()
-        self.focus_force()
+        # foco/ordem (macOS friendly)
+        self.after(40, self.lift)
+        self.after(80, self._try_focus)
+
+        # start
+        self._fade_to(1.0, ms=220)
+        self._start_spinner()
+        self.start_auto_progress(self.duration_ms)
+
+    # ----------------------------- Tema / Assets -----------------------------
 
     def _aplicar_tema(self, tema_preferido):
-        """Aplicar esquema de cores"""
-        colors = COLOR_SCHEMES.get("profissional")
+        colors = COLOR_SCHEMES.get(tema_preferido, COLOR_SCHEMES["profissional"])
         self.accent_primary = colors["accent_primary"]
         self.accent_secondary = colors["accent_secondary"]
         self.text_primary = colors["text_primary"]
         self.text_secondary = colors["text_secondary"]
+        self.glass_bg = colors["glass_bg"]
+        self.glass_border = colors["glass_border"]
+        self.track_bg = colors["track_bg"]
+        self.muted = colors["muted"]
+
+    def _base_path(self):
+        return os.path.dirname(__file__)
 
     def _load_background_hd(self, width, height):
-        """Carregar imagem de fundo"""
-        base_path = os.path.dirname(__file__)
+        base = self._base_path()
         for ext in (".png", ".jpg", ".jpeg", ".PNG", ".JPG", ".JPEG"):
-            path = os.path.join(base_path, "FUNDO_SPLASH" + ext)
+            path = os.path.join(base, "FUNDO_SPLASH" + ext)
             if os.path.exists(path):
                 try:
-                    img = Image.open(path)
+                    img = Image.open(path).convert("RGB")
                     img = img.resize((width, height), Image.Resampling.LANCZOS)
+                    img = ImageEnhance.Brightness(img).enhance(0.28)
+                    img = img.filter(ImageFilter.GaussianBlur(radius=1.2))
 
-                    # Escurecer imagem
-                    enhancer = ImageEnhance.Brightness(img)
-                    img = enhancer.enhance(0.35)
+                    overlay = Image.new("RGB", (width, height), (0, 0, 0))
+                    img = Image.blend(img, overlay, alpha=0.22)
 
-                    return ctk.CTkImage(
-                        light_image=img,
-                        dark_image=img,
-                        size=(width, height),
-                    )
+                    return ctk.CTkImage(light_image=img, dark_image=img, size=(width, height))
                 except Exception as e:
-                    print(f"[SPLASH] Erro ao carregar fundo: {e}")
+                    print(f"[SPLASH] Erro fundo: {e}")
+                    return None
         return None
 
-    def _create_widgets(self):
-        """Criar interface do usuário"""
-        # Frame principal
-        main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.pack(fill="both", expand=True)
+    def _load_icon_any(self, size=(140, 140)):
+        base = self._base_path()
 
-        # Fundo
+        # prioridade: "contabilidade" (padrão), depois "ICONE_SISTEMA"
+        base_names = ["contabilidade", "ICONE_SISTEMA"]
+
+        for name in base_names:
+            for ext in (".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG"):
+                path = os.path.join(base, name + ext)
+                if os.path.exists(path):
+                    try:
+                        img = Image.open(path).convert("RGBA")
+                        return ctk.CTkImage(light_image=img, dark_image=img, size=size)
+                    except Exception as e:
+                        print(f"[SPLASH] Erro ícone: {e}")
+        return None
+
+    # ----------------------------- UI -----------------------------
+
+    def _font(self, family, size, weight=None):
+        try:
+            return (family, size, weight) if weight else (family, size)
+        except Exception:
+            family = "Arial"
+            return (family, size, weight) if weight else (family, size)
+
+    def _tk_bg(self, hexcolor: str):
+        return hexcolor
+
+    def _build_ui(self):
+        self.main = ctk.CTkFrame(self, fg_color="transparent")
+        self.main.pack(fill="both", expand=True)
+
+        # fundo
         if self.bg_image_ctk is not None:
-            bg_label = ctk.CTkLabel(main_frame, image=self.bg_image_ctk, text="")
-            bg_label.pack(fill="both", expand=True)
-
-        # Container central
-        center_container = ctk.CTkFrame(main_frame, fg_color="transparent")
-        center_container.place(relx=0.5, rely=0.5, anchor="center")
-
-        # Ícone do sistema
-        self._create_icon(center_container)
-
-        # Título
-        self._create_title(center_container)
-
-        # Mensagem de boas-vindas
-        self._create_welcome(center_container)
-
-        # Barra de progresso
-        self._create_progress(center_container)
-
-        # Status e spinner
-        self._create_status(center_container)
-
-        # Rodapé
-        self._create_footer(center_container)
-
-    def _create_icon(self, parent):
-        """Criar ícone do sistema"""
-        icon_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        icon_frame.pack(pady=(0, 20))
-
-        icon_path = os.path.join(os.path.dirname(__file__), "ICONE_SISTEMA.png")
-        if os.path.exists(icon_path):
-            try:
-                img = Image.open(icon_path)
-                self.icon_ctk = ctk.CTkImage(
-                    light_image=img,
-                    dark_image=img,
-                    size=(200, 200),
-                )
-                lbl_icon = ctk.CTkLabel(icon_frame, image=self.icon_ctk, text="", fg_color="transparent")
-                lbl_icon.pack()
-            except Exception as e:
-                print(f"[SPLASH] Erro ao carregar ícone: {e}")
-                self._create_fallback_icon(icon_frame)
+            self.bg_label = ctk.CTkLabel(self.main, image=self.bg_image_ctk, text="")
+            self.bg_label.pack(fill="both", expand=True)
         else:
-            self._create_fallback_icon(icon_frame)
+            self.bg_label = None
 
-    def _create_fallback_icon(self, parent):
-        """Ícone fallback"""
-        lbl = ctk.CTkLabel(parent, text="⚙️", font=("Arial", 120), fg_color="transparent")
-        lbl.pack()
+        # container central
+        self.center = ctk.CTkFrame(self.main, fg_color="transparent")
+        self.center.place(relx=0.5, rely=0.5, anchor="center")
 
-    def _create_title(self, parent):
-        """Criar título e subtítulo"""
-        title_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        title_frame.pack(pady=(0, 15))
-
-        # Título principal
-        lbl_title = ctk.CTkLabel(
-            title_frame,
-            text="SISTEMA ÓPERA",
-            font=("Montserrat", 48, "bold"),
-            text_color=self.accent_primary,
-            fg_color="transparent",
+        # card “glass”
+        self.card = ctk.CTkFrame(
+            self.center,
+            fg_color=self.glass_bg,
+            border_color=self.glass_border,
+            border_width=1,
+            corner_radius=26,
         )
-        lbl_title.pack()
+        self.card.pack(padx=22, pady=22)
 
-        # Subtítulo
-        lbl_sub = ctk.CTkLabel(
-            title_frame,
-            text="GESTÃO DE PRODUÇÃO TÊXTIL",
-            font=("Montserrat", 14, "bold"),
-            text_color=self.text_secondary,
-            fg_color="transparent",
-        )
-        lbl_sub.pack(pady=(5, 0))
+        # HEADER
+        header = ctk.CTkFrame(self.card, fg_color="transparent")
+        header.pack(padx=44, pady=(34, 10))
 
-        # Linha decorativa
-        line = ctk.CTkFrame(
-            title_frame,
-            fg_color=self.accent_primary,
-            height=2,
-            width=350,
-            corner_radius=0,
-        )
-        line.pack(pady=10)
+        icon_wrap = ctk.CTkFrame(header, fg_color="transparent")
+        icon_wrap.pack(pady=(0, 16))
 
-    def _create_welcome(self, parent):
-        """Criar área de boas-vindas"""
-        welcome_frame = ctk.CTkFrame(
-            parent,
-            fg_color="transparent",
-            border_width=2,
-            border_color=self.accent_primary,
-            corner_radius=8,
-            width=400,
-            height=90,
-        )
-        welcome_frame.pack(pady=15)
-        welcome_frame.pack_propagate(False)
+        if self.icon_ctk is not None:
+            ctk.CTkLabel(icon_wrap, image=self.icon_ctk, text="", fg_color="transparent").pack()
+        else:
+            ctk.CTkLabel(
+                icon_wrap,
+                text="⚙️",
+                font=self._font("Arial", 92, "bold"),
+                text_color=self.accent_primary,
+                fg_color="transparent",
+            ).pack()
 
-        # Emoji
-        lbl_emoji = ctk.CTkLabel(welcome_frame, text="👋", font=("Arial", 24), fg_color="transparent")
-        lbl_emoji.pack(pady=(8, 0))
-
-        # Mensagem de boas-vindas
-        self.lbl_welcome = ctk.CTkLabel(
-            welcome_frame,
-            text=f"Bem-vindo, {self.usuario_nome}!",
-            font=("Arial", 16, "bold"),
+        ctk.CTkLabel(
+            header,
+            text="ÓPERA FASHION",
+            font=self._font("Montserrat", 44, "bold"),
             text_color=self.text_primary,
-            fg_color="transparent",
-        )
-        self.lbl_welcome.pack()
+        ).pack()
 
-        # Mensagem de carregamento
-        lbl_loading = ctk.CTkLabel(
-            welcome_frame,
-            text="Preparando seu ambiente de trabalho...",
-            font=("Arial", 11),
+        ctk.CTkLabel(
+            header,
+            text="GESTÃO INTELIGENTE DE PRODUÇÃO",
+            font=self._font("Montserrat", 12, "bold"),
             text_color=self.text_secondary,
-            fg_color="transparent",
+        ).pack(pady=(8, 0))
+
+        ctk.CTkLabel(
+            header,
+            text="Bem-vindo!",
+            font=self._font("Montserrat", 25),
+            text_color=self.muted,
+        ).pack(pady=(12, 0))
+
+        # BODY
+        body = ctk.CTkFrame(self.card, fg_color="transparent")
+        body.pack(fill="x", padx=44, pady=(8, 8))
+
+        # status row + spinner
+        status_row = ctk.CTkFrame(body, fg_color="transparent")
+        status_row.pack(fill="x", pady=(0, 10))
+
+        self.status_label = ctk.CTkLabel(
+            status_row,
+            text=self.steps[0] if self.steps else "Preparando ambiente.",
+            font=self._font("Montserrat", 13, "bold"),
+            text_color=self.text_primary,
         )
-        lbl_loading.pack(pady=(0, 8))
-
-    def _create_progress(self, parent):
-        """Criar barra de progresso"""
-        progress_container = ctk.CTkFrame(parent, fg_color="transparent")
-        progress_container.pack(pady=20)
-
-        # Container da barra
-        self.progress_bg = ctk.CTkFrame(
-            progress_container,
-            fg_color="transparent",
-            corner_radius=0,
-            height=30,
-            width=500,
-            border_width=2,
-            border_color=self.accent_primary,
-        )
-        self.progress_bg.pack()
-        self.progress_bg.pack_propagate(False)
-
-        # Barra de progresso interna
-        self.progress_bar = ctk.CTkFrame(
-            self.progress_bg,
-            fg_color=self.accent_primary,
-            corner_radius=0,
-            height=24,
-            width=0,  # Começa com 0
-        )
-        self.progress_bar.place(x=2, y=2)
-
-        # Porcentagem
-        self.lbl_percent = ctk.CTkLabel(
-            progress_container,
-            text="0%",
-            font=("Montserrat", 18, "bold"),
-            text_color=self.accent_primary,
-            fg_color="transparent",
-        )
-        self.lbl_percent.pack(pady=8)
-
-    def _create_status(self, parent):
-        """Criar área de status e spinner"""
-        status_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        status_frame.pack(pady=10)
-
-        # Mensagem de status
-        self.lbl_status = ctk.CTkLabel(
-            status_frame,
-            text="Inicializando módulos do sistema...",
-            font=("Arial", 12),
-            text_color=self.text_secondary,
-            fg_color="transparent",
-        )
-        self.lbl_status.pack()
-
-        # Spinner
-        self.spinner_frame = ctk.CTkFrame(status_frame, fg_color="transparent", width=40, height=40)
-        self.spinner_frame.pack(pady=8)
+        self.status_label.pack(side="left")
 
         self.spinner_canvas = tk.Canvas(
-            self.spinner_frame,
-            width=40,
-            height=40,
-            bg=self.accent_secondary,
+            status_row,
+            width=26,
+            height=26,
             highlightthickness=0,
+            bd=0,
+            bg=self._tk_bg(self.glass_bg),
         )
-        self.spinner_canvas.pack()
+        self.spinner_canvas.pack(side="right", padx=(10, 0))
 
-    def _create_footer(self, parent):
-        """Criar rodapé"""
-        footer = ctk.CTkFrame(parent, fg_color="transparent")
-        footer.pack(pady=15)
+        # progress bar
+        self.progress_bar = ctk.CTkProgressBar(
+            body,
+            height=12,
+            corner_radius=10,
+            fg_color=self.track_bg,
+            progress_color=self.accent_primary,
+        )
+        self.progress_bar.pack(fill="x")
+        self.progress_bar.set(0)
 
-        # Versão
-        lbl_version = ctk.CTkLabel(
-            footer,
-            text="Versão 1.0",
-            font=("Arial", 11),
+        pr_row = ctk.CTkFrame(body, fg_color="transparent")
+        pr_row.pack(fill="x", pady=(8, 0))
+
+        self.progress_text = ctk.CTkLabel(
+            pr_row,
+            text="Inicializando ambiente.",
+            font=self._font("Montserrat", 11),
             text_color=self.text_secondary,
-            fg_color="transparent",
         )
-        lbl_version.pack()
+        self.progress_text.pack(side="left")
 
-        # Copyright
-        lbl_copyright = ctk.CTkLabel(
-            footer,
-            text="© 2025 SISTEMA ÓPERA • Todos os direitos reservados",
-            font=("Arial", 10),
+        self.percent_label = ctk.CTkLabel(
+            pr_row,
+            text="0%",
+            font=self._font("Montserrat", 11, "bold"),
             text_color=self.text_secondary,
-            fg_color="transparent",
         )
-        lbl_copyright.pack(pady=(2, 0))
+        self.percent_label.pack(side="right")
+
+        # FOOTER (profissional, sem pular)
+        footer = ctk.CTkFrame(self.card, fg_color="transparent")
+        footer.pack(fill="x", padx=44, pady=(14, 26))
+
+        line = ctk.CTkFrame(footer, fg_color=self.glass_border, height=1, corner_radius=0)
+        line.pack(fill="x", pady=(0, 10))
+
+        self.footer_label = ctk.CTkLabel(
+            footer,
+            text="Inicializando ambiente • Segurança, Performance e Confiabilidade",
+            font=self._font("Montserrat", 10, "bold"),
+            text_color=self.text_secondary,
+        )
+        self.footer_label.pack()
+
+        self.footer_sub = ctk.CTkLabel(
+            footer,
+            text="Processo automático — aguarde a conclusão.",
+            font=self._font("Montserrat", 10),
+            text_color=self.muted,
+        )
+        self.footer_sub.pack(pady=(6, 0))
+
+    # ----------------------------- Controle Externo -----------------------------
+
+    def update_status(self, message=None, progress=None):
+        """Atualiza status e/ou progresso manualmente."""
+        if self._finished:
+            return
+
+        if message:
+            try:
+                self.status_label.configure(text=message)
+                self.progress_text.configure(text=message)
+            except Exception:
+                pass
+
+        if progress is not None:
+            self._progress = float(max(0.0, min(progress, 1.0)))
+            try:
+                self.progress_bar.set(self._progress)
+            except Exception:
+                pass
+            self._update_percent()
+
+    def start_auto_progress(self, duration_ms=2800):
+        """Progresso automático (com etapas)."""
+        if self._finished or self._auto_mode:
+            return
+        self._auto_mode = True
+        self._elapsed_ms = 0
+        self._total_ms = max(800, int(duration_ms))
+        self._tick_ms = 35
+        self._step_index = 0
+        self._auto_progress_loop()
+
+    # ----------------------------- Spinner Premium -----------------------------
+
+    def _start_spinner(self):
+        self._angle = 0.0
+        self._draw_spinner()
+        self._spinner_loop()
+
+    def _spinner_loop(self):
+        if self._finished:
+            return
+        self._angle = (self._angle + 10.0) % 360.0
+        self._draw_spinner()
+        self._spinner_job = self.after(38, self._spinner_loop)
 
     def _draw_spinner(self):
-        """Desenhar spinner"""
-        self.spinner_canvas.delete("all")
-        cx, cy, r = 20, 20, 15
-        extent = 80
-        self.spinner_canvas.create_arc(
-            cx - r,
-            cy - r,
-            cx + r,
-            cy + r,
-            start=self.angle,
-            extent=extent,
-            style="arc",
-            outline=self.accent_primary,
-            width=3,
-        )
+        c = self.spinner_canvas
+        c.delete("all")
 
-    def _animate_spinner(self):
-        """Animar spinner"""
-        if not self.winfo_exists():
+        cx, cy = 13, 13
+        r_out = 11
+        r_in = 6
+        segments = 12
+        base = self.accent_primary
+
+        def hex_to_rgb(h):
+            h = h.lstrip("#")
+            return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+        def rgb_to_hex(rgb):
+            return f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}"
+
+        br, bg, bb = hex_to_rgb(base)
+
+        for i in range(segments):
+            angle = math.radians((i * (360 / segments)) + self._angle)
+            x1 = cx + r_in * math.cos(angle)
+            y1 = cy + r_in * math.sin(angle)
+            x2 = cx + r_out * math.cos(angle)
+            y2 = cy + r_out * math.sin(angle)
+
+            fade = (i + 1) / segments
+            r = int(br * fade + 40 * (1 - fade))
+            g = int(bg * fade + 40 * (1 - fade))
+            b = int(bb * fade + 40 * (1 - fade))
+            col = rgb_to_hex((max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b))))
+
+            c.create_line(x1, y1, x2, y2, fill=col, width=3, capstyle="round")
+
+    # ----------------------------- Fade -----------------------------
+
+    def _fade_to(self, target_alpha: float, ms: int = 200):
+        if not self._supports_alpha:
             return
-        self.angle = (self.angle + 10) % 360
-        self._draw_spinner()
-        self._agendar_after(50, self._animate_spinner)
 
-    def update_progress(self, fraction: float, message: str = None):
-        """Atualizar progresso"""
-        if not self.winfo_exists():
-            return
+        target_alpha = float(max(0.0, min(target_alpha, 1.0)))
+        steps = max(int(ms / 18), 1)
+        start = self._alpha
+        delta = (target_alpha - start) / steps
 
-        # Validar fração
+        def tick(i):
+            if self._finished:
+                return
+            try:
+                self._alpha = start + (delta * i)
+                self.attributes("-alpha", self._alpha)
+            except Exception:
+                self._supports_alpha = False
+                return
+            if i >= steps:
+                self._alpha = target_alpha
+                return
+            self._fade_job = self.after(18, lambda: tick(i + 1))
+
+        tick(0)
+
+    def _try_focus(self):
         try:
-            f = float(fraction)
-        except Exception:
-            f = 0.0
-
-        f = max(0.0, min(1.0, f))
-        self._progress_fraction = f
-        self.progress = int(round(f * 100))
-
-        # Atualizar barra
-        max_width = 500 - 4  # Largura máxima da barra
-        bar_width = int(max_width * f)
-
-        try:
-            self.progress_bar.configure(width=bar_width)
-            self.lbl_percent.configure(text=f"{self.progress}%")
-            if message:
-                self.lbl_status.configure(text=message)
+            self.focus_force()
         except Exception:
             pass
 
-        try:
-            self.update_idletasks()
-        except Exception:
-            pass
+    # ----------------------------- Auto Progress -----------------------------
 
-    def set_status_message(self, message: str):
-        """Definir mensagem de status"""
-        if not self.winfo_exists():
+    def _auto_progress_loop(self):
+        if self._finished or not self._auto_mode:
             return
+
+        self._elapsed_ms += self._tick_ms
+        frac = min(self._elapsed_ms / self._total_ms, 1.0)
+        self._progress = frac
+
+        if self.steps:
+            idx = min(int(frac * len(self.steps)), len(self.steps) - 1)
+            if idx != self._step_index:
+                self._step_index = idx
+                msg = self.steps[self._step_index]
+                self.update_status(msg, progress=self._progress)
+            else:
+                self.update_status(None, progress=self._progress)
+        else:
+            self.update_status("Inicializando ambiente.", progress=self._progress)
+
+        if frac >= 1.0:
+            self.safe_finish()
+            return
+
+        self._auto_job = self.after(self._tick_ms, self._auto_progress_loop)
+
+    def _update_percent(self):
         try:
-            self.lbl_status.configure(text=message)
-            self.update_idletasks()
+            pct = int(round(self._progress * 100))
+            self.percent_label.configure(text=f"{pct}%")
         except Exception:
             pass
 
-    def complete(self, message: str = None, delay_ms: int = 600):
-        """Completar carregamento"""
-        if message:
-            self.set_status_message(message)
-        self.update_progress(1.0)
-        self._agendar_after(delay_ms, self._finish)
+    # ----------------------------- Finalização -----------------------------
+
+    def safe_finish(self):
+        if self._finished:
+            return
+        self._finish()
 
     def _finish(self):
-        """Finalizar splash"""
-        self._auto_mode = False
-        self._fechando = True
-        cancel_all_afters(self)
+        self._finished = True
+
+        # cancela afters do guard (se existir)
         try:
-            if self.on_complete is not None:
-                self.on_complete()
-        except Exception as e:
-            print(f"[SPLASH] Erro em on_complete: {e}")
+            cancel_all_afters(self)
+        except Exception:
+            pass
+
+        # cancela jobs locais
+        for job_name in ("_auto_job", "_spinner_job", "_fade_job"):
+            job = getattr(self, job_name, None)
+            if job:
+                try:
+                    self.after_cancel(job)
+                except Exception:
+                    pass
+                setattr(self, job_name, None)
+
+        # fade-out rápido e finaliza
+        try:
+            self.attributes("-topmost", False)
+        except Exception:
+            pass
+
+        if self._supports_alpha:
+            self._alpha = 1.0
+            try:
+                self.attributes("-alpha", 1.0)
+            except Exception:
+                pass
+            self._fade_to(0.0, ms=160)
+            self.after(175, self._destroy_and_callback)
+        else:
+            self._destroy_and_callback()
+
+    def _destroy_and_callback(self):
         try:
             self.destroy()
         except Exception:
             pass
+        if self.on_complete:
+            try:
+                self.on_complete()
+            except Exception:
+                pass
 
 
-def rodar_menu_com_splash(usuario_id, usuario_nome, hierarquia, tema_preferido="Noite Urbana"):
+# =============================================================================
+# Funções de “fluxo” (BOOT → SPLASH → ...), que estavam faltando no seu projeto
+# =============================================================================
+
+def rodar_splash_e_chamar(callback, usuario_nome="Usuário", tema_preferido="profissional",
+                         steps=None, duration_ms=4500):
     """
-    Função principal para integrar login com menu via splash (SEM 2 mainloops).
-    Corrige:
-    - invalid command name ...update / check_dpi_scaling
-    - segunda instância aparecendo ao fechar
+    Roda o Splash e ao concluir chama 'callback()'.
+    Uso típico: BOOTSTRAP chama isso e no callback abre o LOGIN.
     """
-    try:
-        print(f"[SPLASH] Iniciando sistema para: {usuario_nome}")
-        print(f"[SPLASH] Tema preferido: {tema_preferido}")
-
-        root = ctk.CTk()
-        root.title("SISTEMA ÓPERA")
-        root.withdraw()
-
-        # ativa guard de after no root também
-        try:
-            initialize_after_guard(root)
-        except Exception:
-            pass
-
-        abrir_menu = {"ok": False}
-
-        def quando_splash_terminar():
-            """Callback quando o splash terminar (só marca e encerra o loop do splash)."""
-            print("[SPLASH] Splash finalizado. Encerrando loop do splash...")
-            abrir_menu["ok"] = True
-
-            try:
-                cancel_all_afters(splash)
-            except Exception:
-                pass
-            try:
-                cancel_all_afters(root)
-            except Exception:
-                pass
-
-            # encerra o mainloop atual (não abre outro aqui dentro!)
-            try:
-                root.quit()
-            except Exception:
-                pass
-
-        splash = SplashScreenHD(
-            parent=root,
-            usuario_nome=usuario_nome,
-            tema_preferido=tema_preferido,
-            on_complete=quando_splash_terminar
-        )
-
-        def simular_carregamento():
-            if not splash.winfo_exists():
-                return
-
-            messages = [
-                ("🔧 Inicializando módulos do sistema...", 0.2),
-                ("📦 Carregando bibliotecas essenciais...", 0.4),
-                ("🔌 Conectando ao banco de dados...", 0.6),
-                ("🎨 Preparando interface gráfica...", 0.8),
-                ("✨ Finalizando preparação...", 0.95)
-            ]
-
-            def next_step(index=0):
-                if not splash.winfo_exists():
-                    return
-
-                if index < len(messages):
-                    msg, progress = messages[index]
-                    splash.update_progress(progress, msg)
-
-                    # usa after guard do root (se existir)
-                    try:
-                        root._agendar_after(800, lambda: next_step(index + 1))
-                    except Exception:
-                        root.after(800, lambda: next_step(index + 1))
-                else:
-                    splash.complete("✅ Sistema pronto! Abrindo...", 800)
-
-            next_step()
-
-        try:
-            root._agendar_after(500, simular_carregamento)
-        except Exception:
-            root.after(500, simular_carregamento)
-
-        # roda SOMENTE o loop do splash
-        root.mainloop()
-
-        # terminou o loop do splash → destrói root com segurança
-        try:
-            if splash.winfo_exists():
-                splash.destroy()
-        except Exception:
-            pass
-
-        try:
-            root.destroy()
-        except Exception:
-            pass
-
-        # abre menu principal (AGORA FORA do mainloop do splash)
-        if abrir_menu["ok"]:
-            print("[SPLASH] Abrindo menu principal...")
-            from MENU_PRINCIPAL import OperaMenuApp
-
-            app = OperaMenuApp(
-                usuario_id=usuario_id,
-                usuario_nome=usuario_nome,
-                usuario_hierarquia=hierarquia,
-                tema_preferido=tema_preferido
-            )
-            app.mainloop()
-
-    except Exception as e:
-        print(f"[SPLASH] Erro crítico: {e}")
-        import traceback
-        traceback.print_exc()
-
-        # Fallback direto
-        try:
-            from MENU_PRINCIPAL import OperaMenuApp
-            app = OperaMenuApp(
-                usuario_id=usuario_id,
-                usuario_nome=usuario_nome,
-                usuario_hierarquia=hierarquia,
-                tema_preferido=tema_preferido
-            )
-            app.mainloop()
-        except Exception as fallback_error:
-            print(f"[SPLASH] Erro no fallback: {fallback_error}")
-
-
-
-if __name__ == "__main__":
-    # Teste do splash
-    ctk.set_appearance_mode("dark")
+    ctk.set_appearance_mode("Dark")
 
     root = ctk.CTk()
     root.withdraw()
 
+    def _on_complete():
+        # encerra o mainloop do root do splash
+        try:
+            root.after(0, root.quit)
+        except Exception:
+            pass
+        # chama callback fora do try
+        try:
+            callback()
+        except Exception:
+            pass
 
-    def teste_finalizar():
-        print("✅ Splash teste finalizado")
-        root.destroy()
-
-
-    splash = SplashScreenHD(
+    SplashScreenModern(
         parent=root,
-        usuario_nome="Usuário Teste",
-        tema_preferido="Azul Oceano",
-        on_complete=teste_finalizar
+        usuario_nome=usuario_nome,
+        tema_preferido=tema_preferido,
+        on_complete=_on_complete,
+        steps=steps,
+        duration_ms=duration_ms,
+        allow_skip=False,
+        block_close=True,
+    )
+
+    root.mainloop()
+    try:
+        root.destroy()
+    except Exception:
+        pass
+
+
+def rodar_login_com_splash(usuario_nome="Usuário", tema_preferido="profissional",
+                           steps=None, duration_ms=4500):
+    """
+    Fluxo: Splash -> Login
+    """
+    def abrir_login():
+        import tkinter as tk
+        from LOGUIN import SistemaLoginModerno
+
+        root_login = tk.Tk()
+        aplicacao = SistemaLoginModerno(root_login)
+        root_login.protocol("WM_DELETE_WINDOW", aplicacao.ao_fechar)
+        root_login.mainloop()
+
+    rodar_splash_e_chamar(
+        callback=abrir_login,
+        usuario_nome=usuario_nome,
+        tema_preferido=tema_preferido,
+        steps=steps,
+        duration_ms=duration_ms,
     )
 
 
-    # Simular progresso no teste
-    def teste_progresso():
-        if splash.winfo_exists():
-            splash.update_progress(0.3, "Testando módulos...")
-            root.after(1000, lambda: splash.update_progress(0.7, "Carregando dados..."))
-            root.after(2000, lambda: splash.complete("Teste concluído!", 500))
+if __name__ == "__main__":
+    import customtkinter as ctk
+    import tkinter as tk
 
+    from LOGUIN import SistemaLoginModerno
+    from MENU_PRINCIPAL import OperaMenuApp  # se o nome for outro, ajuste aqui
 
-    root.after(500, teste_progresso)
+    ctk.set_appearance_mode("Dark")
+
+    root = ctk.CTk()
+    root.withdraw()  # fica escondido durante o splash
+
+    def abrir_menu_teste():
+        # teste direto do menu (sem autenticar) — só pra validar que abre
+        root.withdraw()
+        app = OperaMenuApp(
+            usuario_id=1,
+            usuario_nome="ADMIN",
+            usuario_hierarquia="SUPER ADMIN",
+            tema_preferido="Noite Urbana",
+        )
+        app.mainloop()
+
+    def abrir_login():
+        root.deiconify()
+        login = SistemaLoginModerno(root)
+
+        # Se você quiser, pode trocar a chamada do menu dentro do login
+        # e apontar pra abrir_menu_teste() ou pra sua função real.
+
+        root.protocol("WM_DELETE_WINDOW", login.ao_fechar)
+
+    SplashScreenModern(
+        parent=root,
+        usuario_nome="",
+        tema_preferido="profissional",
+        on_complete=lambda: root.after(0, abrir_login),
+        duration_ms=6000,
+        allow_skip=False,
+        block_close=True,
+    )
+
     root.mainloop()

@@ -1074,53 +1074,68 @@ class EnvioCortes(ctk.CTkFrame):
     # ----------------------------- Edição de Cópias e Pilotos -----------------------------
     def _on_copias_edit(self, tam):
         """
-        Ao editar o campo de cópias retiradas do corte, armazena o valor original digitado e
-        recalcula o saldo de cópias restantes subtraindo o número de pilotos definidos para esse tamanho.
-
-        :param tam: Tamanho (string) da peça (ex.: "P", "M", etc.).
+        Regra correta:
+        - "Cópias retiradas do corte" diminui SOMENTE o "Disponível".
+        - "ENVIAR" é manual (não altera aqui).
         """
         try:
-            # Valor digitado no campo de cópias
-            new_copias = safe_int(self.copias_do_corte[tam].get())
-            # Armazena o valor original para referência futura
-            self.copias_original[tam] = new_copias
-            # Número atual de pilotos definidos para esse tamanho
-            current_pilotos = safe_int(self.pilotos[tam].get())
-            # Cálculo do saldo de cópias restantes (não negativas)
-            leftover = max(self.copias_original[tam] - current_pilotos, 0)
-            # Atualiza o campo de cópias com o saldo
-            self.copias_do_corte[tam].set(leftover)
-        except Exception:
-            # Se ocorrer algum erro de conversão, mantenha o valor atual
-            pass
-        # Recalcular totais após ajuste
-        try:
+            # valor base do corte (quantidade original daquele tamanho)
+            # OBS: usamos self.copias_original[tam] como "base" do corte (ele já é resetado no _limpar()).
+            base = int(self.copias_original.get(tam, 0) or 0)
+
+            # Se ainda não temos base, tenta capturar do display atual ANTES de aplicar retirada.
+            # (isso funciona logo após selecionar o corte, quando o display ainda é o total do corte)
+            if base <= 0:
+                try:
+                    base_txt = str(self.grade_widgets[tam]["disp"].cget("text") or "0").strip()
+                    base = safe_int(base_txt)
+                except Exception:
+                    base = 0
+
+                if base > 0:
+                    self.copias_original[tam] = base  # guarda a base do corte
+
+            retiradas = safe_int(self.copias_do_corte[tam].get())
+
+            # normalizações
+            if retiradas < 0:
+                retiradas = 0
+                self.copias_do_corte[tam].set(0)
+
+            if base > 0 and retiradas > base:
+                retiradas = base
+                self.copias_do_corte[tam].set(base)
+
+            disponivel = max(base - retiradas, 0)
+
+            # atualiza SOMENTE o display de disponível
+            self.grade_widgets[tam]["disp"].configure(text=str(disponivel))
+
+            # NÃO mexe no campo ENVIAR
+            # self.quantidades[tam].set(...)  <-- PROIBIDO aqui
+
+            # recalcula totais/valores (sem travar enviar)
             self._recalcular()
+
         except Exception:
+            # não quebra a digitação do usuário
             pass
 
     def _on_pilotos_edit(self, tam):
         """
-        Ao editar o campo de pilotos, recalcula o saldo de cópias restantes com base no
-        valor original de cópias digitado para esse tamanho.
-
-        :param tam: Tamanho (string) da peça (ex.: "P", "M", etc.).
+        Pilotos NÃO devem recalcular/alterar "Cópias retiradas do corte".
+        Pilotos são informados manualmente e entram apenas nos totais/subtotais.
         """
         try:
-            # Número de pilotos digitado
-            new_pilotos = safe_int(self.pilotos[tam].get())
-            # Valor original de cópias informado anteriormente (se não existir, assume 0)
-            orig_copies = self.copias_original.get(tam, 0)
-            # Recalcula o saldo de cópias restantes
-            leftover = max(orig_copies - new_pilotos, 0)
-            # Atualiza o campo de cópias com o saldo recalculado
-            self.copias_do_corte[tam].set(leftover)
-        except Exception:
-            # Se ocorrer algum erro de conversão, ignore
-            pass
-        # Recalcular totais após ajuste
-        try:
+            p = safe_int(self.pilotos[tam].get())
+
+            if p < 0:
+                p = 0
+                self.pilotos[tam].set(0)
+
+            # NÃO mexer em self.copias_do_corte[tam] aqui
             self._recalcular()
+
         except Exception:
             pass
 

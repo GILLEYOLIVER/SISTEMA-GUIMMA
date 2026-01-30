@@ -289,7 +289,7 @@ class SistemaLoginModerno:
 
     def _abrir_sistema_principal_apos_login(self, user_id, usuario, hierarquia, tema_preferido="Noite Urbana",
                                             modo_callback=False):
-        """Abre o sistema principal via splash screen"""
+        """Abre o MENU diretamente (sem splash). O splash já roda no BOOT."""
         print(f"[LOGIN] Abrindo sistema para: {usuario} (Tema: {tema_preferido})")
 
         try:
@@ -305,30 +305,23 @@ class SistemaLoginModerno:
                 except Exception:
                     pass
 
-            # ✅ USA O SPLASH COM DELAY
-            from SPLASH import rodar_menu_com_splash
-            rodar_menu_com_splash(
+            # Abre direto o MENU
+            from MENU_PRINCIPAL import OperaMenuApp
+            app = OperaMenuApp(
                 usuario_id=int(user_id),
                 usuario_nome=usuario,
-                hierarquia=hierarquia,
+                usuario_hierarquia=hierarquia,
                 tema_preferido=tema_preferido
             )
+            app.mainloop()
 
         except Exception as erro:
-            print(f"[LOGIN] Erro: {erro}")
-            # Fallback direto com delay
+            print(f"[LOGIN] Erro ao abrir MENU: {erro}")
+            import traceback
+            traceback.print_exc()
             try:
-                import time
-                time.sleep(2)
-
-                from MENU_PRINCIPAL import OperaMenuApp
-                app = OperaMenuApp(
-                    usuario_id=user_id,
-                    usuario_nome=usuario,
-                    usuario_hierarquia=hierarquia,
-                    tema_preferido=tema_preferido
-                )
-                app.mainloop()
+                from tkinter import messagebox
+                messagebox.showerror("Erro", f"Falha ao iniciar o sistema:\n{erro}")
             except Exception:
                 pass
 
@@ -376,15 +369,12 @@ class SistemaLoginModerno:
         except Exception as e:
             print(f"[LOGIN] Erro ao preparar tela de login: {e}")
 
-    def _abrir_sistema_principal(
-            self, user_id: int, usuario: str, hierarquia: str = "Padrão",
-            tema_preferido: str = "Noite Urbana"
-    ):
-        """Abre o sistema principal via splash screen."""
+    def _abrir_sistema_principal(self, user_id: int, usuario: str, hierarquia: str = "Padrão",
+                                 tema_preferido: str = "Noite Urbana"):
+        """Abre o MENU diretamente (sem splash)."""
         print(f"[LOGIN] Abrindo sistema para: {usuario} (Tema: {tema_preferido})")
 
         try:
-            # Fecha a janela de login
             if hasattr(self, "root") and self.root:
                 try:
                     self.root.quit()
@@ -392,39 +382,19 @@ class SistemaLoginModerno:
                 except Exception:
                     pass
 
-            # Importa e chama a função do splash
-            from SPLASH import rodar_menu_com_splash
-
-            # Chama a função que gerencia todo o fluxo
-            rodar_menu_com_splash(
+            from MENU_PRINCIPAL import OperaMenuApp
+            app = OperaMenuApp(
                 usuario_id=int(user_id),
                 usuario_nome=usuario,
-                hierarquia=hierarquia,
+                usuario_hierarquia=hierarquia,
+                tema_preferido=tema_preferido
             )
+            app.mainloop()
 
         except Exception as erro:
             print(f"[LOGIN] Erro crítico: {erro}")
             import traceback
             traceback.print_exc()
-
-            # Fallback: tenta abrir diretamente sem splash
-            try:
-                from MENU_PRINCIPAL import OperaMenuApp
-                app = OperaMenuApp(
-                    usuario_id=user_id,
-                    usuario_nome=usuario,
-                    usuario_hierarquia=hierarquia,
-                )
-                app.mainloop()
-            except Exception as fallback_error:
-                print(f"[LOGIN] Fallback também falhou: {fallback_error}")
-                try:
-                    root_erro = tk.Tk()
-                    root_erro.withdraw()
-                    messagebox.showerror("Erro", f"Falha ao iniciar sistema:\n{erro}")
-                    root_erro.destroy()
-                except Exception:
-                    pass
 
     # ----------------------
     # Helpers de banco
