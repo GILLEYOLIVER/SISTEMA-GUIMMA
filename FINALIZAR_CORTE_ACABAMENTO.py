@@ -71,10 +71,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.obter_cores_por_tema()
 
         # Variáveis para campos editáveis
-        self.entregues_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.copias_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.defeitos_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.faltantes_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.entregues_vars = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.copias_vars = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.defeitos_vars = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.faltantes_vars = {t: tk.StringVar(value="0") for t in self.tamanhos}
 
         # Dados originais
         self.enviado_por_tam = {t: 0 for t in self.tamanhos}
@@ -168,6 +168,14 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 widget.configure(text_color=self.cor_texto)
             if hasattr(widget, "winfo_children"):
                 self._recolor_labels_frame(widget)
+
+    def _validar_quantidade(self, tam, proposed):
+        if proposed == "":
+            return True
+        if not proposed.isdigit():
+            return False
+        enviado = safe_int(self.grade_widgets[tam]["enviado"].cget("text"))
+        return int(proposed) <= enviado
 
 
     # ----------------------------- UI -----------------------------
@@ -394,10 +402,16 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                    text_color=self.cor_texto)
             lbl_env.pack(side="left", padx=2)
 
-            ent_ent = ctk.CTkEntry(row, width=90, textvariable=self.entregues_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_ent = ctk.CTkEntry(
+                row,
+                width=90,
+                textvariable=self.entregues_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+                validate="key",
+                validatecommand=(self.register(lambda v, T=tam: self._validar_quantidade(T, v)), "%P"),
+            )
             ent_ent.pack(side="left", padx=2)
             ent_ent.bind("<KeyRelease>", self._recalcular_totais)
 
@@ -412,17 +426,29 @@ class FinalizacaoCortes(ctk.CTkFrame):
             )
             ent_cop.pack(side="left", padx=2)
 
-            ent_def = ctk.CTkEntry(row, width=80, textvariable=self.defeitos_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_def = ctk.CTkEntry(
+                row,
+                width=80,
+                textvariable=self.defeitos_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+                validate="key",
+                validatecommand=(self.register(lambda v, T=tam: self._validar_quantidade(T, v)), "%P"),
+            )
             ent_def.pack(side="left", padx=2)
             ent_def.bind("<KeyRelease>", self._recalcular_totais)
 
-            ent_fal = ctk.CTkEntry(row, width=80, textvariable=self.faltantes_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_fal = ctk.CTkEntry(
+                row,
+                width=80,
+                textvariable=self.faltantes_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+                validate="key",
+                validatecommand=(self.register(lambda v, T=tam: self._validar_quantidade(T, v)), "%P"),
+            )
             ent_fal.pack(side="left", padx=2)
             ent_fal.bind("<KeyRelease>", self._recalcular_totais)
 
