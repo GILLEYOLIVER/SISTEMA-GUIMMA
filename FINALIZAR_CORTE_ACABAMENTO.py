@@ -1068,6 +1068,13 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 entregue = 0
                 self.entregues_vars[t].set(0)
 
+            if entregue + defeito > enviado:
+                entregue = max(enviado - defeito, 0)
+                self.entregues_vars[t].set(entregue)
+
+            # Faltante sempre recalculado com base em Enviado, Entregue e Defeito
+            faltante = max(enviado - entregue - defeito, 0)
+            self.faltantes_vars[t].set(faltante)
             if entregue + defeito + faltante > enviado:
                 faltante = max(enviado - entregue - defeito, 0)
                 self.faltantes_vars[t].set(faltante)
