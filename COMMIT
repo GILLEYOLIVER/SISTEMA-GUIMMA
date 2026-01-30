@@ -2,6 +2,14 @@ git add -A
 git commit -m "Sincroniza tudo"
 git push --force-with-lease origin main
 
+git fetch origin --prune
+git status
+git push --force-with-lease origin main
+
+
+
+___________________________________________________________________________________________________________________
+
 
 baixar
 
