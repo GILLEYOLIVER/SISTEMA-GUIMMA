@@ -534,7 +534,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
                     INSERT INTO {schema}.cadastro_faccoes (
                         codigo, tipo_prestador, nome, telefone, endereco,
                         titular_da_conta, cpf, banco, agencia, conta, pix, data
-                    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
                     (
                         codigo_final,
