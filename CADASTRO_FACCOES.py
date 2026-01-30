@@ -99,6 +99,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
             CREATE TABLE IF NOT EXISTS {schema}.cadastro_faccoes (
                 id               SERIAL PRIMARY KEY,
                 codigo           VARCHAR(10) UNIQUE NOT NULL,
+                tipo_prestador   VARCHAR(50) NOT NULL DEFAULT 'Facção',
                 nome             VARCHAR(200) NOT NULL,
                 telefone         VARCHAR(50),
                 endereco         TEXT,
@@ -111,6 +112,10 @@ class CadastroFaccoesView(ctk.CTkFrame):
                 data             DATE,
                 data_atualizacao DATE
             )
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.cadastro_faccoes
+            ADD COLUMN IF NOT EXISTS tipo_prestador VARCHAR(50) NOT NULL DEFAULT 'Facção'
         """)
 
         # Cria índices se não existirem
@@ -195,7 +200,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
         title_frame.grid(row=0, column=0, sticky="w")
         icon_label = ctk.CTkLabel(title_frame, text="🧵", font=("Roboto", 20), text_color=self.cor_texto)
         icon_label.pack(side="left", padx=(0, 5))
-        title_label = ctk.CTkLabel(title_frame, text="Cadastro de Facções", font=("Roboto", 18, "bold"),
+        title_label = ctk.CTkLabel(title_frame, text="Cadastro de Prestadores", font=("Roboto", 18, "bold"),
                                    text_color=self.cor_texto)
         title_label.pack(side="left")
 
@@ -214,7 +219,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
 
         subtitle_label = ctk.CTkLabel(
             header_container,
-            text="Gerencie facções e dados de pagamento",
+            text="Gerencie prestadores e dados de pagamento",
             font=("Roboto", 11),
             text_color=self.cor_texto
         )
@@ -242,6 +247,32 @@ class CadastroFaccoesView(ctk.CTkFrame):
                                  border_color=self.cor_borda)
             entry.pack(side="left", fill="x", expand=True)
             self.entries[field] = entry
+
+        tipo_row = ctk.CTkFrame(bloco_esquerdo, fg_color="transparent")
+        tipo_row.pack(fill="x", pady=4)
+        ctk.CTkLabel(tipo_row, text="Tipo:", width=100, anchor="w", text_color=self.cor_texto).pack(side="left",
+                                                                                                    padx=(0, 5))
+        self.tipo_prestador_var = ctk.StringVar(value="Facção")
+        self.tipo_prestador_menu = ctk.CTkOptionMenu(
+            tipo_row,
+            values=[
+                "Facção",
+                "Bordado",
+                "Caseador",
+                "Botões",
+                "Estamparia",
+                "Interna",
+                "Tingimento",
+                "Outros Trabalhos",
+            ],
+            variable=self.tipo_prestador_var,
+            fg_color=self.cor_fundo,
+            button_color=self.cor_primaria,
+            button_hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            width=200
+        )
+        self.tipo_prestador_menu.pack(side="left", fill="x", expand=True)
 
         # Dados bancários
         bloco_direito = ctk.CTkFrame(form_frame, fg_color="transparent")
@@ -282,7 +313,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
         search_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(5, 5))
         self.entry_pesquisa = ctk.CTkEntry(
             search_frame,
-            placeholder_text="Pesquisar facções...",
+            placeholder_text="Pesquisar prestadores...",
             width=240,
             height=32,
             fg_color=self.cor_fundo,
@@ -291,6 +322,29 @@ class CadastroFaccoesView(ctk.CTkFrame):
         )
         self.entry_pesquisa.pack(side="left", fill="x", expand=True, padx=(0, 5))
         self.entry_pesquisa.bind("<KeyRelease>", lambda e: self.pesquisar_faccoes())
+        self.tipo_filtro_var = ctk.StringVar(value="Todos")
+        self.tipo_filtro_menu = ctk.CTkOptionMenu(
+            search_frame,
+            values=[
+                "Todos",
+                "Facção",
+                "Bordado",
+                "Caseador",
+                "Botões",
+                "Estamparia",
+                "Interna",
+                "Tingimento",
+                "Outros Trabalhos",
+            ],
+            variable=self.tipo_filtro_var,
+            fg_color=self.cor_fundo,
+            button_color=self.cor_primaria,
+            button_hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            width=160,
+            command=lambda _: self.pesquisar_faccoes()
+        )
+        self.tipo_filtro_menu.pack(side="left", padx=(0, 5))
         self._criar_botao(search_frame, "Buscar", self.pesquisar_faccoes, self.cor_destaque, width=90, height=32)
 
         # Treeview
@@ -306,7 +360,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
 
         self.tree = ttk.Treeview(
             tree_container,
-            columns=("Código", "Nome", "Telefone", "Endereço",
+            columns=("Código", "Nome", "Tipo", "Telefone", "Endereço",
                      "Titular da Conta", "CPF", "Banco", "Agência",
                      "Conta", "Pix", "Data"),
             show="headings",
@@ -318,6 +372,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
         col_config = {
             "Código": 60,
             "Nome": 120,
+            "Tipo": 110,
             "Telefone": 100,
             "Endereço": 200,
             "Titular da Conta": 150,
@@ -379,6 +434,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
     def limpar_campos(self):
         for e in self.entries.values():
             e.delete(0, END)
+        self.tipo_prestador_var.set("Facção")
         self.modo_edicao = False
         self.faccao_selecionada = None
         self.tree.selection_remove(self.tree.selection())
@@ -390,28 +446,30 @@ class CadastroFaccoesView(ctk.CTkFrame):
 
         mapping = {
             "nome": 1,
-            "telefone": 2,
-            "endereco": 3,
-            "titular_da_conta": 4,
-            "cpf": 5,
-            "banco": 6,
-            "agencia": 7,
-            "conta": 8,
-            "pix": 9
+            "telefone": 3,
+            "endereco": 4,
+            "titular_da_conta": 5,
+            "cpf": 6,
+            "banco": 7,
+            "agencia": 8,
+            "conta": 9,
+            "pix": 10
         }
 
+        self.tipo_prestador_var.set(self.faccao_selecionada[2])
         for field, index in mapping.items():
             self.entries[field].delete(0, END)
             value = self.faccao_selecionada[index]
             self.entries[field].insert(0, "" if value is None else str(value))
 
     def salvar_faccao(self):
-        """Insere ou atualiza uma facção no PostgreSQL, mantendo a lógica e a UI atuais."""
+        """Insere ou atualiza um prestador no PostgreSQL, mantendo a lógica e a UI atuais."""
         # Coleta e normaliza dados da UI
         dados = {f: self.entries[f].get().strip() for f in self.entries}
+        dados["tipo_prestador"] = self.tipo_prestador_var.get().strip()
 
         # Validação mínima
-        obrigatorios = ["nome", "telefone", "endereco"]
+        obrigatorios = ["nome", "telefone", "endereco", "tipo_prestador"]
         for campo in obrigatorios:
             if not dados.get(campo):
                 messagebox.showwarning("Aviso", f"Preencha o campo obrigatório: {campo.capitalize()}")
@@ -436,6 +494,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
                 cur.execute(
                     f"""
                     UPDATE {schema}.cadastro_faccoes SET
+                        tipo_prestador=%s,
                         nome=%s,
                         telefone=%s,
                         endereco=%s,
@@ -450,6 +509,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
                     WHERE codigo=%s
                     """,
                     (
+                        dados["tipo_prestador"],
                         dados["nome"], dados["telefone"], dados["endereco"],
                         norm(dados.get("titular_da_conta")),
                         norm(dados.get("cpf")),
@@ -461,7 +521,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
                         codigo_alvo,
                     ),
                 )
-                msg = "Facção atualizada!"
+                msg = "Prestador atualizado!"
             else:
                 # Gera próximo código: ignora vazios e converte para int com segurança
                 cur.execute(f"SELECT MAX(NULLIF(codigo,'')::int) FROM {schema}.cadastro_faccoes")
@@ -472,12 +532,13 @@ class CadastroFaccoesView(ctk.CTkFrame):
                 cur.execute(
                     f"""
                     INSERT INTO {schema}.cadastro_faccoes (
-                        codigo, nome, telefone, endereco,
+                        codigo, tipo_prestador, nome, telefone, endereco,
                         titular_da_conta, cpf, banco, agencia, conta, pix, data
                     ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
                     (
                         codigo_final,
+                        dados["tipo_prestador"],
                         dados["nome"], dados["telefone"], dados["endereco"],
                         norm(dados.get("titular_da_conta")),
                         norm(dados.get("cpf")),
@@ -488,7 +549,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
                         now_date,
                     ),
                 )
-                msg = "Facção cadastrada!"
+                msg = "Prestador cadastrado!"
 
             conn.commit()
             messagebox.showinfo("Sucesso", msg)
@@ -504,11 +565,12 @@ class CadastroFaccoesView(ctk.CTkFrame):
                 conn.close()
 
     def pesquisar_faccoes(self):
-        """Pesquisa facções no banco PostgreSQL"""
+        """Pesquisa prestadores no banco PostgreSQL"""
         # Limpa a Treeview completamente
         self.tree.delete(*self.tree.get_children())
 
         termo = (self.entry_pesquisa.get() or "").strip()
+        tipo_filtro = (self.tipo_filtro_var.get() or "Todos").strip()
         conn = None
         try:
             schema = get_schema()
@@ -518,29 +580,30 @@ class CadastroFaccoesView(ctk.CTkFrame):
             # Consulta corrigida - removida referência à coluna data_criacao
             query = f"""
                 SELECT
-                    codigo, nome, telefone, endereco,
+                    codigo, nome, tipo_prestador, telefone, endereco,
                     titular_da_conta, cpf, banco, agencia, conta, pix,
                     COALESCE(data_atualizacao::text, data::text) AS data_exibicao
                 FROM {schema}.cadastro_faccoes
                 WHERE (%s = '' OR nome ILIKE %s OR codigo ILIKE %s)
+                  AND (%s = 'Todos' OR tipo_prestador = %s)
                 ORDER BY
                     NULLIF(codigo,'')::int DESC NULLS LAST
             """
             like = f"%{termo}%"
-            cursor.execute(query, (termo, like, like))
+            cursor.execute(query, (termo, like, like, tipo_filtro, tipo_filtro))
 
             for row in cursor.fetchall():
                 self.tree.insert("", "end", values=tuple("" if v is None else str(v) for v in row))
 
         except Exception as err:
-            messagebox.showerror("Erro", f"Falha ao carregar facções:\n{err}")
+            messagebox.showerror("Erro", f"Falha ao carregar prestadores:\n{err}")
         finally:
             if conn:
                 conn.close()
 
     def excluir_faccao(self):
         if not self.faccao_selecionada:
-            messagebox.showwarning("Aviso", "Nenhuma facção selecionada para excluir")
+            messagebox.showwarning("Aviso", "Nenhum prestador selecionado para excluir")
             return
 
         codigo = str(self.faccao_selecionada[0]).strip()
@@ -550,7 +613,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
             "Confirmar Exclusão",
             f"Tem certeza que deseja excluir permanentemente:\n"
             f"Código: {codigo}\n"
-            f"Facção: {nome}",
+            f"Prestador: {nome}",
             icon="warning"
         )
 
