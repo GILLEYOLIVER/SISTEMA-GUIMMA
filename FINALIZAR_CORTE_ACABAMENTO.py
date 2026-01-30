@@ -279,7 +279,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         tabela_frame = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         tabela_frame.pack(fill="both", expand=True, pady=8)
 
-        cols = ["ID", "Ordem", "Código", "Descrição", "Prestador", "Data Entrada", "Status", "Qtd Peças"]
+        cols = ["ID", "Ordem", "Código", "Descrição", "Prestador", "Data Entrada", "Status", "Qtd Total", "Peças Restantes"]
 
         # Configurar estilo da Treeview
         self.configurar_treeview_theme()
@@ -293,7 +293,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
         for col in cols:
             self.retornos_tree.heading(col, text=col)
-            w = 100 if col in ["ID", "Status"] else (90 if col == "Qtd Peças" else 140)
+            w = 100 if col in ["ID", "Status"] else (110 if col in ["Qtd Total", "Peças Restantes"] else 140)
             self.retornos_tree.column(col, width=w, anchor="center")
 
         self.retornos_tree.bind("<<TreeviewSelect>>", self.on_retorno_selecionado)
@@ -693,11 +693,17 @@ class FinalizacaoCortes(ctk.CTkFrame):
                     {prestador_expr}                       AS prestador,
                     r.data_chegada                         AS data_chegada,
                     {status_expr}                          AS status_envio,
-                    {qtd_expr}                             AS qtd_total
+                    {qtd_expr}                             AS qtd_total,
+                    GREATEST({qtd_expr} - COALESCE(rt.entregue_total, 0), 0) AS qtd_restante
                 FROM {schema}.controle_retorno_cortes r
                 JOIN {schema}.envios_cortes e ON e.id = r.envio_id
                 {"LEFT JOIN " + schema + ".cadastro_faccoes f ON f.id = e.prestador_id" if has_prestador_id else ""}
                 LEFT JOIN {schema}.cadastro_de_corte c ON c.id = e.corte_id
+                LEFT JOIN (
+                    SELECT envio_id, COALESCE(SUM(entregue), 0) AS entregue_total
+                    FROM {schema}.retorno_detalhes_tamanho
+                    GROUP BY envio_id
+                ) rt ON rt.envio_id = r.envio_id
             """
 
             where = []
@@ -735,7 +741,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
             conn.close()
 
             for i, row in enumerate(rows):
-                (retorno_id, envio_id, ordem, codigo, descricao, prestador, data_chegada, status_envio, qtd_total) = row
+                (retorno_id, envio_id, ordem, codigo, descricao, prestador, data_chegada,
+                 status_envio, qtd_total, qtd_restante) = row
 
                 self.mapa_retorno_envio[int(retorno_id)] = int(envio_id)
 
@@ -764,6 +771,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                         data_chegada.strftime("%d/%m/%Y") if data_chegada else "",
                         status_envio,
                         qtd_total,
+                        qtd_restante,
                     ),
                     tags=tags
                 )
