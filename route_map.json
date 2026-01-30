@@ -49,9 +49,9 @@
     "class": "ConsultarOrdensPage"
   },
 
-  "Cadastro de Facções": {
-  "file": "CADASTRO_FACCOES.py",
-  "class": "CadastroFaccoesView"
+  "Cadastro de Prestadores": {
+    "file": "CADASTRO_FACCOES.py",
+    "class": "CadastroFaccoesView"
   },
 
   "Pesquisar Serviço": {

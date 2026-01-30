@@ -892,7 +892,7 @@ class OperaMenuApp(ctk.CTk):
         "ORDENS DE CORTE": "TESOURA.png",
         "REGISTRO DE CORTE": "FOLHA DE PAPEL.png",
         "ESTOQUE": "ESTOQUE.png",
-        "FACÇÕES": "FABRICA.png",
+        "PRESTADORES": "FABRICA.png",
         "MÃO DE OBRA": "PESSOAS.png",
         "PRODUÇÃO": "PRODUÇAO.png",
         "ACABAMENTO": "FERRAMENTAS.png",
@@ -911,7 +911,7 @@ class OperaMenuApp(ctk.CTk):
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
-        "FACÇÕES": ["Cadastro de Facções", "Pesquisar Serviço"],
+        "PRESTADORES": ["Cadastro de Prestadores", "Pesquisar Serviço"],
         "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento"],
         "FINANCEIRO": [
             "Pagamento de Serviços", "Custo Produto", "Folha Pagamento",
@@ -944,8 +944,8 @@ class OperaMenuApp(ctk.CTk):
             "Saída de Estoque": "ESTOQUE.png",
             "Relatórios": "RELATORIO 2.png",
         },
-        "FACÇÕES": {
-            "Cadastro de Facções": "FACÇAO.png",
+        "PRESTADORES": {
+            "Cadastro de Prestadores": "FACÇAO.png",
             "Pesquisar Serviço": "CONSULTAR ORDENS.png",
         },
         "MÃO DE OBRA": {
@@ -997,7 +997,7 @@ class OperaMenuApp(ctk.CTk):
         "Entrada de Estoque": "estoque_entrada",
         "Saída de Estoque": "estoque_saida",
         "Relatórios": "estoque_relatorios",
-        "Cadastro de Facções": "cadastro_faccoes",
+        "Cadastro de Prestadores": "cadastro_faccoes",
         "Pesquisar Serviço": "pesquisar_servico",
         "Controle de Mão de Obra": "controle_mao_obra",
         "Produção": "Producao",
@@ -2294,8 +2294,8 @@ class OperaMenuApp(ctk.CTk):
                 "Saída de Estoque": "registrar saídas de estoque",
                 "Relatórios": "acessar relatórios de estoque",
 
-                # FACÇÕES
-                "Cadastro de Facções": "cadastrar facções",
+                # PRESTADORES
+                "Cadastro de Prestadores": "cadastrar prestadores",
                 "Pesquisar Serviço": "pesquisar serviços",
 
                 # MÃO DE OBRA
