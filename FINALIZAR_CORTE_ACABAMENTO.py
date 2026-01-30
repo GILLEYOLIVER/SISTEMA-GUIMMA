@@ -1469,7 +1469,59 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 totals["defeitos"] += defeitos
                 totals["faltantes"] += faltantes
                 totals["regulares"] += regulares
-                totals["valor_total"] += float(subtotal or 0.0)
+            totals["valor_total"] += float(subtotal or 0.0)
+
+            # (1.5) Registra defeitos pendentes no histórico de serviços do prestador
+            try:
+                cols_hist = self._cols(cur, schema, "historico_de_servico")
+            except Exception:
+                cols_hist = set()
+            if cols_hist and totals["defeitos"] > 0:
+                data_hist = datetime.now()
+                evento = (self._tipo_servico or "").strip() or "Facção"
+                descricao = f"Defeitos pendentes - {self.retorno_selecionado.get('codigo', '')} {self.retorno_selecionado.get('descricao', '')}".strip()
+                setor = (self._prestador_nome or "").strip()
+                quantidade = int(totals["defeitos"])
+                valor = 0.0
+                status = "Pendente"
+
+                campos = []
+                valores = []
+                params = []
+                if "data" in cols_hist:
+                    campos.append("data")
+                    valores.append("%s")
+                    params.append(data_hist)
+                if "evento" in cols_hist:
+                    campos.append("evento")
+                    valores.append("%s")
+                    params.append(evento)
+                if "descricao" in cols_hist:
+                    campos.append("descricao")
+                    valores.append("%s")
+                    params.append(descricao)
+                if "setor" in cols_hist:
+                    campos.append("setor")
+                    valores.append("%s")
+                    params.append(setor)
+                if "quantidade" in cols_hist:
+                    campos.append("quantidade")
+                    valores.append("%s")
+                    params.append(quantidade)
+                if "valor" in cols_hist:
+                    campos.append("valor")
+                    valores.append("%s")
+                    params.append(valor)
+                if "status" in cols_hist:
+                    campos.append("status")
+                    valores.append("%s")
+                    params.append(status)
+
+                if campos:
+                    cur.execute(
+                        f"INSERT INTO {schema}.historico_de_servico ({', '.join(campos)}) VALUES ({', '.join(valores)})",
+                        params,
+                    )
 
             # (2) Atualiza o cabeçalho do retorno (controle_retorno_cortes)
             obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
@@ -1781,6 +1833,58 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 totals["faltantes"] += total_faltantes
                 totals["regulares"] += regulares
                 totals["valor_total"] += float(subtotal or 0.0)
+
+            # (1.5) Registra defeitos pendentes no histórico de serviços do prestador
+            try:
+                cols_hist = self._cols(cur, schema, "historico_de_servico")
+            except Exception:
+                cols_hist = set()
+            if cols_hist and totals["defeitos"] > 0:
+                data_hist = datetime.now()
+                evento = (self._tipo_servico or "").strip() or "Facção"
+                descricao = f"Defeitos pendentes - {self.retorno_selecionado.get('codigo', '')} {self.retorno_selecionado.get('descricao', '')}".strip()
+                setor = (self._prestador_nome or "").strip()
+                quantidade = int(totals["defeitos"])
+                valor = 0.0
+                status = "Pendente"
+
+                campos = []
+                valores = []
+                params = []
+                if "data" in cols_hist:
+                    campos.append("data")
+                    valores.append("%s")
+                    params.append(data_hist)
+                if "evento" in cols_hist:
+                    campos.append("evento")
+                    valores.append("%s")
+                    params.append(evento)
+                if "descricao" in cols_hist:
+                    campos.append("descricao")
+                    valores.append("%s")
+                    params.append(descricao)
+                if "setor" in cols_hist:
+                    campos.append("setor")
+                    valores.append("%s")
+                    params.append(setor)
+                if "quantidade" in cols_hist:
+                    campos.append("quantidade")
+                    valores.append("%s")
+                    params.append(quantidade)
+                if "valor" in cols_hist:
+                    campos.append("valor")
+                    valores.append("%s")
+                    params.append(valor)
+                if "status" in cols_hist:
+                    campos.append("status")
+                    valores.append("%s")
+                    params.append(status)
+
+                if campos:
+                    cur.execute(
+                        f"INSERT INTO {schema}.historico_de_servico ({', '.join(campos)}) VALUES ({', '.join(valores)})",
+                        params,
+                    )
 
             # (2) Atualiza o cabeçalho do retorno (controle_retorno_cortes)
             obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
