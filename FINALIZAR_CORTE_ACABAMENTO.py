@@ -992,35 +992,37 @@ class FinalizacaoCortes(ctk.CTkFrame):
                             f"[DEBUG] ENVIO tam={tam} | qtd={qtd_env} | pilotos={qtd_pil} | total_enviado={total_enviado} | valor={val_uni}"
                         )
 
-            # 2) DETALHE DO RETORNO (retorno_detalhes_tamanho)
+            # 2) SOMA DO RETORNO (retorno_detalhes_tamanho) PARA DEDUZIR DO ENVIADO
             cur.execute(
                 f"""
                 SELECT tamanho,
-                       COALESCE(entregue,0)  AS entregue,
-                       COALESCE(copias,0)    AS copias,
-                       COALESCE(defeitos,0)  AS defeitos,
-                       COALESCE(faltantes,0) AS faltantes
+                       COALESCE(SUM(entregue),0) AS entregue
                   FROM {schema}.retorno_detalhes_tamanho
                  WHERE envio_id = %s
+                 GROUP BY tamanho
                 """,
                 (envio_id,),
             )
             retorno_rows = cur.fetchall()
-            print(f"[DEBUG] Linhas em retorno_detalhes_tamanho: {len(retorno_rows)}")
+            print(f"[DEBUG] Linhas agregadas em retorno_detalhes_tamanho: {len(retorno_rows)}")
 
-            for tamanho, entregue, copias, defeitos, faltantes in retorno_rows:
+            entregues_por_tam = {t: 0 for t in self.tamanhos}
+            for tamanho, entregue in retorno_rows:
                 if tamanho not in self.tamanhos:
                     continue
+                entregues_por_tam[tamanho] = safe_int(entregue)
 
-                self._set_var_if_zero(self.entregues_vars[tamanho], entregue)
-                self._set_var_if_zero(self.copias_vars[tamanho], copias)
-                self._set_var_if_zero(self.defeitos_vars[tamanho], defeitos)
-                self._set_var_if_zero(self.faltantes_vars[tamanho], faltantes)
-
-                print(
-                    f"[DEBUG] RETORNO tam={tamanho} | ent={entregue} | "
-                    f"copias={copias} | defeitos={defeitos} | faltantes={faltantes}"
-                )
+            for tamanho in self.tamanhos:
+                total_enviado = safe_int(self.enviado_por_tam.get(tamanho, 0))
+                ja_entregue = entregues_por_tam.get(tamanho, 0)
+                restante = max(total_enviado - ja_entregue, 0)
+                self.enviado_por_tam[tamanho] = restante
+                self.grade_widgets[tamanho]["enviado"].configure(text=str(restante))
+                # Mantém campos editáveis vazios ao carregar
+                self.entregues_vars[tamanho].set("")
+                self.copias_vars[tamanho].set("")
+                self.defeitos_vars[tamanho].set("")
+                self.faltantes_vars[tamanho].set("")
 
             conn.close()
 
