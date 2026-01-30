@@ -87,6 +87,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.prestador_var = ctk.StringVar()
         self.servico_var = ctk.StringVar(value="Todos")
         self.periodo_var = ctk.StringVar(value="Personalizado")
+        self.todos_registros_var = ctk.BooleanVar(value=False)
 
         # Inicializar widgets como None
         self.tree = None
@@ -235,6 +236,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         periodo_combo = ctk.CTkComboBox(periodo_frame, values=[
             "Personalizado", "Esta Semana", "Semana Passada", "Este Mês",
             "Mês Passado", "Este Semestre", "Semestre Passado"
+            , "Todos"
         ], width=150, variable=self.periodo_var, command=self._on_periodo_change,
                                         fg_color=self.cor_secundaria,
                                         border_color=self.cor_borda,
@@ -242,6 +244,14 @@ class HistoricoServicosPage(ctk.CTkFrame):
                                         button_color=self.cor_primaria,
                                         button_hover_color=self.cor_hover)
         periodo_combo.pack(side="left", padx=5)
+
+        ctk.CTkCheckBox(
+            periodo_frame,
+            text="Todos os registros",
+            variable=self.todos_registros_var,
+            command=self._on_todos_registros_toggle,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(10, 5))
 
         ctk.CTkLabel(periodo_frame, text="De:", width=30, anchor="e",
                      text_color=self.cor_texto).pack(side="left", padx=(15, 5))
@@ -252,8 +262,18 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.ini_entry = ctk.CTkEntry(periodo_frame, width=120,
                                       fg_color=self.cor_secundaria,
                                       border_color=self.cor_borda,
-                                      text_color=self.cor_texto_entry)
+                                      text_color=self.cor_texto_entry,
+                                      textvariable=self.ini_var)
         self.ini_entry.pack(side="left", padx=5)
+        ctk.CTkButton(
+            periodo_frame,
+            text="📅",
+            width=28,
+            command=lambda: self._abrir_calendario(self.ini_entry),
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(0, 10))
 
         ctk.CTkLabel(periodo_frame, text="Até:", width=30, anchor="e",
                      text_color=self.cor_texto).pack(side="left", padx=(15, 5))
@@ -262,8 +282,18 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.fim_entry = ctk.CTkEntry(periodo_frame, width=120,
                                       fg_color=self.cor_secundaria,
                                       border_color=self.cor_borda,
-                                      text_color=self.cor_texto_entry)
+                                      text_color=self.cor_texto_entry,
+                                      textvariable=self.fim_var)
         self.fim_entry.pack(side="left", padx=5)
+        ctk.CTkButton(
+            periodo_frame,
+            text="📅",
+            width=28,
+            command=lambda: self._abrir_calendario(self.fim_entry),
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(0, 5))
 
         # Linha 2: Prestador e Serviço
         prestador_frame = ctk.CTkFrame(filtros_frame, fg_color=self.cor_fundo)
@@ -317,41 +347,67 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.kpi_valor = self._criar_kpi(kpis_frame, 3, "Valor Total", "R$ 0,00")
         self.kpi_media = self._criar_kpi(kpis_frame, 4, "Tempo Médio", "0 dias")
 
-        # ========== TABELA PRINCIPAL - MESMO ESTILO DO CADASTRO_DE_CORTE ==========
+        # ========== TABELAS (ABAS) ==========
         table_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         table_frame.pack(fill="both", expand=True, pady=10)
 
-        # Configurar estilo da Treeview
         self.configurar_treeview_theme()
 
-        # Criar tabela
+        tabs = ctk.CTkTabview(table_frame, fg_color=self.cor_fundo)
+        tabs.pack(fill="both", expand=True)
+
+        tab_hist = tabs.add("Histórico")
+        tab_defeitos = tabs.add("Peças com Defeito")
+
+        # ---- Aba Histórico ----
         columns = ["data", "tipo", "servico", "codigo", "descricao", "quantidade", "valor_unit", "valor_total",
                    "status"]
         headers = ["Data", "Tipo", "Serviço", "Código", "Descrição", "Quantidade", "V. Unitário", "V. Total", "Status"]
         widths = [100, 120, 120, 100, 200, 80, 100, 100, 120]
         anchors = ["center", "center", "center", "center", "w", "center", "e", "e", "center"]
 
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings",
+        self.tree = ttk.Treeview(tab_hist, columns=columns, show="headings",
                                  height=15, style="Custom.Treeview")
 
         for col, header, width, anchor in zip(columns, headers, widths, anchors):
             self.tree.heading(col, text=header)
             self.tree.column(col, width=width, anchor=anchor)
 
-        # Scrollbars
-        v_scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        h_scrollbar = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
+        v_scrollbar = ttk.Scrollbar(tab_hist, orient="vertical", command=self.tree.yview)
+        h_scrollbar = ttk.Scrollbar(tab_hist, orient="horizontal", command=self.tree.xview)
         self.tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
 
-        # Layout da tabela
         self.tree.grid(row=0, column=0, sticky="nsew")
         v_scrollbar.grid(row=0, column=1, sticky="ns")
         h_scrollbar.grid(row=1, column=0, sticky="ew")
 
-        table_frame.grid_rowconfigure(0, weight=1)
-        table_frame.grid_columnconfigure(0, weight=1)
+        tab_hist.grid_rowconfigure(0, weight=1)
+        tab_hist.grid_columnconfigure(0, weight=1)
 
-        # Configurar cores das linhas alternadas
+        # ---- Aba Peças com Defeito ----
+        def_columns = ["data", "servico", "descricao", "quantidade", "status"]
+        def_headers = ["Data", "Serviço", "Descrição", "Quantidade", "Status"]
+        def_widths = [120, 140, 320, 110, 120]
+        def_anchors = ["center", "center", "w", "center", "center"]
+
+        self.defeito_tree = ttk.Treeview(tab_defeitos, columns=def_columns, show="headings",
+                                         height=15, style="Custom.Treeview")
+
+        for col, header, width, anchor in zip(def_columns, def_headers, def_widths, def_anchors):
+            self.defeito_tree.heading(col, text=header)
+            self.defeito_tree.column(col, width=width, anchor=anchor)
+
+        v_def_scroll = ttk.Scrollbar(tab_defeitos, orient="vertical", command=self.defeito_tree.yview)
+        h_def_scroll = ttk.Scrollbar(tab_defeitos, orient="horizontal", command=self.defeito_tree.xview)
+        self.defeito_tree.configure(yscrollcommand=v_def_scroll.set, xscrollcommand=h_def_scroll.set)
+
+        self.defeito_tree.grid(row=0, column=0, sticky="nsew")
+        v_def_scroll.grid(row=0, column=1, sticky="ns")
+        h_def_scroll.grid(row=1, column=0, sticky="ew")
+
+        tab_defeitos.grid_rowconfigure(0, weight=1)
+        tab_defeitos.grid_columnconfigure(0, weight=1)
+
         self._atualizar_cores_linhas()
 
         # ========== BOTÕES DE AÇÃO - MESMO ESTILO DO CADASTRO_DE_CORTE ==========
@@ -472,6 +528,12 @@ class HistoricoServicosPage(ctk.CTkFrame):
     # ======= LÓGICA DE NEGÓCIO =======
     def _on_periodo_change(self, choice):
         hoje = date.today()
+        if choice == "Todos":
+            self.todos_registros_var.set(True)
+            self._set_date_entries_state(False)
+            return
+        self.todos_registros_var.set(False)
+        self._set_date_entries_state(True)
         if choice == "Esta Semana":
             inicio = _first_day_of_week(hoje)
             fim = hoje
@@ -500,6 +562,114 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         self.ini_var.set(inicio.strftime("%Y-%m-%d"))
         self.fim_var.set(fim.strftime("%Y-%m-%d"))
+
+    def _on_todos_registros_toggle(self):
+        marcado = bool(self.todos_registros_var.get())
+        if marcado:
+            self.periodo_var.set("Todos")
+            self._set_date_entries_state(False)
+        else:
+            if self.periodo_var.get() == "Todos":
+                self.periodo_var.set("Personalizado")
+            self._set_date_entries_state(True)
+
+    def _set_date_entries_state(self, enabled: bool):
+        state = "normal" if enabled else "disabled"
+        self.ini_entry.configure(state=state)
+        self.fim_entry.configure(state=state)
+
+    def _abrir_calendario(self, entry):
+        from datetime import datetime
+        import calendar as _cal
+
+        def setar_data(d):
+            if self.todos_registros_var.get():
+                self.todos_registros_var.set(False)
+                self._set_date_entries_state(True)
+            entry.delete(0, "end")
+            entry.insert(0, d.strftime("%d/%m/%Y"))
+            self.periodo_var.set("Personalizado")
+            top.destroy()
+
+        top = ctk.CTkToplevel(self)
+        top.title("Calendário")
+        top.resizable(False, False)
+
+        W, H = 300, 300
+        self.update_idletasks()
+        top.update_idletasks()
+
+        ex = entry.winfo_rootx()
+        ey = entry.winfo_rooty()
+        eh = entry.winfo_height()
+
+        x = ex
+        y = ey + eh + 6
+
+        sw = top.winfo_screenwidth()
+        sh = top.winfo_screenheight()
+        if x + W > sw:
+            x = sw - W - 10
+        if y + H > sh:
+            y = ey - H - 6
+
+        top.geometry(f"{W}x{H}+{x}+{y}")
+
+        top.transient(self)
+        top.grab_set()
+
+        now = datetime.now()
+        ano = now.year
+        mes = now.month
+
+        nav = ctk.CTkFrame(top)
+        nav.pack(fill="x", padx=10, pady=5)
+
+        lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
+        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        lbl_mes.pack(side="left", expand=True)
+        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+
+        dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        frame_dias = ctk.CTkFrame(top)
+        frame_dias.pack(fill="both", expand=True, padx=10, pady=5)
+
+        for i, dia in enumerate(dias_semana):
+            lbl = ctk.CTkLabel(frame_dias, text=dia, width=30, height=30)
+            lbl.grid(row=0, column=i, padx=2, pady=2)
+
+        def mudar_mes(delta):
+            nonlocal mes, ano
+            mes += delta
+            if mes > 12:
+                mes = 1
+                ano += 1
+            elif mes < 1:
+                mes = 12
+                ano -= 1
+            lbl_mes.configure(text=f"{_cal.month_name[mes]} {ano}")
+            desenhar_calendario()
+
+        def desenhar_calendario():
+            for w in frame_dias.grid_slaves():
+                if int(w.grid_info()["row"]) > 0:
+                    w.destroy()
+
+            cal = _cal.monthcalendar(ano, mes)
+            for i, semana in enumerate(cal):
+                for j, dia in enumerate(semana):
+                    if dia == 0:
+                        continue
+                    btn = ctk.CTkButton(
+                        frame_dias,
+                        text=str(dia),
+                        width=30,
+                        height=30,
+                        command=lambda d=dia: setar_data(datetime(ano, mes, d))
+                    )
+                    btn.grid(row=i + 1, column=j, padx=2, pady=2)
+
+        desenhar_calendario()
 
     def _carregar_prestadores(self):
         """Carrega lista de prestadores do banco"""
@@ -555,14 +725,16 @@ class HistoricoServicosPage(ctk.CTkFrame):
     def _search(self):
         """Busca histórico consolidado"""
         try:
+            todos_registros = bool(self.todos_registros_var.get())
             ini = _dt(self.ini_var.get())
             fim = _dt(self.fim_var.get())
             prestador = self.prestador_var.get().strip()
             servico = self.servico_var.get()
 
-            if not ini or not fim:
-                messagebox.showwarning("Aviso", "Informe o período da busca")
-                return
+            if not todos_registros:
+                if not ini or not fim:
+                    messagebox.showwarning("Aviso", "Informe o período da busca")
+                    return
 
             if not prestador:
                 messagebox.showwarning("Aviso", "Selecione um prestador")
@@ -572,28 +744,38 @@ class HistoricoServicosPage(ctk.CTkFrame):
             cur = conn.cursor()
             schema = get_schema()
 
-            # Limpa tabela
+            # Limpa tabelas
             for item in self.tree.get_children():
                 self.tree.delete(item)
+            if hasattr(self, "defeito_tree") and self.defeito_tree:
+                for item in self.defeito_tree.get_children():
+                    self.defeito_tree.delete(item)
 
             # KPIs
             total_envios = total_retornos = total_pagos = total_valor = total_dias = 0
             registros = 0
 
+            def _filtro_data(campo: str):
+                if todos_registros:
+                    return "", []
+                return f" AND {campo} BETWEEN %s AND %s", [ini, fim]
+
             # 1. ENVIOS
             try:
+                filtro_data, params_data = _filtro_data("data_envio")
                 sql_envios = f"""
                     SELECT data_envio, servico, codigo_corte, descricao_corte, 
                            COALESCE(quantidade_total, 0) as qtd, 
                            COALESCE(valor_peca, 0) as valor_unit,
                            status
                     FROM {schema}.controle_envio_cortes
-                    WHERE data_envio BETWEEN %s AND %s
+                    WHERE 1=1
+                    {filtro_data}
                       AND (costureira = %s OR destino = %s OR faccao = %s)
                       AND (%s = 'Todos' OR servico = %s)
                     ORDER BY data_envio
                 """
-                cur.execute(sql_envios, (ini, fim, prestador, prestador, prestador, servico, servico))
+                cur.execute(sql_envios, (*params_data, prestador, prestador, prestador, servico, servico))
 
                 for row in cur.fetchall():
                     data, serv, codigo, desc, qtd, valor_unit, status = row
@@ -613,6 +795,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
             # 1b. ENVIOS (envios_cortes)
             try:
+                filtro_data, params_data = _filtro_data("ec.data_envio")
                 # Consultar envios registrados na nova tabela envios_cortes.
                 # Aqui buscamos o nome do prestador via join com cadastro_faccoes e
                 # agregamos as quantidades e valores por tamanho para calcular o total.
@@ -642,12 +825,13 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     FROM {schema}.envios_cortes ec
                     LEFT JOIN {schema}.cadastro_de_corte cc ON ec.corte_id = cc.id
                     JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
-                    WHERE ec.data_envio BETWEEN %s AND %s
+                    WHERE 1=1
+                      {filtro_data}
                       AND cf.nome = %s
                       AND (%s = 'Todos' OR ec.tipo_servico = %s)
                     ORDER BY ec.data_envio
                 """
-                cur.execute(sql_envios2, (ini, fim, prestador, servico, servico))
+                cur.execute(sql_envios2, (*params_data, prestador, servico, servico))
                 for row in cur.fetchall():
                     (
                         data, serv, codigo, desc,
@@ -686,6 +870,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
             # 2. RETORNOS/ENTRADAS
             try:
+                filtro_data, params_data = _filtro_data("e.data_chegada")
                 sql_retornos = f"""
                     SELECT e.data_chegada, c.servico, c.codigo_corte, c.descricao_corte,
                            COALESCE((SELECT SUM(COALESCE(quantidade_entregue,0))
@@ -695,12 +880,13 @@ class HistoricoServicosPage(ctk.CTkFrame):
                            c.status
                     FROM {schema}.entrada_acabamento e
                     JOIN {schema}.controle_envio_cortes c ON e.envio_id = c.id
-                    WHERE e.data_chegada BETWEEN %s AND %s
+                    WHERE 1=1
+                      {filtro_data}
                       AND (c.costureira = %s OR c.destino = %s OR c.faccao = %s)
                       AND (%s = 'Todos' OR c.servico = %s)
                     ORDER BY e.data_chegada
                 """
-                cur.execute(sql_retornos, (ini, fim, prestador, prestador, prestador, servico, servico))
+                cur.execute(sql_retornos, (*params_data, prestador, prestador, prestador, servico, servico))
 
                 for row in cur.fetchall():
                     data, serv, codigo, desc, qtd, valor_unit, status = row
@@ -720,6 +906,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
             # 3. PAGAMENTOS
             try:
+                filtro_data, params_data = _filtro_data("data_pagamento")
                 sql_pagamentos = f"""
                     SELECT data_pagamento, tipo_servico, codigo, descricao,
                            COALESCE(quantidade_finalizada, 0) as qtd,
@@ -727,13 +914,14 @@ class HistoricoServicosPage(ctk.CTkFrame):
                            COALESCE(total_pago, 0) as valor_total,
                            CASE WHEN estornado THEN 'Estornado' ELSE 'Pago' END as status
                     FROM {schema}.pagamento_corte_acabamento
-                    WHERE data_pagamento BETWEEN %s AND %s
+                    WHERE 1=1
+                      {filtro_data}
                       AND costureira = %s
                       AND (%s = 'Todos' OR tipo_servico = %s)
                       AND estornado = FALSE
                     ORDER BY data_pagamento
                 """
-                cur.execute(sql_pagamentos, (ini, fim, prestador, servico, servico))
+                cur.execute(sql_pagamentos, (*params_data, prestador, servico, servico))
 
                 for row in cur.fetchall():
                     data, serv, codigo, desc, qtd, valor_unit, valor_total, status = row
@@ -752,15 +940,17 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
             # 4. HISTÓRICO DE SERVIÇOS
             try:
+                filtro_data, params_data = _filtro_data("data")
                 sql_historico = f"""
                     SELECT data, evento, descricao, setor, quantidade, valor, status
                     FROM {schema}.historico_de_servico
-                    WHERE data BETWEEN %s AND %s
+                    WHERE 1=1
+                      {filtro_data}
                       AND setor = %s
                       AND (%s = 'Todos' OR evento = %s)
                     ORDER BY data
                 """
-                cur.execute(sql_historico, (ini, fim, prestador, servico, servico))
+                cur.execute(sql_historico, (*params_data, prestador, servico, servico))
 
                 for row in cur.fetchall():
                     data, evento, desc, setor, qtd, valor, status = row
@@ -777,6 +967,32 @@ class HistoricoServicosPage(ctk.CTkFrame):
             except Exception as e:
                 print(f"Erro em histórico: {e}")
 
+            # 4b. PEÇAS COM DEFEITO (histórico pendente)
+            try:
+                filtro_data, params_data = _filtro_data("data")
+                sql_defeitos = f"""
+                    SELECT data, evento, descricao, quantidade, status
+                    FROM {schema}.historico_de_servico
+                    WHERE 1=1
+                      {filtro_data}
+                      AND setor = %s
+                      AND (%s = 'Todos' OR evento = %s)
+                      AND status = 'Pendente'
+                    ORDER BY data
+                """
+                cur.execute(sql_defeitos, (*params_data, prestador, servico, servico))
+
+                for row in cur.fetchall():
+                    data, evento, desc, qtd, status = row
+                    tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
+                    if hasattr(self, "defeito_tree") and self.defeito_tree:
+                        self.defeito_tree.insert("", "end", values=(
+                            data, evento, desc, qtd or 0, status or "Pendente"
+                        ), tags=(tag,))
+                    registros += 1
+            except Exception as e:
+                print(f"Erro em defeitos pendentes: {e}")
+
             # Calcular tempo médio (simplificado)
             tempo_medio = total_retornos / max(total_envios, 1) if total_envios > 0 else 0
 
@@ -789,8 +1005,14 @@ class HistoricoServicosPage(ctk.CTkFrame):
             self.kpi_media.configure(text=f"{tempo_medio:.1f} dias")
 
             # Cache para exportação
+            periodo_ini = ini
+            periodo_fim = fim
+            if todos_registros:
+                periodo_ini = "Todos"
+                periodo_fim = ""
+
             self._last_search = {
-                "ini": ini, "fim": fim, "prestador": prestador, "servico": servico,
+                "ini": periodo_ini, "fim": periodo_fim, "prestador": prestador, "servico": servico,
                 "total_envios": total_envios, "total_retornos": total_retornos,
                 "total_pagos": total_pagos, "total_valor": total_valor
             }
