@@ -1711,8 +1711,25 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 "valor_total": 0.0,
             }
 
-            # Importante: aqui fazemos consolidação (replace) para garantir consistência do pagamento.
-            cur.execute(f"DELETE FROM {schema}.retorno_detalhes_tamanho WHERE envio_id = %s", (envio_id,))
+            # Carrega valores já salvos para acumular novas baixas parciais
+            cur.execute(
+                f"""
+                SELECT tamanho, COALESCE(entregue,0), COALESCE(copias,0),
+                       COALESCE(defeitos,0), COALESCE(faltantes,0)
+                  FROM {schema}.retorno_detalhes_tamanho
+                 WHERE envio_id = %s
+                """,
+                (envio_id,),
+            )
+            existentes = {
+                row[0]: {
+                    "entregue": safe_int(row[1]),
+                    "copias": safe_int(row[2]),
+                    "defeitos": safe_int(row[3]),
+                    "faltantes": safe_int(row[4]),
+                }
+                for row in cur.fetchall()
+            }
 
             for t in self.tamanhos:
                 entregue = safe_int(self.entregues_vars[t].get())
@@ -1720,22 +1737,48 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 defeitos = safe_int(self.defeitos_vars[t].get())
                 faltantes = safe_int(self.faltantes_vars[t].get())
 
-                regulares = max(0, entregue - defeitos - faltantes)
+                base = existentes.get(t, {"entregue": 0, "copias": 0, "defeitos": 0, "faltantes": 0})
+                total_entregue = base["entregue"] + entregue
+                total_copias = base["copias"] + copias
+                total_defeitos = base["defeitos"] + defeitos
+                total_faltantes = base["faltantes"] + faltantes
+
+                regulares = max(0, total_entregue - total_defeitos - total_faltantes)
                 valor_peca = float(self.valor_por_tam.get(t, 0.0) or 0.0)
                 subtotal = regulares * valor_peca
 
                 # grava somente linhas com algum dado
-                if any([entregue, copias, defeitos, faltantes, regulares]) or subtotal > 0:
-                    cur.execute(f"""
-                        INSERT INTO {schema}.retorno_detalhes_tamanho
-                            (envio_id, tamanho, entregue, copias, defeitos, faltantes, regulares, subtotal)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (envio_id, t, entregue, copias, defeitos, faltantes, regulares, subtotal))
+                if any([total_entregue, total_copias, total_defeitos, total_faltantes, regulares]) or subtotal > 0:
+                    if t in existentes:
+                        cur.execute(
+                            f"""
+                            UPDATE {schema}.retorno_detalhes_tamanho
+                               SET entregue = %s,
+                                   copias = %s,
+                                   defeitos = %s,
+                                   faltantes = %s,
+                                   regulares = %s,
+                                   subtotal = %s
+                             WHERE envio_id = %s AND tamanho = %s
+                            """,
+                            (total_entregue, total_copias, total_defeitos, total_faltantes,
+                             regulares, subtotal, envio_id, t),
+                        )
+                    else:
+                        cur.execute(
+                            f"""
+                            INSERT INTO {schema}.retorno_detalhes_tamanho
+                                (envio_id, tamanho, entregue, copias, defeitos, faltantes, regulares, subtotal)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            (envio_id, t, total_entregue, total_copias, total_defeitos,
+                             total_faltantes, regulares, subtotal),
+                        )
 
-                totals["entregue"] += entregue
-                totals["copias"] += copias
-                totals["defeitos"] += defeitos
-                totals["faltantes"] += faltantes
+                totals["entregue"] += total_entregue
+                totals["copias"] += total_copias
+                totals["defeitos"] += total_defeitos
+                totals["faltantes"] += total_faltantes
                 totals["regulares"] += regulares
                 totals["valor_total"] += float(subtotal or 0.0)
 
