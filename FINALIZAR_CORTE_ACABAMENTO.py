@@ -1041,7 +1041,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         valor_total = 0.0
         completo = True
         tem_envio = False
-        tem_informado = False
+        tem_parcial = False
 
         for t in self.tamanhos:
             enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
@@ -1088,11 +1088,11 @@ class FinalizacaoCortes(ctk.CTkFrame):
             self.grade_widgets[t]["regulares"].configure(text=str(reg))
             self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(subtotal))
 
-            informado = entregue + faltante
-            if informado > 0:
-                tem_informado = True
-            if informado != enviado:
-                completo = False
+            if enviado > 0:
+                if entregue < enviado:
+                    tem_parcial = True
+                if entregue != enviado:
+                    completo = False
 
             total_entregue += entregue
             total_copias += copias
@@ -1122,7 +1122,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
             if tem_envio and completo:
                 self.btn_finalizar.configure(state="normal")
                 self.btn_baixa_parcial.configure(state="disabled")
-            elif tem_informado:
+            elif tem_envio and tem_parcial:
                 self.btn_finalizar.configure(state="disabled")
                 self.btn_baixa_parcial.configure(state="normal")
             else:
