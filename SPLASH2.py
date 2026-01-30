@@ -40,6 +40,11 @@ COLOR_SCHEMES = {
 class SplashScreenModern(ctk.CTkToplevel):
     """
     Splash screen moderna em tela cheia, com card central e foco em identidade visual.
+    Ajustes principais:
+      - mantém referência do label de fundo (evita sumir no Mac/GC)
+      - controla/cancela afters (spinner + auto progress) de forma robusta
+      - reduz problemas de foco/topmost no macOS
+      - garante chamada do on_complete 1x
     """
 
     def __init__(self, parent, usuario_nome="Usuário", tema_preferido="profissional", on_complete=None):
@@ -54,6 +59,8 @@ class SplashScreenModern(ctk.CTkToplevel):
         self.angle = 0
         self._auto_mode = False
         self._auto_job = None
+        self._spinner_job = None
+        self._finished = False
 
         initialize_after_guard(self)
 
@@ -62,33 +69,81 @@ class SplashScreenModern(ctk.CTkToplevel):
         self.title("SISTEMA ÓPERA")
         self.configure(fg_color=self.accent_secondary)
 
+        # Tamanho full-screen mais estável (macOS incluso)
         screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-
-        system = platform.system().lower()
-        if system == "darwin":
-            screen_height -= 80
-        elif system == "windows":
-            screen_height -= 40
+        try:
+            screen_height = self.winfo_vrootheight()
+        except Exception:
+            screen_height = self.winfo_screenheight()
 
         self.geometry(f"{screen_width}x{screen_height}+0+0")
         self.overrideredirect(True)
 
+        # No macOS, topmost + focus_force pode causar “travas”/focus estranho.
+        # Ainda assim, manter topmost ajuda, mas vamos fazer lift/focus com after.
         try:
             self.attributes("-topmost", True)
         except Exception:
             pass
 
-        self.bind("<Escape>", lambda e: self._finish())
+        # Fecha com ESC
+        self.bind("<Escape>", lambda e: self.safe_finish())
+        # Se alguma lib mandar WM_DELETE_WINDOW
+        try:
+            self.protocol("WM_DELETE_WINDOW", self.safe_finish)
+        except Exception:
+            pass
 
         self.bg_image_ctk = self._load_background_hd(screen_width, screen_height)
 
         self._create_widgets()
 
+        # animações e foco (com after para melhorar compatibilidade)
         self._animate_spinner()
+        self.after(50, self.lift)
+        self.after(80, self._try_focus)
 
-        self.lift()
-        self.focus_force()
+    # --------------------- util ---------------------
+
+    def _try_focus(self):
+        try:
+            self.focus_force()
+        except Exception:
+            try:
+                self.focus_set()
+            except Exception:
+                pass
+
+    def _font(self, family, size, weight=None):
+        # fallback simples caso Montserrat não exista no sistema
+        fam = family
+        try:
+            # testar criando (tk aceita tupla mesmo sem fonte, mas alguns ambientes bugam)
+            _ = (fam, size, weight) if weight else (fam, size)
+            return _
+        except Exception:
+            fam = "Arial"
+            return (fam, size, weight) if weight else (fam, size)
+
+    def safe_finish(self):
+        # garante finalização única
+        if self._finished:
+            return
+        try:
+            self._finish()
+        except Exception:
+            # fallback (não deixa travar se algo der errado)
+            try:
+                self.destroy()
+            except Exception:
+                pass
+            if self.on_complete:
+                try:
+                    self.on_complete()
+                except Exception:
+                    pass
+
+    # --------------------- tema/imagens ---------------------
 
     def _aplicar_tema(self, tema_preferido):
         colors = COLOR_SCHEMES.get(tema_preferido, COLOR_SCHEMES["profissional"])
@@ -114,30 +169,35 @@ class SplashScreenModern(ctk.CTkToplevel):
                     print(f"[SPLASH2] Erro ao carregar fundo: {e}")
         return None
 
+    # --------------------- UI ---------------------
+
     def _create_widgets(self):
-        main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.pack(fill="both", expand=True)
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_frame.pack(fill="both", expand=True)
 
+        # IMPORTANTE: manter referência do label para evitar sumir em alguns casos
         if self.bg_image_ctk is not None:
-            bg_label = ctk.CTkLabel(main_frame, image=self.bg_image_ctk, text="")
-            bg_label.pack(fill="both", expand=True)
+            self.bg_label = ctk.CTkLabel(self.main_frame, image=self.bg_image_ctk, text="")
+            self.bg_label.pack(fill="both", expand=True)
+        else:
+            self.bg_label = None
 
-        center_container = ctk.CTkFrame(main_frame, fg_color="transparent")
-        center_container.place(relx=0.5, rely=0.5, anchor="center")
+        self.center_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.center_container.place(relx=0.5, rely=0.5, anchor="center")
 
-        card = ctk.CTkFrame(
-            center_container,
+        self.card = ctk.CTkFrame(
+            self.center_container,
             fg_color=self.glass_bg,
             border_color=self.glass_border,
             border_width=1,
             corner_radius=24,
         )
-        card.pack(padx=20, pady=20)
+        self.card.pack(padx=20, pady=20)
 
-        self._create_header(card)
-        self._create_progress(card)
-        self._create_status(card)
-        self._create_footer(card)
+        self._create_header(self.card)
+        self._create_progress(self.card)
+        self._create_status(self.card)
+        self._create_footer(self.card)
 
     def _create_header(self, parent):
         header = ctk.CTkFrame(parent, fg_color="transparent")
@@ -154,14 +214,16 @@ class SplashScreenModern(ctk.CTkToplevel):
                 ctk.CTkLabel(icon_frame, image=self.icon_ctk, text="", fg_color="transparent").pack()
             except Exception as e:
                 print(f"[SPLASH2] Erro ao carregar ícone: {e}")
-                ctk.CTkLabel(icon_frame, text="⚙️", font=("Arial", 90), fg_color="transparent").pack()
+                ctk.CTkLabel(icon_frame, text="⚙️", font=self._font("Arial", 90, "bold"),
+                             fg_color="transparent").pack()
         else:
-            ctk.CTkLabel(icon_frame, text="⚙️", font=("Arial", 90), fg_color="transparent").pack()
+            ctk.CTkLabel(icon_frame, text="⚙️", font=self._font("Arial", 90, "bold"),
+                         fg_color="transparent").pack()
 
         title = ctk.CTkLabel(
             header,
             text="ÓPERA FASHION",
-            font=("Montserrat", 42, "bold"),
+            font=self._font("Montserrat", 42, "bold"),
             text_color=self.text_primary,
         )
         title.pack()
@@ -169,7 +231,7 @@ class SplashScreenModern(ctk.CTkToplevel):
         subtitle = ctk.CTkLabel(
             header,
             text="GESTÃO INTELIGENTE DE PRODUÇÃO",
-            font=("Montserrat", 12, "bold"),
+            font=self._font("Montserrat", 12, "bold"),
             text_color=self.text_secondary,
         )
         subtitle.pack(pady=(6, 0))
@@ -177,7 +239,7 @@ class SplashScreenModern(ctk.CTkToplevel):
         welcome = ctk.CTkLabel(
             header,
             text=f"Bem-vindo, {self.usuario_nome}",
-            font=("Montserrat", 12),
+            font=self._font("Montserrat", 12),
             text_color=self.text_secondary,
         )
         welcome.pack(pady=(12, 0))
@@ -200,7 +262,7 @@ class SplashScreenModern(ctk.CTkToplevel):
         self.progress_label = ctk.CTkLabel(
             progress_frame,
             text="Preparando ambiente...",
-            font=("Montserrat", 11),
+            font=self._font("Montserrat", 11),
             text_color=self.text_secondary,
         )
         self.progress_label.pack(anchor="w", pady=(10, 0))
@@ -212,7 +274,7 @@ class SplashScreenModern(ctk.CTkToplevel):
         self.status_label = ctk.CTkLabel(
             status_frame,
             text="Carregando módulos essenciais",
-            font=("Montserrat", 12, "bold"),
+            font=self._font("Montserrat", 12, "bold"),
             text_color=self.text_primary,
         )
         self.status_label.pack(side="left")
@@ -220,7 +282,7 @@ class SplashScreenModern(ctk.CTkToplevel):
         self.spinner_label = ctk.CTkLabel(
             status_frame,
             text="⟳",
-            font=("Montserrat", 18, "bold"),
+            font=self._font("Montserrat", 18, "bold"),
             text_color=self.accent_primary,
         )
         self.spinner_label.pack(side="right")
@@ -240,28 +302,28 @@ class SplashScreenModern(ctk.CTkToplevel):
         ctk.CTkLabel(
             footer,
             text="Versão Profissional • Segurança & Performance",
-            font=("Montserrat", 10),
+            font=self._font("Montserrat", 10),
             text_color=self.text_secondary,
         ).pack()
 
-    def update_status(self, message, progress=None):
-        if message:
-            self.status_label.configure(text=message)
-        if progress is not None:
-            self.progress_bar.set(max(0, min(progress, 1)))
+    # --------------------- API externa ---------------------
 
-    def _animate_spinner(self):
-        self.angle = (self.angle + 20) % 360
-        symbols = ["⟳", "⟲", "⟲", "⟳"]
-        idx = (self.angle // 90) % len(symbols)
-        try:
-            self.spinner_label.configure(text=symbols[idx])
-        except Exception:
+    def update_status(self, message, progress=None):
+        if self._finished:
             return
-        self.after(120, self._animate_spinner)
+        if message:
+            try:
+                self.status_label.configure(text=message)
+            except Exception:
+                pass
+        if progress is not None:
+            try:
+                self.progress_bar.set(max(0, min(progress, 1)))
+            except Exception:
+                pass
 
     def start_auto_progress(self, duration_ms=3000):
-        if self._auto_mode:
+        if self._finished or self._auto_mode:
             return
         self._auto_mode = True
         steps = max(int(duration_ms / 50), 1)
@@ -269,25 +331,106 @@ class SplashScreenModern(ctk.CTkToplevel):
         self._auto_steps = steps
         self._auto_progress()
 
+    # --------------------- animações ---------------------
+
+    def _animate_spinner(self):
+        if self._finished:
+            return
+        self.angle = (self.angle + 20) % 360
+        symbols = ["⟳", "⟲", "⟲", "⟳"]
+        idx = (self.angle // 90) % len(symbols)
+        try:
+            self.spinner_label.configure(text=symbols[idx])
+        except Exception:
+            return
+        self._spinner_job = self.after(120, self._animate_spinner)
+
     def _auto_progress(self):
-        if not self._auto_mode:
+        if self._finished or not self._auto_mode:
             return
         self._auto_step += 1
         frac = min(self._auto_step / self._auto_steps, 1.0)
-        self.progress_bar.set(frac)
+        try:
+            self.progress_bar.set(frac)
+        except Exception:
+            pass
+
         if frac >= 1.0:
-            self._finish()
+            self.safe_finish()
             return
         self._auto_job = self.after(50, self._auto_progress)
 
+    # --------------------- finalização ---------------------
+
     def _finish(self):
-        cancel_all_afters(self)
+        if self._finished:
+            return
+        self._finished = True
+
+        # cancela afters
+        try:
+            cancel_all_afters(self)
+        except Exception:
+            pass
+
+        if self._spinner_job:
+            try:
+                self.after_cancel(self._spinner_job)
+            except Exception:
+                pass
+            self._spinner_job = None
+
+        if self._auto_job:
+            try:
+                self.after_cancel(self._auto_job)
+            except Exception:
+                pass
+            self._auto_job = None
+
+        # solta topmost antes de destruir (melhor no macOS)
+        try:
+            self.attributes("-topmost", False)
+        except Exception:
+            pass
+
+        # destruir
         try:
             self.destroy()
         except Exception:
             pass
+
+        # callback (uma vez)
         if self.on_complete:
             try:
                 self.on_complete()
             except Exception:
                 pass
+if __name__ == "__main__":
+    import customtkinter as ctk
+
+    # aparência (opcional)
+    ctk.set_appearance_mode("Dark")
+
+    # root escondido (o splash é um Toplevel, precisa de um root)
+    root = ctk.CTk()
+    root.withdraw()
+
+    def on_complete():
+        # só pra confirmar que finalizou (pode trocar pra abrir seu login/menu)
+        root.deiconify()
+        root.title("OK")
+        root.geometry("420x180")
+        ctk.CTkLabel(root, text="Splash finalizou ✅", font=("Arial", 16)).pack(pady=40)
+        ctk.CTkButton(root, text="Fechar", command=root.destroy).pack()
+
+    splash = SplashScreenModern(
+        parent=root,
+        usuario_nome="Teste",
+        tema_preferido="profissional",
+        on_complete=on_complete
+    )
+
+    # fecha sozinho em 3s (ou remova essa linha e feche no ESC)
+    splash.start_auto_progress(duration_ms=9000)
+
+    root.mainloop()
