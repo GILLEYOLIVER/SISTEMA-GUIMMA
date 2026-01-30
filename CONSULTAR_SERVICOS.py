@@ -317,41 +317,67 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.kpi_valor = self._criar_kpi(kpis_frame, 3, "Valor Total", "R$ 0,00")
         self.kpi_media = self._criar_kpi(kpis_frame, 4, "Tempo Médio", "0 dias")
 
-        # ========== TABELA PRINCIPAL - MESMO ESTILO DO CADASTRO_DE_CORTE ==========
+        # ========== TABELAS (ABAS) ==========
         table_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         table_frame.pack(fill="both", expand=True, pady=10)
 
-        # Configurar estilo da Treeview
         self.configurar_treeview_theme()
 
-        # Criar tabela
+        tabs = ctk.CTkTabview(table_frame, fg_color=self.cor_fundo)
+        tabs.pack(fill="both", expand=True)
+
+        tab_hist = tabs.add("Histórico")
+        tab_defeitos = tabs.add("Peças com Defeito")
+
+        # ---- Aba Histórico ----
         columns = ["data", "tipo", "servico", "codigo", "descricao", "quantidade", "valor_unit", "valor_total",
                    "status"]
         headers = ["Data", "Tipo", "Serviço", "Código", "Descrição", "Quantidade", "V. Unitário", "V. Total", "Status"]
         widths = [100, 120, 120, 100, 200, 80, 100, 100, 120]
         anchors = ["center", "center", "center", "center", "w", "center", "e", "e", "center"]
 
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings",
+        self.tree = ttk.Treeview(tab_hist, columns=columns, show="headings",
                                  height=15, style="Custom.Treeview")
 
         for col, header, width, anchor in zip(columns, headers, widths, anchors):
             self.tree.heading(col, text=header)
             self.tree.column(col, width=width, anchor=anchor)
 
-        # Scrollbars
-        v_scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        h_scrollbar = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
+        v_scrollbar = ttk.Scrollbar(tab_hist, orient="vertical", command=self.tree.yview)
+        h_scrollbar = ttk.Scrollbar(tab_hist, orient="horizontal", command=self.tree.xview)
         self.tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
 
-        # Layout da tabela
         self.tree.grid(row=0, column=0, sticky="nsew")
         v_scrollbar.grid(row=0, column=1, sticky="ns")
         h_scrollbar.grid(row=1, column=0, sticky="ew")
 
-        table_frame.grid_rowconfigure(0, weight=1)
-        table_frame.grid_columnconfigure(0, weight=1)
+        tab_hist.grid_rowconfigure(0, weight=1)
+        tab_hist.grid_columnconfigure(0, weight=1)
 
-        # Configurar cores das linhas alternadas
+        # ---- Aba Peças com Defeito ----
+        def_columns = ["data", "servico", "descricao", "quantidade", "status"]
+        def_headers = ["Data", "Serviço", "Descrição", "Quantidade", "Status"]
+        def_widths = [120, 140, 320, 110, 120]
+        def_anchors = ["center", "center", "w", "center", "center"]
+
+        self.defeito_tree = ttk.Treeview(tab_defeitos, columns=def_columns, show="headings",
+                                         height=15, style="Custom.Treeview")
+
+        for col, header, width, anchor in zip(def_columns, def_headers, def_widths, def_anchors):
+            self.defeito_tree.heading(col, text=header)
+            self.defeito_tree.column(col, width=width, anchor=anchor)
+
+        v_def_scroll = ttk.Scrollbar(tab_defeitos, orient="vertical", command=self.defeito_tree.yview)
+        h_def_scroll = ttk.Scrollbar(tab_defeitos, orient="horizontal", command=self.defeito_tree.xview)
+        self.defeito_tree.configure(yscrollcommand=v_def_scroll.set, xscrollcommand=h_def_scroll.set)
+
+        self.defeito_tree.grid(row=0, column=0, sticky="nsew")
+        v_def_scroll.grid(row=0, column=1, sticky="ns")
+        h_def_scroll.grid(row=1, column=0, sticky="ew")
+
+        tab_defeitos.grid_rowconfigure(0, weight=1)
+        tab_defeitos.grid_columnconfigure(0, weight=1)
+
         self._atualizar_cores_linhas()
 
         # ========== BOTÕES DE AÇÃO - MESMO ESTILO DO CADASTRO_DE_CORTE ==========
@@ -572,9 +598,12 @@ class HistoricoServicosPage(ctk.CTkFrame):
             cur = conn.cursor()
             schema = get_schema()
 
-            # Limpa tabela
+            # Limpa tabelas
             for item in self.tree.get_children():
                 self.tree.delete(item)
+            if hasattr(self, "defeito_tree") and self.defeito_tree:
+                for item in self.defeito_tree.get_children():
+                    self.defeito_tree.delete(item)
 
             # KPIs
             total_envios = total_retornos = total_pagos = total_valor = total_dias = 0
@@ -776,6 +805,30 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     registros += 1
             except Exception as e:
                 print(f"Erro em histórico: {e}")
+
+            # 4b. PEÇAS COM DEFEITO (histórico pendente)
+            try:
+                sql_defeitos = f"""
+                    SELECT data, evento, descricao, quantidade, status
+                    FROM {schema}.historico_de_servico
+                    WHERE data BETWEEN %s AND %s
+                      AND setor = %s
+                      AND (%s = 'Todos' OR evento = %s)
+                      AND status = 'Pendente'
+                    ORDER BY data
+                """
+                cur.execute(sql_defeitos, (ini, fim, prestador, servico, servico))
+
+                for row in cur.fetchall():
+                    data, evento, desc, qtd, status = row
+                    tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
+                    if hasattr(self, "defeito_tree") and self.defeito_tree:
+                        self.defeito_tree.insert("", "end", values=(
+                            data, evento, desc, qtd or 0, status or "Pendente"
+                        ), tags=(tag,))
+                    registros += 1
+            except Exception as e:
+                print(f"Erro em defeitos pendentes: {e}")
 
             # Calcular tempo médio (simplificado)
             tempo_medio = total_retornos / max(total_envios, 1) if total_envios > 0 else 0

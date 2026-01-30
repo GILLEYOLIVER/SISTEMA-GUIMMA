@@ -71,10 +71,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.obter_cores_por_tema()
 
         # Variáveis para campos editáveis
-        self.entregues_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.copias_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.defeitos_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.faltantes_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.entregues_vars = {t: tk.StringVar(value="") for t in self.tamanhos}
+        self.copias_vars = {t: tk.StringVar(value="") for t in self.tamanhos}
+        self.defeitos_vars = {t: tk.StringVar(value="") for t in self.tamanhos}
+        self.faltantes_vars = {t: tk.StringVar(value="") for t in self.tamanhos}
 
         # Dados originais
         self.enviado_por_tam = {t: 0 for t in self.tamanhos}
@@ -168,6 +168,22 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 widget.configure(text_color=self.cor_texto)
             if hasattr(widget, "winfo_children"):
                 self._recolor_labels_frame(widget)
+
+    def _normalizar_valor(self, var, max_value):
+        raw = str(var.get())
+        digits = "".join(ch for ch in raw if ch.isdigit())
+        if raw != digits:
+            var.set(digits)
+        if digits == "":
+            return 0
+        valor = int(digits)
+        if max_value > 0 and valor > max_value:
+            valor = max_value
+            var.set(str(valor))
+        return valor
+
+    def _set_var_if_zero(self, var, valor):
+        var.set("" if valor in (0, "0", None) else str(valor))
 
 
     # ----------------------------- UI -----------------------------
@@ -263,7 +279,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         tabela_frame = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         tabela_frame.pack(fill="both", expand=True, pady=8)
 
-        cols = ["ID", "Ordem", "Código", "Descrição", "Prestador", "Data Entrada", "Status", "Qtd Peças"]
+        cols = ["ID", "Ordem", "Código", "Descrição", "Prestador", "Data Entrada", "Status", "Qtd Total", "Peças Restantes"]
 
         # Configurar estilo da Treeview
         self.configurar_treeview_theme()
@@ -277,7 +293,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
         for col in cols:
             self.retornos_tree.heading(col, text=col)
-            w = 100 if col in ["ID", "Status"] else (90 if col == "Qtd Peças" else 140)
+            w = 100 if col in ["ID", "Status"] else (110 if col in ["Qtd Total", "Peças Restantes"] else 140)
             self.retornos_tree.column(col, width=w, anchor="center")
 
         self.retornos_tree.bind("<<TreeviewSelect>>", self.on_retorno_selecionado)
@@ -394,10 +410,14 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                    text_color=self.cor_texto)
             lbl_env.pack(side="left", padx=2)
 
-            ent_ent = ctk.CTkEntry(row, width=90, textvariable=self.entregues_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_ent = ctk.CTkEntry(
+                row,
+                width=90,
+                textvariable=self.entregues_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+            )
             ent_ent.pack(side="left", padx=2)
             ent_ent.bind("<KeyRelease>", self._recalcular_totais)
 
@@ -412,17 +432,25 @@ class FinalizacaoCortes(ctk.CTkFrame):
             )
             ent_cop.pack(side="left", padx=2)
 
-            ent_def = ctk.CTkEntry(row, width=80, textvariable=self.defeitos_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_def = ctk.CTkEntry(
+                row,
+                width=80,
+                textvariable=self.defeitos_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+            )
             ent_def.pack(side="left", padx=2)
             ent_def.bind("<KeyRelease>", self._recalcular_totais)
 
-            ent_fal = ctk.CTkEntry(row, width=80, textvariable=self.faltantes_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_fal = ctk.CTkEntry(
+                row,
+                width=80,
+                textvariable=self.faltantes_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+            )
             ent_fal.pack(side="left", padx=2)
             ent_fal.bind("<KeyRelease>", self._recalcular_totais)
 
@@ -522,17 +550,29 @@ class FinalizacaoCortes(ctk.CTkFrame):
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         botoes.pack(fill="x", pady=(2, 8))
 
-        ctk.CTkButton(botoes, text="Finalizar Corte Completo", width=180,
-                      command=self.finalizar_completo,
-                      fg_color=self.cor_primaria,
-                      hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
+        self.btn_finalizar = ctk.CTkButton(
+            botoes,
+            text="Finalizar Corte Completo",
+            width=180,
+            command=self.finalizar_completo,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            state="disabled",
+        )
+        self.btn_finalizar.pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Salvar Baixa Parcial", width=150,
-                      command=self.salvar_baixa_parcial,
-                      fg_color=self.cor_primaria,
-                      hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
+        self.btn_baixa_parcial = ctk.CTkButton(
+            botoes,
+            text="Salvar Baixa Parcial",
+            width=150,
+            command=self.salvar_baixa_parcial,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            state="disabled",
+        )
+        self.btn_baixa_parcial.pack(side="left", padx=4)
 
         ctk.CTkButton(botoes, text="Limpar", width=120,
                       command=self.limpar_campos,
@@ -653,11 +693,17 @@ class FinalizacaoCortes(ctk.CTkFrame):
                     {prestador_expr}                       AS prestador,
                     r.data_chegada                         AS data_chegada,
                     {status_expr}                          AS status_envio,
-                    {qtd_expr}                             AS qtd_total
+                    {qtd_expr}                             AS qtd_total,
+                    GREATEST({qtd_expr} - COALESCE(rt.entregue_total, 0), 0) AS qtd_restante
                 FROM {schema}.controle_retorno_cortes r
                 JOIN {schema}.envios_cortes e ON e.id = r.envio_id
                 {"LEFT JOIN " + schema + ".cadastro_faccoes f ON f.id = e.prestador_id" if has_prestador_id else ""}
                 LEFT JOIN {schema}.cadastro_de_corte c ON c.id = e.corte_id
+                LEFT JOIN (
+                    SELECT envio_id, COALESCE(SUM(entregue), 0) AS entregue_total
+                    FROM {schema}.retorno_detalhes_tamanho
+                    GROUP BY envio_id
+                ) rt ON rt.envio_id = r.envio_id
             """
 
             where = []
@@ -695,7 +741,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
             conn.close()
 
             for i, row in enumerate(rows):
-                (retorno_id, envio_id, ordem, codigo, descricao, prestador, data_chegada, status_envio, qtd_total) = row
+                (retorno_id, envio_id, ordem, codigo, descricao, prestador, data_chegada,
+                 status_envio, qtd_total, qtd_restante) = row
 
                 self.mapa_retorno_envio[int(retorno_id)] = int(envio_id)
 
@@ -724,6 +771,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                         data_chegada.strftime("%d/%m/%Y") if data_chegada else "",
                         status_envio,
                         qtd_total,
+                        qtd_restante,
                     ),
                     tags=tags
                 )
@@ -858,10 +906,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
         # 0) LIMPA A GRADE
         for t in self.tamanhos:
-            self.entregues_vars[t].set(0)
-            self.copias_vars[t].set(0)
-            self.defeitos_vars[t].set(0)
-            self.faltantes_vars[t].set(0)
+            self.entregues_vars[t].set("")
+            self.copias_vars[t].set("")
+            self.defeitos_vars[t].set("")
+            self.faltantes_vars[t].set("")
 
             self.enviado_por_tam[t] = 0
             self.valor_por_tam[t] = 0.0
@@ -952,35 +1000,37 @@ class FinalizacaoCortes(ctk.CTkFrame):
                             f"[DEBUG] ENVIO tam={tam} | qtd={qtd_env} | pilotos={qtd_pil} | total_enviado={total_enviado} | valor={val_uni}"
                         )
 
-            # 2) DETALHE DO RETORNO (retorno_detalhes_tamanho)
+            # 2) SOMA DO RETORNO (retorno_detalhes_tamanho) PARA DEDUZIR DO ENVIADO
             cur.execute(
                 f"""
                 SELECT tamanho,
-                       COALESCE(entregue,0)  AS entregue,
-                       COALESCE(copias,0)    AS copias,
-                       COALESCE(defeitos,0)  AS defeitos,
-                       COALESCE(faltantes,0) AS faltantes
+                       COALESCE(SUM(entregue),0) AS entregue
                   FROM {schema}.retorno_detalhes_tamanho
                  WHERE envio_id = %s
+                 GROUP BY tamanho
                 """,
                 (envio_id,),
             )
             retorno_rows = cur.fetchall()
-            print(f"[DEBUG] Linhas em retorno_detalhes_tamanho: {len(retorno_rows)}")
+            print(f"[DEBUG] Linhas agregadas em retorno_detalhes_tamanho: {len(retorno_rows)}")
 
-            for tamanho, entregue, copias, defeitos, faltantes in retorno_rows:
+            entregues_por_tam = {t: 0 for t in self.tamanhos}
+            for tamanho, entregue in retorno_rows:
                 if tamanho not in self.tamanhos:
                     continue
+                entregues_por_tam[tamanho] = safe_int(entregue)
 
-                self.entregues_vars[tamanho].set(entregue or 0)
-                self.copias_vars[tamanho].set(copias or 0)
-                self.defeitos_vars[tamanho].set(defeitos or 0)
-                self.faltantes_vars[tamanho].set(faltantes or 0)
-
-                print(
-                    f"[DEBUG] RETORNO tam={tamanho} | ent={entregue} | "
-                    f"copias={copias} | defeitos={defeitos} | faltantes={faltantes}"
-                )
+            for tamanho in self.tamanhos:
+                total_enviado = safe_int(self.enviado_por_tam.get(tamanho, 0))
+                ja_entregue = entregues_por_tam.get(tamanho, 0)
+                restante = max(total_enviado - ja_entregue, 0)
+                self.enviado_por_tam[tamanho] = restante
+                self.grade_widgets[tamanho]["enviado"].configure(text=str(restante))
+                # Mantém campos editáveis vazios ao carregar
+                self.entregues_vars[tamanho].set("")
+                self.copias_vars[tamanho].set("")
+                self.defeitos_vars[tamanho].set("")
+                self.faltantes_vars[tamanho].set("")
 
             conn.close()
 
@@ -999,23 +1049,47 @@ class FinalizacaoCortes(ctk.CTkFrame):
         total_faltante = 0
         total_regulares = 0
         valor_total = 0.0
+        completo = True
+        tem_envio = False
+        tem_parcial = False
 
         for t in self.tamanhos:
             enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
-            entregue = safe_int(self.entregues_vars[t].get())
-            copias = safe_int(self.copias_vars[t].get())
-            defeito = safe_int(self.defeitos_vars[t].get())
-            faltante = safe_int(self.faltantes_vars[t].get())
+            entregue = self._normalizar_valor(self.entregues_vars[t], enviado)
+            copias = self._normalizar_valor(self.copias_vars[t], enviado)
+            defeito = self._normalizar_valor(self.defeitos_vars[t], enviado)
+            faltante = self._normalizar_valor(self.faltantes_vars[t], enviado)
 
-            # Não exceder enviado
-            if entregue + defeito + faltante > enviado:
-                max_possivel = max(0, enviado - defeito - faltante)
-                self.entregues_vars[t].set(min(entregue, max_possivel))
-                entregue = safe_int(self.entregues_vars[t].get())
+            if enviado > 0:
+                tem_envio = True
+
+            # Normaliza valores para não exceder o enviado
+            if defeito < 0:
+                defeito = 0
+                self.defeitos_vars[t].set("")
+            if defeito > enviado:
+                defeito = enviado
+                self._set_var_if_zero(self.defeitos_vars[t], defeito)
+            if faltante > enviado:
+                faltante = enviado
+                self._set_var_if_zero(self.faltantes_vars[t], faltante)
+
+            if entregue < 0:
+                entregue = 0
+                self.entregues_vars[t].set("")
+
+            if entregue > enviado:
+                entregue = enviado
+                self._set_var_if_zero(self.entregues_vars[t], entregue)
+
+            # Faltante sempre recalculado com base em Enviado e Entregue
+            # (defeitos fazem parte do entregue)
+            faltante = max(enviado - entregue, 0)
+            self._set_var_if_zero(self.faltantes_vars[t], faltante)
 
             # Cópias não excedem entregue
             if copias > entregue:
-                self.copias_vars[t].set(min(copias, entregue))
+                self._set_var_if_zero(self.copias_vars[t], min(copias, entregue))
                 copias = safe_int(self.copias_vars[t].get())
 
             reg = max(0, entregue - copias - defeito)
@@ -1023,6 +1097,12 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
             self.grade_widgets[t]["regulares"].configure(text=str(reg))
             self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(subtotal))
+
+            if enviado > 0:
+                if entregue < enviado:
+                    tem_parcial = True
+                if entregue != enviado:
+                    completo = False
 
             total_entregue += entregue
             total_copias += copias
@@ -1039,12 +1119,27 @@ class FinalizacaoCortes(ctk.CTkFrame):
         try:
             if total_defeito > 0:
                 self.bonif_final_var.set("nao")
+            else:
+                self.bonif_final_var.set("sim")
         except Exception:
             pass
 
         self.lbl_total_faltante.configure(text=str(total_faltante))
         self.lbl_total_regulares.configure(text=str(total_regulares))
         self.lbl_valor_total.configure(text=fmt_moeda(valor_total))
+
+        try:
+            if tem_envio and completo:
+                self.btn_finalizar.configure(state="normal")
+                self.btn_baixa_parcial.configure(state="disabled")
+            elif tem_envio and tem_parcial:
+                self.btn_finalizar.configure(state="disabled")
+                self.btn_baixa_parcial.configure(state="normal")
+            else:
+                self.btn_finalizar.configure(state="disabled")
+                self.btn_baixa_parcial.configure(state="disabled")
+        except Exception:
+            pass
 
     # ----------------------------- Relatório -----------------------------
     def abrir_relatorio(self):
@@ -1374,7 +1469,93 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 totals["defeitos"] += defeitos
                 totals["faltantes"] += faltantes
                 totals["regulares"] += regulares
-                totals["valor_total"] += float(subtotal or 0.0)
+            totals["valor_total"] += float(subtotal or 0.0)
+
+            # (1.5) Registra defeitos pendentes no histórico de serviços do prestador
+            try:
+                cols_hist = self._cols(cur, schema, "historico_de_servico")
+            except Exception:
+                cols_hist = set()
+            if cols_hist and totals["defeitos"] > 0:
+                envio_id_required = False
+                envio_id_valid = False
+                if "envio_id" in cols_hist:
+                    try:
+                        cur.execute(
+                            """
+                            SELECT is_nullable
+                              FROM information_schema.columns
+                             WHERE table_schema = %s
+                               AND table_name = 'historico_de_servico'
+                               AND column_name = 'envio_id'
+                            """,
+                            (schema,),
+                        )
+                        row_envio_nullable = cur.fetchone()
+                        envio_id_required = bool(row_envio_nullable and row_envio_nullable[0] == "NO")
+                    except Exception:
+                        envio_id_required = False
+
+                    try:
+                        cur.execute(
+                            f"SELECT 1 FROM {schema}.controle_envio_cortes WHERE id = %s",
+                            (envio_id,),
+                        )
+                        envio_id_valid = bool(cur.fetchone())
+                    except Exception:
+                        envio_id_valid = False
+
+                    if envio_id_required and not envio_id_valid:
+                        cols_hist = set()
+                data_hist = datetime.now()
+                evento = (self._tipo_servico or "").strip() or "Facção"
+                descricao = f"Defeitos pendentes - {self.retorno_selecionado.get('codigo', '')} {self.retorno_selecionado.get('descricao', '')}".strip()
+                setor = (self._prestador_nome or "").strip()
+                quantidade = int(totals["defeitos"])
+                valor = 0.0
+                status = "Pendente"
+
+                campos = []
+                valores = []
+                params = []
+                if "data" in cols_hist:
+                    campos.append("data")
+                    valores.append("%s")
+                    params.append(data_hist)
+                if "evento" in cols_hist:
+                    campos.append("evento")
+                    valores.append("%s")
+                    params.append(evento)
+                if "descricao" in cols_hist:
+                    campos.append("descricao")
+                    valores.append("%s")
+                    params.append(descricao)
+                if "setor" in cols_hist:
+                    campos.append("setor")
+                    valores.append("%s")
+                    params.append(setor)
+                if "quantidade" in cols_hist:
+                    campos.append("quantidade")
+                    valores.append("%s")
+                    params.append(quantidade)
+                if "valor" in cols_hist:
+                    campos.append("valor")
+                    valores.append("%s")
+                    params.append(valor)
+                if "status" in cols_hist:
+                    campos.append("status")
+                    valores.append("%s")
+                    params.append(status)
+                if "envio_id" in cols_hist and envio_id_valid:
+                    campos.append("envio_id")
+                    valores.append("%s")
+                    params.append(envio_id)
+
+                if campos:
+                    cur.execute(
+                        f"INSERT INTO {schema}.historico_de_servico ({', '.join(campos)}) VALUES ({', '.join(valores)})",
+                        params,
+                    )
 
             # (2) Atualiza o cabeçalho do retorno (controle_retorno_cortes)
             obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
@@ -1616,8 +1797,25 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 "valor_total": 0.0,
             }
 
-            # Importante: aqui fazemos consolidação (replace) para garantir consistência do pagamento.
-            cur.execute(f"DELETE FROM {schema}.retorno_detalhes_tamanho WHERE envio_id = %s", (envio_id,))
+            # Carrega valores já salvos para acumular novas baixas parciais
+            cur.execute(
+                f"""
+                SELECT tamanho, COALESCE(entregue,0), COALESCE(copias,0),
+                       COALESCE(defeitos,0), COALESCE(faltantes,0)
+                  FROM {schema}.retorno_detalhes_tamanho
+                 WHERE envio_id = %s
+                """,
+                (envio_id,),
+            )
+            existentes = {
+                row[0]: {
+                    "entregue": safe_int(row[1]),
+                    "copias": safe_int(row[2]),
+                    "defeitos": safe_int(row[3]),
+                    "faltantes": safe_int(row[4]),
+                }
+                for row in cur.fetchall()
+            }
 
             for t in self.tamanhos:
                 entregue = safe_int(self.entregues_vars[t].get())
@@ -1625,24 +1823,139 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 defeitos = safe_int(self.defeitos_vars[t].get())
                 faltantes = safe_int(self.faltantes_vars[t].get())
 
-                regulares = max(0, entregue - defeitos - faltantes)
+                base = existentes.get(t, {"entregue": 0, "copias": 0, "defeitos": 0, "faltantes": 0})
+                total_entregue = base["entregue"] + entregue
+                total_copias = base["copias"] + copias
+                total_defeitos = base["defeitos"] + defeitos
+                total_faltantes = base["faltantes"] + faltantes
+
+                regulares = max(0, total_entregue - total_defeitos - total_faltantes)
                 valor_peca = float(self.valor_por_tam.get(t, 0.0) or 0.0)
                 subtotal = regulares * valor_peca
 
                 # grava somente linhas com algum dado
-                if any([entregue, copias, defeitos, faltantes, regulares]) or subtotal > 0:
-                    cur.execute(f"""
-                        INSERT INTO {schema}.retorno_detalhes_tamanho
-                            (envio_id, tamanho, entregue, copias, defeitos, faltantes, regulares, subtotal)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (envio_id, t, entregue, copias, defeitos, faltantes, regulares, subtotal))
+                if any([total_entregue, total_copias, total_defeitos, total_faltantes, regulares]) or subtotal > 0:
+                    if t in existentes:
+                        cur.execute(
+                            f"""
+                            UPDATE {schema}.retorno_detalhes_tamanho
+                               SET entregue = %s,
+                                   copias = %s,
+                                   defeitos = %s,
+                                   faltantes = %s,
+                                   regulares = %s,
+                                   subtotal = %s
+                             WHERE envio_id = %s AND tamanho = %s
+                            """,
+                            (total_entregue, total_copias, total_defeitos, total_faltantes,
+                             regulares, subtotal, envio_id, t),
+                        )
+                    else:
+                        cur.execute(
+                            f"""
+                            INSERT INTO {schema}.retorno_detalhes_tamanho
+                                (envio_id, tamanho, entregue, copias, defeitos, faltantes, regulares, subtotal)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            (envio_id, t, total_entregue, total_copias, total_defeitos,
+                             total_faltantes, regulares, subtotal),
+                        )
 
-                totals["entregue"] += entregue
-                totals["copias"] += copias
-                totals["defeitos"] += defeitos
-                totals["faltantes"] += faltantes
+                totals["entregue"] += total_entregue
+                totals["copias"] += total_copias
+                totals["defeitos"] += total_defeitos
+                totals["faltantes"] += total_faltantes
                 totals["regulares"] += regulares
                 totals["valor_total"] += float(subtotal or 0.0)
+
+            # (1.5) Registra defeitos pendentes no histórico de serviços do prestador
+            try:
+                cols_hist = self._cols(cur, schema, "historico_de_servico")
+            except Exception:
+                cols_hist = set()
+            if cols_hist and totals["defeitos"] > 0:
+                envio_id_required = False
+                envio_id_valid = False
+                if "envio_id" in cols_hist:
+                    try:
+                        cur.execute(
+                            """
+                            SELECT is_nullable
+                              FROM information_schema.columns
+                             WHERE table_schema = %s
+                               AND table_name = 'historico_de_servico'
+                               AND column_name = 'envio_id'
+                            """,
+                            (schema,),
+                        )
+                        row_envio_nullable = cur.fetchone()
+                        envio_id_required = bool(row_envio_nullable and row_envio_nullable[0] == "NO")
+                    except Exception:
+                        envio_id_required = False
+
+                    try:
+                        cur.execute(
+                            f"SELECT 1 FROM {schema}.controle_envio_cortes WHERE id = %s",
+                            (envio_id,),
+                        )
+                        envio_id_valid = bool(cur.fetchone())
+                    except Exception:
+                        envio_id_valid = False
+
+                    if envio_id_required and not envio_id_valid:
+                        cols_hist = set()
+                data_hist = datetime.now()
+                evento = (self._tipo_servico or "").strip() or "Facção"
+                descricao = f"Defeitos pendentes - {self.retorno_selecionado.get('codigo', '')} {self.retorno_selecionado.get('descricao', '')}".strip()
+                setor = (self._prestador_nome or "").strip()
+                quantidade = int(totals["defeitos"])
+                valor = 0.0
+                status = "Pendente"
+
+                campos = []
+                valores = []
+                params = []
+                if "data" in cols_hist:
+                    campos.append("data")
+                    valores.append("%s")
+                    params.append(data_hist)
+                if "evento" in cols_hist:
+                    campos.append("evento")
+                    valores.append("%s")
+                    params.append(evento)
+                if "descricao" in cols_hist:
+                    campos.append("descricao")
+                    valores.append("%s")
+                    params.append(descricao)
+                if "setor" in cols_hist:
+                    campos.append("setor")
+                    valores.append("%s")
+                    params.append(setor)
+                if "quantidade" in cols_hist:
+                    campos.append("quantidade")
+                    valores.append("%s")
+                    params.append(quantidade)
+                if "valor" in cols_hist:
+                    campos.append("valor")
+                    valores.append("%s")
+                    params.append(valor)
+                if "status" in cols_hist:
+                    campos.append("status")
+                    valores.append("%s")
+                    params.append(status)
+                if "envio_id" in cols_hist and envio_id_valid:
+                    try:
+                        campos.append("envio_id")
+                        valores.append("%s")
+                        params.append(envio_id)
+                    except Exception:
+                        pass
+
+                if campos:
+                    cur.execute(
+                        f"INSERT INTO {schema}.historico_de_servico ({', '.join(campos)}) VALUES ({', '.join(valores)})",
+                        params,
+                    )
 
             # (2) Atualiza o cabeçalho do retorno (controle_retorno_cortes)
             obs_finalizacao = (self.obs_finalizacao_txt.get("1.0", tk.END) or "").strip()
@@ -1734,10 +2047,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
             entry.configure(state="disabled")
 
         for t in self.tamanhos:
-            self.entregues_vars[t].set(0)
-            self.copias_vars[t].set(0)
-            self.defeitos_vars[t].set(0)
-            self.faltantes_vars[t].set(0)
+            self.entregues_vars[t].set("")
+            self.copias_vars[t].set("")
+            self.defeitos_vars[t].set("")
+            self.faltantes_vars[t].set("")
             self.grade_widgets[t]["enviado"].configure(text="0")
             self.grade_widgets[t]["valor"].configure(text=fmt_moeda(0))
             self.grade_widgets[t]["regulares"].configure(text="0")
@@ -1750,6 +2063,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.lbl_total_regulares.configure(text="0")
         self.lbl_valor_total.configure(text=fmt_moeda(0))
         self.obs_finalizacao_txt.delete("1.0", tk.END)
+        try:
+            self.bonif_final_var.set("sim")
+        except Exception:
+            pass
 
 
 # ============================== Executar ==============================

@@ -146,6 +146,8 @@ class EnvioCortes(ctk.CTkFrame):
         # Variáveis da grade
         # Quantidades originais informadas pelo usuário (por tamanho)
         self.quantidades = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        # Seleção de envio por tamanho (checkbox)
+        self.selecionar_envio = {t: tk.IntVar(value=0) for t in self.tamanhos}
         # Número de cópias retiradas diretamente do corte para cada tamanho (piloto automático)
         # Esses valores serão subtraídos das quantidades enviadas e somados aos pilotos
         self.copias_do_corte = {t: tk.StringVar(value="0") for t in self.tamanhos}
@@ -156,13 +158,16 @@ class EnvioCortes(ctk.CTkFrame):
         # `pilotos` armazena o valor mostrado no campo da grade (pilotos a serem enviados).
         self.pilotos = {t: tk.StringVar(value="0") for t in self.tamanhos}
         # Armazenamos o número original de cópias digitadas para cada tamanho.
-        # Este valor é usado para recalcular as cópias restantes quando o número de pilotos é alterado.
+        # Este valor é usado para debitar corretamente as cópias no corte.
         self.copias_original = {t: 0 for t in self.tamanhos}
+        # Saldo base do corte por tamanho (quantidade disponível original)
+        self.saldo_base = {t: 0 for t in self.tamanhos}
         # Valor unitário (como string) para cada tamanho
         self.valores = {t: tk.StringVar(value="") for t in self.tamanhos}
 
         # Valor único
         self.valor_unico_var = tk.IntVar(value=0)
+        self._atualizando_valor = False
 
         # Piloto (tam + qtd) - usado para registrar pilotos extras via o painel lateral
         self.piloto_tam_var = tk.StringVar(value=self.tamanhos[0])
@@ -449,6 +454,7 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Cabeçalho da grade, agora com coluna adicional "Cópias Ret. Corte"
         for h, w in [
+            ("Sel.", 50),
             ("Tam.", 60),
             ("Disponível", 90),
             ("Cópias Ret. Corte", 90),
@@ -464,6 +470,20 @@ class EnvioCortes(ctk.CTkFrame):
             row = ctk.CTkFrame(left, fg_color=self.cor_fundo)
             row.pack(fill="x", pady=2)
 
+            # Seleção rápida (envio total)
+            chk_envio = ctk.CTkCheckBox(
+                row,
+                text="",
+                width=50,
+                variable=self.selecionar_envio[tam],
+                command=lambda T=tam: self._on_toggle_selecionar_envio(T),
+                fg_color=self.cor_primaria,
+                hover_color=self.cor_hover,
+                text_color=self.cor_texto,
+                checkmark_color=self.cor_texto,
+            )
+            chk_envio.pack(side="left", padx=2)
+
             # Coluna do tamanho
             ctk.CTkLabel(row, text=tam, width=60, text_color=self.cor_texto).pack(side="left", padx=2)
 
@@ -472,8 +492,8 @@ class EnvioCortes(ctk.CTkFrame):
             lbl_disp.pack(side="left", padx=2)
 
             # Cópias retiradas do corte: representa o número de cópias removidas do corte para este tamanho.
-            # Este campo é editável; quando alterado, armazenamos o valor digitado em `copias_original` e
-            # recalculamos o saldo de cópias restantes subtraindo o número de pilotos definidos.
+            # Este campo é editável; ao alterar, o saldo disponível é atualizado e a quantidade a enviar
+            # é preenchida automaticamente com o saldo disponível.
             ent_cop = ctk.CTkEntry(row, width=90, textvariable=self.copias_do_corte[tam],
                                    fg_color=self.cor_terciaria, border_color=self.cor_borda, text_color=self.cor_texto)
             ent_cop.pack(side="left", padx=2)
@@ -500,6 +520,8 @@ class EnvioCortes(ctk.CTkFrame):
             ent_val.pack(side="left", padx=2)
             # Recalcular subtotais ao editar valor
             ent_val.bind("<KeyRelease>", lambda e, T=tam: self._on_valor_edit(T))
+            ent_val.bind("<FocusOut>", lambda e, T=tam: self._on_valor_edit(T))
+            self.valores[tam].trace_add("write", lambda *_args, T=tam: self._on_valor_edit(T))
 
             # Subtotal
             lbl_total = ctk.CTkLabel(row, text=fmt_moeda(0), width=110, text_color=self.cor_texto)
@@ -510,6 +532,8 @@ class EnvioCortes(ctk.CTkFrame):
                 "disp": lbl_disp,
                 "sub": lbl_total,
                 "ent_val": ent_val,
+                "ent_qtd": ent_qtd,
+                "chk_envio": chk_envio,
             }
 
         # Totais - COM TEMA
@@ -1036,13 +1060,22 @@ class EnvioCortes(ctk.CTkFrame):
         for i, tam in enumerate(cols_tam):
             idx = 4 + i  # após id, numero, codigo, descricao
             if idx < len(vals):
-                self.grade_widgets[tam]["disp"].configure(text=str(safe_int(vals[idx])))
+                saldo = safe_int(vals[idx])
+                self.saldo_base[tam] = saldo
+                self.grade_widgets[tam]["disp"].configure(text=str(saldo))
 
         # Limpa quantidades enviadas
         for tam in self.tamanhos:
             self.quantidades[tam].set("0")
             self.pilotos[tam].set("0")
             self.valores[tam].set("")
+            self.copias_do_corte[tam].set("0")
+            self.copias_original[tam] = 0
+            self.selecionar_envio[tam].set(0)
+            try:
+                self.grade_widgets[tam]["ent_qtd"].configure(state="normal")
+            except Exception:
+                pass
 
         self._recalcular()
 
@@ -1065,39 +1098,49 @@ class EnvioCortes(ctk.CTkFrame):
                 self.grade_widgets[tam]["ent_val"].configure(state="normal")
 
     def _on_valor_edit(self, tam):
-        if self.valor_unico_var.get():
-            v = self.valores[tam].get()
-            for t in self.tamanhos:
-                self.valores[t].set(v)
+        if self._atualizando_valor:
+            return
+        self._atualizando_valor = True
+        try:
+            if self.valor_unico_var.get():
+                v = self.valores[tam].get()
+                for t in self.tamanhos:
+                    self.valores[t].set(v)
+            self._recalcular()
+        finally:
+            self._atualizando_valor = False
+
+    def _set_quantidade_envio(self, tam, valor, bloquear=False):
+        try:
+            self.quantidades[tam].set(str(max(int(valor), 0)))
+        except Exception:
+            self.quantidades[tam].set("0")
+        try:
+            estado = "disabled" if bloquear else "normal"
+            self.grade_widgets[tam]["ent_qtd"].configure(state=estado)
+        except Exception:
+            pass
         self._recalcular()
+
+    def _on_toggle_selecionar_envio(self, tam):
+        selecionado = bool(self.selecionar_envio[tam].get())
+        if selecionado:
+            disponivel = safe_int(self.grade_widgets[tam]["disp"].cget("text"))
+            self._set_quantidade_envio(tam, disponivel, bloquear=True)
+        else:
+            self._set_quantidade_envio(tam, 0, bloquear=False)
 
     # ----------------------------- Edição de Cópias e Pilotos -----------------------------
     def _on_copias_edit(self, tam):
         """
         Regra correta:
         - "Cópias retiradas do corte" diminui SOMENTE o "Disponível".
-        - "ENVIAR" é manual (não altera aqui).
+        - "ENVIAR" é atualizado automaticamente com o saldo disponível.
         """
         try:
-            # valor base do corte (quantidade original daquele tamanho)
-            # OBS: usamos self.copias_original[tam] como "base" do corte (ele já é resetado no _limpar()).
-            base = int(self.copias_original.get(tam, 0) or 0)
-
-            # Se ainda não temos base, tenta capturar do display atual ANTES de aplicar retirada.
-            # (isso funciona logo após selecionar o corte, quando o display ainda é o total do corte)
-            if base <= 0:
-                try:
-                    base_txt = str(self.grade_widgets[tam]["disp"].cget("text") or "0").strip()
-                    base = safe_int(base_txt)
-                except Exception:
-                    base = 0
-
-                if base > 0:
-                    self.copias_original[tam] = base  # guarda a base do corte
-
+            base = int(self.saldo_base.get(tam, 0) or 0)
             retiradas = safe_int(self.copias_do_corte[tam].get())
 
-            # normalizações
             if retiradas < 0:
                 retiradas = 0
                 self.copias_do_corte[tam].set(0)
@@ -1107,33 +1150,15 @@ class EnvioCortes(ctk.CTkFrame):
                 self.copias_do_corte[tam].set(base)
 
             disponivel = max(base - retiradas, 0)
-
-            # atualiza SOMENTE o display de disponível
             self.grade_widgets[tam]["disp"].configure(text=str(disponivel))
 
-            # NÃO mexe no campo ENVIAR
-            # self.quantidades[tam].set(...)  <-- PROIBIDO aqui
+            # Armazena o valor original de cópias digitadas
+            self.copias_original[tam] = retiradas
 
-            # recalcula totais/valores (sem travar enviar)
-            # Valor digitado no campo de cópias
-            new_copias = safe_int(self.copias_do_corte[tam].get())
-            # Armazena o valor original para referência futura
-            self.copias_original[tam] = new_copias
-            # Número atual de pilotos definidos para esse tamanho
-            current_pilotos = safe_int(self.pilotos[tam].get())
-            # Cálculo do saldo de cópias restantes (não negativas)
-            leftover = max(self.copias_original[tam] - current_pilotos, 0)
-            # Atualiza o campo de cópias com o saldo
-            self.copias_do_corte[tam].set(str(leftover))
+            # Atualiza automaticamente o campo ENVIAR com o saldo disponível
+            bloquear = bool(self.selecionar_envio[tam].get())
+            self._set_quantidade_envio(tam, disponivel, bloquear=bloquear)
         except Exception:
-            # Se ocorrer algum erro de conversão, mantenha o valor atual
-            pass
-        # Recalcular totais após ajuste
-        try:
-            self._recalcular()
-
-        except Exception:
-            # não quebra a digitação do usuário
             pass
 
     def _on_pilotos_edit(self, tam):
@@ -1147,16 +1172,6 @@ class EnvioCortes(ctk.CTkFrame):
             if p < 0:
                 p = 0
                 self.pilotos[tam].set(0)
-
-            # NÃO mexer em self.copias_do_corte[tam] aqui
-            # Número de pilotos digitado
-            new_pilotos = safe_int(self.pilotos[tam].get())
-            # Valor original de cópias informado anteriormente (se não existir, assume 0)
-            orig_copies = self.copias_original.get(tam, 0)
-            # Recalcula o saldo de cópias restantes
-            leftover = max(orig_copies - new_pilotos, 0)
-            # Atualiza o campo de cópias com o saldo recalculado
-            self.copias_do_corte[tam].set(str(leftover))
         except Exception:
             # Se ocorrer algum erro de conversão, ignore
             pass
@@ -1357,6 +1372,10 @@ class EnvioCortes(ctk.CTkFrame):
             self.pilotos[tam].set("0")
             # Zera o número original de cópias digitadas
             self.copias_original[tam] = 0
+            # Zera saldo base
+            self.saldo_base[tam] = 0
+            # Limpa seleção rápida
+            self.selecionar_envio[tam].set(0)
             # Zera pilotos manuais (mantém compatibilidade, embora não seja usado)
             try:
                 self.pilotos_manual[tam] = 0
@@ -1367,6 +1386,10 @@ class EnvioCortes(ctk.CTkFrame):
             # Reseta o display da coluna "Disponível" e "Subtotal"
             self.grade_widgets[tam]["disp"].configure(text="0")
             self.grade_widgets[tam]["sub"].configure(text=fmt_moeda(0))
+            try:
+                self.grade_widgets[tam]["ent_qtd"].configure(state="normal")
+            except Exception:
+                pass
         self.lbl_total_pecas.configure(text="0")
         self.lbl_valor_total.configure(text=fmt_moeda(0))
         self.aviamentos_entry.delete("1.0", "end")
