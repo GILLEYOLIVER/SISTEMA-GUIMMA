@@ -169,13 +169,18 @@ class FinalizacaoCortes(ctk.CTkFrame):
             if hasattr(widget, "winfo_children"):
                 self._recolor_labels_frame(widget)
 
-    def _validar_quantidade(self, tam, proposed):
-        if proposed == "":
-            return True
-        if not proposed.isdigit():
-            return False
-        enviado = safe_int(self.grade_widgets[tam]["enviado"].cget("text"))
-        return int(proposed) <= enviado
+    def _normalizar_valor(self, var, max_value):
+        raw = str(var.get())
+        digits = "".join(ch for ch in raw if ch.isdigit())
+        if raw != digits:
+            var.set(digits)
+        if digits == "":
+            return 0
+        valor = int(digits)
+        if valor > max_value:
+            valor = max_value
+            var.set(str(valor))
+        return valor
 
 
     # ----------------------------- UI -----------------------------
@@ -409,8 +414,6 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 fg_color=self.cor_secundaria,
                 border_color=self.cor_borda,
                 text_color=self.cor_texto_entry,
-                validate="key",
-                validatecommand=(self.register(lambda v, T=tam: self._validar_quantidade(T, v)), "%P"),
             )
             ent_ent.pack(side="left", padx=2)
             ent_ent.bind("<KeyRelease>", self._recalcular_totais)
@@ -433,8 +436,6 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 fg_color=self.cor_secundaria,
                 border_color=self.cor_borda,
                 text_color=self.cor_texto_entry,
-                validate="key",
-                validatecommand=(self.register(lambda v, T=tam: self._validar_quantidade(T, v)), "%P"),
             )
             ent_def.pack(side="left", padx=2)
             ent_def.bind("<KeyRelease>", self._recalcular_totais)
@@ -446,8 +447,6 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 fg_color=self.cor_secundaria,
                 border_color=self.cor_borda,
                 text_color=self.cor_texto_entry,
-                validate="key",
-                validatecommand=(self.register(lambda v, T=tam: self._validar_quantidade(T, v)), "%P"),
             )
             ent_fal.pack(side="left", padx=2)
             ent_fal.bind("<KeyRelease>", self._recalcular_totais)
@@ -1043,10 +1042,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
         for t in self.tamanhos:
             enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
-            entregue = safe_int(self.entregues_vars[t].get())
-            copias = safe_int(self.copias_vars[t].get())
-            defeito = safe_int(self.defeitos_vars[t].get())
-            faltante = safe_int(self.faltantes_vars[t].get())
+            entregue = self._normalizar_valor(self.entregues_vars[t], enviado)
+            copias = self._normalizar_valor(self.copias_vars[t], enviado)
+            defeito = self._normalizar_valor(self.defeitos_vars[t], enviado)
+            faltante = self._normalizar_valor(self.faltantes_vars[t], enviado)
 
             if enviado > 0:
                 tem_envio = True
