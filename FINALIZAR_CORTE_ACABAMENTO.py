@@ -1477,6 +1477,36 @@ class FinalizacaoCortes(ctk.CTkFrame):
             except Exception:
                 cols_hist = set()
             if cols_hist and totals["defeitos"] > 0:
+                envio_id_required = False
+                envio_id_valid = False
+                if "envio_id" in cols_hist:
+                    try:
+                        cur.execute(
+                            """
+                            SELECT is_nullable
+                              FROM information_schema.columns
+                             WHERE table_schema = %s
+                               AND table_name = 'historico_de_servico'
+                               AND column_name = 'envio_id'
+                            """,
+                            (schema,),
+                        )
+                        row_envio_nullable = cur.fetchone()
+                        envio_id_required = bool(row_envio_nullable and row_envio_nullable[0] == "NO")
+                    except Exception:
+                        envio_id_required = False
+
+                    try:
+                        cur.execute(
+                            f"SELECT 1 FROM {schema}.controle_envio_cortes WHERE id = %s",
+                            (envio_id,),
+                        )
+                        envio_id_valid = bool(cur.fetchone())
+                    except Exception:
+                        envio_id_valid = False
+
+                    if envio_id_required and not envio_id_valid:
+                        cols_hist = set()
                 data_hist = datetime.now()
                 evento = (self._tipo_servico or "").strip() or "Facção"
                 descricao = f"Defeitos pendentes - {self.retorno_selecionado.get('codigo', '')} {self.retorno_selecionado.get('descricao', '')}".strip()
@@ -1516,18 +1546,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
                     campos.append("status")
                     valores.append("%s")
                     params.append(status)
-                if "envio_id" in cols_hist:
-                    try:
-                        cur.execute(
-                            f"SELECT 1 FROM {schema}.controle_envio_cortes WHERE id = %s",
-                            (envio_id,),
-                        )
-                        if cur.fetchone():
-                            campos.append("envio_id")
-                            valores.append("%s")
-                            params.append(envio_id)
-                    except Exception:
-                        pass
+                if "envio_id" in cols_hist and envio_id_valid:
+                    campos.append("envio_id")
+                    valores.append("%s")
+                    params.append(envio_id)
 
                 if campos:
                     cur.execute(
@@ -1852,6 +1874,36 @@ class FinalizacaoCortes(ctk.CTkFrame):
             except Exception:
                 cols_hist = set()
             if cols_hist and totals["defeitos"] > 0:
+                envio_id_required = False
+                envio_id_valid = False
+                if "envio_id" in cols_hist:
+                    try:
+                        cur.execute(
+                            """
+                            SELECT is_nullable
+                              FROM information_schema.columns
+                             WHERE table_schema = %s
+                               AND table_name = 'historico_de_servico'
+                               AND column_name = 'envio_id'
+                            """,
+                            (schema,),
+                        )
+                        row_envio_nullable = cur.fetchone()
+                        envio_id_required = bool(row_envio_nullable and row_envio_nullable[0] == "NO")
+                    except Exception:
+                        envio_id_required = False
+
+                    try:
+                        cur.execute(
+                            f"SELECT 1 FROM {schema}.controle_envio_cortes WHERE id = %s",
+                            (envio_id,),
+                        )
+                        envio_id_valid = bool(cur.fetchone())
+                    except Exception:
+                        envio_id_valid = False
+
+                    if envio_id_required and not envio_id_valid:
+                        cols_hist = set()
                 data_hist = datetime.now()
                 evento = (self._tipo_servico or "").strip() or "Facção"
                 descricao = f"Defeitos pendentes - {self.retorno_selecionado.get('codigo', '')} {self.retorno_selecionado.get('descricao', '')}".strip()
@@ -1891,16 +1943,11 @@ class FinalizacaoCortes(ctk.CTkFrame):
                     campos.append("status")
                     valores.append("%s")
                     params.append(status)
-                if "envio_id" in cols_hist:
+                if "envio_id" in cols_hist and envio_id_valid:
                     try:
-                        cur.execute(
-                            f"SELECT 1 FROM {schema}.controle_envio_cortes WHERE id = %s",
-                            (envio_id,),
-                        )
-                        if cur.fetchone():
-                            campos.append("envio_id")
-                            valores.append("%s")
-                            params.append(envio_id)
+                        campos.append("envio_id")
+                        valores.append("%s")
+                        params.append(envio_id)
                     except Exception:
                         pass
 
