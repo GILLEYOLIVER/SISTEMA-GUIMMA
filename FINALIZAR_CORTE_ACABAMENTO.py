@@ -1516,6 +1516,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
                     campos.append("status")
                     valores.append("%s")
                     params.append(status)
+                if "envio_id" in cols_hist:
+                    campos.append("envio_id")
+                    valores.append("%s")
+                    params.append(envio_id)
 
                 if campos:
                     cur.execute(
@@ -1879,6 +1883,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
                     campos.append("status")
                     valores.append("%s")
                     params.append(status)
+                if "envio_id" in cols_hist:
+                    campos.append("envio_id")
+                    valores.append("%s")
+                    params.append(envio_id)
 
                 if campos:
                     cur.execute(
