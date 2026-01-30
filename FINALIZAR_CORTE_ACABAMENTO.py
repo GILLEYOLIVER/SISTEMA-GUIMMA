@@ -71,10 +71,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.obter_cores_por_tema()
 
         # Variáveis para campos editáveis
-        self.entregues_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.copias_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.defeitos_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
-        self.faltantes_vars = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.entregues_vars = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.copias_vars = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.defeitos_vars = {t: tk.StringVar(value="0") for t in self.tamanhos}
+        self.faltantes_vars = {t: tk.StringVar(value="0") for t in self.tamanhos}
 
         # Dados originais
         self.enviado_por_tam = {t: 0 for t in self.tamanhos}
@@ -168,6 +168,19 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 widget.configure(text_color=self.cor_texto)
             if hasattr(widget, "winfo_children"):
                 self._recolor_labels_frame(widget)
+
+    def _normalizar_valor(self, var, max_value):
+        raw = str(var.get())
+        digits = "".join(ch for ch in raw if ch.isdigit())
+        if raw != digits:
+            var.set(digits)
+        if digits == "":
+            return 0
+        valor = int(digits)
+        if max_value > 0 and valor > max_value:
+            valor = max_value
+            var.set(str(valor))
+        return valor
 
 
     # ----------------------------- UI -----------------------------
@@ -394,10 +407,14 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                    text_color=self.cor_texto)
             lbl_env.pack(side="left", padx=2)
 
-            ent_ent = ctk.CTkEntry(row, width=90, textvariable=self.entregues_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_ent = ctk.CTkEntry(
+                row,
+                width=90,
+                textvariable=self.entregues_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+            )
             ent_ent.pack(side="left", padx=2)
             ent_ent.bind("<KeyRelease>", self._recalcular_totais)
 
@@ -412,17 +429,25 @@ class FinalizacaoCortes(ctk.CTkFrame):
             )
             ent_cop.pack(side="left", padx=2)
 
-            ent_def = ctk.CTkEntry(row, width=80, textvariable=self.defeitos_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_def = ctk.CTkEntry(
+                row,
+                width=80,
+                textvariable=self.defeitos_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+            )
             ent_def.pack(side="left", padx=2)
             ent_def.bind("<KeyRelease>", self._recalcular_totais)
 
-            ent_fal = ctk.CTkEntry(row, width=80, textvariable=self.faltantes_vars[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
+            ent_fal = ctk.CTkEntry(
+                row,
+                width=80,
+                textvariable=self.faltantes_vars[tam],
+                fg_color=self.cor_secundaria,
+                border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+            )
             ent_fal.pack(side="left", padx=2)
             ent_fal.bind("<KeyRelease>", self._recalcular_totais)
 
@@ -522,17 +547,29 @@ class FinalizacaoCortes(ctk.CTkFrame):
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         botoes.pack(fill="x", pady=(2, 8))
 
-        ctk.CTkButton(botoes, text="Finalizar Corte Completo", width=180,
-                      command=self.finalizar_completo,
-                      fg_color=self.cor_primaria,
-                      hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
+        self.btn_finalizar = ctk.CTkButton(
+            botoes,
+            text="Finalizar Corte Completo",
+            width=180,
+            command=self.finalizar_completo,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            state="disabled",
+        )
+        self.btn_finalizar.pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Salvar Baixa Parcial", width=150,
-                      command=self.salvar_baixa_parcial,
-                      fg_color=self.cor_primaria,
-                      hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
+        self.btn_baixa_parcial = ctk.CTkButton(
+            botoes,
+            text="Salvar Baixa Parcial",
+            width=150,
+            command=self.salvar_baixa_parcial,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            state="disabled",
+        )
+        self.btn_baixa_parcial.pack(side="left", padx=4)
 
         ctk.CTkButton(botoes, text="Limpar", width=120,
                       command=self.limpar_campos,
@@ -999,19 +1036,42 @@ class FinalizacaoCortes(ctk.CTkFrame):
         total_faltante = 0
         total_regulares = 0
         valor_total = 0.0
+        completo = True
+        tem_envio = False
+        tem_informado = False
 
         for t in self.tamanhos:
             enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
-            entregue = safe_int(self.entregues_vars[t].get())
-            copias = safe_int(self.copias_vars[t].get())
-            defeito = safe_int(self.defeitos_vars[t].get())
-            faltante = safe_int(self.faltantes_vars[t].get())
+            entregue = self._normalizar_valor(self.entregues_vars[t], enviado)
+            copias = self._normalizar_valor(self.copias_vars[t], enviado)
+            defeito = self._normalizar_valor(self.defeitos_vars[t], enviado)
+            faltante = self._normalizar_valor(self.faltantes_vars[t], enviado)
 
-            # Não exceder enviado
-            if entregue + defeito + faltante > enviado:
-                max_possivel = max(0, enviado - defeito - faltante)
-                self.entregues_vars[t].set(min(entregue, max_possivel))
-                entregue = safe_int(self.entregues_vars[t].get())
+            if enviado > 0:
+                tem_envio = True
+
+            # Normaliza valores para não exceder o enviado
+            if defeito < 0:
+                defeito = 0
+                self.defeitos_vars[t].set(0)
+            if defeito > enviado:
+                defeito = enviado
+                self.defeitos_vars[t].set(enviado)
+            if faltante > enviado:
+                faltante = enviado
+                self.faltantes_vars[t].set(enviado)
+
+            if entregue < 0:
+                entregue = 0
+                self.entregues_vars[t].set(0)
+
+            if entregue + defeito > enviado:
+                entregue = max(enviado - defeito, 0)
+                self.entregues_vars[t].set(entregue)
+
+            # Faltante sempre recalculado com base em Enviado, Entregue e Defeito
+            faltante = max(enviado - entregue - defeito, 0)
+            self.faltantes_vars[t].set(faltante)
 
             # Cópias não excedem entregue
             if copias > entregue:
@@ -1023,6 +1083,12 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
             self.grade_widgets[t]["regulares"].configure(text=str(reg))
             self.grade_widgets[t]["subtotal"].configure(text=fmt_moeda(subtotal))
+
+            informado = entregue + defeito + faltante
+            if informado > 0:
+                tem_informado = True
+            if informado != enviado:
+                completo = False
 
             total_entregue += entregue
             total_copias += copias
@@ -1045,6 +1111,19 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.lbl_total_faltante.configure(text=str(total_faltante))
         self.lbl_total_regulares.configure(text=str(total_regulares))
         self.lbl_valor_total.configure(text=fmt_moeda(valor_total))
+
+        try:
+            if tem_envio and completo:
+                self.btn_finalizar.configure(state="normal")
+                self.btn_baixa_parcial.configure(state="disabled")
+            elif tem_informado:
+                self.btn_finalizar.configure(state="disabled")
+                self.btn_baixa_parcial.configure(state="normal")
+            else:
+                self.btn_finalizar.configure(state="disabled")
+                self.btn_baixa_parcial.configure(state="disabled")
+        except Exception:
+            pass
 
     # ----------------------------- Relatório -----------------------------
     def abrir_relatorio(self):
