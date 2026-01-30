@@ -485,6 +485,7 @@ CREATE TABLE IF NOT EXISTS opera.controle_envio_cortes (
 -- [TABELA 22] envios_cortes - Envios de cortes para facções
 CREATE TABLE IF NOT EXISTS opera.envios_cortes (
     id SERIAL PRIMARY KEY,
+    remessa_id UUID,
     data_envio DATE NOT NULL,
     hora_envio TIME,
     prestador_id INTEGER REFERENCES opera.cadastro_faccoes(id),

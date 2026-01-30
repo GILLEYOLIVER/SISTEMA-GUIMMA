@@ -145,16 +145,16 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Variáveis da grade
         # Quantidades originais informadas pelo usuário (por tamanho)
-        self.quantidades = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.quantidades = {t: tk.StringVar(value="0") for t in self.tamanhos}
         # Número de cópias retiradas diretamente do corte para cada tamanho (piloto automático)
         # Esses valores serão subtraídos das quantidades enviadas e somados aos pilotos
-        self.copias_do_corte = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.copias_do_corte = {t: tk.StringVar(value="0") for t in self.tamanhos}
         # Pilotos informados manualmente via o campo "Registrar".
         # Por simplicidade, trataremos a coluna "Pilotos" como editável. O valor exibido representa
         # o número total de pilotos que serão enviados deste tamanho. Quando o usuário ajusta o
         # valor de pilotos, o sistema irá recalcular a quantidade de cópias restantes do corte.
         # `pilotos` armazena o valor mostrado no campo da grade (pilotos a serem enviados).
-        self.pilotos = {t: ctk.IntVar(value=0) for t in self.tamanhos}
+        self.pilotos = {t: tk.StringVar(value="0") for t in self.tamanhos}
         # Armazenamos o número original de cópias digitadas para cada tamanho.
         # Este valor é usado para recalcular as cópias restantes quando o número de pilotos é alterado.
         self.copias_original = {t: 0 for t in self.tamanhos}
@@ -166,7 +166,7 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Piloto (tam + qtd) - usado para registrar pilotos extras via o painel lateral
         self.piloto_tam_var = tk.StringVar(value=self.tamanhos[0])
-        self.piloto_qtd_var = ctk.IntVar(value=0)
+        self.piloto_qtd_var = tk.StringVar(value="0")
 
         # Esquema de cadastro_de_corte detectado
         self._corte_schema = None
@@ -1040,8 +1040,8 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Limpa quantidades enviadas
         for tam in self.tamanhos:
-            self.quantidades[tam].set(0)
-            self.pilotos[tam].set(0)
+            self.quantidades[tam].set("0")
+            self.pilotos[tam].set("0")
             self.valores[tam].set("")
 
         self._recalcular()
@@ -1115,6 +1115,21 @@ class EnvioCortes(ctk.CTkFrame):
             # self.quantidades[tam].set(...)  <-- PROIBIDO aqui
 
             # recalcula totais/valores (sem travar enviar)
+            # Valor digitado no campo de cópias
+            new_copias = safe_int(self.copias_do_corte[tam].get())
+            # Armazena o valor original para referência futura
+            self.copias_original[tam] = new_copias
+            # Número atual de pilotos definidos para esse tamanho
+            current_pilotos = safe_int(self.pilotos[tam].get())
+            # Cálculo do saldo de cópias restantes (não negativas)
+            leftover = max(self.copias_original[tam] - current_pilotos, 0)
+            # Atualiza o campo de cópias com o saldo
+            self.copias_do_corte[tam].set(str(leftover))
+        except Exception:
+            # Se ocorrer algum erro de conversão, mantenha o valor atual
+            pass
+        # Recalcular totais após ajuste
+        try:
             self._recalcular()
 
         except Exception:
@@ -1134,6 +1149,19 @@ class EnvioCortes(ctk.CTkFrame):
                 self.pilotos[tam].set(0)
 
             # NÃO mexer em self.copias_do_corte[tam] aqui
+            # Número de pilotos digitado
+            new_pilotos = safe_int(self.pilotos[tam].get())
+            # Valor original de cópias informado anteriormente (se não existir, assume 0)
+            orig_copies = self.copias_original.get(tam, 0)
+            # Recalcula o saldo de cópias restantes
+            leftover = max(orig_copies - new_pilotos, 0)
+            # Atualiza o campo de cópias com o saldo recalculado
+            self.copias_do_corte[tam].set(str(leftover))
+        except Exception:
+            # Se ocorrer algum erro de conversão, ignore
+            pass
+        # Recalcular totais após ajuste
+        try:
             self._recalcular()
 
         except Exception:
@@ -1196,9 +1224,9 @@ class EnvioCortes(ctk.CTkFrame):
             current = safe_int(self.pilotos[tam].get())
         except Exception:
             current = 0
-        self.pilotos[tam].set(current + qtd)
+        self.pilotos[tam].set(str(current + qtd))
         # Limpa o campo de entrada após registrar
-        self.piloto_qtd_var.set(0)
+        self.piloto_qtd_var.set("0")
         # Atualiza o saldo de cópias restantes considerando o novo valor de pilotos
         try:
             self._on_pilotos_edit(tam)
@@ -1322,11 +1350,11 @@ class EnvioCortes(ctk.CTkFrame):
         self.ordem_entry.configure(state="disabled")
         for tam in self.tamanhos:
             # Zera todas as quantidades informadas
-            self.quantidades[tam].set(0)
+            self.quantidades[tam].set("0")
             # Zera as cópias retiradas do corte
-            self.copias_do_corte[tam].set(0)
+            self.copias_do_corte[tam].set("0")
             # Zera o total de pilotos visíveis
-            self.pilotos[tam].set(0)
+            self.pilotos[tam].set("0")
             # Zera o número original de cópias digitadas
             self.copias_original[tam] = 0
             # Zera pilotos manuais (mantém compatibilidade, embora não seja usado)
@@ -1347,7 +1375,7 @@ class EnvioCortes(ctk.CTkFrame):
         self.piloto_resumo_lbl.configure(text="Nenhum.")
         # Zera a quantidade de piloto a registrar
         try:
-            self.piloto_qtd_var.set(0)
+            self.piloto_qtd_var.set("0")
         except Exception:
             pass
         # Deseleciona valor único e restaura campos de valor unitário
@@ -2082,7 +2110,7 @@ class EnvioCortes(ctk.CTkFrame):
                         # ``copias_original`` armazena o número de cópias informadas pelo usuário para cada tamanho.
                         # Se o usuário não informou cópias, o valor será 0.
                         orig = int(self.copias_original.get(t, 0)) if isinstance(self.copias_original, dict) else 0
-                        pil = int(self.pilotos[t].get())
+                        pil = safe_int(self.pilotos[t].get())
                         copias_orig[t] = orig
                         # Cópi as remanescentes (não utilizadas como pilotos) não podem ser negativas
                         leftover_copies[t] = max(orig - pil, 0)
@@ -2102,6 +2130,7 @@ class EnvioCortes(ctk.CTkFrame):
                         cur.execute(f"""
                             CREATE TABLE {get_schema()}.envios_cortes (
                                 id SERIAL PRIMARY KEY,
+                                remessa_id UUID,
                                 data_envio DATE NOT NULL,
                                 hora_envio TIME,
                                 prestador_id INTEGER REFERENCES {get_schema()}.cadastro_faccoes(id),
@@ -2204,6 +2233,15 @@ class EnvioCortes(ctk.CTkFrame):
                                 else:
                                     # fallback
                                     cur.execute(f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN {col} TEXT")
+                        cur.execute("""
+                            SELECT column_name
+                            FROM information_schema.columns
+                            WHERE table_schema = %s AND table_name = 'envios_cortes' AND column_name = 'remessa_id'
+                        """, (get_schema(),))
+                        if not cur.fetchone():
+                            cur.execute(
+                                f"ALTER TABLE {get_schema()}.envios_cortes ADD COLUMN remessa_id UUID"
+                            )
 
                     # Inserir dados
                     data_envio = datetime.now().date()
@@ -2253,9 +2291,11 @@ class EnvioCortes(ctk.CTkFrame):
                     corte_ordem = (self.ordem_entry.get() or "").strip()
                     corte_codigo = (self.codigo_entry.get() or "").strip()
                     corte_desc = (self.descricao_entry.get() or "").strip()
+                    import uuid
+                    remessa_id = str(uuid.uuid4())
                     cur.execute(f"""
                         INSERT INTO {get_schema()}.envios_cortes (
-                            data_envio, hora_envio, prestador_id, tipo_servico, corte_id, ordem_corte, codigo_corte, descricao_corte,
+                            remessa_id, data_envio, hora_envio, prestador_id, tipo_servico, corte_id, ordem_corte, codigo_corte, descricao_corte,
                             qtd_pp, qtd_p, qtd_m, qtd_g, qtd_gg, qtd_g1, qtd_g2, qtd_g3,
                             copias_pp, copias_p, copias_m, copias_g, copias_gg, copias_g1, copias_g2, copias_g3,
                             piloto_pp, piloto_p, piloto_m, piloto_g, piloto_gg, piloto_g1, piloto_g2, piloto_g3,
@@ -2263,7 +2303,7 @@ class EnvioCortes(ctk.CTkFrame):
                             aviamentos, outros, observacoes, tel_encarregado, tel_acabamento, previsao_entrega,
                             total_pecas, total_pilotos, valor_total_envio, resumo_pilotos, copias_do_corte
                         ) VALUES (
-                            %s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
                             %s, %s, %s, %s, %s, %s, %s, %s,
@@ -2274,6 +2314,7 @@ class EnvioCortes(ctk.CTkFrame):
                         RETURNING id
                     """,
                                 (
+                                    remessa_id,
                                     data_envio,
                                     datetime.now().time(),
                                     self._prestador_id,
@@ -2317,6 +2358,7 @@ class EnvioCortes(ctk.CTkFrame):
             messagebox.showinfo("Sucesso", "Envio confirmado e saldo debitado.")
             self._atualizar_saldo_pos_envio(self.corte_selecionado)
             self._recarregar_lista_cortes()
+            self._limpar()
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao confirmar envio: {e}")
