@@ -338,7 +338,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
 
         ctk.CTkLabel(filt, text="Buscar:").grid(row=0, column=6, padx=(8, 4), pady=8, sticky="e")
         ent = ctk.CTkEntry(filt, width=280, textvariable=self.busca_var,
-                           placeholder_text="código / descrição / destino / costureira")
+                           placeholder_text="código / descrição / destino / prestador")
         ent.grid(row=0, column=7, padx=4, pady=8)
         ent.bind("<Return>", lambda e: self._search())
 
@@ -387,18 +387,18 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                        "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL", "PILOTOS", "V.PEÇA", "V.TOTAL", "OBS"]
             widths = [80, 110, 80, 110, 260, 110, 140, 60, 60, 60, 60, 60, 60, 60, 60, 80, 110, 90, 100, 240]
         elif key == "ret":
-            cols = ("retorno_id", "envio_id", "data", "hora", "codigo", "descricao", "costureira",
+            cols = ("retorno_id", "envio_id", "data", "hora", "codigo", "descricao", "prestador",
                     "pp", "p", "m", "g", "gg", "g1", "g2", "g3",
                     "pilotos", "aviamentos", "outros", "obs")
-            headers = ["RETORNO", "ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "COSTUREIRA",
+            headers = ["RETORNO", "ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR",
                        "PP", "P", "M", "G", "GG", "G1", "G2", "G3",
                        "PILOTOS", "AVIAMENTOS", "OUTROS", "OBS"]
             widths = [90, 80, 110, 80, 110, 240, 160, 60, 60, 60, 60, 60, 60, 60, 60, 80, 160, 160, 240]
         elif key == "fin":
-            cols = ("data", "codigo", "descricao", "costureira",
+            cols = ("data", "codigo", "descricao", "prestador",
                     "qtd_pp", "qtd_p", "qtd_m", "qtd_g", "qtd_gg", "qtd_g1", "qtd_g2", "qtd_g3",
                     "valor_peca", "status", "obs")
-            headers = ["DATA", "CÓDIGO", "DESCRIÇÃO", "COSTUREIRA",
+            headers = ["DATA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR",
                        "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "V.PEÇA", "STATUS", "OBS"]
             widths = [110, 110, 260, 160, 60, 60, 60, 60, 60, 60, 60, 60, 90, 110, 260]
         elif key == "int":
@@ -556,6 +556,13 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                 ORDER BY {env_date_col or 'id'} DESC
             """, params)
 
+            prestador_lookup = {}
+            try:
+                prestadores = _select_dicts(f"SELECT id, nome FROM {schema}.cadastro_faccoes")
+                prestador_lookup = {p["id"]: p["nome"] for p in prestadores}
+            except Exception:
+                prestador_lookup = {}
+
             # 3) BUSCAR RETORNOS (cabeçalho)
             try:
                 ret = _select_dicts(f"""
@@ -591,8 +598,10 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             desc_col = _pick(env_cols, "descricao_corte", "descricao")
             servico_col = _pick(env_cols, "tipo_servico", "servico")
             destino_col = _pick(env_cols, "destino", "prestador", "faccao", "costureira")
+            prestador_id_col = _pick(env_cols, "prestador_id")
             pilotos_col = _pick(env_cols, "total_pilotos", "pilotos", "resumo_pilotos")
-            valor_peca_col = _pick(env_cols, "valor_total_envio", "valor_total", "valor_peca", "valor_unitario")
+            valor_total_envio_col = _pick(env_cols, "valor_total_envio", "valor_total")
+            valor_peca_col = _pick(env_cols, "valor_peca", "valor_unitario")
             envio_id_col = _pick(env_cols, "id")
             hora_envio_col = _pick(env_cols, "hora_envio")
             qtd_pp_col = _pick(env_cols, "qtd_pp", "pp")
@@ -606,6 +615,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
 
             env_rows = []
             for e in env:
+                prestador_nome = ""
+                if prestador_id_col and safe_get(e, prestador_id_col) in prestador_lookup:
+                    prestador_nome = prestador_lookup.get(safe_get(e, prestador_id_col), "")
                 row = {
                     "envio_id": safe_get(e, envio_id_col, ""),
                     "data_envio": safe_get(e, env_date_col, ""),
@@ -613,7 +625,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     "codigo": safe_get(e, codigo_col, ""),
                     "descricao": safe_get(e, desc_col, ""),
                     "servico": safe_get(e, servico_col, ""),
-                    "destino": safe_get(e, destino_col, ""),
+                    "destino": prestador_nome or safe_get(e, destino_col, ""),
                     "pp": safe_get(e, qtd_pp_col, 0),
                     "p": safe_get(e, qtd_p_col, 0),
                     "m": safe_get(e, qtd_m_col, 0),
@@ -625,7 +637,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     "total": safe_get(e, "total_pecas", safe_get(e, "total", None)),
                     "pilotos": safe_get(e, pilotos_col, ""),
                     "valor_peca": safe_get(e, valor_peca_col, ""),
-                    "valor_total": safe_get(e, "valor_total_envio", safe_get(e, "valor_total", "")),
+                    "valor_total": safe_get(e, valor_total_envio_col, ""),
                     "obs": safe_get(e, "observacoes", "") or safe_get(e, "observacao", "") or safe_get(e, "obs", ""),
                 }
                 if row["total"] in (None, ""):
@@ -639,6 +651,11 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                         + safe_get(e, qtd_g2_col, 0)
                         + safe_get(e, qtd_g3_col, 0)
                     )
+                if not row["valor_peca"] and row["total"]:
+                    try:
+                        row["valor_peca"] = round(float(row["valor_total"] or 0) / float(row["total"]), 2)
+                    except Exception:
+                        row["valor_peca"] = ""
                 if _filtra_termo(row, "codigo", "descricao", "destino", "servico"):
                     env_rows.append(row)
 
@@ -667,6 +684,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                 envio_id = safe_get(r, ret_envio_col, "")
                 tamanhos = detalhe_por_envio.get(envio_id, {"pp": 0, "p": 0, "m": 0, "g": 0, "gg": 0, "g1": 0, "g2": 0, "g3": 0})
                 envio_match = next((x for x in env if safe_get(x, envio_id_col) == envio_id), {})
+                prestador_nome = ""
+                if prestador_id_col and safe_get(envio_match, prestador_id_col) in prestador_lookup:
+                    prestador_nome = prestador_lookup.get(safe_get(envio_match, prestador_id_col), "")
                 row = {
                     "retorno_id": safe_get(r, ret_id_col, ""),
                     "envio_id": envio_id,
@@ -674,7 +694,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     "hora": safe_get(r, ret_hora_col, ""),
                     "codigo": safe_get(envio_match, codigo_col, ""),
                     "descricao": safe_get(envio_match, desc_col, ""),
-                    "costureira": safe_get(envio_match, destino_col, ""),
+                    "prestador": prestador_nome or safe_get(envio_match, destino_col, ""),
                     "pp": tamanhos.get("pp", 0),
                     "p": tamanhos.get("p", 0),
                     "m": tamanhos.get("m", 0),
@@ -688,13 +708,13 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     "outros": safe_get(r, ret_outros_col, ""),
                     "obs": safe_get(r, ret_obs_col, ""),
                 }
-                if _filtra_termo(row, "codigo", "descricao", "costureira"):
+                if _filtra_termo(row, "codigo", "descricao", "prestador"):
                     ret_rows.append(row)
 
             fin_date_col = _pick(fin_cols, "data_finalizacao", "data", "data_final")
             fin_codigo_col = _pick(fin_cols, "codigo_corte", "codigo")
             fin_desc_col = _pick(fin_cols, "descricao_corte", "descricao")
-            fin_cost_col = _pick(fin_cols, "costureira", "prestador", "faccao")
+            fin_cost_col = _pick(fin_cols, "prestador", "faccao", "costureira")
             fin_valor_peca_col = _pick(fin_cols, "valor_peca", "valor_unitario")
             status_col = _pick(fin_cols, "status")
             fin_envio_col = _pick(fin_cols, "envio_id", "corte_id")
@@ -705,7 +725,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     "data": safe_get(f, fin_date_col, ""),
                     "codigo": safe_get(f, fin_codigo_col, ""),
                     "descricao": safe_get(f, fin_desc_col, ""),
-                    "costureira": safe_get(f, fin_cost_col, ""),
+                    "prestador": safe_get(f, fin_cost_col, ""),
                     "qtd_pp": safe_get(f, "qtd_pp", safe_get(f, "pp", 0)),
                     "qtd_p": safe_get(f, "qtd_p", safe_get(f, "p", 0)),
                     "qtd_m": safe_get(f, "qtd_m", safe_get(f, "m", 0)),
@@ -718,7 +738,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     "status": safe_get(f, status_col, ""),
                     "obs": safe_get(f, "observacao", "") or safe_get(f, "obs", ""),
                 }
-                if _filtra_termo(row, "codigo", "descricao", "costureira"):
+                if _filtra_termo(row, "codigo", "descricao", "prestador"):
                     fin_rows.append(row)
 
             # 7) JOIN interno para a aba Interna
@@ -767,6 +787,12 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                             + safe_get(e, qtd_g2_col, 0)
                             + safe_get(e, qtd_g3_col, 0)
                         )
+                    if not row["valor_peca_env"] and row["total_env"]:
+                        try:
+                            total_envio = safe_get(e, valor_total_envio_col, 0)
+                            row["valor_peca_env"] = round(float(total_envio or 0) / float(row["total_env"]), 2)
+                        except Exception:
+                            row["valor_peca_env"] = ""
                     int_rows.append(row)
 
             # 7) ATUALIZA TABELA NA TELA
@@ -843,12 +869,12 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                               "OBS"]))
         if getattr(self, "print_ret_var", None) and self.print_ret_var.get():
             selected.append(("Retorno", self._cache.get("ret", []), list(self.cols_ret),
-                             ["RETORNO", "ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "COSTUREIRA",
+                             ["RETORNO", "ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR",
                               "PP", "P", "M", "G", "GG", "G1", "G2", "G3",
                               "PILOTOS", "AVIAMENTOS", "OUTROS", "OBS"]))
         if getattr(self, "print_fin_var", None) and self.print_fin_var.get():
             selected.append(("Finalizados", self._cache.get("fin", []), list(self.cols_fin),
-                             ["DATA", "CÓDIGO", "DESCRIÇÃO", "COSTUREIRA",
+                             ["DATA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR",
                               "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "V.PEÇA", "STATUS", "OBS"]))
 
         if not selected:
