@@ -451,35 +451,148 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             return
         try:
             from reportlab.lib.pagesizes import A4
-            from reportlab.pdfgen import canvas
+            from reportlab.lib import colors
+            from reportlab.lib.units import mm
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, HRFlowable
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.enums import TA_LEFT, TA_RIGHT
         except Exception:
             messagebox.showwarning("Aviso", "reportlab não está disponível para gerar a ficha.")
             return
         defeito_id, prestador, codigo, descricao, tamanho, qtd, origem, status, data_envio, data_retorno = item
         filename = f"ficha_defeito_{defeito_id}.pdf"
-        c = canvas.Canvas(filename, pagesize=A4)
-        width, height = A4
-        y = height - 50
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(40, y, "Ficha de Retrabalho de Defeitos")
-        y -= 30
-        c.setFont("Helvetica", 11)
-        for label, value in [
+
+        styles = getSampleStyleSheet()
+        style_title = ParagraphStyle(
+            "DefeitoTitle",
+            parent=styles["Heading1"],
+            fontName="Helvetica-Bold",
+            fontSize=13,
+            leading=15,
+            alignment=TA_LEFT,
+            spaceAfter=2,
+        )
+        style_sub = ParagraphStyle(
+            "DefeitoSub",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#444444"),
+            alignment=TA_LEFT,
+        )
+        style_value = ParagraphStyle(
+            "DefeitoValue",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=9,
+            leading=11,
+            textColor=colors.HexColor("#222222"),
+        )
+        style_total = ParagraphStyle(
+            "DefeitoTotal",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=10,
+            leading=12,
+            alignment=TA_RIGHT,
+            textColor=colors.HexColor("#111111"),
+        )
+
+        def _p(v):
+            return str(v).strip() if v not in (None, "") else "-"
+
+        valor_peca = 0.0
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                f"SELECT valor_peca FROM {get_schema()}.defeitos_envios WHERE id = %s",
+                (defeito_id,),
+            )
+            row = cur.fetchone()
+            if row:
+                valor_peca = float(row[0] or 0.0)
+            conn.close()
+        except Exception:
+            valor_peca = 0.0
+
+        total = float(valor_peca or 0.0) * float(qtd or 0)
+
+        doc = SimpleDocTemplate(
+            filename,
+            pagesize=A4,
+            leftMargin=16 * mm,
+            rightMargin=16 * mm,
+            topMargin=14 * mm,
+            bottomMargin=14 * mm,
+            title="Ficha de Retrabalho de Defeitos",
+            author="Ópera Fashion",
+        )
+
+        elements = [
+            Paragraph("FICHA DE RETRABALHO DE DEFEITOS", style_title),
+            Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", style_sub),
+            HRFlowable(color=colors.HexColor("#D0D0D0")),
+            Spacer(1, 4),
+        ]
+
+        dados_left = [
             ("ID", defeito_id),
             ("Prestador", prestador),
-            ("Código", codigo),
-            ("Descrição", descricao),
-            ("Tamanho", tamanho),
-            ("Quantidade", qtd),
             ("Origem", origem),
             ("Status", status),
+        ]
+        dados_right = [
+            ("Código", codigo),
+            ("Descrição", descricao),
             ("Envio", data_envio),
             ("Retorno", data_retorno),
-        ]:
-            c.drawString(40, y, f"{label}: {value}")
-            y -= 18
-        c.showPage()
-        c.save()
+        ]
+
+        def _kv_table(rows_left, rows_right):
+            left = [Paragraph(f"{k}: <b>{_p(v)}</b>", style_value) for k, v in rows_left]
+            right = [Paragraph(f"{k}: <b>{_p(v)}</b>", style_value) for k, v in rows_right]
+            t = Table([[left, right]], colWidths=[(doc.width * 0.5) - 4, (doc.width * 0.5) - 4])
+            t.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("BOX", (0, 0), (0, 0), 0.6, colors.HexColor("#D0D0D0")),
+                ("BOX", (1, 0), (1, 0), 0.6, colors.HexColor("#D0D0D0")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FAFAFA")),
+            ]))
+            return t
+
+        elements.append(_kv_table(dados_left, dados_right))
+        elements.append(Spacer(1, 6))
+
+        itens_table = Table(
+            [
+                ["Tamanho", "Quantidade", "Valor/Peça", "Subtotal"],
+                [_p(tamanho), _p(qtd), f"R$ {valor_peca:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                 f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")],
+            ],
+            colWidths=[doc.width * 0.2, doc.width * 0.2, doc.width * 0.3, doc.width * 0.3],
+        )
+        itens_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D0D0D0")),
+            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FAFAFA")),
+        ]))
+        elements.append(itens_table)
+        elements.append(Spacer(1, 6))
+
+        elements.append(Paragraph(f"Total: R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                                  style_total))
+
+        doc.build(elements)
         messagebox.showinfo("Sucesso", f"Ficha gerada: {filename}")
 
 
