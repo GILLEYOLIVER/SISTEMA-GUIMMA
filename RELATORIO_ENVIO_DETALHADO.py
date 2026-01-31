@@ -320,16 +320,26 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         self.ini_var = ctk.StringVar(value=_first_day(hoje).strftime("%Y-%m-%d"))
         self.fim_var = ctk.StringVar(value=_last_day(hoje).strftime("%Y-%m-%d"))
         self.busca_var = ctk.StringVar(value="")
+        self.periodo_var = ctk.StringVar(value="Este mês")
 
         ctk.CTkLabel(filt, text="De:").grid(row=0, column=0, padx=(8, 4), pady=8, sticky="e")
         ctk.CTkEntry(filt, width=120, textvariable=self.ini_var).grid(row=0, column=1, padx=4, pady=8)
         ctk.CTkLabel(filt, text="Até:").grid(row=0, column=2, padx=(8, 4), pady=8, sticky="e")
         ctk.CTkEntry(filt, width=120, textvariable=self.fim_var).grid(row=0, column=3, padx=4, pady=8)
 
-        ctk.CTkLabel(filt, text="Buscar:").grid(row=0, column=4, padx=(8, 4), pady=8, sticky="e")
+        ctk.CTkLabel(filt, text="Período:").grid(row=0, column=4, padx=(8, 4), pady=8, sticky="e")
+        periodo_menu = ctk.CTkOptionMenu(
+            filt,
+            values=["Este mês", "Últimos 30 dias", "Todos os períodos"],
+            variable=self.periodo_var,
+            command=lambda _: self._apply_periodo()
+        )
+        periodo_menu.grid(row=0, column=5, padx=4, pady=8)
+
+        ctk.CTkLabel(filt, text="Buscar:").grid(row=0, column=6, padx=(8, 4), pady=8, sticky="e")
         ent = ctk.CTkEntry(filt, width=280, textvariable=self.busca_var,
                            placeholder_text="código / descrição / destino / costureira")
-        ent.grid(row=0, column=5, padx=4, pady=8)
+        ent.grid(row=0, column=7, padx=4, pady=8)
         ent.bind("<Return>", lambda e: self._search())
 
         ctk.CTkButton(filt, text="🔍 Buscar", width=120, command=self._search).grid(
@@ -441,13 +451,29 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         ctk.CTkButton(btns, text="🖨️ Imprimir (seções marcadas)", command=self._report_html).grid(row=0, column=1,
                                                                                                   padx=(0, 8))
 
-    def _fill_table(self, data):
+    def _apply_periodo(self):
+        hoje = date.today()
+        if self.periodo_var.get() == "Todos os períodos":
+            self.ini_var.set("")
+            self.fim_var.set("")
+            return
+        if self.periodo_var.get() == "Últimos 30 dias":
+            ini = hoje - timedelta(days=30)
+            self.ini_var.set(ini.strftime("%Y-%m-%d"))
+            self.fim_var.set(hoje.strftime("%Y-%m-%d"))
+            return
+        ini = hoje.replace(day=1)
+        fim = (ini.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        self.ini_var.set(ini.strftime("%Y-%m-%d"))
+        self.fim_var.set(fim.strftime("%Y-%m-%d"))
+
+    def _fill_table(self, data_int, data_env, data_ret, data_fin):
         """Preenche as tabelas com os dados obtidos da pesquisa"""
         self._cache = {
-            "interna": data,
-            "env": data,
-            "ret": data,
-            "fin": data,
+            "interna": data_int,
+            "env": data_env,
+            "ret": data_ret,
+            "fin": data_fin,
             "filtros": {
                 "ini": self.ini_var.get(),
                 "fim": self.fim_var.get(),
@@ -463,23 +489,23 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     tree.delete(item)
 
         # Preencher cada tabela com os dados apropriados
-        for row in data:
+        for row in data_int:
             # Tabela Interna
             if hasattr(self, "tree_int"):
                 values = [row.get(col, "") for col in self.cols_int]
                 self.tree_int.insert("", "end", values=values)
 
-            # Tabela Enviados
+        for row in data_env:
             if hasattr(self, "tree_env"):
                 values = [row.get(col, "") for col in self.cols_env]
                 self.tree_env.insert("", "end", values=values)
 
-            # Tabela Retorno
+        for row in data_ret:
             if hasattr(self, "tree_ret"):
                 values = [row.get(col, "") for col in self.cols_ret]
                 self.tree_ret.insert("", "end", values=values)
 
-            # Tabela Finalizados
+        for row in data_fin:
             if hasattr(self, "tree_fin"):
                 values = [row.get(col, "") for col in self.cols_fin]
                 self.tree_fin.insert("", "end", values=values)
@@ -497,12 +523,33 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             def safe_get(row: dict, key: str, default=""):
                 return row[key] if key in row else default
 
+            def _filtra_termo(row: dict, *keys):
+                termo = (self.busca_var.get() or "").strip().lower()
+                if not termo:
+                    return True
+                for k in keys:
+                    val = str(row.get(k, "") or "").lower()
+                    if termo in val:
+                        return True
+                return False
+
+            ini = _dt(self.ini_var.get())
+            fim = _dt(self.fim_var.get())
+            env_date_col = _pick(env_cols, "data_envio", "data", "data_saida", "data_envio_corte")
+            env_date_sql = _normalize_date_sql(env_date_col) if env_date_col else "NULL"
+            date_filter = ""
+            params = []
+            if ini and fim and env_date_col:
+                date_filter = f"WHERE {env_date_sql} BETWEEN %s AND %s"
+                params.extend([ini, fim])
+
             # 2) BUSCAR CONTROLE_ENVIO_CORTES
             env = _select_dicts(f"""
                 SELECT *
                 FROM {schema}.controle_envio_cortes
-                ORDER BY data_envio DESC, id DESC
-            """)
+                {date_filter}
+                ORDER BY {env_date_col or 'id'} DESC
+            """, params)
 
             # 3) BUSCAR ACABAMENTO
             try:
@@ -524,25 +571,23 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             except Exception:
                 fin = []
 
-            # 5) JOIN
-            joined = []
+            # 5) Mapeamentos
+            codigo_col = _pick(env_cols, "codigo_corte", "codigo", "codigo_modelo")
+            desc_col = _pick(env_cols, "descricao_corte", "descricao")
+            servico_col = _pick(env_cols, "tipo_servico", "servico")
+            destino_col = _pick(env_cols, "destino", "prestador", "faccao", "costureira")
+            pilotos_col = _pick(env_cols, "pilotos")
+            valor_peca_col = _pick(env_cols, "valor_peca", "valor_unitario")
+            corte_id_col = _pick(env_cols, "corte_id", "id")
+
+            env_rows = []
             for e in env:
-                corte_id = safe_get(e, "corte_id")
-
-                aca_match = next((x for x in aca if safe_get(x, "corte_id") == corte_id), {})
-                fin_match = next((x for x in fin if safe_get(x, "corte_id") == corte_id), {})
-
                 row = {
-                    # Campos do banco
-                    "id": safe_get(e, "id"),
-                    "data_envio": safe_get(e, "data_envio"),
-                    "servico": safe_get(e, "servico"),
-                    "ordem_corte": safe_get(e, "ordem_corte"),
-                    "codigo_corte": safe_get(e, "codigo_corte"),
-                    "descricao_corte": safe_get(e, "descricao_corte"),
-                    "destino": safe_get(e, "destino"),
-                    "costureira": safe_get(e, "costureira"),
-                    "faccao": safe_get(e, "faccao"),
+                    "data_envio": safe_get(e, env_date_col, ""),
+                    "codigo": safe_get(e, codigo_col, ""),
+                    "descricao": safe_get(e, desc_col, ""),
+                    "servico": safe_get(e, servico_col, ""),
+                    "destino": safe_get(e, destino_col, ""),
                     "pp": safe_get(e, "pp", 0),
                     "p": safe_get(e, "p", 0),
                     "m": safe_get(e, "m", 0),
@@ -551,26 +596,128 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     "g1": safe_get(e, "g1", 0),
                     "g2": safe_get(e, "g2", 0),
                     "g3": safe_get(e, "g3", 0),
-
-                    # acabamento
-                    "acabamento_obs": safe_get(aca_match, "observacao", ""),
-
-                    # finalizados
-                    "finalizado_data": safe_get(fin_match, "data_finalizacao", ""),
-
-                    # Campos do layout
-                    "r_pil": "",
-                    "c_pil": "",
-                    "r_pilot": "",
-                    "c_pilot": "",
-                    "r_pil2": "",
-                    "c_pil2": "",
+                    "total": safe_get(e, "total", None),
+                    "pilotos": safe_get(e, pilotos_col, ""),
+                    "valor_peca": safe_get(e, valor_peca_col, ""),
+                    "valor_total": safe_get(e, "valor_total", ""),
+                    "obs": safe_get(e, "observacao", "") or safe_get(e, "obs", ""),
                 }
+                if row["total"] in (None, ""):
+                    row["total"] = (
+                        safe_get(e, "pp", 0)
+                        + safe_get(e, "p", 0)
+                        + safe_get(e, "m", 0)
+                        + safe_get(e, "g", 0)
+                        + safe_get(e, "gg", 0)
+                        + safe_get(e, "g1", 0)
+                        + safe_get(e, "g2", 0)
+                        + safe_get(e, "g3", 0)
+                    )
+                if _filtra_termo(row, "codigo", "descricao", "destino", "servico"):
+                    env_rows.append(row)
 
-                joined.append(row)
+            aca_date_col = _pick(aca_cols, "data_retorno", "data_entrada", "data", "data_retorno_corte")
+            envio_col = _pick(aca_cols, "envio_id", "corte_id")
+            aca_codigo_col = _pick(aca_cols, "codigo_corte", "codigo")
+            aca_desc_col = _pick(aca_cols, "descricao_corte", "descricao")
+            aca_cost_col = _pick(aca_cols, "costureira", "prestador", "faccao")
+            aca_pil_col = _pick(aca_cols, "pilotos")
 
-            # 6) ATUALIZA TABELA NA TELA
-            self._fill_table(joined)
+            ret_rows = []
+            for a in aca:
+                row = {
+                    "data": safe_get(a, aca_date_col, ""),
+                    "envio_id": safe_get(a, envio_col, ""),
+                    "codigo": safe_get(a, aca_codigo_col, ""),
+                    "descricao": safe_get(a, aca_desc_col, ""),
+                    "costureira": safe_get(a, aca_cost_col, ""),
+                    "pilotos": safe_get(a, aca_pil_col, ""),
+                    "aviamentos": safe_get(a, "aviamentos", ""),
+                    "outros": safe_get(a, "outros", ""),
+                    "obs": safe_get(a, "observacao", "") or safe_get(a, "obs", ""),
+                }
+                if _filtra_termo(row, "codigo", "descricao", "costureira"):
+                    ret_rows.append(row)
+
+            fin_date_col = _pick(fin_cols, "data_finalizacao", "data", "data_final")
+            fin_codigo_col = _pick(fin_cols, "codigo_corte", "codigo")
+            fin_desc_col = _pick(fin_cols, "descricao_corte", "descricao")
+            fin_cost_col = _pick(fin_cols, "costureira", "prestador", "faccao")
+            fin_valor_peca_col = _pick(fin_cols, "valor_peca", "valor_unitario")
+            status_col = _pick(fin_cols, "status")
+
+            fin_rows = []
+            for f in fin:
+                row = {
+                    "data": safe_get(f, fin_date_col, ""),
+                    "codigo": safe_get(f, fin_codigo_col, ""),
+                    "descricao": safe_get(f, fin_desc_col, ""),
+                    "costureira": safe_get(f, fin_cost_col, ""),
+                    "qtd_pp": safe_get(f, "qtd_pp", safe_get(f, "pp", 0)),
+                    "qtd_p": safe_get(f, "qtd_p", safe_get(f, "p", 0)),
+                    "qtd_m": safe_get(f, "qtd_m", safe_get(f, "m", 0)),
+                    "qtd_g": safe_get(f, "qtd_g", safe_get(f, "g", 0)),
+                    "qtd_gg": safe_get(f, "qtd_gg", safe_get(f, "gg", 0)),
+                    "qtd_g1": safe_get(f, "qtd_g1", safe_get(f, "g1", 0)),
+                    "qtd_g2": safe_get(f, "qtd_g2", safe_get(f, "g2", 0)),
+                    "qtd_g3": safe_get(f, "qtd_g3", safe_get(f, "g3", 0)),
+                    "valor_peca": safe_get(f, fin_valor_peca_col, ""),
+                    "status": safe_get(f, status_col, ""),
+                    "obs": safe_get(f, "observacao", "") or safe_get(f, "obs", ""),
+                }
+                if _filtra_termo(row, "codigo", "descricao", "costureira"):
+                    fin_rows.append(row)
+
+            # 6) JOIN interno para a aba Interna
+            int_rows = []
+            for e in env:
+                join_key = safe_get(e, corte_id_col)
+                aca_match = next((x for x in aca if safe_get(x, envio_col) == join_key), {})
+                fin_match = next((x for x in fin if safe_get(x, corte_id_col) == join_key), {})
+                row = {
+                    "data_envio": safe_get(e, env_date_col, ""),
+                    "codigo": safe_get(e, codigo_col, ""),
+                    "descricao": safe_get(e, desc_col, ""),
+                    "destino": safe_get(e, destino_col, ""),
+                    "pp": safe_get(e, "pp", 0),
+                    "p": safe_get(e, "p", 0),
+                    "m": safe_get(e, "m", 0),
+                    "g": safe_get(e, "g", 0),
+                    "gg": safe_get(e, "gg", 0),
+                    "g1": safe_get(e, "g1", 0),
+                    "g2": safe_get(e, "g2", 0),
+                    "g3": safe_get(e, "g3", 0),
+                    "total_env": safe_get(e, "total", ""),
+                    "pilotos_env": safe_get(e, pilotos_col, ""),
+                    "valor_peca_env": safe_get(e, valor_peca_col, ""),
+                    "data_retorno": safe_get(aca_match, aca_date_col, ""),
+                    "pilotos_ret": safe_get(aca_match, aca_pil_col, ""),
+                    "data_final": safe_get(fin_match, fin_date_col, ""),
+                    "pp_fin": safe_get(fin_match, "qtd_pp", safe_get(fin_match, "pp", 0)),
+                    "p_fin": safe_get(fin_match, "qtd_p", safe_get(fin_match, "p", 0)),
+                    "m_fin": safe_get(fin_match, "qtd_m", safe_get(fin_match, "m", 0)),
+                    "g_fin": safe_get(fin_match, "qtd_g", safe_get(fin_match, "g", 0)),
+                    "gg_fin": safe_get(fin_match, "qtd_gg", safe_get(fin_match, "gg", 0)),
+                    "g1_fin": safe_get(fin_match, "qtd_g1", safe_get(fin_match, "g1", 0)),
+                    "g2_fin": safe_get(fin_match, "qtd_g2", safe_get(fin_match, "g2", 0)),
+                    "g3_fin": safe_get(fin_match, "qtd_g3", safe_get(fin_match, "g3", 0)),
+                }
+                if _filtra_termo(row, "codigo", "descricao", "destino"):
+                    if row["total_env"] in (None, ""):
+                        row["total_env"] = (
+                            safe_get(e, "pp", 0)
+                            + safe_get(e, "p", 0)
+                            + safe_get(e, "m", 0)
+                            + safe_get(e, "g", 0)
+                            + safe_get(e, "gg", 0)
+                            + safe_get(e, "g1", 0)
+                            + safe_get(e, "g2", 0)
+                            + safe_get(e, "g3", 0)
+                        )
+                    int_rows.append(row)
+
+            # 7) ATUALIZA TABELA NA TELA
+            self._fill_table(int_rows, env_rows, ret_rows, fin_rows)
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha na pesquisa:\n{e}")
