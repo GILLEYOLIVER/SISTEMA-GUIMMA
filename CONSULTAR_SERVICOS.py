@@ -1015,8 +1015,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     ORDER BY e.data_envio DESC, e.id DESC, r.tamanho
                 """
                 cur.execute(sql_defeitos, (*params_data, prestador, servico, servico))
+                rows_defeitos = cur.fetchall()
+                print(f"[Defeitos] retorno_detalhes_tamanho: {len(rows_defeitos)} linhas")
 
-                for row in cur.fetchall():
+                for row in rows_defeitos:
                     data_envio, envio_id, codigo, desc, tamanho, defeitos = row
                     if hasattr(data_envio, "strftime"):
                         data_envio = data_envio.strftime("%d/%m/%Y")
@@ -1055,7 +1057,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
                         ORDER BY {data_col} DESC
                     """
                     cur.execute(sql_defeitos_hist, (*params_data_hist, prestador, servico, servico))
-                    for row in cur.fetchall():
+                    rows_hist = cur.fetchall()
+                    print(f"[Defeitos] historico_de_servico (setor/evento): {len(rows_hist)} linhas")
+                    for row in rows_hist:
                         data_hist, evento, desc, qtd, status = row
                         if hasattr(data_hist, "strftime"):
                             data_hist = data_hist.strftime("%d/%m/%Y")
@@ -1104,7 +1108,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
                          ORDER BY h.{data_col} DESC
                     """
                     cur.execute(sql_defeitos_hist, tuple(params))
-                    for row in cur.fetchall():
+                    rows_hist = cur.fetchall()
+                    print(f"[Defeitos] historico_de_servico (prestador/quantidade_defeitos): {len(rows_hist)} linhas")
+                    for row in rows_hist:
                         data_hist, envio_id, codigo, desc, tamanho, defeitos = row
                         if hasattr(data_hist, "strftime"):
                             data_hist = data_hist.strftime("%d/%m/%Y")
@@ -1120,7 +1126,15 @@ class HistoricoServicosPage(ctk.CTkFrame):
                             ), tags=(tag,))
                         registros += 1
             except Exception as e:
-                print(f"Erro em defeitos pendentes: {e}")
+                import traceback
+                print("[Defeitos] Falha ao carregar defeitos pendentes.")
+                print(f"[Defeitos] Prestador={prestador} | Servico={servico} | Todos={todos_registros}")
+                try:
+                    print(f"[Defeitos] Periodo={ini} -> {fim}")
+                except Exception:
+                    pass
+                print(f"[Defeitos] Erro: {e}")
+                traceback.print_exc()
 
             # Calcular tempo médio (simplificado)
             tempo_medio = total_retornos / max(total_envios, 1) if total_envios > 0 else 0
