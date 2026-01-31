@@ -493,14 +493,14 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # conteúdo
         content_frame = ctk.CTkFrame(self, fg_color=self.main_bg, corner_radius=0)
-        content_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=(0, 10))
+        content_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=4, pady=(0, 6))
         content_frame.grid_columnconfigure(0, weight=1)
         content_frame.grid_columnconfigure(1, weight=2)
         content_frame.grid_rowconfigure(0, weight=1)
 
         # painel esquerdo (lista) - MESMO ESTILO DO CADASTRO_DE_CORTE
         left_panel = ctk.CTkFrame(content_frame, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
+        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=2)
         left_panel.grid_rowconfigure(1, weight=1)
         ctk.CTkLabel(
             left_panel,
@@ -510,7 +510,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
 
         tabs_left = ctk.CTkTabview(left_panel, fg_color="transparent")
-        tabs_left.grid(row=1, column=0, sticky="nsew", padx=8, pady=(4, 8))
+        tabs_left.grid(row=1, column=0, sticky="nsew", padx=6, pady=(2, 6))
 
         tab_servicos = tabs_left.add("Serviços")
         tab_defeitos = tabs_left.add("Defeitos")
@@ -526,9 +526,19 @@ class PagamentoModernUI(ctk.CTkFrame):
         cols = ("id", "tipo_servico", "codigo", "descricao", "costureira", "data_envio", "data_chegada", "total_qtd")
         self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=11, style="Custom.Treeview")
         headings = ["ID", "Serviço", "Código", "Descrição", "Costureira", "Envio", "Chegada", "Qtd"]
+        tree_widths = {
+            "id": 55,
+            "tipo_servico": 90,
+            "codigo": 70,
+            "descricao": 150,
+            "costureira": 120,
+            "data_envio": 80,
+            "data_chegada": 80,
+            "total_qtd": 55,
+        }
         for col, h in zip(cols, headings):
             self.tree.heading(col, text=h)
-            self.tree.column(col, width=70 if col != "descricao" else 140, anchor="center")
+            self.tree.column(col, width=tree_widths.get(col, 80), anchor="center")
         self.tree.grid(row=0, column=0, sticky="nsew")
         vsb = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree.yview)
         hsb = ttk.Scrollbar(tree_container, orient="horizontal", command=self.tree.xview)
@@ -550,9 +560,19 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.defeitos_tree = ttk.Treeview(defeitos_container, columns=defeitos_cols, show="headings",
                                           height=11, style="Custom.Treeview")
         defeitos_headings = ["ID", "Prestador", "Código", "Descrição", "Tam", "Qtd", "Retorno", "Status"]
+        defeitos_widths = {
+            "id": 50,
+            "prestador": 120,
+            "codigo": 70,
+            "descricao": 140,
+            "tamanho": 45,
+            "quantidade": 55,
+            "data_retorno": 80,
+            "status": 70,
+        }
         for col, h in zip(defeitos_cols, defeitos_headings):
             self.defeitos_tree.heading(col, text=h)
-            self.defeitos_tree.column(col, width=80 if col != "descricao" else 160, anchor="center")
+            self.defeitos_tree.column(col, width=defeitos_widths.get(col, 80), anchor="center")
         self.defeitos_tree.grid(row=0, column=0, sticky="nsew")
         defeitos_vsb = ttk.Scrollbar(defeitos_container, orient="vertical", command=self.defeitos_tree.yview)
         defeitos_hsb = ttk.Scrollbar(defeitos_container, orient="horizontal", command=self.defeitos_tree.xview)
@@ -596,7 +616,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # resumo de pagamento - MESMO ESTILO DO CADASTRO_DE_CORTE
         summary_frame = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        summary_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=4, pady=(0, 4))
+        summary_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=2, pady=(0, 4))
         summary_frame.grid_columnconfigure(0, weight=1)
         summary_frame.grid_columnconfigure(1, weight=1)
         summary_frame.grid_columnconfigure(2, weight=1)
@@ -662,7 +682,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # seções inferiores - MESMO ESTILO DO CADASTRO_DE_CORTE
         ident_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        ident_card.grid(row=1, column=0, sticky="nsew", padx=4, pady=3)
+        ident_card.grid(row=1, column=0, sticky="nsew", padx=2, pady=2)
         ident_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             ident_card,
@@ -747,7 +767,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.valor_peca_entry.grid(row=8, column=1, padx=8, pady=1, sticky="ew")
 
         ajustes_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        ajustes_card.grid(row=1, column=1, sticky="nsew", padx=4, pady=3)
+        ajustes_card.grid(row=1, column=1, sticky="nsew", padx=2, pady=2)
         ajustes_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             ajustes_card,
@@ -810,7 +830,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.bonificacao_entry.bind("<KeyRelease>", lambda ev: self.recalcular())
 
         defeito_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        defeito_card.grid(row=1, column=2, sticky="nsew", padx=4, pady=3)
+        defeito_card.grid(row=1, column=2, sticky="nsew", padx=2, pady=2)
         defeito_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             defeito_card,
@@ -919,7 +939,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.descontar_parcela_btn.grid(row=6, column=0, columnspan=2, padx=8, pady=(2, 6))
 
         banco_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        banco_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=4, pady=3)
+        banco_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=2, pady=2)
         banco_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             banco_card,
@@ -978,7 +998,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # ações - MESMO ESTILO DO CADASTRO_DE_CORTE
         actions = ctk.CTkFrame(right_panel, fg_color=self.main_bg)
-        actions.grid(row=3, column=0, columnspan=3, sticky="e", pady=(4, 2), padx=4)
+        actions.grid(row=3, column=0, columnspan=3, sticky="e", pady=(4, 2), padx=2)
         self.salvar_btn = ctk.CTkButton(
             actions,
             text="💾 Salvar",
