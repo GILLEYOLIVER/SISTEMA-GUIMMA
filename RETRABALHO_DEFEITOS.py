@@ -425,8 +425,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             cur = conn.cursor()
             self._ensure_schema(cur)
 
-            values = dados["values"] if isinstance(dados, dict) else dados
-            data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = values
+            values = list(dados["values"]) if isinstance(dados, dict) else list(dados or [])
+            if len(values) < 8:
+                values.extend([""] * (8 - len(values)))
+            data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = values[:8]
             envio_id = int(envio_id) if str(envio_id).isdigit() else None
             historico_id = None
             if isinstance(dados, dict):
