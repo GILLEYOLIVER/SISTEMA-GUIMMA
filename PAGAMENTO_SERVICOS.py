@@ -491,8 +491,8 @@ class PagamentoModernUI(ctk.CTkFrame):
             command=self.pesquisar_finalizados
         ).grid(row=0, column=5, padx=4, pady=6)
 
-        # conteúdo (scrollável para evitar cortes dentro do menu)
-        content_frame = ctk.CTkScrollableFrame(self, fg_color=self.main_bg, corner_radius=0)
+        # conteúdo
+        content_frame = ctk.CTkFrame(self, fg_color=self.main_bg, corner_radius=0)
         content_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=(0, 10))
         content_frame.grid_columnconfigure(0, weight=1)
         content_frame.grid_columnconfigure(1, weight=2)
