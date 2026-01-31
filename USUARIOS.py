@@ -1846,9 +1846,9 @@ class UsuariosPage(ctk.CTkFrame):
                     ],
                 },
                 {
-                    "setor": "FACÇÕES",
+                    "setor": "PRESTADORES",
                     "permissoes": [
-                        {"nome": "Cadastro de Facções", "codigo": "cadastro_faccoes"},
+                        {"nome": "Cadastro de Prestadores", "codigo": "cadastro_faccoes"},
                         {"nome": "Pesquisar Serviço", "codigo": "pesquisar_servico"},
                     ],
                 },

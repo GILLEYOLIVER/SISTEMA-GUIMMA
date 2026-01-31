@@ -316,13 +316,14 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         serv_combo = ctk.CTkComboBox(prestador_frame, values=[
             "Todos", "Facção", "Bordado", "Caseador", "Botões",
-            "Estamparia", "Tingimento", "Outros Trabalhos"
+            "Estamparia", "Interna", "Tingimento", "Outros Trabalhos"
         ], width=150, variable=self.servico_var,
                                      fg_color=self.cor_secundaria,
                                      border_color=self.cor_borda,
                                      text_color=self.cor_texto,
                                      button_color=self.cor_primaria,
-                                     button_hover_color=self.cor_hover)
+                                     button_hover_color=self.cor_hover,
+                                     command=lambda _: self._carregar_prestadores(self.servico_var.get()))
         serv_combo.pack(side="left", padx=5)
 
         # Botão buscar
@@ -385,10 +386,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
         tab_hist.grid_columnconfigure(0, weight=1)
 
         # ---- Aba Peças com Defeito ----
-        def_columns = ["data", "servico", "descricao", "quantidade", "status"]
-        def_headers = ["Data", "Serviço", "Descrição", "Quantidade", "Status"]
-        def_widths = [120, 140, 320, 110, 120]
-        def_anchors = ["center", "center", "w", "center", "center"]
+        def_columns = ["data", "envio_id", "codigo", "descricao", "tamanho", "defeitos"]
+        def_headers = ["Data", "Envio", "Código", "Descrição", "Tamanho", "Defeitos"]
+        def_widths = [110, 80, 110, 320, 90, 90]
+        def_anchors = ["center", "center", "center", "w", "center", "center"]
 
         self.defeito_tree = ttk.Treeview(tab_defeitos, columns=def_columns, show="headings",
                                          height=15, style="Custom.Treeview")
@@ -671,52 +672,77 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         desenhar_calendario()
 
-    def _carregar_prestadores(self):
-        """Carrega lista de prestadores do banco"""
+    def _carregar_prestadores(self, tipo_servico="Todos"):
+        """Carrega lista de prestadores do banco, com filtro opcional por tipo."""
         try:
             conn = get_conn()
             cur = conn.cursor()
             schema = get_schema()
+            tipo_servico = (tipo_servico or "Todos").strip()
+            filtrar_tipo = tipo_servico != "Todos"
 
             prestadores = set()
 
             # De cadastro_faccoes
             try:
-                cur.execute(f"SELECT DISTINCT nome FROM {schema}.cadastro_faccoes WHERE nome IS NOT NULL")
+                if filtrar_tipo:
+                    cur.execute(
+                        f"""
+                        SELECT DISTINCT nome
+                        FROM {schema}.cadastro_faccoes
+                        WHERE nome IS NOT NULL AND tipo_prestador = %s
+                        """,
+                        (tipo_servico,),
+                    )
+                else:
+                    cur.execute(f"SELECT DISTINCT nome FROM {schema}.cadastro_faccoes WHERE nome IS NOT NULL")
                 prestadores.update(r[0] for r in cur.fetchall())
             except Exception:
                 pass
 
             # De controle_envio_cortes
-            for col in ["costureira", "destino", "faccao"]:
+            if not filtrar_tipo:
+                for col in ["costureira", "destino", "faccao"]:
+                    try:
+                        cur.execute(f"SELECT DISTINCT {col} FROM {schema}.controle_envio_cortes WHERE {col} IS NOT NULL")
+                        prestadores.update(r[0] for r in cur.fetchall())
+                    except Exception:
+                        pass
+
+            # De pagamento_corte_acabamento
+            if not filtrar_tipo:
                 try:
-                    cur.execute(f"SELECT DISTINCT {col} FROM {schema}.controle_envio_cortes WHERE {col} IS NOT NULL")
+                    cur.execute(
+                        f"SELECT DISTINCT costureira FROM {schema}.pagamento_corte_acabamento WHERE costureira IS NOT NULL")
                     prestadores.update(r[0] for r in cur.fetchall())
                 except Exception:
                     pass
 
-            # De pagamento_corte_acabamento
-            try:
-                cur.execute(
-                    f"SELECT DISTINCT costureira FROM {schema}.pagamento_corte_acabamento WHERE costureira IS NOT NULL")
-                prestadores.update(r[0] for r in cur.fetchall())
-            except Exception:
-                pass
-
             # De envios_cortes (por prestador_id)
             try:
-                cur.execute(
-                    f"""SELECT DISTINCT cf.nome
-                           FROM {schema}.envios_cortes ec
-                           JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
-                           WHERE cf.nome IS NOT NULL"""
-                )
+                if filtrar_tipo:
+                    cur.execute(
+                        f"""SELECT DISTINCT cf.nome
+                               FROM {schema}.envios_cortes ec
+                               JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
+                               WHERE cf.nome IS NOT NULL AND cf.tipo_prestador = %s""",
+                        (tipo_servico,),
+                    )
+                else:
+                    cur.execute(
+                        f"""SELECT DISTINCT cf.nome
+                               FROM {schema}.envios_cortes ec
+                               JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
+                               WHERE cf.nome IS NOT NULL"""
+                    )
                 prestadores.update(r[0] for r in cur.fetchall())
             except Exception:
                 pass
 
             prestadores_list = sorted(list(prestadores))
             self.prestador_combo.configure(values=prestadores_list)
+            if self.prestador_var.get() not in prestadores_list:
+                self.prestador_var.set("")
 
             cur.close()
         except Exception as e:
@@ -967,27 +993,37 @@ class HistoricoServicosPage(ctk.CTkFrame):
             except Exception as e:
                 print(f"Erro em histórico: {e}")
 
-            # 4b. PEÇAS COM DEFEITO (histórico pendente)
+            # 4b. PEÇAS COM DEFEITO (por tamanho)
             try:
-                filtro_data, params_data = _filtro_data("data")
+                filtro_data, params_data = _filtro_data("e.data_envio")
                 sql_defeitos = f"""
-                    SELECT data, evento, descricao, quantidade, status
-                    FROM {schema}.historico_de_servico
+                    SELECT
+                        e.data_envio,
+                        e.id,
+                        COALESCE(e.codigo_corte, ''),
+                        COALESCE(e.descricao_corte, ''),
+                        COALESCE(r.tamanho, ''),
+                        COALESCE(r.defeitos, 0)
+                    FROM {schema}.retorno_detalhes_tamanho r
+                    JOIN {schema}.envios_cortes e ON e.id = r.envio_id
+                    LEFT JOIN {schema}.cadastro_faccoes cf ON cf.id = e.prestador_id
                     WHERE 1=1
                       {filtro_data}
-                      AND setor = %s
-                      AND (%s = 'Todos' OR evento = %s)
-                      AND status = 'Pendente'
-                    ORDER BY data
+                      AND COALESCE(cf.nome, '') = %s
+                      AND COALESCE(r.defeitos, 0) > 0
+                      AND (%s = 'Todos' OR e.tipo_servico = %s)
+                    ORDER BY e.data_envio DESC, e.id DESC, r.tamanho
                 """
                 cur.execute(sql_defeitos, (*params_data, prestador, servico, servico))
 
                 for row in cur.fetchall():
-                    data, evento, desc, qtd, status = row
+                    data_envio, envio_id, codigo, desc, tamanho, defeitos = row
+                    if hasattr(data_envio, "strftime"):
+                        data_envio = data_envio.strftime("%d/%m/%Y")
                     tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
                     if hasattr(self, "defeito_tree") and self.defeito_tree:
                         self.defeito_tree.insert("", "end", values=(
-                            data, evento, desc, qtd or 0, status or "Pendente"
+                            data_envio or "", envio_id or "", codigo or "", desc or "", tamanho or "", defeitos or 0
                         ), tags=(tag,))
                     registros += 1
             except Exception as e:
