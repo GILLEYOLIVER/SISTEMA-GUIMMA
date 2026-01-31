@@ -223,6 +223,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.cor_hover = getattr(self.sistema, "cor_hover", "#334155")
             self.cor_adicionar = getattr(self.sistema, "cor_adicionar", "#3a7ebf")
             self.cor_imprimir = getattr(self.sistema, "cor_imprimir", "#3a7ebf")
+            self.cor_sucesso = getattr(self.sistema, "cor_sucesso", "#22c55e")
         else:
             self.cor_fundo = "#ffffff"
             self.cor_primaria = "#3a7ebf"
@@ -234,6 +235,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.cor_hover = "#2e4a66"
             self.cor_adicionar = "#3a7ebf"
             self.cor_imprimir = "#3a7ebf"
+            self.cor_sucesso = "#22c55e"
 
     def _update_theme_from_host(self):
         """Atualiza as cores baseado no host/sistema - MESMO PADRÃO DO CADASTRO_DE_CORTE"""
