@@ -65,6 +65,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 tamanho VARCHAR(10),
                 quantidade INTEGER DEFAULT 0,
                 tipo_servico VARCHAR(50),
+                valor_peca NUMERIC(12,2) DEFAULT 0,
                 origem VARCHAR(20) DEFAULT 'Externo',
                 status VARCHAR(50) DEFAULT 'Pendente',
                 data_envio DATE,
@@ -102,6 +103,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
 
         btns = ctk.CTkFrame(main, fg_color="transparent")
         btns.grid(row=1, column=0, sticky="ew", padx=15, pady=(0, 5))
+        ctk.CTkLabel(btns, text="Valor/Peça:", text_color=self.cor_texto).pack(side="left", padx=(0, 4))
+        self.valor_peca_entry = ctk.CTkEntry(btns, width=90)
+        self.valor_peca_entry.insert(0, "0.00")
+        self.valor_peca_entry.pack(side="left", padx=(0, 12))
         ctk.CTkButton(btns, text="Atualizar", command=self._recarregar_tudo,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
@@ -110,6 +115,9 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                       text_color=self.cor_texto).pack(side="left", padx=4)
         ctk.CTkButton(btns, text="Baixa Interna", command=self._registrar_baixa_interna,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=4)
+        ctk.CTkButton(btns, text="Imprimir Ficha", command=self._imprimir_ficha,
+                      fg_color=self.cor_alerta, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
         pend_frame = ctk.CTkFrame(main, fg_color="transparent")
@@ -320,16 +328,26 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         if not dados:
             return
         data_envio = datetime.now().date()
-        self._registrar_defeito(dados, origem="Externo", status="Enviado", data_envio=data_envio)
+        valor_peca = self._valor_peca_atual()
+        self._registrar_defeito(dados, origem="Externo", status="Enviado",
+                                data_envio=data_envio, valor_peca=valor_peca)
 
     def _registrar_baixa_interna(self):
         dados = self._get_pendente_selecionado()
         if not dados:
             return
         data_retorno = datetime.now().date()
-        self._registrar_defeito(dados, origem="Interno", status="Finalizado", data_retorno=data_retorno)
+        valor_peca = self._valor_peca_atual()
+        self._registrar_defeito(dados, origem="Interno", status="Finalizado",
+                                data_retorno=data_retorno, valor_peca=valor_peca)
 
-    def _registrar_defeito(self, dados, origem, status, data_envio=None, data_retorno=None):
+    def _valor_peca_atual(self):
+        try:
+            return float((self.valor_peca_entry.get() or "0").replace(",", "."))
+        except Exception:
+            return 0.0
+
+    def _registrar_defeito(self, dados, origem, status, data_envio=None, data_retorno=None, valor_peca=0.0):
         conn = None
         try:
             schema = get_schema()
@@ -342,8 +360,8 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             cur.execute(f"""
                 INSERT INTO {schema}.defeitos_envios
                     (envio_id, codigo, descricao, prestador, tamanho, quantidade,
-                     tipo_servico, origem, status, data_envio, data_retorno)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                     tipo_servico, valor_peca, origem, status, data_envio, data_retorno)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """, (
                 envio_id,
                 codigo if codigo != "-" else None,
@@ -352,6 +370,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 tamanho if tamanho != "-" else None,
                 int(qtd) if str(qtd).isdigit() else 0,
                 servico,
+                valor_peca,
                 origem,
                 status,
                 data_envio,
@@ -421,6 +440,43 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         finally:
             if conn:
                 conn.close()
+
+    def _imprimir_ficha(self):
+        item = self._get_defeito_processo()
+        if not item:
+            return
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+        except Exception:
+            messagebox.showwarning("Aviso", "reportlab não está disponível para gerar a ficha.")
+            return
+        defeito_id, prestador, codigo, descricao, tamanho, qtd, origem, status, data_envio, data_retorno = item
+        filename = f"ficha_defeito_{defeito_id}.pdf"
+        c = canvas.Canvas(filename, pagesize=A4)
+        width, height = A4
+        y = height - 50
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(40, y, "Ficha de Retrabalho de Defeitos")
+        y -= 30
+        c.setFont("Helvetica", 11)
+        for label, value in [
+            ("ID", defeito_id),
+            ("Prestador", prestador),
+            ("Código", codigo),
+            ("Descrição", descricao),
+            ("Tamanho", tamanho),
+            ("Quantidade", qtd),
+            ("Origem", origem),
+            ("Status", status),
+            ("Envio", data_envio),
+            ("Retorno", data_retorno),
+        ]:
+            c.drawString(40, y, f"{label}: {value}")
+            y -= 18
+        c.showPage()
+        c.save()
+        messagebox.showinfo("Sucesso", f"Ficha gerada: {filename}")
 
 
 if __name__ == "__main__":

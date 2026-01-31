@@ -1603,6 +1603,19 @@ class PagamentoModernUI(ctk.CTkFrame):
         defeito_id, prestador, codigo, descricao, tamanho, qtd, data_retorno, status = vals
         self._defeito_selecionado = defeito_id
 
+        data_envio = ""
+        valor_peca = 0.0
+        try:
+            row = _select_one(
+                "SELECT data_envio, valor_peca FROM defeitos_envios WHERE id = %s",
+                (defeito_id,)
+            )
+            if row:
+                data_envio = row[0].strftime("%d/%m/%Y") if hasattr(row[0], "strftime") else (row[0] or "")
+                valor_peca = float(row[1] or 0.0)
+        except Exception:
+            pass
+
         self.tipo_servico_var.set("Defeito")
         self.current_mapping = {
             "tipo_servico": "Defeito",
@@ -1621,7 +1634,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         self.data_envio.configure(state="normal")
         self.data_envio.delete(0, "end")
-        self.data_envio.insert(0, "")
+        self.data_envio.insert(0, data_envio or "")
         self.data_envio.configure(state="readonly")
 
         self.data_chegada.configure(state="normal")
@@ -1645,10 +1658,10 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.obs_defeito_text.delete("1.0", "end")
         self.obs_defeito_text.insert("1.0", f"Retrabalho de defeito {tamanho or ''}".strip())
 
-        self.valor_por_peca = 0.0
+        self.valor_por_peca = float(valor_peca or 0.0)
         self.valor_peca_entry.configure(state="normal")
         self.valor_peca_entry.delete(0, "end")
-        self.valor_peca_entry.insert(0, "0.00")
+        self.valor_peca_entry.insert(0, f"{self.valor_por_peca:.2f}")
         self.valor_peca_entry.configure(state="readonly")
 
         self._carregar_dados_bancarios_prestador(prestador, "Defeito")
