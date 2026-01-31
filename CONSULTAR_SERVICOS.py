@@ -993,7 +993,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
             except Exception as e:
                 print(f"Erro em histórico: {e}")
 
-            # 4b. PEÇAS COM DEFEITO (por tamanho)
+            # 4b. PEÇAS COM DEFEITO (por tamanho + histórico)
             try:
                 filtro_data, params_data = _filtro_data("e.data_envio")
                 sql_defeitos = f"""
@@ -1024,6 +1024,34 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     if hasattr(self, "defeito_tree") and self.defeito_tree:
                         self.defeito_tree.insert("", "end", values=(
                             data_envio or "", envio_id or "", codigo or "", desc or "", tamanho or "", defeitos or 0
+                        ), tags=(tag,))
+                    registros += 1
+
+                filtro_data_hist, params_data_hist = _filtro_data("data")
+                sql_defeitos_hist = f"""
+                    SELECT data, evento, descricao, quantidade, status
+                    FROM {schema}.historico_de_servico
+                    WHERE 1=1
+                      {filtro_data_hist}
+                      AND setor = %s
+                      AND (%s = 'Todos' OR evento = %s)
+                      AND status = 'Pendente'
+                    ORDER BY data DESC
+                """
+                cur.execute(sql_defeitos_hist, (*params_data_hist, prestador, servico, servico))
+                for row in cur.fetchall():
+                    data_hist, evento, desc, qtd, status = row
+                    if hasattr(data_hist, "strftime"):
+                        data_hist = data_hist.strftime("%d/%m/%Y")
+                    tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
+                    if hasattr(self, "defeito_tree") and self.defeito_tree:
+                        self.defeito_tree.insert("", "end", values=(
+                            data_hist or "",
+                            "-",
+                            "-",
+                            desc or "",
+                            evento or "",
+                            qtd or 0
                         ), tags=(tag,))
                     registros += 1
             except Exception as e:
