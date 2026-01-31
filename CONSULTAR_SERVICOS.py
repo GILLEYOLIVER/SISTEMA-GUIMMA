@@ -817,6 +817,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     total_valor += valor_total
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em envios: {e}")
 
             # 1b. ENVIOS (envios_cortes)
@@ -892,14 +894,32 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     total_valor += valor_total_envio
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em envios (envios_cortes): {e}")
 
             # 2. RETORNOS/ENTRADAS
             try:
                 filtro_data, params_data = _filtro_data("e.data_chegada")
+                cur.execute(
+                    """
+                    SELECT column_name
+                      FROM information_schema.columns
+                     WHERE table_schema = %s
+                       AND table_name = 'retorno_detalhes_tamanho'
+                    """,
+                    (schema,),
+                )
+                cols_retorno = {row[0] for row in cur.fetchall()}
+                entregue_col = "quantidade_entregue" if "quantidade_entregue" in cols_retorno else (
+                    "entregue" if "entregue" in cols_retorno else None
+                )
+                soma_entregue_sql = "0"
+                if entregue_col:
+                    soma_entregue_sql = f"SUM(COALESCE({entregue_col},0))"
                 sql_retornos = f"""
                     SELECT e.data_chegada, c.servico, c.codigo_corte, c.descricao_corte,
-                           COALESCE((SELECT SUM(COALESCE(quantidade_entregue,0))
+                           COALESCE((SELECT {soma_entregue_sql}
                                FROM {schema}.retorno_detalhes_tamanho r
                                WHERE r.retorno_id = e.id), 0) as qtd,
                            COALESCE(c.valor_peca, 0) as valor_unit,
@@ -928,6 +948,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     total_valor += valor_total
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em retornos: {e}")
 
             # 3. PAGAMENTOS
@@ -962,6 +984,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     total_valor += valor_total
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em pagamentos: {e}")
 
             # 4. HISTÓRICO DE SERVIÇOS
@@ -991,6 +1015,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                         total_valor += valor
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em histórico: {e}")
 
             # 4b. PEÇAS COM DEFEITO (por tamanho + histórico)
@@ -1126,6 +1152,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                             ), tags=(tag,))
                         registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 import traceback
                 print("[Defeitos] Falha ao carregar defeitos pendentes.")
                 print(f"[Defeitos] Prestador={prestador} | Servico={servico} | Todos={todos_registros}")
