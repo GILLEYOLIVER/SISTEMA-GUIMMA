@@ -923,6 +923,20 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
           header .t {{ font-weight:700; font-size:18px }}
           header .m {{ margin-left:auto; opacity:.9 }}
           header img.logo {{ height:32px; border-radius:4px; }}
+          header .controls {{ display:flex; gap:8px; align-items:center; }}
+          header .controls button {{
+            background: transparent;
+            color: inherit;
+            border: 1px solid var(--acc);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+          }}
+          header .controls button.active {{
+            background: var(--acc);
+            color: #fff;
+          }}
           h2 {{ margin:16px 0 8px; border-bottom:1px solid var(--brd); padding-bottom:6px; }}
           .k {{ margin:6px 0 12px; font-size:12px; opacity:.85 }}
           table {{ width:100%; border-collapse:collapse; margin:8px 0 16px; }}
@@ -938,6 +952,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                            -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
             header {{ background:#fff !important; color:#000 !important; border-bottom:2px solid #000 !important; }}
             header .t, header .m {{ color:#000 !important; }}
+            header .controls {{ display:none; }}
             h2 {{ color:#000 !important; border-color:#000 !important; }}
             .k {{ color:#000 !important; opacity:1 !important; }}
             td, th {{ color:#000 !important; }}
@@ -973,6 +988,12 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                 sections_html.append("<div class='break'></div>")
 
         logo_img = f"<img class='logo' src='{logo_data_uri}' alt='logo'>" if logo_data_uri else ""
+        print_controls = """
+        <div class="controls">
+          <button type="button" data-orient="portrait">Retrato</button>
+          <button type="button" data-orient="landscape">Paisagem</button>
+        </div>
+        """
 
         html = f"""<!doctype html>
     <html>
@@ -985,12 +1006,37 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
     <header>
       {logo_img}
       <div class="t">Relatório Detalhado — Envio de Cortes</div>
+      {print_controls}
       <div class="m">Gerado em {now}</div>
     </header>
     <div class="wrap">
       {''.join(sections_html)}
     </div>
-    <script>setTimeout(function(){{window.print();}}, 400);</script>
+    <script>
+      (function() {{
+        var initial = "{orientation}";
+        var buttons = document.querySelectorAll('[data-orient]');
+        function setOrientation(value) {{
+          var style = document.getElementById('page-orientation');
+          if (!style) {{
+            style = document.createElement('style');
+            style.id = 'page-orientation';
+            document.head.appendChild(style);
+          }}
+          style.textContent = '@page {{ size: A4 ' + value + '; margin: 14mm; }}';
+          buttons.forEach(function(btn) {{
+            btn.classList.toggle('active', btn.getAttribute('data-orient') === value);
+          }});
+        }}
+        buttons.forEach(function(btn) {{
+          btn.addEventListener('click', function() {{
+            setOrientation(btn.getAttribute('data-orient'));
+          }});
+        }});
+        setOrientation(initial);
+        setTimeout(function(){{window.print();}}, 400);
+      }})();
+    </script>
     </body>
     </html>"""
 
