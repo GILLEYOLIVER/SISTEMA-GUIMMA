@@ -996,18 +996,74 @@ CREATE TABLE IF NOT EXISTS opera.historico_servicos (
 -- [TABELA 45] historico_de_servico - Histórico de serviço (facções)
 CREATE TABLE IF NOT EXISTS opera.historico_de_servico (
     id BIGSERIAL PRIMARY KEY,
-    envio_id INTEGER NOT NULL REFERENCES opera.controle_envio_cortes(id) ON DELETE CASCADE,
+
+    -- vínculos (mantém compatibilidade)
+    envio_id INTEGER REFERENCES opera.controle_envio_cortes(id) ON DELETE SET NULL,
     entrada_id INTEGER REFERENCES opera.entrada_acabamento(id) ON DELETE SET NULL,
     pagamento_id BIGINT REFERENCES opera.pagamento_servicos(id) ON DELETE SET NULL,
+
+    -- vínculo correto para a página de finalização (recomendado)
+    envio_corte_id INTEGER REFERENCES opera.envios_cortes(id) ON DELETE SET NULL,
+    retorno_id INTEGER REFERENCES opera.controle_retorno_cortes(id) ON DELETE SET NULL,
+
+    -- dados que a página tenta gravar no histórico (defeitos pendentes)
+    data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    evento VARCHAR(100),
+    descricao TEXT,
+    setor VARCHAR(200),
+    quantidade INTEGER DEFAULT 0,
+    valor NUMERIC(12,2) DEFAULT 0,
+
+    -- seus campos originais
     tipo_servico VARCHAR(50),
-    status VARCHAR(50) DEFAULT 'Em Andamento',
+    status VARCHAR(50) DEFAULT 'Pendente',
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- [TABELA 46] defeitos_envios - Retrabalho de defeitos
+CREATE TABLE IF NOT EXISTS opera.defeitos_envios (
+    id SERIAL PRIMARY KEY,
+    historico_id BIGINT,
+    envio_id INTEGER,
+    envio_corte_id INTEGER,
+    codigo VARCHAR(50),
+    descricao TEXT,
+    prestador VARCHAR(200),
+    tamanho VARCHAR(10),
+    quantidade INTEGER DEFAULT 0,
+    tipo_servico VARCHAR(50),
+    valor_peca NUMERIC(12,2) DEFAULT 0,
+    origem VARCHAR(20) DEFAULT 'Externo',
+    status VARCHAR(50) DEFAULT 'Pendente',
+    data_envio DATE,
+    data_retorno DATE,
+    data_finalizacao DATE,
+    hora_envio TIME,
+    hora_retorno TIME,
+    hora_finalizacao TIME,
+    previsao_entrega DATE,
+    tel_encarregado VARCHAR(50),
+    tel_acabamento VARCHAR(50),
+    aviamentos TEXT,
+    outros TEXT,
+    observacoes TEXT,
+    data_pagamento DATE,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_defeitos_envio_status ON opera.defeitos_envios (status);
+CREATE INDEX IF NOT EXISTS idx_defeitos_envio_prestador ON opera.defeitos_envios (prestador);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_defeitos_envio_unico
+    ON opera.defeitos_envios (envio_id, tamanho)
+    WHERE envio_id IS NOT NULL AND tamanho IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_defeitos_envio_hist_unico
+    ON opera.defeitos_envios (historico_id)
+    WHERE historico_id IS NOT NULL;
 
 ----------------------------------------
 -- 14. TABELAS DE PRICING E RELATÓRIOS
 ----------------------------------------
--- [TABELA 46] pricing_profiles - Perfis de precificação
+-- [TABELA 47] pricing_profiles - Perfis de precificação
 CREATE TABLE IF NOT EXISTS opera.pricing_profiles (
     nome VARCHAR(100) PRIMARY KEY,
     impostos NUMERIC(12,4),
@@ -1026,7 +1082,7 @@ CREATE TABLE IF NOT EXISTS opera.pricing_profiles (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- [TABELA 47] relatorios_finalizacao - Relatórios de finalização
+-- [TABELA 48] relatorios_finalizacao - Relatórios de finalização
 CREATE TABLE IF NOT EXISTS opera.relatorios_finalizacao (
     id SERIAL PRIMARY KEY,
     entrada_id INTEGER REFERENCES opera.entrada_acabamento(id),
@@ -1042,7 +1098,7 @@ CREATE TABLE IF NOT EXISTS opera.relatorios_finalizacao (
 ----------------------------------------
 -- 15. VIEWS DO SISTEMA
 ----------------------------------------
--- [VIEW 48] permissoes - View de permissões
+-- [VIEW 49] permissoes - View de permissões
 CREATE OR REPLACE VIEW opera.permissoes AS
 SELECT
     usuario_id,
@@ -1054,7 +1110,7 @@ SELECT
     pode_administrar
 FROM opera.usuario_permissoes;
 
--- [VIEW 49] usuario - View de usuários
+-- [VIEW 50] usuario - View de usuários
 CREATE OR REPLACE VIEW opera.usuario AS
 SELECT
     id,
@@ -1071,7 +1127,7 @@ SELECT
     tema_preferido
 FROM opera.usuarios;
 
--- [VIEW 50] vw_usuario_logs - View para logs com nome de usuário
+-- [VIEW 51] vw_usuario_logs - View para logs com nome de usuário
 CREATE OR REPLACE VIEW opera.vw_usuario_logs AS
 SELECT
     ul.id,

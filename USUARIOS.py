@@ -1859,6 +1859,12 @@ class UsuariosPage(ctk.CTkFrame):
                     ],
                 },
                 {
+                    "setor": "DEFEITOS",
+                    "permissoes": [
+                        {"nome": "Retrabalho de Defeitos", "codigo": "retrabalho_defeitos"},
+                    ],
+                },
+                {
                     "setor": "PRODUÇÃO",
                     "permissoes": [
                         {"nome": "Produção", "codigo": "producao"},

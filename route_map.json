@@ -59,6 +59,11 @@
     "class": "PesquisaServicosPage"
   },
 
+  "Retrabalho de Defeitos": {
+    "file": "RETRABALHO_DEFEITOS.py",
+    "class": "RetrabalhoDefeitosPage"
+  },
+
   "Controle de Mão de Obra": {
     "file": "CONTROLE_ENVIO_CORTES.py",
     "class": "EnvioCortes"

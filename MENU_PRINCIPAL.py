@@ -894,6 +894,7 @@ class OperaMenuApp(ctk.CTk):
         "ESTOQUE": "ESTOQUE.png",
         "PRESTADORES": "FABRICA.png",
         "MÃO DE OBRA": "PESSOAS.png",
+        "DEFEITOS": "ACABAMENTO.png",
         "PRODUÇÃO": "PRODUÇAO.png",
         "ACABAMENTO": "FERRAMENTAS.png",
         "FINANCEIRO": "DINHEIRO.png",
@@ -910,6 +911,7 @@ class OperaMenuApp(ctk.CTk):
         "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
+        "DEFEITOS": ["Retrabalho de Defeitos"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
         "PRESTADORES": ["Cadastro de Prestadores", "Pesquisar Serviço"],
         "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento"],
@@ -950,6 +952,9 @@ class OperaMenuApp(ctk.CTk):
         },
         "MÃO DE OBRA": {
             "Controle de Mão de Obra": "MAO DE OBRA.png",
+        },
+        "DEFEITOS": {
+            "Retrabalho de Defeitos": "ACABAMENTO.png",
         },
         "PRODUÇÃO": {
             "Produção": "PRODUÇAO.png",
@@ -1000,6 +1005,7 @@ class OperaMenuApp(ctk.CTk):
         "Cadastro de Prestadores": "cadastro_faccoes",
         "Pesquisar Serviço": "pesquisar_servico",
         "Controle de Mão de Obra": "controle_mao_obra",
+        "Retrabalho de Defeitos": "retrabalho_defeitos",
         "Produção": "Producao",
         "Registro Acabamento": "registro_acabamento",
         "Finalizar Corte / Acabamento": "finalizar_corte",
@@ -2300,6 +2306,8 @@ class OperaMenuApp(ctk.CTk):
 
                 # MÃO DE OBRA
                 "Controle de Mão de Obra": "controlar mão de obra",
+                # DEFEITOS
+                "Retrabalho de Defeitos": "tratar defeitos",
 
                 # PRODUÇÃO
                 "Produção": "acessar o módulo de produção",

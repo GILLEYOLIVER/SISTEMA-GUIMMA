@@ -223,6 +223,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.cor_hover = getattr(self.sistema, "cor_hover", "#334155")
             self.cor_adicionar = getattr(self.sistema, "cor_adicionar", "#3a7ebf")
             self.cor_imprimir = getattr(self.sistema, "cor_imprimir", "#3a7ebf")
+            self.cor_sucesso = getattr(self.sistema, "cor_sucesso", "#22c55e")
         else:
             self.cor_fundo = "#ffffff"
             self.cor_primaria = "#3a7ebf"
@@ -234,6 +235,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.cor_hover = "#2e4a66"
             self.cor_adicionar = "#3a7ebf"
             self.cor_imprimir = "#3a7ebf"
+            self.cor_sucesso = "#22c55e"
 
     def _update_theme_from_host(self):
         """Atualiza as cores baseado no host/sistema - MESMO PADRÃO DO CADASTRO_DE_CORTE"""
@@ -505,8 +507,16 @@ class PagamentoModernUI(ctk.CTkFrame):
             text_color=self.cor_texto
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
 
-        tree_container = ctk.CTkFrame(left_panel, fg_color="transparent")
-        tree_container.grid(row=1, column=0, sticky="nsew", padx=8, pady=(4, 8))
+        tabs_left = ctk.CTkTabview(left_panel, fg_color="transparent")
+        tabs_left.grid(row=1, column=0, sticky="nsew", padx=8, pady=(4, 8))
+
+        tab_servicos = tabs_left.add("Serviços")
+        tab_defeitos = tabs_left.add("Defeitos")
+
+        tree_container = ctk.CTkFrame(tab_servicos, fg_color="transparent")
+        tree_container.grid(row=0, column=0, sticky="nsew")
+        tab_servicos.grid_rowconfigure(0, weight=1)
+        tab_servicos.grid_columnconfigure(0, weight=1)
         tree_container.grid_rowconfigure(0, weight=1)
         tree_container.grid_columnconfigure(0, weight=1)
 
@@ -522,6 +532,40 @@ class PagamentoModernUI(ctk.CTkFrame):
         vsb.grid(row=0, column=1, sticky="ns")
         self.tree.bind("<Double-1>", self._on_select_item)
         self.tree.bind("<Return>", self._on_select_item)
+
+        defeitos_container = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
+        defeitos_container.grid(row=0, column=0, sticky="nsew")
+        tab_defeitos.grid_rowconfigure(0, weight=1)
+        tab_defeitos.grid_columnconfigure(0, weight=1)
+        defeitos_container.grid_rowconfigure(0, weight=1)
+        defeitos_container.grid_columnconfigure(0, weight=1)
+
+        defeitos_cols = ("id", "prestador", "codigo", "descricao", "tamanho", "quantidade", "data_retorno", "status")
+        self.defeitos_tree = ttk.Treeview(defeitos_container, columns=defeitos_cols, show="headings",
+                                          height=14, style="Custom.Treeview")
+        defeitos_headings = ["ID", "Prestador", "Código", "Descrição", "Tam", "Qtd", "Retorno", "Status"]
+        for col, h in zip(defeitos_cols, defeitos_headings):
+            self.defeitos_tree.heading(col, text=h)
+            self.defeitos_tree.column(col, width=80 if col != "descricao" else 160, anchor="center")
+        self.defeitos_tree.grid(row=0, column=0, sticky="nsew")
+        defeitos_vsb = ttk.Scrollbar(defeitos_container, orient="vertical", command=self.defeitos_tree.yview)
+        self.defeitos_tree.configure(yscrollcommand=defeitos_vsb.set)
+        defeitos_vsb.grid(row=0, column=1, sticky="ns")
+        self.defeitos_tree.bind("<Double-1>", self._on_select_defeito)
+        self.defeitos_tree.bind("<Return>", self._on_select_defeito)
+
+        defeitos_actions = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
+        defeitos_actions.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        ctk.CTkButton(
+            defeitos_actions,
+            text="Marcar Pago",
+            command=self._pagar_defeito,
+            fg_color=self.cor_sucesso,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            height=32,
+            width=120
+        ).pack(side="left", padx=4)
 
 
         # Configurar cores das linhas alternadas (alto contraste)
@@ -1382,6 +1426,60 @@ class PagamentoModernUI(ctk.CTkFrame):
             tag = 'evenrow' if len(self.tree.get_children()) % 2 == 0 else 'oddrow'
             self.tree.insert("", "end", values=r, tags=(tag,))
 
+        self._carregar_defeitos_pagamento()
+
+    def _carregar_defeitos_pagamento(self):
+        if not hasattr(self, "defeitos_tree"):
+            return
+        for iid in self.defeitos_tree.get_children():
+            self.defeitos_tree.delete(iid)
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            cur.execute(f"""
+                SELECT id, prestador, codigo, descricao, tamanho, quantidade, data_retorno, status
+                  FROM {schema}.defeitos_envios
+                 WHERE origem = 'Externo'
+                   AND status IN ('Finalizado', 'Aguardando Pagamento')
+                 ORDER BY COALESCE(data_retorno, criado_em) DESC NULLS LAST, id DESC
+            """)
+            for row in cur.fetchall():
+                defeito_id, prestador, codigo, desc, tamanho, qtd, data_retorno, status = row
+                if hasattr(data_retorno, "strftime"):
+                    data_retorno = data_retorno.strftime("%d/%m/%Y")
+                self.defeitos_tree.insert("", "end", values=(
+                    defeito_id, prestador or "", codigo or "", desc or "", tamanho or "",
+                    qtd or 0, data_retorno or "", status or ""
+                ))
+            conn.close()
+        except Exception as e:
+            print(f"Erro ao carregar defeitos para pagamento: {e}")
+
+    def _pagar_defeito(self):
+        if not hasattr(self, "defeitos_tree"):
+            return
+        sel = self.defeitos_tree.selection()
+        if not sel:
+            messagebox.showwarning("Aviso", "Selecione um defeito para pagamento.")
+            return
+        vals = self.defeitos_tree.item(sel[0], "values")
+        defeito_id = vals[0]
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            cur.execute(
+                f"UPDATE {schema}.defeitos_envios SET status = %s, data_pagamento = CURRENT_DATE WHERE id = %s",
+                ("Pago", defeito_id),
+            )
+            conn.commit()
+            conn.close()
+            self._carregar_defeitos_pagamento()
+            messagebox.showinfo("Sucesso", "Pagamento do defeito registrado.")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao registrar pagamento:\n{e}")
+
 
     def _carregar_dados_bancarios_prestador(self, destino: str, servico: str) -> None:
         """Preenche campos bancários do prestador (último pagamento -> envios_cortes -> cadastro_faccoes)."""
@@ -1494,65 +1592,81 @@ class PagamentoModernUI(ctk.CTkFrame):
                 entry.insert(0, v)
                 entry.configure(state="readonly")
 
-        self.data_envio.configure(state="normal");
-        self.data_envio.delete(0, "end");
-        self.data_envio.insert(0, vals[5] or "");
+    def _on_select_defeito(self, _event=None):
+        """Seleciona um defeito na aba de pagamento."""
+        sel = self.defeitos_tree.selection()
+        if not sel:
+            return
+        vals = self.defeitos_tree.item(sel[0]).get("values", [])
+        if not vals:
+            return
+        defeito_id, prestador, codigo, descricao, tamanho, qtd, data_retorno, status = vals
+        self._defeito_selecionado = defeito_id
+
+        data_envio = ""
+        valor_peca = 0.0
+        try:
+            row = _select_one(
+                "SELECT data_envio, valor_peca FROM defeitos_envios WHERE id = %s",
+                (defeito_id,)
+            )
+            if row:
+                data_envio = row[0].strftime("%d/%m/%Y") if hasattr(row[0], "strftime") else (row[0] or "")
+                valor_peca = float(row[1] or 0.0)
+        except Exception:
+            pass
+
+        self.tipo_servico_var.set("Defeito")
+        self.current_mapping = {
+            "tipo_servico": "Defeito",
+            "codigo": codigo,
+            "descricao": descricao,
+            "costureira": prestador,
+        }
+
+        for k, v in self.current_mapping.items():
+            if k in self.ident_entries:
+                entry = self.ident_entries[k]
+                entry.configure(state="normal")
+                entry.delete(0, "end")
+                entry.insert(0, v or "")
+                entry.configure(state="readonly")
+
+        self.data_envio.configure(state="normal")
+        self.data_envio.delete(0, "end")
+        self.data_envio.insert(0, data_envio or "")
         self.data_envio.configure(state="readonly")
-        self.data_chegada.configure(state="normal");
-        self.data_chegada.delete(0, "end");
-        self.data_chegada.insert(0, vals[6] or "");
+
+        self.data_chegada.configure(state="normal")
+        self.data_chegada.delete(0, "end")
+        self.data_chegada.insert(0, data_retorno or "")
         self.data_chegada.configure(state="readonly")
 
+        try:
+            self.quantidade_finalizada = int(qtd or 0)
+        except Exception:
+            self.quantidade_finalizada = 0
+        self.quant_final_entry.configure(state="normal")
+        self.quant_final_entry.delete(0, "end")
+        self.quant_final_entry.insert(0, str(self.quantidade_finalizada))
+        self.quant_final_entry.configure(state="readonly")
 
+        self.defeito_count_entry.delete(0, "end")
+        self.defeito_count_entry.insert(0, str(self.quantidade_finalizada))
+        self.valor_defeito_entry.delete(0, "end")
+        self.valor_defeito_entry.insert(0, "0.00")
+        self.obs_defeito_text.delete("1.0", "end")
+        self.obs_defeito_text.insert("1.0", f"Retrabalho de defeito {tamanho or ''}".strip())
 
-        # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
-        valor_peca = self._buscar_valor_peca(codigo=mapping["codigo"], finalizado_id=int(vals[0]) if vals and vals[0] is not None else None)
         self.valor_por_peca = float(valor_peca or 0.0)
         self.valor_peca_entry.configure(state="normal")
         self.valor_peca_entry.delete(0, "end")
         self.valor_peca_entry.insert(0, f"{self.valor_por_peca:.2f}")
         self.valor_peca_entry.configure(state="readonly")
 
-
-
-        # tentar puxar dados bancários de fluxo antigo (se existirem)
-        try:
-            banco_row = _select_one("""
-                SELECT titular_conta, cpf, banco, agencia, conta, pix
-                  FROM pecas_finalizadas
-                 WHERE codigo = %s AND tipo_servico = %s
-              ORDER BY id DESC LIMIT 1
-            """, (mapping["codigo"], mapping["tipo_servico"]))
-            if banco_row:
-                self.titular_entry.delete(0, "end");
-                self.titular_entry.insert(0, banco_row[0] or "")
-                self.cpf_entry.delete(0, "end");
-                self.cpf_entry.insert(0, banco_row[1] or "")
-                self.banco_entry.delete(0, "end");
-                self.banco_entry.insert(0, banco_row[2] or "")
-                self.agencia_entry.delete(0, "end");
-                self.agencia_entry.insert(0, banco_row[3] or "")
-                self.conta_entry.delete(0, "end");
-                self.conta_entry.insert(0, banco_row[4] or "")
-                self.pix_entry.delete(0, "end");
-                self.pix_entry.insert(0, banco_row[5] or "")
-        except Exception:
-            pass
-
-        self._carregar_dados_bancarios_prestador(mapping["costureira"], mapping["tipo_servico"])
-        self._carregar_bonificacao_por_corte(mapping["codigo"])
+        self._carregar_dados_bancarios_prestador(prestador, "Defeito")
         if not (self.titular_entry.get() or "").strip():
-            self.titular_entry.insert(0, mapping.get("costureira", ""))
-        self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"])
-
-        # busca corte_id finalizado (para adiantamento)
-        corte_id_finalizado = vals[0]
-        try:
-            r = _select_one("SELECT corte_id FROM cortes_finalizados WHERE id = %s LIMIT 1", (corte_id_finalizado,))
-            corte_id_lookup = r[0] if r and r[0] is not None else corte_id_finalizado
-        except Exception:
-            corte_id_lookup = corte_id_finalizado
-        self._carregar_adiantamento_faccao(mapping["codigo"], corte_id_lookup)
+            self.titular_entry.insert(0, prestador or "")
         self.recalcular()
 
     def aplicar_desconto_adiantamento(self):
