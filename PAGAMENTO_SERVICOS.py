@@ -527,14 +527,14 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=11, style="Custom.Treeview")
         headings = ["ID", "Serviço", "Código", "Descrição", "Costureira", "Envio", "Chegada", "Qtd"]
         tree_widths = {
-            "id": 55,
-            "tipo_servico": 90,
-            "codigo": 70,
-            "descricao": 150,
-            "costureira": 120,
-            "data_envio": 80,
-            "data_chegada": 80,
-            "total_qtd": 55,
+            "id": 50,
+            "tipo_servico": 85,
+            "codigo": 65,
+            "descricao": 140,
+            "costureira": 110,
+            "data_envio": 75,
+            "data_chegada": 75,
+            "total_qtd": 50,
         }
         for col, h in zip(cols, headings):
             self.tree.heading(col, text=h)
