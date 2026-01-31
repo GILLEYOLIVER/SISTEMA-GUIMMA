@@ -522,7 +522,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             return valor.strftime("%d/%m/%Y")
         return str(valor or "")
 
-    def _abrir_calendario(self, entry):
+    def _abrir_calendario(self, entry, parent=None):
         from datetime import datetime
         import calendar as _cal
 
@@ -534,6 +534,9 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         def setar_data(d):
             entry.delete(0, "end")
             entry.insert(0, d.strftime("%d/%m/%Y"))
+            if parent is not None:
+                parent.lift()
+                parent.focus_force()
             top.destroy()
 
         top = ctk.CTkToplevel(self)
@@ -559,8 +562,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             y = ey - H - 6
 
         top.geometry(f"{W}x{H}+{x}+{y}")
-        top.transient(self)
+        top.transient(parent or self)
         top.grab_set()
+        top.focus_force()
+        top.lift()
 
         now = datetime.now()
         ano = now.year
@@ -1189,8 +1194,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         return caminho_pdf
 
     def _abrir_janela_envio_defeito(self, dados, origem, status):
-        values = dados["values"]
-        data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = values
+        values = list(dados["values"])
+        if len(values) < 8:
+            values.extend([""] * (8 - len(values)))
+        data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = values[:8]
         envio_id_num = int(envio_id) if str(envio_id).isdigit() else None
         envio_info = self._carregar_info_envio(envio_id_num)
         prestador_info = self._carregar_info_prestador(envio_info.get("prestador_id"), prestador)
@@ -1241,9 +1248,9 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             previsao_frame,
             text="📅",
             width=36,
-            command=lambda: self._abrir_calendario(previsao_entry),
+            command=lambda: self._abrir_calendario(previsao_entry, parent=janela),
         ).pack(side="left", padx=(6, 0))
-        previsao_entry.bind("<Double-Button-1>", lambda e: self._abrir_calendario(previsao_entry))
+        previsao_entry.bind("<Double-Button-1>", lambda e: self._abrir_calendario(previsao_entry, parent=janela))
         row += 1
 
         ctk.CTkLabel(janela, text="Valor/Peça:", text_color=self.cor_texto).grid(
