@@ -445,6 +445,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             variable=self.source_var,
             selected_color=self.accent_color,
             fg_color=self.cor_primaria,
+            height=28,
             command=lambda *_: self.pesquisar_finalizados()
         )
         self.orig_seg.grid(row=0, column=1, padx=4, pady=4)
@@ -483,6 +484,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             filter_frame,
             text="🔍",
             width=40,
+            height=28,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -563,7 +565,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             fg_color=self.cor_sucesso,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
-            height=32,
+            height=30,
             width=120
         ).pack(side="left", padx=4)
 
@@ -893,6 +895,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             desconto_frame,
             text="Aplicar",
             width=80,
+            height=28,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
@@ -902,6 +905,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             adiant_frame,
             text="Descontar 1 parcela",
             width=160,
+            height=28,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
@@ -973,6 +977,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             actions,
             text="💾 Salvar",
             width=130,
+            height=32,
             fg_color=self.cor_adicionar,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -983,6 +988,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             actions,
             text="📤 Exportar CSV",
             width=130,
+            height=32,
             fg_color=self.cor_imprimir,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -993,6 +999,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             actions,
             text="🔁 Recalcular",
             width=120,
+            height=32,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -1003,6 +1010,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             actions,
             text="🖨️ Imprimir",
             width=130,
+            height=32,
             fg_color=self.cor_imprimir,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
