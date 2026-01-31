@@ -933,6 +933,11 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             cursor: pointer;
             font-size: 12px;
           }}
+          header .controls button.primary {{
+            background: var(--acc);
+            color: #fff;
+            border-color: var(--acc);
+          }}
           header .controls button.active {{
             background: var(--acc);
             color: #fff;
@@ -992,6 +997,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         <div class="controls">
           <button type="button" data-orient="portrait">Retrato</button>
           <button type="button" data-orient="landscape">Paisagem</button>
+          <button type="button" class="primary" id="btn-print">Imprimir</button>
         </div>
         """
 
@@ -1034,7 +1040,12 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
           }});
         }});
         setOrientation(initial);
-        setTimeout(function(){{window.print();}}, 400);
+        var printBtn = document.getElementById('btn-print');
+        if (printBtn) {
+          printBtn.addEventListener('click', function() {
+            window.print();
+          });
+        }
       }})();
     </script>
     </body>
