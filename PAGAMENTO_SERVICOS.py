@@ -1600,68 +1600,60 @@ class PagamentoModernUI(ctk.CTkFrame):
         vals = self.defeitos_tree.item(sel[0]).get("values", [])
         if not vals:
             return
-        self._defeito_selecionado = vals[0]
-        messagebox.showinfo("Info", f"Defeito #{self._defeito_selecionado} selecionado.")
+        defeito_id, prestador, codigo, descricao, tamanho, qtd, data_retorno, status = vals
+        self._defeito_selecionado = defeito_id
 
-        self.data_envio.configure(state="normal");
-        self.data_envio.delete(0, "end");
-        self.data_envio.insert(0, vals[5] or "");
+        self.tipo_servico_var.set("Defeito")
+        self.current_mapping = {
+            "tipo_servico": "Defeito",
+            "codigo": codigo,
+            "descricao": descricao,
+            "costureira": prestador,
+        }
+
+        for k, v in self.current_mapping.items():
+            if k in self.ident_entries:
+                entry = self.ident_entries[k]
+                entry.configure(state="normal")
+                entry.delete(0, "end")
+                entry.insert(0, v or "")
+                entry.configure(state="readonly")
+
+        self.data_envio.configure(state="normal")
+        self.data_envio.delete(0, "end")
+        self.data_envio.insert(0, "")
         self.data_envio.configure(state="readonly")
-        self.data_chegada.configure(state="normal");
-        self.data_chegada.delete(0, "end");
-        self.data_chegada.insert(0, vals[6] or "");
+
+        self.data_chegada.configure(state="normal")
+        self.data_chegada.delete(0, "end")
+        self.data_chegada.insert(0, data_retorno or "")
         self.data_chegada.configure(state="readonly")
 
+        try:
+            self.quantidade_finalizada = int(qtd or 0)
+        except Exception:
+            self.quantidade_finalizada = 0
+        self.quant_final_entry.configure(state="normal")
+        self.quant_final_entry.delete(0, "end")
+        self.quant_final_entry.insert(0, str(self.quantidade_finalizada))
+        self.quant_final_entry.configure(state="readonly")
 
+        self.defeito_count_entry.delete(0, "end")
+        self.defeito_count_entry.insert(0, str(self.quantidade_finalizada))
+        self.valor_defeito_entry.delete(0, "end")
+        self.valor_defeito_entry.insert(0, "0.00")
+        self.obs_defeito_text.delete("1.0", "end")
+        self.obs_defeito_text.insert("1.0", f"Retrabalho de defeito {tamanho or ''}".strip())
 
-        # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
-        valor_peca = self._buscar_valor_peca(codigo=mapping["codigo"], finalizado_id=int(vals[0]) if vals and vals[0] is not None else None)
-        self.valor_por_peca = float(valor_peca or 0.0)
+        self.valor_por_peca = 0.0
         self.valor_peca_entry.configure(state="normal")
         self.valor_peca_entry.delete(0, "end")
-        self.valor_peca_entry.insert(0, f"{self.valor_por_peca:.2f}")
+        self.valor_peca_entry.insert(0, "0.00")
         self.valor_peca_entry.configure(state="readonly")
 
-
-
-        # tentar puxar dados bancários de fluxo antigo (se existirem)
-        try:
-            banco_row = _select_one("""
-                SELECT titular_conta, cpf, banco, agencia, conta, pix
-                  FROM pecas_finalizadas
-                 WHERE codigo = %s AND tipo_servico = %s
-              ORDER BY id DESC LIMIT 1
-            """, (mapping["codigo"], mapping["tipo_servico"]))
-            if banco_row:
-                self.titular_entry.delete(0, "end");
-                self.titular_entry.insert(0, banco_row[0] or "")
-                self.cpf_entry.delete(0, "end");
-                self.cpf_entry.insert(0, banco_row[1] or "")
-                self.banco_entry.delete(0, "end");
-                self.banco_entry.insert(0, banco_row[2] or "")
-                self.agencia_entry.delete(0, "end");
-                self.agencia_entry.insert(0, banco_row[3] or "")
-                self.conta_entry.delete(0, "end");
-                self.conta_entry.insert(0, banco_row[4] or "")
-                self.pix_entry.delete(0, "end");
-                self.pix_entry.insert(0, banco_row[5] or "")
-        except Exception:
-            pass
-
-        self._carregar_dados_bancarios_prestador(mapping["costureira"], mapping["tipo_servico"])
-        self._carregar_bonificacao_por_corte(mapping["codigo"])
+        self._carregar_dados_bancarios_prestador(prestador, "Defeito")
         if not (self.titular_entry.get() or "").strip():
-            self.titular_entry.insert(0, mapping.get("costureira", ""))
-        self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"])
-
-        # busca corte_id finalizado (para adiantamento)
-        corte_id_finalizado = vals[0]
-        try:
-            r = _select_one("SELECT corte_id FROM cortes_finalizados WHERE id = %s LIMIT 1", (corte_id_finalizado,))
-            corte_id_lookup = r[0] if r and r[0] is not None else corte_id_finalizado
-        except Exception:
-            corte_id_lookup = corte_id_finalizado
-        self._carregar_adiantamento_faccao(mapping["codigo"], corte_id_lookup)
+            self.titular_entry.insert(0, prestador or "")
         self.recalcular()
 
     def aplicar_desconto_adiantamento(self):
