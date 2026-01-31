@@ -440,6 +440,7 @@ class RetornoCortes(ctk.CTkFrame):
             w = 100 if col in ["ID", "Status"] else (90 if col == "Qtd Peças" else 140)
             self.envios_tree.column(col, width=w, anchor="center")
         self.envios_tree.bind("<<TreeviewSelect>>", self.on_envio_selecionado)
+        self.envios_tree.bind("<Double-1>", self._aviso_envio_em_conferencia)
 
         # Cores por status - MESMO ESTILO DO CADASTRO_DE_CORTE
         if ctk.get_appearance_mode() == "Dark":
@@ -1088,6 +1089,10 @@ class RetornoCortes(ctk.CTkFrame):
         }
 
         status = status.strip()
+        status_normalizado = status.casefold()
+        if status_normalizado.startswith("em conferen"):
+            self.envio_selecionado = None
+            return
 
         if status == "Finalizado":
             messagebox.showinfo("Aviso", "Este envio já está FINALIZADO.\nNão é possível registrar novo retorno.")
@@ -1125,6 +1130,17 @@ class RetornoCortes(ctk.CTkFrame):
         # Carrega todos os detalhes
         if envio_id is not None:
             self._carregar_detalhes_envio(envio_id)
+
+    def _aviso_envio_em_conferencia(self, _event=None):
+        """Exibe aviso ao tentar abrir envio que já está em conferência."""
+        sel = self.envios_tree.selection()
+        if not sel:
+            return
+
+        valores = self.envios_tree.item(sel[0], "values")
+        status = (valores[6] if len(valores) > 6 else "") or ""
+        if status.strip().casefold().startswith("em conferen"):
+            messagebox.showinfo("Aviso", "Esse corte já está em conferência.")
 
     def _preencher_banco(self, dados, has_titular=False):
         valores = ["", "", "", "", "", ""]
