@@ -705,7 +705,7 @@ class UsuariosPage(ctk.CTkFrame):
                 ('cadastro_modelos_aviamentos', 'Modelos - Aviamentos', 'Cadastros'),
                 ('cadastro_modelos_outros', 'Modelos - Outros', 'Cadastros'),
                 ('cadastro_modelos_imagens', 'Modelos - Imagens', 'Cadastros'),
-                ('cadastro_faccoes', 'Facções', 'Cadastros'),
+                ('cadastro_faccoes', 'Prestadores', 'Cadastros'),
                 ('ficha_tecnica_cabecalho', 'Ficha Técnica', 'Cadastros'),
 
                 # Corte

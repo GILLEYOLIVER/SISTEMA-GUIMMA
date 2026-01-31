@@ -316,13 +316,14 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         serv_combo = ctk.CTkComboBox(prestador_frame, values=[
             "Todos", "Facção", "Bordado", "Caseador", "Botões",
-            "Estamparia", "Tingimento", "Outros Trabalhos"
+            "Estamparia", "Interna", "Tingimento", "Outros Trabalhos"
         ], width=150, variable=self.servico_var,
                                      fg_color=self.cor_secundaria,
                                      border_color=self.cor_borda,
                                      text_color=self.cor_texto,
                                      button_color=self.cor_primaria,
-                                     button_hover_color=self.cor_hover)
+                                     button_hover_color=self.cor_hover,
+                                     command=lambda _: self._carregar_prestadores(self.servico_var.get()))
         serv_combo.pack(side="left", padx=5)
 
         # Botão buscar
@@ -671,52 +672,77 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         desenhar_calendario()
 
-    def _carregar_prestadores(self):
-        """Carrega lista de prestadores do banco"""
+    def _carregar_prestadores(self, tipo_servico="Todos"):
+        """Carrega lista de prestadores do banco, com filtro opcional por tipo."""
         try:
             conn = get_conn()
             cur = conn.cursor()
             schema = get_schema()
+            tipo_servico = (tipo_servico or "Todos").strip()
+            filtrar_tipo = tipo_servico != "Todos"
 
             prestadores = set()
 
             # De cadastro_faccoes
             try:
-                cur.execute(f"SELECT DISTINCT nome FROM {schema}.cadastro_faccoes WHERE nome IS NOT NULL")
+                if filtrar_tipo:
+                    cur.execute(
+                        f"""
+                        SELECT DISTINCT nome
+                        FROM {schema}.cadastro_faccoes
+                        WHERE nome IS NOT NULL AND tipo_prestador = %s
+                        """,
+                        (tipo_servico,),
+                    )
+                else:
+                    cur.execute(f"SELECT DISTINCT nome FROM {schema}.cadastro_faccoes WHERE nome IS NOT NULL")
                 prestadores.update(r[0] for r in cur.fetchall())
             except Exception:
                 pass
 
             # De controle_envio_cortes
-            for col in ["costureira", "destino", "faccao"]:
+            if not filtrar_tipo:
+                for col in ["costureira", "destino", "faccao"]:
+                    try:
+                        cur.execute(f"SELECT DISTINCT {col} FROM {schema}.controle_envio_cortes WHERE {col} IS NOT NULL")
+                        prestadores.update(r[0] for r in cur.fetchall())
+                    except Exception:
+                        pass
+
+            # De pagamento_corte_acabamento
+            if not filtrar_tipo:
                 try:
-                    cur.execute(f"SELECT DISTINCT {col} FROM {schema}.controle_envio_cortes WHERE {col} IS NOT NULL")
+                    cur.execute(
+                        f"SELECT DISTINCT costureira FROM {schema}.pagamento_corte_acabamento WHERE costureira IS NOT NULL")
                     prestadores.update(r[0] for r in cur.fetchall())
                 except Exception:
                     pass
 
-            # De pagamento_corte_acabamento
-            try:
-                cur.execute(
-                    f"SELECT DISTINCT costureira FROM {schema}.pagamento_corte_acabamento WHERE costureira IS NOT NULL")
-                prestadores.update(r[0] for r in cur.fetchall())
-            except Exception:
-                pass
-
             # De envios_cortes (por prestador_id)
             try:
-                cur.execute(
-                    f"""SELECT DISTINCT cf.nome
-                           FROM {schema}.envios_cortes ec
-                           JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
-                           WHERE cf.nome IS NOT NULL"""
-                )
+                if filtrar_tipo:
+                    cur.execute(
+                        f"""SELECT DISTINCT cf.nome
+                               FROM {schema}.envios_cortes ec
+                               JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
+                               WHERE cf.nome IS NOT NULL AND cf.tipo_prestador = %s""",
+                        (tipo_servico,),
+                    )
+                else:
+                    cur.execute(
+                        f"""SELECT DISTINCT cf.nome
+                               FROM {schema}.envios_cortes ec
+                               JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
+                               WHERE cf.nome IS NOT NULL"""
+                    )
                 prestadores.update(r[0] for r in cur.fetchall())
             except Exception:
                 pass
 
             prestadores_list = sorted(list(prestadores))
             self.prestador_combo.configure(values=prestadores_list)
+            if self.prestador_var.get() not in prestadores_list:
+                self.prestador_var.set("")
 
             cur.close()
         except Exception as e:
