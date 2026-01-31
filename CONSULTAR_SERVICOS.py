@@ -386,10 +386,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
         tab_hist.grid_columnconfigure(0, weight=1)
 
         # ---- Aba Peças com Defeito ----
-        def_columns = ["data", "envio_id", "codigo", "descricao", "tamanho", "defeitos"]
-        def_headers = ["Data", "Envio", "Código", "Descrição", "Tamanho", "Defeitos"]
-        def_widths = [110, 80, 110, 320, 90, 90]
-        def_anchors = ["center", "center", "center", "w", "center", "center"]
+        def_columns = ["data", "envio_id", "codigo", "descricao", "prestador", "tamanho", "defeitos", "servico", "status"]
+        def_headers = ["Data", "Id de Envio", "Código", "Descrição", "Prestador", "Tamanho", "Defeitos", "Serviço", "Status"]
+        def_widths = [110, 90, 110, 300, 160, 80, 80, 120, 110]
+        def_anchors = ["center", "center", "center", "w", "w", "center", "center", "center", "center"]
 
         self.defeito_tree = ttk.Treeview(tab_defeitos, columns=def_columns, show="headings",
                                          height=15, style="Custom.Treeview")
@@ -1028,8 +1028,11 @@ class HistoricoServicosPage(ctk.CTkFrame):
                         e.id,
                         COALESCE(e.codigo_corte, ''),
                         COALESCE(e.descricao_corte, ''),
+                        COALESCE(cf.nome, ''),
                         COALESCE(r.tamanho, ''),
-                        COALESCE(r.defeitos, 0)
+                        COALESCE(r.defeitos, 0),
+                        COALESCE(e.tipo_servico, ''),
+                        COALESCE(e.status_envio, '')
                     FROM {schema}.retorno_detalhes_tamanho r
                     JOIN {schema}.envios_cortes e ON e.id = r.envio_id
                     LEFT JOIN {schema}.cadastro_faccoes cf ON cf.id = e.prestador_id
@@ -1045,13 +1048,21 @@ class HistoricoServicosPage(ctk.CTkFrame):
                 print(f"[Defeitos] retorno_detalhes_tamanho: {len(rows_defeitos)} linhas")
 
                 for row in rows_defeitos:
-                    data_envio, envio_id, codigo, desc, tamanho, defeitos = row
+                    data_envio, envio_id, codigo, desc, prestador_nome, tamanho, defeitos, servico_envio, status_envio = row
                     if hasattr(data_envio, "strftime"):
                         data_envio = data_envio.strftime("%d/%m/%Y")
                     tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
                     if hasattr(self, "defeito_tree") and self.defeito_tree:
                         self.defeito_tree.insert("", "end", values=(
-                            data_envio or "", envio_id or "", codigo or "", desc or "", tamanho or "", defeitos or 0
+                            data_envio or "",
+                            envio_id or "",
+                            codigo or "",
+                            desc or "",
+                            prestador_nome or "",
+                            tamanho or "",
+                            defeitos or 0,
+                            servico_envio or "",
+                            status_envio or ""
                         ), tags=(tag,))
                     registros += 1
 
@@ -1071,9 +1082,12 @@ class HistoricoServicosPage(ctk.CTkFrame):
                             "data_envio" if "data_envio" in cols_hist else "data_chegada"
                         )
                     )
+                    envio_col = "envio_id" if "envio_id" in cols_hist else (
+                        "envio_corte_id" if "envio_corte_id" in cols_hist else "NULL"
+                    )
                     filtro_data_hist, params_data_hist = _filtro_data(data_col)
                     sql_defeitos_hist = f"""
-                        SELECT {data_col}, evento, descricao, quantidade, status
+                        SELECT {data_col}, {envio_col}, evento, descricao, setor, quantidade, status, tipo_servico
                         FROM {schema}.historico_de_servico
                         WHERE 1=1
                           {filtro_data_hist}
@@ -1086,18 +1100,21 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     rows_hist = cur.fetchall()
                     print(f"[Defeitos] historico_de_servico (setor/evento): {len(rows_hist)} linhas")
                     for row in rows_hist:
-                        data_hist, evento, desc, qtd, status = row
+                        data_hist, envio_id, evento, desc, setor, qtd, status, tipo_servico = row
                         if hasattr(data_hist, "strftime"):
                             data_hist = data_hist.strftime("%d/%m/%Y")
                         tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
                         if hasattr(self, "defeito_tree") and self.defeito_tree:
                             self.defeito_tree.insert("", "end", values=(
                                 data_hist or "",
-                                "-",
+                                envio_id or "",
                                 "-",
                                 desc or "",
-                                evento or "",
-                                qtd or 0
+                                setor or "",
+                                "-",
+                                qtd or 0,
+                                tipo_servico or evento or "",
+                                status or ""
                             ), tags=(tag,))
                         registros += 1
                 elif {"prestador", "quantidade_defeitos"}.issubset(cols_hist):
@@ -1122,8 +1139,11 @@ class HistoricoServicosPage(ctk.CTkFrame):
                                {envio_expr} AS envio_id,
                                {codigo_expr} AS codigo,
                                {desc_expr} AS descricao,
+                               COALESCE(h.prestador, '') AS prestador,
                                'TOTAL' AS tamanho,
-                               COALESCE(h.quantidade_defeitos, 0) AS defeitos
+                               COALESCE(h.quantidade_defeitos, 0) AS defeitos,
+                               {("h.tipo_servico" if "tipo_servico" in cols_hist else "''")} AS servico,
+                               {("h.status" if "status" in cols_hist else "''")} AS status
                           FROM {schema}.historico_de_servico h
                           {join_corte}
                          WHERE 1=1
@@ -1137,7 +1157,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     rows_hist = cur.fetchall()
                     print(f"[Defeitos] historico_de_servico (prestador/quantidade_defeitos): {len(rows_hist)} linhas")
                     for row in rows_hist:
-                        data_hist, envio_id, codigo, desc, tamanho, defeitos = row
+                        data_hist, envio_id, codigo, desc, prestador_nome, tamanho, defeitos, servico_hist, status_hist = row
                         if hasattr(data_hist, "strftime"):
                             data_hist = data_hist.strftime("%d/%m/%Y")
                         tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
@@ -1147,8 +1167,11 @@ class HistoricoServicosPage(ctk.CTkFrame):
                                 envio_id or "",
                                 codigo or "",
                                 desc or "",
+                                prestador_nome or "",
                                 tamanho or "",
-                                defeitos or 0
+                                defeitos or 0,
+                                servico_hist or "",
+                                status_hist or ""
                             ), tags=(tag,))
                         registros += 1
             except Exception as e:
