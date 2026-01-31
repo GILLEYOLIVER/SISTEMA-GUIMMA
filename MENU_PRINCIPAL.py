@@ -894,7 +894,6 @@ class OperaMenuApp(ctk.CTk):
         "ESTOQUE": "ESTOQUE.png",
         "PRESTADORES": "FABRICA.png",
         "MÃO DE OBRA": "PESSOAS.png",
-        "DEFEITOS": "ACABAMENTO.png",
         "PRODUÇÃO": "PRODUÇAO.png",
         "ACABAMENTO": "FERRAMENTAS.png",
         "FINANCEIRO": "DINHEIRO.png",
@@ -911,10 +910,9 @@ class OperaMenuApp(ctk.CTk):
         "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
-        "DEFEITOS": ["Retrabalho de Defeitos"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
         "PRESTADORES": ["Cadastro de Prestadores", "Pesquisar Serviço"],
-        "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento"],
+        "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento", "Retrabalho de Defeitos"],
         "FINANCEIRO": [
             "Pagamento de Serviços", "Custo Produto", "Folha Pagamento",
             "Fechamento Mensal", "Contas a Pagar", "Adiantamento", "Adiantamentos Pendentes"
@@ -953,15 +951,13 @@ class OperaMenuApp(ctk.CTk):
         "MÃO DE OBRA": {
             "Controle de Mão de Obra": "MAO DE OBRA.png",
         },
-        "DEFEITOS": {
-            "Retrabalho de Defeitos": "ACABAMENTO.png",
-        },
         "PRODUÇÃO": {
             "Produção": "PRODUÇAO.png",
         },
         "ACABAMENTO": {
             "Registro Acabamento": "ACABAMENTO.png",
             "Finalizar Corte / Acabamento": "ACABAMENTO.png",
+            "Retrabalho de Defeitos": "ACABAMENTO.png",
         },
         "FINANCEIRO": {
             "Pagamento de Serviços": "DINHEIRO.png",
