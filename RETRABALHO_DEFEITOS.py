@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 
 try:
@@ -70,6 +70,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 status VARCHAR(50) DEFAULT 'Pendente',
                 data_envio DATE,
                 data_retorno DATE,
+                data_finalizacao DATE,
+                hora_envio TIME,
+                hora_retorno TIME,
+                hora_finalizacao TIME,
                 previsao_entrega DATE,
                 tel_encarregado VARCHAR(50),
                 tel_acabamento VARCHAR(50),
@@ -83,6 +87,22 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         cursor.execute(f"""
             ALTER TABLE {schema}.defeitos_envios
             ADD COLUMN IF NOT EXISTS valor_peca NUMERIC(12,2) DEFAULT 0
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS data_finalizacao DATE
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS hora_envio TIME
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS hora_retorno TIME
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS hora_finalizacao TIME
         """)
         cursor.execute(f"""
             ALTER TABLE {schema}.defeitos_envios
@@ -115,6 +135,16 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         cursor.execute(f"""
             CREATE INDEX IF NOT EXISTS idx_defeitos_envio_prestador
             ON {schema}.defeitos_envios (prestador)
+        """)
+        cursor.execute(f"""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_defeitos_envio_unico
+            ON {schema}.defeitos_envios (envio_id, tamanho)
+            WHERE envio_id IS NOT NULL AND tamanho IS NOT NULL
+        """)
+        cursor.execute(f"""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_defeitos_envio_hist_unico
+            ON {schema}.defeitos_envios (historico_id)
+            WHERE historico_id IS NOT NULL
         """)
 
     def _criar_interface(self):
@@ -372,9 +402,11 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         if not dados:
             return
         data_retorno = datetime.now().date()
+        data_finalizacao = datetime.now().date()
         valor_peca = self._valor_peca_atual()
         self._registrar_defeito(dados, origem="Interno", status="Finalizado",
-                                data_retorno=data_retorno, valor_peca=valor_peca)
+                                data_retorno=data_retorno, valor_peca=valor_peca,
+                                data_finalizacao=data_finalizacao)
 
     def _valor_peca_atual(self):
         try:
@@ -384,7 +416,8 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
 
     def _registrar_defeito(self, dados, origem, status, data_envio=None, data_retorno=None,
                            valor_peca=0.0, previsao_entrega=None, tel_encarregado=None,
-                           tel_acabamento=None, aviamentos=None, outros=None, observacoes=None):
+                           tel_acabamento=None, aviamentos=None, outros=None, observacoes=None,
+                           data_finalizacao=None):
         conn = None
         try:
             schema = get_schema()
@@ -395,13 +428,45 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             values = dados["values"] if isinstance(dados, dict) else dados
             data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = values
             envio_id = int(envio_id) if str(envio_id).isdigit() else None
+            historico_id = None
+            if isinstance(dados, dict):
+                for tag in dados.get("tags", ()):
+                    if tag.startswith("hist_") and tag.split("_")[-1].isdigit():
+                        historico_id = int(tag.split("_")[-1])
+                        break
+
+            if historico_id:
+                cur.execute(
+                    f"SELECT 1 FROM {schema}.defeitos_envios WHERE historico_id = %s",
+                    (historico_id,),
+                )
+            else:
+                cur.execute(
+                    f"""
+                    SELECT 1 FROM {schema}.defeitos_envios
+                     WHERE envio_id = %s AND COALESCE(tamanho, '') = COALESCE(%s, '')
+                    """,
+                    (envio_id, tamanho if tamanho != "-" else None),
+                )
+            if cur.fetchone():
+                messagebox.showwarning("Aviso", "Este defeito já foi enviado anteriormente.")
+                return
+
+            hora_envio = datetime.now().time() if data_envio else None
+            hora_retorno = datetime.now().time() if data_retorno else None
+            if status == "Finalizado" and not data_finalizacao:
+                data_finalizacao = datetime.now().date()
+            hora_finalizacao = datetime.now().time() if data_finalizacao else None
+
             cur.execute(f"""
                 INSERT INTO {schema}.defeitos_envios
-                    (envio_id, codigo, descricao, prestador, tamanho, quantidade,
+                    (historico_id, envio_id, codigo, descricao, prestador, tamanho, quantidade,
                      tipo_servico, valor_peca, origem, status, data_envio, data_retorno,
+                     data_finalizacao, hora_envio, hora_retorno, hora_finalizacao,
                      previsao_entrega, tel_encarregado, tel_acabamento, aviamentos, outros, observacoes)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """, (
+                historico_id,
                 envio_id,
                 codigo if codigo != "-" else None,
                 desc,
@@ -414,6 +479,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 status,
                 data_envio,
                 data_retorno,
+                data_finalizacao,
+                hora_envio,
+                hora_retorno,
+                hora_finalizacao,
                 previsao_entrega,
                 tel_encarregado,
                 tel_acabamento,
@@ -450,6 +519,99 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         if hasattr(valor, "strftime"):
             return valor.strftime("%d/%m/%Y")
         return str(valor or "")
+
+    def _abrir_calendario(self, entry):
+        from datetime import datetime
+        import calendar as _cal
+
+        meses_pt = [
+            "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+        ]
+
+        def setar_data(d):
+            entry.delete(0, "end")
+            entry.insert(0, d.strftime("%d/%m/%Y"))
+            top.destroy()
+
+        top = ctk.CTkToplevel(self)
+        top.title("Calendário")
+        top.resizable(False, False)
+
+        W, H = 300, 300
+        self.update_idletasks()
+        top.update_idletasks()
+
+        ex = entry.winfo_rootx()
+        ey = entry.winfo_rooty()
+        eh = entry.winfo_height()
+
+        x = ex
+        y = ey + eh + 6
+
+        sw = top.winfo_screenwidth()
+        sh = top.winfo_screenheight()
+        if x + W > sw:
+            x = sw - W - 10
+        if y + H > sh:
+            y = ey - H - 6
+
+        top.geometry(f"{W}x{H}+{x}+{y}")
+        top.transient(self)
+        top.grab_set()
+
+        now = datetime.now()
+        ano = now.year
+        mes = now.month
+
+        nav = ctk.CTkFrame(top)
+        nav.pack(fill="x", padx=10, pady=5)
+
+        lbl_mes = ctk.CTkLabel(nav, text=f"{meses_pt[mes]} {ano}", font=("Arial", 14))
+        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        lbl_mes.pack(side="left", expand=True)
+        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+
+        dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        frame_dias = ctk.CTkFrame(top)
+        frame_dias.pack(fill="both", expand=True, padx=10, pady=5)
+
+        for i, dia in enumerate(dias_semana):
+            lbl = ctk.CTkLabel(frame_dias, text=dia, width=30, height=30)
+            lbl.grid(row=0, column=i, padx=2, pady=2)
+
+        def mudar_mes(delta):
+            nonlocal mes, ano
+            mes += delta
+            if mes > 12:
+                mes = 1
+                ano += 1
+            elif mes < 1:
+                mes = 12
+                ano -= 1
+            lbl_mes.configure(text=f"{meses_pt[mes]} {ano}")
+            desenhar_calendario()
+
+        def desenhar_calendario():
+            for w in frame_dias.grid_slaves():
+                if int(w.grid_info()["row"]) > 0:
+                    w.destroy()
+
+            cal = _cal.monthcalendar(ano, mes)
+            for i, semana in enumerate(cal):
+                for j, dia in enumerate(semana):
+                    if dia == 0:
+                        continue
+                    btn = ctk.CTkButton(
+                        frame_dias,
+                        text=str(dia),
+                        width=30,
+                        height=30,
+                        command=lambda d=dia: setar_data(datetime(ano, mes, d))
+                    )
+                    btn.grid(row=i + 1, column=j, padx=2, pady=2)
+
+        desenhar_calendario()
 
     def _carregar_info_envio(self, envio_id):
         if not envio_id:
@@ -1068,9 +1230,18 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         ctk.CTkLabel(janela, text="Previsão Entrega:", text_color=self.cor_texto).grid(
             row=row, column=0, sticky="w", padx=12, pady=4
         )
-        previsao_entry = ctk.CTkEntry(janela, width=140)
+        previsao_frame = ctk.CTkFrame(janela, fg_color="transparent")
+        previsao_frame.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        previsao_entry = ctk.CTkEntry(previsao_frame, width=140)
         previsao_entry.insert(0, self._format_date(envio_info.get("previsao_entrega")))
-        previsao_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        previsao_entry.pack(side="left")
+        ctk.CTkButton(
+            previsao_frame,
+            text="📅",
+            width=36,
+            command=lambda: self._abrir_calendario(previsao_entry),
+        ).pack(side="left", padx=(6, 0))
+        previsao_entry.bind("<Double-Button-1>", lambda e: self._abrir_calendario(previsao_entry))
         row += 1
 
         ctk.CTkLabel(janela, text="Valor/Peça:", text_color=self.cor_texto).grid(
@@ -1211,7 +1382,13 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             conn = get_conn()
             cur = conn.cursor()
             cur.execute(
-                f"UPDATE {schema}.defeitos_envios SET status = %s, data_retorno = CURRENT_DATE WHERE id = %s",
+                f"""
+                UPDATE {schema}.defeitos_envios
+                   SET status = %s,
+                       data_retorno = CURRENT_DATE,
+                       hora_retorno = CURRENT_TIME
+                 WHERE id = %s
+                """,
                 ("Em Conferência", defeito_id),
             )
             conn.commit()
@@ -1235,7 +1412,13 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             conn = get_conn()
             cur = conn.cursor()
             cur.execute(
-                f"UPDATE {schema}.defeitos_envios SET status = %s, data_retorno = CURRENT_DATE WHERE id = %s",
+                f"""
+                UPDATE {schema}.defeitos_envios
+                   SET status = %s,
+                       data_finalizacao = CURRENT_DATE,
+                       hora_finalizacao = CURRENT_TIME
+                 WHERE id = %s
+                """,
                 ("Finalizado", defeito_id),
             )
             conn.commit()
@@ -1311,14 +1494,57 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                     }
                 },
             )
-            filename = f"ficha_defeito_{defeito_id}.pdf"
-            self._gerar_pdf_defeito(caminho_pdf=filename, dados=dados_pdf, abrir_pdf=False)
-            messagebox.showinfo("Sucesso", f"Ficha gerada: {filename}")
+            self._abrir_janela_impressao(defeito_id, dados_pdf)
         except Exception as err:
             messagebox.showerror("Erro", f"Falha ao gerar ficha:\n{err}")
         finally:
             if conn:
                 conn.close()
+
+    def _abrir_janela_impressao(self, defeito_id, dados_pdf):
+        janela = ctk.CTkToplevel(self)
+        janela.title("Imprimir ficha de defeito")
+        janela.geometry("420x180")
+        janela.grab_set()
+
+        ctk.CTkLabel(
+            janela,
+            text="Escolha a ação para a ficha de defeito:",
+            text_color=self.cor_texto,
+            font=("Roboto", 12, "bold"),
+        ).pack(pady=(16, 8))
+
+        def _pre_visualizar():
+            try:
+                self._gerar_pdf_defeito(dados=dados_pdf, abrir_pdf=True)
+            except Exception as err:
+                messagebox.showerror("Erro", f"Falha ao abrir pré-visualização:\n{err}")
+
+        def _salvar_pdf():
+            caminho = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                filetypes=[("PDF files", "*.pdf")],
+                initialfile=f"ficha_defeito_{defeito_id}.pdf",
+            )
+            if not caminho:
+                return
+            try:
+                self._gerar_pdf_defeito(caminho_pdf=caminho, dados=dados_pdf, abrir_pdf=False)
+                messagebox.showinfo("Sucesso", f"Ficha salva em: {caminho}")
+            except Exception as err:
+                messagebox.showerror("Erro", f"Falha ao salvar ficha:\n{err}")
+
+        botoes = ctk.CTkFrame(janela, fg_color="transparent")
+        botoes.pack(pady=12)
+        ctk.CTkButton(botoes, text="Pré-visualizar", command=_pre_visualizar,
+                      fg_color=self.cor_alerta, hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=6)
+        ctk.CTkButton(botoes, text="Salvar PDF", command=_salvar_pdf,
+                      fg_color=self.cor_sucesso, hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=6)
+        ctk.CTkButton(botoes, text="Fechar", command=janela.destroy,
+                      fg_color=self.cor_destaque, hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=6)
 
 
 if __name__ == "__main__":
