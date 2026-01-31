@@ -417,7 +417,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
     def _registrar_defeito(self, dados, origem, status, data_envio=None, data_retorno=None,
                            valor_peca=0.0, previsao_entrega=None, tel_encarregado=None,
                            tel_acabamento=None, aviamentos=None, outros=None, observacoes=None,
-                           data_finalizacao=None):
+                           data_finalizacao=None, data_pagamento=None):
         conn = None
         try:
             schema = get_schema()
@@ -465,7 +465,8 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                     (historico_id, envio_id, codigo, descricao, prestador, tamanho, quantidade,
                      tipo_servico, valor_peca, origem, status, data_envio, data_retorno,
                      data_finalizacao, hora_envio, hora_retorno, hora_finalizacao,
-                     previsao_entrega, tel_encarregado, tel_acabamento, aviamentos, outros, observacoes)
+                     previsao_entrega, tel_encarregado, tel_acabamento, aviamentos, outros,
+                     observacoes, data_pagamento)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """, (
                 historico_id,
@@ -491,6 +492,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 aviamentos,
                 outros,
                 observacoes,
+                data_pagamento,
             ))
             conn.commit()
             self._recarregar_tudo()
