@@ -996,11 +996,27 @@ CREATE TABLE IF NOT EXISTS opera.historico_servicos (
 -- [TABELA 45] historico_de_servico - Histórico de serviço (facções)
 CREATE TABLE IF NOT EXISTS opera.historico_de_servico (
     id BIGSERIAL PRIMARY KEY,
-    envio_id INTEGER NOT NULL REFERENCES opera.controle_envio_cortes(id) ON DELETE CASCADE,
+
+    -- vínculos (mantém compatibilidade)
+    envio_id INTEGER REFERENCES opera.controle_envio_cortes(id) ON DELETE SET NULL,
     entrada_id INTEGER REFERENCES opera.entrada_acabamento(id) ON DELETE SET NULL,
     pagamento_id BIGINT REFERENCES opera.pagamento_servicos(id) ON DELETE SET NULL,
+
+    -- vínculo correto para a página de finalização (recomendado)
+    envio_corte_id INTEGER REFERENCES opera.envios_cortes(id) ON DELETE SET NULL,
+    retorno_id INTEGER REFERENCES opera.controle_retorno_cortes(id) ON DELETE SET NULL,
+
+    -- dados que a página tenta gravar no histórico (defeitos pendentes)
+    data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    evento VARCHAR(100),
+    descricao TEXT,
+    setor VARCHAR(200),
+    quantidade INTEGER DEFAULT 0,
+    valor NUMERIC(12,2) DEFAULT 0,
+
+    -- seus campos originais
     tipo_servico VARCHAR(50),
-    status VARCHAR(50) DEFAULT 'Em Andamento',
+    status VARCHAR(50) DEFAULT 'Pendente',
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
