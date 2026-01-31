@@ -75,6 +75,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             )
         """)
         cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS valor_peca NUMERIC(12,2) DEFAULT 0
+        """)
+        cursor.execute(f"""
             CREATE INDEX IF NOT EXISTS idx_defeitos_envio_status
             ON {schema}.defeitos_envios (status)
         """)
