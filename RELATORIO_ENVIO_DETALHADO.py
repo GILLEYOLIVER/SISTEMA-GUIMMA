@@ -853,60 +853,174 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             messagebox.showerror("Exportar", f"Falha ao salvar CSV:\n{e}")
 
     def _report_html(self):
-        """Gera HTML para impressão"""
+        """Gera HTML para impressão (corrigido e mais robusto)"""
         if not getattr(self, "_cache", None):
             messagebox.showinfo("Relatório", "Busque primeiro.")
             return
 
-        # quais seções o usuário marcou
+        # =========================
+        # Helpers
+        # =========================
+        import html as _html
+        import sys
+        import subprocess
+        from tempfile import gettempdir
+        import base64
+        from datetime import datetime, date
+
+        def _safe_filename_part(s: str) -> str:
+            """Evita caracteres inválidos no nome do arquivo (ex: 31/01/2026)."""
+            s = str(s or "").strip()
+            # troca tudo que costuma quebrar no Windows/mac
+            for ch in ['\\', '/', ':', '*', '?', '"', '<', '>', '|', '\n', '\r', '\t']:
+                s = s.replace(ch, "-")
+            while "--" in s:
+                s = s.replace("--", "-")
+            return s.strip("-") or "sem_data"
+
+        def _fmt_date(v):
+            """Formata date/datetime em pt-BR."""
+            if isinstance(v, datetime):
+                return v.strftime("%d/%m/%Y %H:%M")
+            if isinstance(v, date):
+                return v.strftime("%d/%m/%Y")
+            return v
+
+        def _to_number_if_possible(v):
+            """Se vier '123' ou '123,45' como string, converte para número (para alinhar à direita)."""
+            if isinstance(v, str):
+                s = v.strip()
+                if not s:
+                    return v
+                s2 = s.replace(".", "").replace(",", ".")  # pt-BR -> float (tenta)
+                # tenta int primeiro se não tiver ponto
+                try:
+                    if "." not in s2:
+                        return int(s2)
+                    return float(s2)
+                except Exception:
+                    return v
+            return v
+
+        def _open_file(path):
+            """Abre o HTML no sistema (Windows/macOS/Linux)."""
+            try:
+                # Windows
+                if hasattr(os, "startfile"):
+                    os.startfile(path)  # type: ignore[attr-defined]
+                    return True
+            except Exception:
+                pass
+
+            try:
+                # macOS
+                if sys.platform == "darwin":
+                    subprocess.Popen(["open", path])
+                    return True
+                # Linux
+                if sys.platform.startswith("linux"):
+                    subprocess.Popen(["xdg-open", path])
+                    return True
+            except Exception:
+                pass
+
+            # fallback navegador
+            try:
+                import webbrowser
+                webbrowser.open_new_tab("file://" + path)
+                return True
+            except Exception:
+                return False
+
+        # =========================
+        # Seções selecionadas
+        # =========================
         selected = []
+
         if getattr(self, "print_interna_var", None) and self.print_interna_var.get():
-            selected.append(("Interna", self._cache.get("interna", []), list(self.cols_int),
-                             ["DATA ENV.", "CÓDIGO", "DESCRIÇÃO", "DESTINO", "PP", "P", "M", "G", "GG", "G1", "G2",
-                              "G3",
-                              "TOT.ENV", "PILOTOS", "V.PEÇA", "DATA RET.", "PILOTOS RET.", "DATA FIN.",
-                              "PP", "P", "M", "G", "GG", "G1", "G2", "G3"]))
+            selected.append((
+                "Interna",
+                self._cache.get("interna", []),
+                list(self.cols_int),
+                ["DATA ENV.", "CÓDIGO", "DESCRIÇÃO", "DESTINO", "PP", "P", "M", "G", "GG", "G1", "G2", "G3",
+                 "TOT.ENV", "PILOTOS", "V.PEÇA", "DATA RET.", "PILOTOS RET.", "DATA FIN.",
+                 "PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+            ))
+
         if getattr(self, "print_env_var", None) and self.print_env_var.get():
-            selected.append(("Enviados", self._cache.get("env", []), list(self.cols_env),
-                             ["ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "SERVIÇO", "DESTINO",
-                              "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL", "PILOTOS", "V.PEÇA", "V.TOTAL",
-                              "OBS"]))
+            selected.append((
+                "Enviados",
+                self._cache.get("env", []),
+                list(self.cols_env),
+                ["ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "SERVIÇO", "DESTINO",
+                 "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL", "PILOTOS", "V.PEÇA", "V.TOTAL", "OBS"]
+            ))
+
         if getattr(self, "print_ret_var", None) and self.print_ret_var.get():
-            selected.append(("Retorno", self._cache.get("ret", []), list(self.cols_ret),
-                             ["RETORNO", "ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR",
-                              "PP", "P", "M", "G", "GG", "G1", "G2", "G3",
-                              "PILOTOS", "AVIAMENTOS", "OUTROS", "OBS"]))
+            selected.append((
+                "Retorno",
+                self._cache.get("ret", []),
+                list(self.cols_ret),
+                ["RETORNO", "ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR",
+                 "PP", "P", "M", "G", "GG", "G1", "G2", "G3",
+                 "PILOTOS", "AVIAMENTOS", "OUTROS", "OBS"]
+            ))
+
         if getattr(self, "print_fin_var", None) and self.print_fin_var.get():
-            selected.append(("Finalizados", self._cache.get("fin", []), list(self.cols_fin),
-                             ["DATA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR",
-                              "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "V.PEÇA", "STATUS", "OBS"]))
+            selected.append((
+                "Finalizados",
+                self._cache.get("fin", []),
+                list(self.cols_fin),
+                ["DATA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR",
+                 "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "V.PEÇA", "STATUS", "OBS"]
+            ))
 
         if not selected:
             messagebox.showwarning("Relatório", "Selecione pelo menos uma seção para imprimir.")
             return
 
-        from tempfile import gettempdir
-        import base64
+        # =========================
+        # Filtros / saída
+        # =========================
+        filtros = self._cache.get("filtros", {}) or {}
+        ini = filtros.get("ini", "")
+        fim = filtros.get("fim", "")
+        termo = filtros.get("termo", "")
 
-        filtros = self._cache["filtros"]
-        ini, fim, termo = filtros["ini"], filtros["fim"], filtros["termo"]
         now = datetime.now().strftime("%d/%m/%Y %H:%M")
-        out = os.path.join(gettempdir(), f"relatorio_envio_detalhado_{ini}_a_{fim}.html")
+        ini_safe = _safe_filename_part(ini)
+        fim_safe = _safe_filename_part(fim)
+        out = os.path.join(gettempdir(), f"relatorio_envio_detalhado_{ini_safe}_a_{fim_safe}.html")
 
-        # carrega logo.jpg
+        # =========================
+        # Logo
+        # =========================
         base_dir = os.path.dirname(__file__)
-        logo_path = os.path.join(base_dir, "logo.jpg")
-        logo_data_uri = ""
-        try:
-            if os.path.isfile(logo_path):
-                with open(logo_path, "rb") as f:
-                    b64 = base64.b64encode(f.read()).decode("ascii")
-                logo_data_uri = f"data:image/jpeg;base64,{b64}"
-        except Exception:
-            logo_data_uri = ""
+        # tenta algumas opções comuns
+        logo_candidates = [
+            os.path.join(base_dir, "logo.jpg"),
+            os.path.join(base_dir, "logo.jpeg"),
+            os.path.join(base_dir, "logo.png"),
+        ]
 
-        # CSS
-        orientation = "landscape" if getattr(self, "print_landscape_var", None) and self.print_landscape_var.get() else "portrait"
+        logo_data_uri = ""
+        for lp in logo_candidates:
+            try:
+                if os.path.isfile(lp):
+                    ext = os.path.splitext(lp)[1].lower()
+                    mime = "image/jpeg" if ext in [".jpg", ".jpeg"] else "image/png"
+                    with open(lp, "rb") as f:
+                        b64 = base64.b64encode(f.read()).decode("ascii")
+                    logo_data_uri = f"data:{mime};base64,{b64}"
+                    break
+            except Exception:
+                continue
+
+        # =========================
+        # CSS (mantive seu visual)
+        # =========================
+        orientation = "landscape" if (getattr(self, "print_landscape_var", None) and self.print_landscape_var.get()) else "portrait"
+
         css = f"""
         <style>
           :root {{
@@ -951,7 +1065,6 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
           td.num {{ text-align:right; }}
           .break {{ page-break-after: always; }}
 
-          /* IMPRESSÃO */
           @media print {{
             body, .wrap {{ background:#fff !important; color:#000 !important;
                            -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
@@ -967,27 +1080,57 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         </style>
         """
 
+        # =========================
+        # HTML de tabelas (corrigido)
+        # =========================
         def table_html(rows, cols, headers):
             if not rows:
                 return "<div class='k'>Sem dados nesta seção.</div>"
-            th = "".join(f"<th>{h}</th>" for h in headers)
-            body = []
+
+            # Se headers não bater com cols, usa cols como fallback para não desalinha
+            if not headers or len(headers) != len(cols):
+                headers_use = [str(c).upper() for c in cols]
+            else:
+                headers_use = headers
+
+            th = "".join(f"<th>{_html.escape(str(h))}</th>" for h in headers_use)
+
+            body_rows = []
             for r in rows:
                 tds = []
+                # r precisa ser dict; se vier tuple/list por algum motivo, não quebra
+                if not isinstance(r, dict):
+                    # tenta converter por ordem de cols
+                    try:
+                        r = {cols[i]: r[i] for i in range(min(len(cols), len(r)))}
+                    except Exception:
+                        r = {}
+
                 for c in cols:
                     v = r.get(c, "")
-                    if isinstance(v, (datetime, date)):
-                        v = v.strftime("%Y-%m-%d")
-                    cls = "num" if isinstance(v, (int, float)) else ""
-                    tds.append(f"<td class='{cls}'>{v}</td>")
-                body.append("<tr>" + "".join(tds) + "</tr>")
-            return f"<table><thead><tr>{th}</tr></thead><tbody>{''.join(body)}</tbody></table>"
+                    v = _fmt_date(v)
+                    v = _to_number_if_possible(v)
 
+                    cls = "num" if isinstance(v, (int, float)) else ""
+                    # escapa HTML para não quebrar tabela (ex: texto com < > &)
+                    cell = _html.escape(str(v)) if v is not None else ""
+                    tds.append(f"<td class='{cls}'>{cell}</td>")
+
+                body_rows.append("<tr>" + "".join(tds) + "</tr>")
+
+            return f"<table><thead><tr>{th}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+
+        # =========================
+        # Monta seções
+        # =========================
         sections_html = []
         sections_html.append(
-            f"<div class='k'>Período: <b>{ini}</b> a <b>{fim}</b> &nbsp;•&nbsp; Busca: <b>{termo or '-'}</b></div>")
+            f"<div class='k'>Período: <b>{_html.escape(str(ini) or '-')}</b> a <b>{_html.escape(str(fim) or '-')}</b>"
+            f" &nbsp;•&nbsp; Busca: <b>{_html.escape(str(termo) or '-')}</b></div>"
+        )
+
         for idx, (titulo, data, cols, headers) in enumerate(selected, start=1):
-            sections_html.append(f"<h2>{titulo}</h2>")
+            sections_html.append(f"<h2>{_html.escape(str(titulo))}</h2>")
             sections_html.append(table_html(data, cols, headers))
             if idx != len(selected):
                 sections_html.append("<div class='break'></div>")
@@ -1001,69 +1144,73 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         </div>
         """
 
-        html = f"""<!doctype html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="color-scheme" content="light">
-      {css}
-    </head>
-    <body>
-    <header>
-      {logo_img}
-      <div class="t">Relatório Detalhado — Envio de Cortes</div>
-      {print_controls}
-      <div class="m">Gerado em {now}</div>
-    </header>
-    <div class="wrap">
-      {''.join(sections_html)}
-    </div>
-    <script>
-      (function() {{
-        var initial = "{orientation}";
-        var buttons = document.querySelectorAll('[data-orient]');
-        function setOrientation(value) {{
-          var style = document.getElementById('page-orientation');
-          if (!style) {{
-            style = document.createElement('style');
-            style.id = 'page-orientation';
-            document.head.appendChild(style);
-          }}
-          style.textContent = '@page {{ size: A4 ' + value + '; margin: 14mm; }}';
-          buttons.forEach(function(btn) {{
-            btn.classList.toggle('active', btn.getAttribute('data-orient') === value);
-          }});
-        }}
-        buttons.forEach(function(btn) {{
-          btn.addEventListener('click', function() {{
-            setOrientation(btn.getAttribute('data-orient'));
-          }});
-        }});
-        setOrientation(initial);
-        var printBtn = document.getElementById('btn-print');
-        if (printBtn) {
-          printBtn.addEventListener('click', function() {
-            window.print();
-          });
-        }
-      }})();
-    </script>
-    </body>
-    </html>"""
+        html_doc = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light">
+  {css}
+</head>
+<body>
+<header>
+  {logo_img}
+  <div class="t">Relatório Detalhado — Envio de Cortes</div>
+  {print_controls}
+  <div class="m">Gerado em {now}</div>
+</header>
 
+<div class="wrap">
+  {''.join(sections_html)}
+</div>
+
+<script>
+  (function() {{
+    var initial = "{orientation}";
+    var buttons = document.querySelectorAll('[data-orient]');
+    function setOrientation(value) {{
+      var style = document.getElementById('page-orientation');
+      if (!style) {{
+        style = document.createElement('style');
+        style.id = 'page-orientation';
+        document.head.appendChild(style);
+      }}
+      style.textContent = '@page {{ size: A4 ' + value + '; margin: 14mm; }}';
+      buttons.forEach(function(btn) {{
+        btn.classList.toggle('active', btn.getAttribute('data-orient') === value);
+      }});
+    }}
+    buttons.forEach(function(btn) {{
+      btn.addEventListener('click', function() {{
+        setOrientation(btn.getAttribute('data-orient'));
+      }});
+    }});
+    setOrientation(initial);
+
+    var printBtn = document.getElementById('btn-print');
+    if (printBtn) {{
+      printBtn.addEventListener('click', function() {{
+        window.print();
+      }});
+    }}
+  }})();
+</script>
+</body>
+</html>"""
+
+        # =========================
+        # Grava e abre
+        # =========================
         try:
             with open(out, "w", encoding="utf-8") as f:
-                f.write(html)
+                f.write(html_doc)
         except Exception as e:
             messagebox.showerror("Relatório", f"Falha ao gravar arquivo:\n{e}")
             return
 
-        try:
-            # tenta abrir no Windows primeiro
-            os.startfile(out)
-        except Exception:
-            import webbrowser
-            webbrowser.open_new_tab("file://" + out)
+        opened = _open_file(out)
+        if not opened:
+            messagebox.showwarning("Relatório", f"Relatório gerado, mas não consegui abrir automaticamente:\n{out}")
+            return
 
         messagebox.showinfo("Relatório", f"Relatório gerado:\n{out}")
 
