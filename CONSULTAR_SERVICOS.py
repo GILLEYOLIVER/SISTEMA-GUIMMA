@@ -1037,17 +1037,22 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     (schema,),
                 )
                 cols_hist = {row[0] for row in cur.fetchall()}
-                if {"data", "evento", "descricao", "quantidade", "status", "setor"}.issubset(cols_hist):
-                    filtro_data_hist, params_data_hist = _filtro_data("data")
+                if {"evento", "descricao", "quantidade", "status", "setor"}.issubset(cols_hist):
+                    data_col = "data" if "data" in cols_hist else (
+                        "data_atualizacao" if "data_atualizacao" in cols_hist else (
+                            "data_envio" if "data_envio" in cols_hist else "data_chegada"
+                        )
+                    )
+                    filtro_data_hist, params_data_hist = _filtro_data(data_col)
                     sql_defeitos_hist = f"""
-                        SELECT data, evento, descricao, quantidade, status
+                        SELECT {data_col}, evento, descricao, quantidade, status
                         FROM {schema}.historico_de_servico
                         WHERE 1=1
                           {filtro_data_hist}
                           AND setor = %s
                           AND (%s = 'Todos' OR evento = %s)
                           AND status = 'Pendente'
-                        ORDER BY data DESC
+                        ORDER BY {data_col} DESC
                     """
                     cur.execute(sql_defeitos_hist, (*params_data_hist, prestador, servico, servico))
                     for row in cur.fetchall():
