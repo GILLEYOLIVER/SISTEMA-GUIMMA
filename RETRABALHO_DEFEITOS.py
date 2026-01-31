@@ -70,6 +70,12 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 status VARCHAR(50) DEFAULT 'Pendente',
                 data_envio DATE,
                 data_retorno DATE,
+                previsao_entrega DATE,
+                tel_encarregado VARCHAR(50),
+                tel_acabamento VARCHAR(50),
+                aviamentos TEXT,
+                outros TEXT,
+                observacoes TEXT,
                 data_pagamento DATE,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -77,6 +83,30 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         cursor.execute(f"""
             ALTER TABLE {schema}.defeitos_envios
             ADD COLUMN IF NOT EXISTS valor_peca NUMERIC(12,2) DEFAULT 0
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS previsao_entrega DATE
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS tel_encarregado VARCHAR(50)
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS tel_acabamento VARCHAR(50)
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS aviamentos TEXT
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS outros TEXT
+        """)
+        cursor.execute(f"""
+            ALTER TABLE {schema}.defeitos_envios
+            ADD COLUMN IF NOT EXISTS observacoes TEXT
         """)
         cursor.execute(f"""
             CREATE INDEX IF NOT EXISTS idx_defeitos_envio_status
@@ -325,16 +355,17 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         if not sel:
             messagebox.showwarning("Aviso", "Selecione um defeito pendente.")
             return None
-        return self.pend_tree.item(sel[0], "values")
+        item = self.pend_tree.item(sel[0])
+        return {
+            "values": item.get("values", ()),
+            "tags": item.get("tags", ()),
+        }
 
     def _registrar_envio_externo(self):
         dados = self._get_pendente_selecionado()
         if not dados:
             return
-        data_envio = datetime.now().date()
-        valor_peca = self._valor_peca_atual()
-        self._registrar_defeito(dados, origem="Externo", status="Enviado",
-                                data_envio=data_envio, valor_peca=valor_peca)
+        self._abrir_janela_envio_defeito(dados, origem="Externo", status="Enviado")
 
     def _registrar_baixa_interna(self):
         dados = self._get_pendente_selecionado()
@@ -351,7 +382,9 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         except Exception:
             return 0.0
 
-    def _registrar_defeito(self, dados, origem, status, data_envio=None, data_retorno=None, valor_peca=0.0):
+    def _registrar_defeito(self, dados, origem, status, data_envio=None, data_retorno=None,
+                           valor_peca=0.0, previsao_entrega=None, tel_encarregado=None,
+                           tel_acabamento=None, aviamentos=None, outros=None, observacoes=None):
         conn = None
         try:
             schema = get_schema()
@@ -359,13 +392,15 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             cur = conn.cursor()
             self._ensure_schema(cur)
 
-            data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = dados
+            values = dados["values"] if isinstance(dados, dict) else dados
+            data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = values
             envio_id = int(envio_id) if str(envio_id).isdigit() else None
             cur.execute(f"""
                 INSERT INTO {schema}.defeitos_envios
                     (envio_id, codigo, descricao, prestador, tamanho, quantidade,
-                     tipo_servico, valor_peca, origem, status, data_envio, data_retorno)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                     tipo_servico, valor_peca, origem, status, data_envio, data_retorno,
+                     previsao_entrega, tel_encarregado, tel_acabamento, aviamentos, outros, observacoes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """, (
                 envio_id,
                 codigo if codigo != "-" else None,
@@ -379,6 +414,12 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 status,
                 data_envio,
                 data_retorno,
+                previsao_entrega,
+                tel_encarregado,
+                tel_acabamento,
+                aviamentos,
+                outros,
+                observacoes,
             ))
             conn.commit()
             self._recarregar_tudo()
@@ -389,6 +430,768 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         finally:
             if conn:
                 conn.close()
+
+    def _parse_date(self, valor):
+        if not valor:
+            return None
+        if hasattr(valor, "year"):
+            return valor
+        texto = str(valor).strip()
+        if not texto:
+            return None
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(texto, fmt).date()
+            except Exception:
+                continue
+        return None
+
+    def _format_date(self, valor):
+        if hasattr(valor, "strftime"):
+            return valor.strftime("%d/%m/%Y")
+        return str(valor or "")
+
+    def _carregar_info_envio(self, envio_id):
+        if not envio_id:
+            return {}
+        conn = None
+        try:
+            schema = get_schema()
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT column_name
+                  FROM information_schema.columns
+                 WHERE table_schema = %s
+                   AND table_name = 'envios_cortes'
+                """,
+                (schema,),
+            )
+            cols = {row[0] for row in cur.fetchall()}
+            wanted = {
+                "codigo_corte": "codigo",
+                "descricao_corte": "descricao",
+                "ordem_corte": "ordem_corte",
+                "data_envio": "data_envio",
+                "previsao_entrega": "previsao_entrega",
+                "tel_encarregado": "tel_encarregado",
+                "tel_acabamento": "tel_acabamento",
+                "prestador_id": "prestador_id",
+            }
+            select_cols = [col for col in wanted if col in cols]
+            if not select_cols:
+                return {}
+            cur.execute(
+                f"SELECT {', '.join(select_cols)} FROM {schema}.envios_cortes WHERE id = %s",
+                (envio_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return {}
+            result = {}
+            for idx, col in enumerate(select_cols):
+                result[wanted[col]] = row[idx]
+            return result
+        except Exception:
+            return {}
+        finally:
+            if conn:
+                conn.close()
+
+    def _carregar_info_prestador(self, prestador_id=None, nome=None):
+        if not prestador_id and not nome:
+            return {}
+        conn = None
+        try:
+            schema = get_schema()
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT column_name
+                  FROM information_schema.columns
+                 WHERE table_schema = %s
+                   AND table_name = 'cadastro_faccoes'
+                """,
+                (schema,),
+            )
+            cols = {row[0] for row in cur.fetchall()}
+            wanted = ["nome", "telefone", "banco", "agencia", "conta", "pix", "titular_da_conta"]
+            select_cols = [col for col in wanted if col in cols]
+            if not select_cols:
+                return {}
+            if prestador_id:
+                cur.execute(
+                    f"SELECT {', '.join(select_cols)} FROM {schema}.cadastro_faccoes WHERE id = %s",
+                    (prestador_id,),
+                )
+            else:
+                cur.execute(
+                    f"SELECT {', '.join(select_cols)} FROM {schema}.cadastro_faccoes WHERE nome = %s",
+                    (nome,),
+                )
+            row = cur.fetchone()
+            if not row:
+                return {}
+            data = dict(zip(select_cols, row))
+            return {
+                "nome": data.get("nome") or nome or "",
+                "telefone": data.get("telefone") or "",
+                "banco": data.get("banco") or "",
+                "agencia": data.get("agencia") or "",
+                "conta": data.get("conta") or "",
+                "pix": data.get("pix") or "",
+                "titular": data.get("titular_da_conta") or "",
+            }
+        except Exception:
+            return {}
+        finally:
+            if conn:
+                conn.close()
+
+    def _montar_dados_pdf_defeito(self, defeito, prestador_info=None, envio_info=None, extras=None):
+        prestador_info = prestador_info or {}
+        envio_info = envio_info or {}
+        extras = extras or {}
+        tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+
+        tamanho_defeito = (defeito.get("tamanho") or "").upper()
+        qtd_defeito = int(defeito.get("quantidade") or 0)
+        valor_peca = float(defeito.get("valor_peca") or 0.0)
+        itens = []
+        total_geral = 0.0
+        for tam in tamanhos:
+            qtd = qtd_defeito if tam == tamanho_defeito else 0
+            subtotal = qtd * valor_peca
+            total_geral += subtotal
+            itens.append({
+                "tam": tam,
+                "qtd": qtd,
+                "piloto": 0,
+                "valor_peca": valor_peca,
+                "subtotal": subtotal,
+            })
+
+        prestador = {
+            "nome": prestador_info.get("nome") or defeito.get("prestador") or "",
+            "telefone": prestador_info.get("telefone") or "",
+            "banco": prestador_info.get("banco") or "",
+            "agencia": prestador_info.get("agencia") or "",
+            "conta": prestador_info.get("conta") or "",
+            "pix": prestador_info.get("pix") or "",
+            "titular": prestador_info.get("titular") or "",
+        }
+        corte = {
+            "codigo": defeito.get("codigo") or envio_info.get("codigo") or "",
+            "descricao": defeito.get("descricao") or envio_info.get("descricao") or "",
+            "ordem_corte": envio_info.get("ordem_corte") or "",
+        }
+        envio = {
+            "data_envio": defeito.get("data_envio") or envio_info.get("data_envio") or "",
+            "previsao_entrega": defeito.get("previsao_entrega") or envio_info.get("previsao_entrega") or "",
+            "tel_encarregado": defeito.get("tel_encarregado") or envio_info.get("tel_encarregado") or "",
+            "tel_acabamento": defeito.get("tel_acabamento") or envio_info.get("tel_acabamento") or "",
+        }
+        campos_texto = {
+            "aviamentos": defeito.get("aviamentos") or extras.get("aviamentos") or "",
+            "outros": defeito.get("outros") or extras.get("outros") or "",
+            "observacoes": defeito.get("observacoes") or extras.get("observacoes") or "",
+        }
+        return {
+            "prestador": prestador,
+            "corte": corte,
+            "envio": envio,
+            "itens": itens,
+            "totais": {"total_geral": total_geral},
+            "campos_texto": campos_texto,
+            "meta": extras.get("meta") or {},
+        }
+
+    def _gerar_pdf_defeito(self, caminho_pdf: str | None = None, dados: dict | None = None,
+                           abrir_pdf: bool = False) -> str:
+        from datetime import datetime, date
+        import os
+        import re
+        import sys
+        import tempfile
+        import webbrowser
+
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
+        )
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+
+        def _t(v):
+            if v is None:
+                return ""
+            if isinstance(v, (date, datetime)):
+                try:
+                    return v.strftime("%d/%m/%Y")
+                except Exception:
+                    return str(v)
+            return str(v).strip()
+
+        def _p(text):
+            txt = _t(text)
+            txt = txt.replace("\r\n", "\n").replace("\r", "\n")
+            txt = re.sub(r"\n{3,}", "\n\n", txt)
+            txt = txt.replace("\n", "<br/>")
+            return txt.strip() if txt.strip() else "-"
+
+        def _int(v, default=0):
+            try:
+                if v is None or v == "":
+                    return int(default)
+                if isinstance(v, (int, float)):
+                    return int(v)
+                s = str(v).strip()
+                if not s:
+                    return int(default)
+                return int(float(s.replace(".", "").replace(",", ".")))
+            except Exception:
+                return int(default)
+
+        def _num(v, default=0.0):
+            try:
+                if v is None or v == "":
+                    return float(default)
+                if isinstance(v, (int, float)):
+                    return float(v)
+                s = str(v).strip().replace("R$", "").replace(" ", "")
+                if not s:
+                    return float(default)
+                try:
+                    return float(s)
+                except Exception:
+                    return float(s.replace(".", "").replace(",", "."))
+            except Exception:
+                return float(default)
+
+        def fmt_moeda(v):
+            val = float(_num(v, 0.0))
+            s = f"{val:,.2f}"
+            return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+        def fmt_data(v):
+            s = _t(v)
+            return s if s else "-"
+
+        def _find_logo_path(candidate: str | None):
+            c = (candidate or "").strip()
+            if c and os.path.exists(c):
+                return c
+            if os.path.exists("LOGO.jpg"):
+                return "LOGO.jpg"
+            try:
+                lp = globals().get("LOGO_PATH", "")
+                if lp and os.path.exists(lp):
+                    return lp
+            except Exception:
+                pass
+            return None
+
+        def _open_pdf(path_pdf: str):
+            try:
+                abs_path = os.path.abspath(path_pdf)
+                if sys.platform.startswith("win"):
+                    url = "file:///" + abs_path.replace("\\", "/")
+                else:
+                    url = "file://" + abs_path
+                webbrowser.open(url)
+            except Exception:
+                pass
+
+        if not caminho_pdf:
+            fd, caminho_pdf = tempfile.mkstemp(suffix=".pdf", prefix="defeito_envio_")
+            os.close(fd)
+
+        prestador = dados.get("prestador", {}) or {}
+        corte = dados.get("corte", {}) or {}
+        envio = dados.get("envio", {}) or {}
+        itens = dados.get("itens", []) or []
+        totais = dados.get("totais", {}) or {}
+        campos_texto = dados.get("campos_texto", {}) or {}
+        meta = dados.get("meta", {}) or {}
+
+        itens_norm = []
+        total_geral = 0.0
+        for it in itens:
+            tam = _t(it.get("tam")) or "-"
+            qtd = _int(it.get("qtd"), 0)
+            piloto = _int(it.get("piloto"), 0)
+            valor_peca = _num(it.get("valor_peca"), 0.0)
+            subtotal = it.get("subtotal")
+            if subtotal is None or subtotal == "":
+                subtotal = (qtd + piloto) * valor_peca
+            subtotal = _num(subtotal, 0.0)
+            total_geral += subtotal
+            itens_norm.append({
+                "tam": tam, "qtd": qtd, "piloto": piloto, "valor_peca": valor_peca, "subtotal": subtotal
+            })
+
+        if totais.get("total_geral") not in (None, ""):
+            total_geral = _num(totais.get("total_geral"), total_geral)
+
+        titulo = "CONTROLE DE MÃO DE OBRA — Retrabalho de Defeitos"
+        gerado_em = _t(meta.get("gerado_em")) or datetime.now().strftime("%d/%m/%Y %H:%M")
+        logo_path = _find_logo_path(meta.get("logo_path"))
+        empresa_nome = (_t(meta.get("empresa_nome")) or "OPERA / EMPRESA").strip()
+
+        doc = SimpleDocTemplate(
+            caminho_pdf,
+            pagesize=A4,
+            leftMargin=16 * mm,
+            rightMargin=16 * mm,
+            topMargin=14 * mm,
+            bottomMargin=14 * mm,
+            title=titulo,
+            author="Ópera Fashion",
+        )
+
+        styles = getSampleStyleSheet()
+        style_title = ParagraphStyle(
+            "OPERA_Title_Defeito",
+            parent=styles["Heading1"],
+            fontName="Helvetica-Bold",
+            fontSize=13,
+            leading=15,
+            alignment=TA_LEFT,
+            spaceAfter=2,
+        )
+        style_sub = ParagraphStyle(
+            "OPERA_Sub_Defeito",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#444444"),
+            alignment=TA_LEFT,
+        )
+        style_value = ParagraphStyle(
+            "OPERA_Value_Defeito",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#222222"),
+        )
+        style_box_title = ParagraphStyle(
+            "OPERA_BoxTitle_Defeito",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            leading=11,
+            textColor=colors.HexColor("#111111"),
+            spaceAfter=2,
+        )
+        style_total = ParagraphStyle(
+            "OPERA_Total_Defeito",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=10,
+            leading=12,
+            alignment=TA_RIGHT,
+            textColor=colors.HexColor("#111111"),
+        )
+        style_small = ParagraphStyle(
+            "OPERA_Small_Defeito",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=7,
+            leading=9,
+            textColor=colors.HexColor("#666666"),
+        )
+
+        def build_footer(canvas, _doc):
+            canvas.saveState()
+            canvas.setFont("Helvetica", 7)
+            canvas.setFillColor(colors.HexColor("#666666"))
+            canvas.drawString(16 * mm, 9 * mm, "SISTEMA OPERA — Impressão")
+            canvas.drawRightString(210 * mm - 16 * mm, 9 * mm, f"Página {canvas.getPageNumber()}")
+            canvas.restoreState()
+
+        def kv_table(title_left: str, rows_left, title_right: str, rows_right):
+            left_parts = [Paragraph(title_left, style_box_title)]
+            for k, v in rows_left:
+                left_parts.append(Paragraph(f"{_t(k)}: <b>{_p(v)}</b>", style_value))
+
+            right_parts = [Paragraph(title_right, style_box_title)]
+            for k, v in rows_right:
+                right_parts.append(Paragraph(f"{_t(k)}: <b>{_p(v)}</b>", style_value))
+
+            t = Table([[left_parts, right_parts]], colWidths=[(doc.width * 0.5) - 4, (doc.width * 0.5) - 4])
+            t.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("BOX", (0, 0), (0, 0), 0.6, colors.HexColor("#D0D0D0")),
+                ("BOX", (1, 0), (1, 0), 0.6, colors.HexColor("#D0D0D0")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FAFAFA")),
+            ]))
+            return t
+
+        def text_box_compacto(title: str, body: str):
+            elements = [
+                Paragraph(title, style_box_title),
+                Paragraph(_p(body), style_value),
+            ]
+            t = Table([[elements]], colWidths=[doc.width])
+            t.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#D0D0D0")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFFFFF")),
+            ]))
+            return t
+
+        story = []
+        header_left = [
+            Paragraph(titulo, style_title),
+            Paragraph(f"Gerado em: {gerado_em}", style_sub),
+        ]
+
+        header_right = []
+        if logo_path:
+            try:
+                img = RLImage(logo_path)
+                img.drawHeight = 16 * mm
+                img.drawWidth = 42 * mm
+                header_right.append(img)
+            except Exception:
+                header_right.append(
+                    Paragraph("ÓPERA FASHION", ParagraphStyle("LogoTxtDefeito", parent=style_title, alignment=TA_RIGHT)))
+        else:
+            header_right.append(
+                Paragraph("ÓPERA FASHION", ParagraphStyle("LogoTxtDefeito", parent=style_title, alignment=TA_RIGHT)))
+
+        header_tbl = Table([[header_left, header_right]], colWidths=[doc.width * 0.70, doc.width * 0.30])
+        header_tbl.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+        story.append(header_tbl)
+        story.append(Spacer(1, 1.5 * mm))
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#222222")))
+        story.append(Spacer(1, 4 * mm))
+
+        story.append(kv_table(
+            "Dados do Prestador",
+            [
+                ("Nome", prestador.get("nome")),
+                ("Telefone", prestador.get("telefone")),
+                ("Banco", prestador.get("banco")),
+                ("Agência", prestador.get("agencia")),
+                ("Conta", prestador.get("conta")),
+                ("PIX", prestador.get("pix")),
+                ("Titular", prestador.get("titular")),
+            ],
+            "Dados do Corte / Envio",
+            [
+                ("Código", corte.get("codigo")),
+                ("Descrição", corte.get("descricao")),
+                ("Nº Ordem", corte.get("ordem_corte")),
+                ("Data", fmt_data(envio.get("data_envio"))),
+                ("Previsão de Entrega", fmt_data(envio.get("previsao_entrega"))),
+                ("Tel. Encarregado", envio.get("tel_encarregado")),
+                ("Tel. Acabamento", envio.get("tel_acabamento")),
+            ],
+        ))
+        story.append(Spacer(1, 4 * mm))
+
+        story.append(Paragraph("Itens do Envio", style_box_title))
+        story.append(Spacer(1, 1.5 * mm))
+
+        table_data = [["Tam.", "Qtd", "Piloto", "Valor/Peça", "Subtotal"]]
+        for it in itens_norm:
+            table_data.append([
+                it["tam"],
+                str(it["qtd"]),
+                str(it["piloto"]),
+                fmt_moeda(it["valor_peca"]),
+                fmt_moeda(it["subtotal"]),
+            ])
+
+        col_widths = [18 * mm, 16 * mm, 16 * mm, 28 * mm, 28 * mm]
+        row_heights = [6 * mm] + [4.6 * mm] * (len(table_data) - 1)
+
+        itens_tbl = Table(table_data, colWidths=col_widths, rowHeights=row_heights, repeatRows=1)
+        itens_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#222222")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+            ("TOPPADDING", (0, 0), (-1, 0), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
+
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D0D0")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+            ("ALIGN", (0, 1), (0, -1), "CENTER"),
+            ("ALIGN", (1, 1), (2, -1), "CENTER"),
+            ("ALIGN", (3, 1), (4, -1), "RIGHT"),
+
+            ("LEFTPADDING", (0, 1), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 1), (-1, -1), 3),
+            ("TOPPADDING", (0, 1), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 1), (-1, -1), 1),
+
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F7F7F7")]),
+        ]))
+        story.append(itens_tbl)
+        story.append(Spacer(1, 2.5 * mm))
+
+        total_tbl = Table(
+            [[Paragraph("TOTAL GERAL:", style_value), Paragraph(fmt_moeda(total_geral), style_total)]],
+            colWidths=[doc.width * 0.7, doc.width * 0.3]
+        )
+        total_tbl.setStyle(TableStyle([
+            ("LINEABOVE", (0, 0), (-1, 0), 1.0, colors.HexColor("#222222")),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ]))
+        story.append(total_tbl)
+        story.append(Spacer(1, 3 * mm))
+
+        story.append(text_box_compacto("Aviamentos", campos_texto.get("aviamentos", "")))
+        story.append(Spacer(1, 2 * mm))
+        story.append(text_box_compacto("Outros", campos_texto.get("outros", "")))
+        story.append(Spacer(1, 2 * mm))
+        story.append(text_box_compacto("Observações", campos_texto.get("observacoes", "")))
+        story.append(Spacer(1, 3 * mm))
+
+        nome_prest = (_t(prestador.get("nome")) or "").strip()
+        if not nome_prest:
+            nome_prest = "______________________________"
+
+        assin_tbl = Table(
+            [
+                ["Assinatura do Prestador", "Assinatura da Empresa"],
+                ["______________________________", "______________________________"],
+                [f"Nome: {nome_prest}", f"Nome: {empresa_nome}"],
+                ["Data: ____/____/________", "Data: ____/____/________"],
+            ],
+            colWidths=[doc.width * 0.5, doc.width * 0.5],
+            rowHeights=[5 * mm, 7 * mm, 5 * mm, 5 * mm]
+        )
+        assin_tbl.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+
+            ("ALIGN", (0, 1), (-1, 1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+            ("LINEABOVE", (0, 0), (-1, 0), 1.0, colors.HexColor("#222222")),
+            ("BOX", (0, 0), (0, -1), 0.6, colors.HexColor("#D0D0D0")),
+            ("BOX", (1, 0), (1, -1), 0.6, colors.HexColor("#D0D0D0")),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#FAFAFA")),
+
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ]))
+        story.append(assin_tbl)
+
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph("Documento gerado automaticamente pelo Sistema Ópera.", style_small))
+
+        doc.build(story, onFirstPage=build_footer, onLaterPages=build_footer)
+
+        if abrir_pdf:
+            _open_pdf(caminho_pdf)
+
+        return caminho_pdf
+
+    def _abrir_janela_envio_defeito(self, dados, origem, status):
+        values = dados["values"]
+        data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = values
+        envio_id_num = int(envio_id) if str(envio_id).isdigit() else None
+        envio_info = self._carregar_info_envio(envio_id_num)
+        prestador_info = self._carregar_info_prestador(envio_info.get("prestador_id"), prestador)
+
+        janela = ctk.CTkToplevel(self)
+        janela.title("Pré-visualização do envio de defeito")
+        janela.geometry("780x640")
+        janela.grab_set()
+
+        def _add_row(label, value, row):
+            ctk.CTkLabel(janela, text=label, text_color=self.cor_texto).grid(
+                row=row, column=0, sticky="w", padx=12, pady=4
+            )
+            lbl = ctk.CTkLabel(janela, text=value, text_color=self.cor_texto)
+            lbl.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+
+        row = 0
+        _add_row("Prestador:", prestador, row)
+        row += 1
+        _add_row("Código:", codigo, row)
+        row += 1
+        _add_row("Descrição:", desc, row)
+        row += 1
+        _add_row("Tamanho:", tamanho, row)
+        row += 1
+        _add_row("Quantidade:", qtd, row)
+        row += 1
+        _add_row("Serviço:", servico, row)
+        row += 1
+
+        ctk.CTkLabel(janela, text="Data Envio:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=12, pady=4
+        )
+        data_envio_entry = ctk.CTkEntry(janela, width=140)
+        data_envio_entry.insert(0, self._format_date(envio_info.get("data_envio") or datetime.now().date()))
+        data_envio_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        row += 1
+
+        ctk.CTkLabel(janela, text="Previsão Entrega:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=12, pady=4
+        )
+        previsao_entry = ctk.CTkEntry(janela, width=140)
+        previsao_entry.insert(0, self._format_date(envio_info.get("previsao_entrega")))
+        previsao_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        row += 1
+
+        ctk.CTkLabel(janela, text="Valor/Peça:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=12, pady=4
+        )
+        valor_entry = ctk.CTkEntry(janela, width=140)
+        valor_entry.insert(0, f"{self._valor_peca_atual():.2f}")
+        valor_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        row += 1
+
+        ctk.CTkLabel(janela, text="Tel. Encarregado:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=12, pady=4
+        )
+        tel_encarregado_entry = ctk.CTkEntry(janela, width=200)
+        tel_encarregado_entry.insert(0, envio_info.get("tel_encarregado") or "")
+        tel_encarregado_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        row += 1
+
+        ctk.CTkLabel(janela, text="Tel. Acabamento:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=12, pady=4
+        )
+        tel_acabamento_entry = ctk.CTkEntry(janela, width=200)
+        tel_acabamento_entry.insert(0, envio_info.get("tel_acabamento") or "")
+        tel_acabamento_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        row += 1
+
+        ctk.CTkLabel(janela, text="Aviamentos:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="nw", padx=12, pady=4
+        )
+        aviamentos_text = ctk.CTkTextbox(janela, width=420, height=60)
+        aviamentos_text.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        row += 1
+
+        ctk.CTkLabel(janela, text="Outros:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="nw", padx=12, pady=4
+        )
+        outros_text = ctk.CTkTextbox(janela, width=420, height=60)
+        outros_text.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        row += 1
+
+        ctk.CTkLabel(janela, text="Observações:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="nw", padx=12, pady=4
+        )
+        observacoes_text = ctk.CTkTextbox(janela, width=420, height=80)
+        observacoes_text.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        row += 1
+
+        def _coletar_pdf_data():
+            valor = 0.0
+            try:
+                valor = float(valor_entry.get().replace(",", "."))
+            except Exception:
+                valor = 0.0
+            defeito_info = {
+                "codigo": codigo,
+                "descricao": desc,
+                "prestador": prestador,
+                "tamanho": tamanho,
+                "quantidade": int(qtd) if str(qtd).isdigit() else 0,
+                "valor_peca": valor,
+                "data_envio": self._parse_date(data_envio_entry.get()),
+                "previsao_entrega": self._parse_date(previsao_entry.get()),
+                "tel_encarregado": tel_encarregado_entry.get(),
+                "tel_acabamento": tel_acabamento_entry.get(),
+                "aviamentos": aviamentos_text.get("1.0", "end-1c"),
+                "outros": outros_text.get("1.0", "end-1c"),
+                "observacoes": observacoes_text.get("1.0", "end-1c"),
+            }
+            meta = {
+                "gerado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "empresa_nome": "OPERA / EMPRESA",
+                "logo_path": "LOGO.jpg",
+            }
+            return self._montar_dados_pdf_defeito(
+                defeito_info,
+                prestador_info=prestador_info,
+                envio_info=envio_info,
+                extras={"meta": meta},
+            ), defeito_info
+
+        def _pre_visualizar():
+            try:
+                dados_pdf, _ = _coletar_pdf_data()
+                self._gerar_pdf_defeito(dados=dados_pdf, abrir_pdf=True)
+            except Exception as err:
+                messagebox.showerror("Erro", f"Falha ao gerar pré-visualização:\n{err}")
+
+        def _confirmar_envio():
+            _, defeito_info = _coletar_pdf_data()
+            data_envio = defeito_info.get("data_envio")
+            valor = defeito_info.get("valor_peca")
+            previsao = defeito_info.get("previsao_entrega")
+            tel_enc = defeito_info.get("tel_encarregado")
+            tel_ac = defeito_info.get("tel_acabamento")
+            self._registrar_defeito(
+                dados,
+                origem=origem,
+                status=status,
+                data_envio=data_envio,
+                valor_peca=valor,
+                previsao_entrega=previsao,
+                tel_encarregado=tel_enc,
+                tel_acabamento=tel_ac,
+                aviamentos=defeito_info.get("aviamentos"),
+                outros=defeito_info.get("outros"),
+                observacoes=defeito_info.get("observacoes"),
+            )
+            janela.destroy()
+            messagebox.showinfo("Sucesso", "Defeito enviado com sucesso.")
+
+        botoes = ctk.CTkFrame(janela, fg_color="transparent")
+        botoes.grid(row=row, column=0, columnspan=2, pady=12)
+        ctk.CTkButton(botoes, text="Pré-visualizar", command=_pre_visualizar,
+                      fg_color=self.cor_alerta, hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=6)
+        ctk.CTkButton(botoes, text="Enviar", command=_confirmar_envio,
+                      fg_color=self.cor_sucesso, hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=6)
+        ctk.CTkButton(botoes, text="Cancelar", command=janela.destroy,
+                      fg_color=self.cor_destaque, hover_color=self.cor_hover,
+                      text_color=self.cor_texto).pack(side="left", padx=6)
 
     def _get_defeito_processo(self):
         sel = self.proc_tree.selection()
@@ -450,150 +1253,72 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         if not item:
             return
         try:
-            from reportlab.lib.pagesizes import A4
-            from reportlab.lib import colors
-            from reportlab.lib.units import mm
-            from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, HRFlowable
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-            from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+            from reportlab.lib.pagesizes import A4  # noqa: F401
         except Exception:
             messagebox.showwarning("Aviso", "reportlab não está disponível para gerar a ficha.")
             return
-        defeito_id, prestador, codigo, descricao, tamanho, qtd, origem, status, data_envio, data_retorno = item
-        filename = f"ficha_defeito_{defeito_id}.pdf"
-
-        styles = getSampleStyleSheet()
-        style_title = ParagraphStyle(
-            "DefeitoTitle",
-            parent=styles["Heading1"],
-            fontName="Helvetica-Bold",
-            fontSize=13,
-            leading=15,
-            alignment=TA_LEFT,
-            spaceAfter=2,
-        )
-        style_sub = ParagraphStyle(
-            "DefeitoSub",
-            parent=styles["Normal"],
-            fontName="Helvetica",
-            fontSize=8,
-            leading=10,
-            textColor=colors.HexColor("#444444"),
-            alignment=TA_LEFT,
-        )
-        style_value = ParagraphStyle(
-            "DefeitoValue",
-            parent=styles["Normal"],
-            fontName="Helvetica",
-            fontSize=9,
-            leading=11,
-            textColor=colors.HexColor("#222222"),
-        )
-        style_total = ParagraphStyle(
-            "DefeitoTotal",
-            parent=styles["Normal"],
-            fontName="Helvetica-Bold",
-            fontSize=10,
-            leading=12,
-            alignment=TA_RIGHT,
-            textColor=colors.HexColor("#111111"),
-        )
-
-        def _p(v):
-            return str(v).strip() if v not in (None, "") else "-"
-
-        valor_peca = 0.0
+        defeito_id = item[0]
+        conn = None
         try:
+            schema = get_schema()
             conn = get_conn()
             cur = conn.cursor()
+            self._ensure_schema(cur)
             cur.execute(
-                f"SELECT valor_peca FROM {get_schema()}.defeitos_envios WHERE id = %s",
+                f"""
+                SELECT envio_id, prestador, codigo, descricao, tamanho, quantidade, valor_peca,
+                       data_envio, previsao_entrega, tel_encarregado, tel_acabamento,
+                       aviamentos, outros, observacoes
+                  FROM {schema}.defeitos_envios
+                 WHERE id = %s
+                """,
                 (defeito_id,),
             )
             row = cur.fetchone()
-            if row:
-                valor_peca = float(row[0] or 0.0)
-            conn.close()
-        except Exception:
-            valor_peca = 0.0
+            if not row:
+                messagebox.showwarning("Aviso", "Defeito não encontrado.")
+                return
+            (envio_id, prestador, codigo, descricao, tamanho, qtd, valor_peca,
+             data_envio, previsao_entrega, tel_encarregado, tel_acabamento,
+             aviamentos, outros, observacoes) = row
 
-        total = float(valor_peca or 0.0) * float(qtd or 0)
-
-        doc = SimpleDocTemplate(
-            filename,
-            pagesize=A4,
-            leftMargin=16 * mm,
-            rightMargin=16 * mm,
-            topMargin=14 * mm,
-            bottomMargin=14 * mm,
-            title="Ficha de Retrabalho de Defeitos",
-            author="Ópera Fashion",
-        )
-
-        elements = [
-            Paragraph("FICHA DE RETRABALHO DE DEFEITOS", style_title),
-            Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", style_sub),
-            HRFlowable(color=colors.HexColor("#D0D0D0")),
-            Spacer(1, 4),
-        ]
-
-        dados_left = [
-            ("ID", defeito_id),
-            ("Prestador", prestador),
-            ("Origem", origem),
-            ("Status", status),
-        ]
-        dados_right = [
-            ("Código", codigo),
-            ("Descrição", descricao),
-            ("Envio", data_envio),
-            ("Retorno", data_retorno),
-        ]
-
-        def _kv_table(rows_left, rows_right):
-            left = [Paragraph(f"{k}: <b>{_p(v)}</b>", style_value) for k, v in rows_left]
-            right = [Paragraph(f"{k}: <b>{_p(v)}</b>", style_value) for k, v in rows_right]
-            t = Table([[left, right]], colWidths=[(doc.width * 0.5) - 4, (doc.width * 0.5) - 4])
-            t.setStyle(TableStyle([
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ("BOX", (0, 0), (0, 0), 0.6, colors.HexColor("#D0D0D0")),
-                ("BOX", (1, 0), (1, 0), 0.6, colors.HexColor("#D0D0D0")),
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FAFAFA")),
-            ]))
-            return t
-
-        elements.append(_kv_table(dados_left, dados_right))
-        elements.append(Spacer(1, 6))
-
-        itens_table = Table(
-            [
-                ["Tamanho", "Quantidade", "Valor/Peça", "Subtotal"],
-                [_p(tamanho), _p(qtd), f"R$ {valor_peca:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                 f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")],
-            ],
-            colWidths=[doc.width * 0.2, doc.width * 0.2, doc.width * 0.3, doc.width * 0.3],
-        )
-        itens_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D0D0D0")),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FAFAFA")),
-        ]))
-        elements.append(itens_table)
-        elements.append(Spacer(1, 6))
-
-        elements.append(Paragraph(f"Total: R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                                  style_total))
-
-        doc.build(elements)
-        messagebox.showinfo("Sucesso", f"Ficha gerada: {filename}")
+            envio_info = self._carregar_info_envio(envio_id)
+            prestador_info = self._carregar_info_prestador(envio_info.get("prestador_id"), prestador)
+            defeito_info = {
+                "codigo": codigo,
+                "descricao": descricao,
+                "prestador": prestador,
+                "tamanho": tamanho,
+                "quantidade": qtd,
+                "valor_peca": valor_peca,
+                "data_envio": data_envio,
+                "previsao_entrega": previsao_entrega,
+                "tel_encarregado": tel_encarregado,
+                "tel_acabamento": tel_acabamento,
+                "aviamentos": aviamentos,
+                "outros": outros,
+                "observacoes": observacoes,
+            }
+            dados_pdf = self._montar_dados_pdf_defeito(
+                defeito_info,
+                prestador_info=prestador_info,
+                envio_info=envio_info,
+                extras={
+                    "meta": {
+                        "gerado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "empresa_nome": "OPERA / EMPRESA",
+                        "logo_path": "LOGO.jpg",
+                    }
+                },
+            )
+            filename = f"ficha_defeito_{defeito_id}.pdf"
+            self._gerar_pdf_defeito(caminho_pdf=filename, dados=dados_pdf, abrir_pdf=False)
+            messagebox.showinfo("Sucesso", f"Ficha gerada: {filename}")
+        except Exception as err:
+            messagebox.showerror("Erro", f"Falha ao gerar ficha:\n{err}")
+        finally:
+            if conn:
+                conn.close()
 
 
 if __name__ == "__main__":
