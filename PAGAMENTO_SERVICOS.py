@@ -520,6 +520,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         tab_servicos.grid_rowconfigure(0, weight=1)
         tab_servicos.grid_columnconfigure(0, weight=1)
         tree_container.grid_rowconfigure(0, weight=1)
+        tree_container.grid_rowconfigure(1, weight=0)
         tree_container.grid_columnconfigure(0, weight=1)
 
         cols = ("id", "tipo_servico", "codigo", "descricao", "costureira", "data_envio", "data_chegada", "total_qtd")
@@ -530,8 +531,10 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.tree.column(col, width=70 if col != "descricao" else 140, anchor="center")
         self.tree.grid(row=0, column=0, sticky="nsew")
         vsb = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=vsb.set)
+        hsb = ttk.Scrollbar(tree_container, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
         vsb.grid(row=0, column=1, sticky="ns")
+        hsb.grid(row=1, column=0, sticky="ew")
         self.tree.bind("<Double-1>", self._on_select_item)
         self.tree.bind("<Return>", self._on_select_item)
 
@@ -540,6 +543,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         tab_defeitos.grid_rowconfigure(0, weight=1)
         tab_defeitos.grid_columnconfigure(0, weight=1)
         defeitos_container.grid_rowconfigure(0, weight=1)
+        defeitos_container.grid_rowconfigure(1, weight=0)
         defeitos_container.grid_columnconfigure(0, weight=1)
 
         defeitos_cols = ("id", "prestador", "codigo", "descricao", "tamanho", "quantidade", "data_retorno", "status")
@@ -551,8 +555,10 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.defeitos_tree.column(col, width=80 if col != "descricao" else 160, anchor="center")
         self.defeitos_tree.grid(row=0, column=0, sticky="nsew")
         defeitos_vsb = ttk.Scrollbar(defeitos_container, orient="vertical", command=self.defeitos_tree.yview)
-        self.defeitos_tree.configure(yscrollcommand=defeitos_vsb.set)
+        defeitos_hsb = ttk.Scrollbar(defeitos_container, orient="horizontal", command=self.defeitos_tree.xview)
+        self.defeitos_tree.configure(yscrollcommand=defeitos_vsb.set, xscrollcommand=defeitos_hsb.set)
         defeitos_vsb.grid(row=0, column=1, sticky="ns")
+        defeitos_hsb.grid(row=1, column=0, sticky="ew")
         self.defeitos_tree.bind("<Double-1>", self._on_select_defeito)
         self.defeitos_tree.bind("<Return>", self._on_select_defeito)
 
