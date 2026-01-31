@@ -505,8 +505,16 @@ class PagamentoModernUI(ctk.CTkFrame):
             text_color=self.cor_texto
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
 
-        tree_container = ctk.CTkFrame(left_panel, fg_color="transparent")
-        tree_container.grid(row=1, column=0, sticky="nsew", padx=8, pady=(4, 8))
+        tabs_left = ctk.CTkTabview(left_panel, fg_color="transparent")
+        tabs_left.grid(row=1, column=0, sticky="nsew", padx=8, pady=(4, 8))
+
+        tab_servicos = tabs_left.add("Serviços")
+        tab_defeitos = tabs_left.add("Defeitos")
+
+        tree_container = ctk.CTkFrame(tab_servicos, fg_color="transparent")
+        tree_container.grid(row=0, column=0, sticky="nsew")
+        tab_servicos.grid_rowconfigure(0, weight=1)
+        tab_servicos.grid_columnconfigure(0, weight=1)
         tree_container.grid_rowconfigure(0, weight=1)
         tree_container.grid_columnconfigure(0, weight=1)
 
@@ -522,6 +530,40 @@ class PagamentoModernUI(ctk.CTkFrame):
         vsb.grid(row=0, column=1, sticky="ns")
         self.tree.bind("<Double-1>", self._on_select_item)
         self.tree.bind("<Return>", self._on_select_item)
+
+        defeitos_container = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
+        defeitos_container.grid(row=0, column=0, sticky="nsew")
+        tab_defeitos.grid_rowconfigure(0, weight=1)
+        tab_defeitos.grid_columnconfigure(0, weight=1)
+        defeitos_container.grid_rowconfigure(0, weight=1)
+        defeitos_container.grid_columnconfigure(0, weight=1)
+
+        defeitos_cols = ("id", "prestador", "codigo", "descricao", "tamanho", "quantidade", "data_retorno", "status")
+        self.defeitos_tree = ttk.Treeview(defeitos_container, columns=defeitos_cols, show="headings",
+                                          height=14, style="Custom.Treeview")
+        defeitos_headings = ["ID", "Prestador", "Código", "Descrição", "Tam", "Qtd", "Retorno", "Status"]
+        for col, h in zip(defeitos_cols, defeitos_headings):
+            self.defeitos_tree.heading(col, text=h)
+            self.defeitos_tree.column(col, width=80 if col != "descricao" else 160, anchor="center")
+        self.defeitos_tree.grid(row=0, column=0, sticky="nsew")
+        defeitos_vsb = ttk.Scrollbar(defeitos_container, orient="vertical", command=self.defeitos_tree.yview)
+        self.defeitos_tree.configure(yscrollcommand=defeitos_vsb.set)
+        defeitos_vsb.grid(row=0, column=1, sticky="ns")
+        self.defeitos_tree.bind("<Double-1>", self._on_select_defeito)
+        self.defeitos_tree.bind("<Return>", self._on_select_defeito)
+
+        defeitos_actions = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
+        defeitos_actions.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        ctk.CTkButton(
+            defeitos_actions,
+            text="Marcar Pago",
+            command=self._pagar_defeito,
+            fg_color=self.cor_sucesso,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            height=32,
+            width=120
+        ).pack(side="left", padx=4)
 
 
         # Configurar cores das linhas alternadas (alto contraste)
@@ -1382,6 +1424,60 @@ class PagamentoModernUI(ctk.CTkFrame):
             tag = 'evenrow' if len(self.tree.get_children()) % 2 == 0 else 'oddrow'
             self.tree.insert("", "end", values=r, tags=(tag,))
 
+        self._carregar_defeitos_pagamento()
+
+    def _carregar_defeitos_pagamento(self):
+        if not hasattr(self, "defeitos_tree"):
+            return
+        for iid in self.defeitos_tree.get_children():
+            self.defeitos_tree.delete(iid)
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            cur.execute(f"""
+                SELECT id, prestador, codigo, descricao, tamanho, quantidade, data_retorno, status
+                  FROM {schema}.defeitos_envios
+                 WHERE origem = 'Externo'
+                   AND status IN ('Finalizado', 'Aguardando Pagamento')
+                 ORDER BY COALESCE(data_retorno, criado_em) DESC NULLS LAST, id DESC
+            """)
+            for row in cur.fetchall():
+                defeito_id, prestador, codigo, desc, tamanho, qtd, data_retorno, status = row
+                if hasattr(data_retorno, "strftime"):
+                    data_retorno = data_retorno.strftime("%d/%m/%Y")
+                self.defeitos_tree.insert("", "end", values=(
+                    defeito_id, prestador or "", codigo or "", desc or "", tamanho or "",
+                    qtd or 0, data_retorno or "", status or ""
+                ))
+            conn.close()
+        except Exception as e:
+            print(f"Erro ao carregar defeitos para pagamento: {e}")
+
+    def _pagar_defeito(self):
+        if not hasattr(self, "defeitos_tree"):
+            return
+        sel = self.defeitos_tree.selection()
+        if not sel:
+            messagebox.showwarning("Aviso", "Selecione um defeito para pagamento.")
+            return
+        vals = self.defeitos_tree.item(sel[0], "values")
+        defeito_id = vals[0]
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            cur.execute(
+                f"UPDATE {schema}.defeitos_envios SET status = %s, data_pagamento = CURRENT_DATE WHERE id = %s",
+                ("Pago", defeito_id),
+            )
+            conn.commit()
+            conn.close()
+            self._carregar_defeitos_pagamento()
+            messagebox.showinfo("Sucesso", "Pagamento do defeito registrado.")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao registrar pagamento:\n{e}")
+
 
     def _carregar_dados_bancarios_prestador(self, destino: str, servico: str) -> None:
         """Preenche campos bancários do prestador (último pagamento -> envios_cortes -> cadastro_faccoes)."""
@@ -1493,6 +1589,17 @@ class PagamentoModernUI(ctk.CTkFrame):
                 entry.delete(0, "end")
                 entry.insert(0, v)
                 entry.configure(state="readonly")
+
+    def _on_select_defeito(self, _event=None):
+        """Seleciona um defeito na aba de pagamento."""
+        sel = self.defeitos_tree.selection()
+        if not sel:
+            return
+        vals = self.defeitos_tree.item(sel[0]).get("values", [])
+        if not vals:
+            return
+        self._defeito_selecionado = vals[0]
+        messagebox.showinfo("Info", f"Defeito #{self._defeito_selecionado} selecionado.")
 
         self.data_envio.configure(state="normal");
         self.data_envio.delete(0, "end");
