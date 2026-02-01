@@ -393,7 +393,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         header_g = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         header_g.pack(fill="x")
 
-        for h, w in [("Tam.", 60), ("Enviado", 80), ("Entregue", 90), ("Cópias", 80), ("Defeito", 80), ("Faltante", 80),
+        for h, w in [("Tam.", 60), ("Enviado", 80), ("Entregue", 90), ("Piloto recebida", 120), ("Defeito", 80), ("Faltante", 80),
                      ("Regulares", 120), ("Valor/Peça", 100), ("Subtotal", 110)]:
             ctk.CTkLabel(header_g, text=h, width=w,
                          text_color=self.cor_texto).pack(side="left", padx=2)
@@ -485,7 +485,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                                text_color=self.cor_texto)
         self.lbl_total_entregue.pack(side="left", padx=4)
 
-        ctk.CTkLabel(totais, text="Cópias:", width=80,
+        ctk.CTkLabel(totais, text="Piloto recebida:", width=140,
                      font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=12)
 
@@ -953,18 +953,16 @@ class FinalizacaoCortes(ctk.CTkFrame):
                     qtd_pil = safe_int(pilotos)
                     val_uni = float(valor_peca or 0)
 
-                    total_enviado = qtd_env + qtd_pil
-
-                    self.enviado_por_tam[tamanho] = total_enviado
+                    self.enviado_por_tam[tamanho] = qtd_env
                     self.pilotos_por_tam[tamanho] = qtd_pil
                     self.valor_por_tam[tamanho] = val_uni
+                    self.copias_vars[tamanho].set(str(qtd_pil) if qtd_pil else "")
 
-                    self.grade_widgets[tamanho]["enviado"].configure(text=str(total_enviado))
+                    self.grade_widgets[tamanho]["enviado"].configure(text=str(qtd_env))
                     self.grade_widgets[tamanho]["valor"].configure(text=fmt_moeda(val_uni))
 
                     print(
-                        f"[DEBUG] ENVIO tam={tamanho} | qtd={qtd_env} | pilotos={qtd_pil} "
-                        f"| total_enviado={total_enviado} | valor={val_uni}"
+                        f"[DEBUG] ENVIO tam={tamanho} | qtd={qtd_env} | pilotos={qtd_pil} | valor={val_uni}"
                     )
             else:
                 # Não há registro em envio_detalhes_tamanho; calcular a partir de envios_cortes
@@ -990,14 +988,14 @@ class FinalizacaoCortes(ctk.CTkFrame):
                         qtd_env = safe_int(row_envio[qtd_indices[tam]])
                         qtd_pil = safe_int(row_envio[pil_indices[tam]])
                         val_uni = float(row_envio[val_indices[tam]] or 0)
-                        total_enviado = qtd_env + qtd_pil
-                        self.enviado_por_tam[tam] = total_enviado
+                        self.enviado_por_tam[tam] = qtd_env
                         self.pilotos_por_tam[tam] = qtd_pil
                         self.valor_por_tam[tam] = val_uni
-                        self.grade_widgets[tam]["enviado"].configure(text=str(total_enviado))
+                        self.copias_vars[tam].set(str(qtd_pil) if qtd_pil else "")
+                        self.grade_widgets[tam]["enviado"].configure(text=str(qtd_env))
                         self.grade_widgets[tam]["valor"].configure(text=fmt_moeda(val_uni))
                         print(
-                            f"[DEBUG] ENVIO tam={tam} | qtd={qtd_env} | pilotos={qtd_pil} | total_enviado={total_enviado} | valor={val_uni}"
+                            f"[DEBUG] ENVIO tam={tam} | qtd={qtd_env} | pilotos={qtd_pil} | valor={val_uni}"
                         )
 
             # 2) SOMA DO RETORNO (retorno_detalhes_tamanho) PARA DEDUZIR DO ENVIADO
@@ -1028,7 +1026,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                 self.grade_widgets[tamanho]["enviado"].configure(text=str(restante))
                 # Mantém campos editáveis vazios ao carregar
                 self.entregues_vars[tamanho].set("")
-                self.copias_vars[tamanho].set("")
+                self.copias_vars[tamanho].set(str(self.pilotos_por_tam.get(tamanho, 0)) or "")
                 self.defeitos_vars[tamanho].set("")
                 self.faltantes_vars[tamanho].set("")
 
@@ -1056,7 +1054,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         for t in self.tamanhos:
             enviado = safe_int(self.grade_widgets[t]["enviado"].cget("text"))
             entregue = self._normalizar_valor(self.entregues_vars[t], enviado)
-            copias = self._normalizar_valor(self.copias_vars[t], enviado)
+            copias = safe_int(self.copias_vars[t].get())
             defeito = self._normalizar_valor(self.defeitos_vars[t], enviado)
             faltante = self._normalizar_valor(self.faltantes_vars[t], enviado)
 
@@ -1087,12 +1085,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
             faltante = max(enviado - entregue, 0)
             self._set_var_if_zero(self.faltantes_vars[t], faltante)
 
-            # Cópias não excedem entregue
-            if copias > entregue:
-                self._set_var_if_zero(self.copias_vars[t], min(copias, entregue))
-                copias = safe_int(self.copias_vars[t].get())
-
-            reg = max(0, entregue - copias - defeito)
+            reg = max(0, entregue - defeito)
             subtotal = reg * float(self.valor_por_tam[t])
 
             self.grade_widgets[t]["regulares"].configure(text=str(reg))
@@ -1169,7 +1162,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         preview_txt.append(f"Entrada   : {dados['data_entrada']}  |  Emissão: {dados['emissao']}")
         preview_txt.append("-" * 90)
         preview_txt.append(
-            f"{'Tam.':<5}{'Enviado':>9}{'Entregue':>11}{'Cópias':>8}{'Defeito':>9}{'Faltante':>10}{'Regulares':>11}{'Vlr/Pç':>10}{'Subtotal':>12}")
+            f"{'Tam.':<5}{'Enviado':>9}{'Entregue':>11}{'Piloto':>8}{'Defeito':>9}{'Faltante':>10}{'Regulares':>11}{'Vlr/Pç':>10}{'Subtotal':>12}")
         preview_txt.append("-" * 90)
         for r in dados["linhas"]:
             preview_txt.append(
@@ -1242,7 +1235,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
             defeito = safe_int(self.defeitos_vars[t].get())
             faltante = safe_int(self.faltantes_vars[t].get())
 
-            reg = max(0, entregue - copias - defeito)
+            reg = max(0, entregue - defeito)
             valor_peca = float(self.valor_por_tam.get(t, 0.0))
             subtotal = reg * valor_peca
 
@@ -1339,7 +1332,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
   <table>
     <thead>
       <tr>
-        <th>Tam.</th><th>Enviado</th><th>Entregue</th><th>Cópias</th><th>Defeito</th><th>Faltante</th><th>Regulares</th><th>Valor/Peça</th><th>Subtotal</th>
+        <th>Tam.</th><th>Enviado</th><th>Entregue</th><th>Piloto recebida</th><th>Defeito</th><th>Faltante</th><th>Regulares</th><th>Valor/Peça</th><th>Subtotal</th>
       </tr>
     </thead>
     <tbody>
@@ -1349,7 +1342,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
   <div class="totais">
     Totais — Entregue: {d['totais']['entregue']} |
-    Cópias: {d['totais']['copias']} |
+    Piloto recebida: {d['totais']['copias']} |
     Defeito: {d['totais']['defeito']} |
     Faltante: {d['totais']['faltante']} |
     Regulares: {d['totais']['regulares']} |
