@@ -1651,9 +1651,22 @@ class EnvioCortes(ctk.CTkFrame):
                 base_dir = os.path.join(os.path.dirname(__file__), "Controle de serviços")
                 os.makedirs(base_dir, exist_ok=True)
                 codigo = ""
+                descricao = ""
+                tamanhos_nome = ""
                 if dados_envio:
                     corte_info = dados_envio.get("corte", {}) or {}
                     codigo = _t(corte_info.get("codigo"))
+                    descricao = _t(corte_info.get("descricao"))
+                    itens_envio = dados_envio.get("itens", []) or []
+                    tamanhos_enviados = []
+                    for it in itens_envio:
+                        tam = _t(it.get("tam")).upper()
+                        qtd = _int(it.get("qtd"), 0)
+                        piloto = _int(it.get("piloto"), 0)
+                        if tam and (qtd > 0 or piloto > 0):
+                            tamanhos_enviados.append(tam)
+                    if tamanhos_enviados:
+                        tamanhos_nome = ",".join(tamanhos_enviados)
                 if not codigo:
                     try:
                         codigo_entry = getattr(self, "codigo_entry", None)
@@ -1661,11 +1674,39 @@ class EnvioCortes(ctk.CTkFrame):
                             codigo = codigo_entry.get()
                     except Exception:
                         codigo = ""
+                if not descricao:
+                    try:
+                        descricao_entry = getattr(self, "descricao_entry", None)
+                        if descricao_entry is not None:
+                            descricao = descricao_entry.get()
+                    except Exception:
+                        descricao = ""
+                if not tamanhos_nome:
+                    try:
+                        tamanhos_enviados = []
+                        for tam in getattr(self, "tamanhos", []):
+                            qtd = safe_int(self.quantidades[tam].get())
+                            piloto = safe_int(self.pilotos[tam].get())
+                            if qtd > 0 or piloto > 0:
+                                tamanhos_enviados.append(tam)
+                        if tamanhos_enviados:
+                            tamanhos_nome = ",".join(tamanhos_enviados)
+                    except Exception:
+                        tamanhos_nome = ""
                 codigo = codigo.strip().replace("/", "-").replace("\\", "-")
+                descricao = descricao.strip().replace("/", "-").replace("\\", "-")
+                tamanhos_nome = tamanhos_nome.strip().replace("/", "-").replace("\\", "-")
                 stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                nome = f"controle_envio_{stamp}"
+                nome_partes = ["controle_envio", stamp]
                 if codigo:
-                    nome += f"_{codigo}"
+                    nome_partes.append(codigo)
+                if descricao:
+                    nome_partes.append(descricao)
+                if tamanhos_nome:
+                    nome_partes.append(tamanhos_nome)
+                nome = "_".join(nome_partes)
+                if codigo:
+                    nome = nome.replace("__", "_")
                 nome += ".pdf"
                 destino = os.path.join(base_dir, nome)
                 shutil.copy2(path_pdf, destino)
