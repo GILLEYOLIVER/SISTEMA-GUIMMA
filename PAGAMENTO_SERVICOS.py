@@ -1203,8 +1203,8 @@ class PagamentoModernUI(ctk.CTkFrame):
         if valor_flag > 0:
             self.bonif_var.set("sim")
             self.bonificacao_entry.configure(state="normal")
-            if not self.bonificacao_entry.get().strip():
-                self.bonificacao_entry.insert(0, "0.00")
+            self.bonificacao_entry.delete(0, "end")
+            self.bonificacao_entry.insert(0, f"{valor_flag:.2f}")
         else:
             self.bonif_var.set("nao")
             self.bonificacao_entry.configure(state="disabled")
@@ -1299,6 +1299,8 @@ class PagamentoModernUI(ctk.CTkFrame):
                 self.defeito_count_entry.insert(0, str(total_def))
         except Exception:
             pass
+
+        self._carregar_bonificacao_por_corte(codigo)
 
 
         # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
