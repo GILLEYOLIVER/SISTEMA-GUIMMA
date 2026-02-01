@@ -1131,6 +1131,37 @@ class PagamentoModernUI(ctk.CTkFrame):
                         return float(r[0])
                 except Exception:
                     pass
+            else:
+                try:
+                    cols_val = [c for c in [
+                        "valor_pp", "valor_p", "valor_m", "valor_g",
+                        "valor_gg", "valor_g1", "valor_g2", "valor_g3"
+                    ] if c in cols_env]
+                    if cols_val:
+                        r = _select_one(
+                            f"SELECT {', '.join(cols_val)} FROM envios_cortes WHERE id=%s LIMIT 1",
+                            (envio_id,),
+                        )
+                        if r:
+                            for val in r:
+                                if val is not None and float(val or 0) > 0:
+                                    return float(val)
+                except Exception:
+                    pass
+
+        # 2b) tenta via envio_detalhes_tamanho (valor_peca por tamanho)
+        if envio_id and _table_exists("envio_detalhes_tamanho"):
+            cols_det = _columns_of("envio_detalhes_tamanho")
+            if "valor_peca" in cols_det:
+                try:
+                    r = _select_one(
+                        "SELECT MAX(valor_peca) FROM envio_detalhes_tamanho WHERE envio_id = %s",
+                        (envio_id,),
+                    )
+                    if r and r[0] is not None:
+                        return float(r[0])
+                except Exception:
+                    pass
 
         # 3) fallback fluxo antigo
         if _table_exists("controle_envio_cortes"):
@@ -1515,8 +1546,14 @@ class PagamentoModernUI(ctk.CTkFrame):
             messagebox.showerror("Erro", f"Falha ao registrar pagamento:\n{e}")
 
 
-    def _carregar_dados_bancarios_prestador(self, destino: str, servico: str) -> None:
-        """Preenche campos bancários do prestador (último pagamento -> envios_cortes -> cadastro_faccoes)."""
+    def _carregar_dados_bancarios_prestador(
+        self,
+        destino: str,
+        servico: str,
+        finalizado_id: int | None = None,
+        codigo: str | None = None,
+    ) -> None:
+        """Preenche campos bancários do prestador (último pagamento -> cadastro_faccoes/envios_cortes)."""
 
         def _tem_algo(row):
             return bool(row and any((v is not None and str(v).strip() != "") for v in row))
@@ -1555,8 +1592,51 @@ class PagamentoModernUI(ctk.CTkFrame):
                 except Exception:
                     row = None
 
-        # 3) fallback: cadastro de facções (quando for Facção)
-        if not _tem_algo(row) and servico.lower() == "facção".lower() and _table_exists("cadastro_faccoes"):
+        # 3) fallback: prestador_id em cortes_finalizados/envios_cortes -> cadastro_faccoes
+        if not _tem_algo(row) and _table_exists("cadastro_faccoes"):
+            prestador_id = None
+            cols_cf = _columns_of("cortes_finalizados") if _table_exists("cortes_finalizados") else set()
+            for col in ("prestador_id", "faccao_id", "costureira_id"):
+                if col in cols_cf and finalizado_id:
+                    try:
+                        r = _select_one(
+                            f"SELECT {col} FROM cortes_finalizados WHERE id = %s LIMIT 1",
+                            (finalizado_id,),
+                        )
+                        if r and r[0]:
+                            prestador_id = int(r[0])
+                            break
+                    except Exception:
+                        pass
+
+            if prestador_id is None:
+                envio_id = self._buscar_envio_id(finalizado_id=finalizado_id, codigo=codigo)
+                if envio_id and _table_exists("envios_cortes"):
+                    cols_env = _columns_of("envios_cortes")
+                    if "prestador_id" in cols_env:
+                        try:
+                            r = _select_one(
+                                "SELECT prestador_id FROM envios_cortes WHERE id = %s LIMIT 1",
+                                (envio_id,),
+                            )
+                            if r and r[0]:
+                                prestador_id = int(r[0])
+                        except Exception:
+                            pass
+
+            if prestador_id:
+                try:
+                    row = _select_one("""
+                        SELECT titular_da_conta, cpf, banco, agencia, conta, pix
+                          FROM cadastro_faccoes
+                         WHERE id = %s
+                      ORDER BY id DESC LIMIT 1
+                    """, (prestador_id,))
+                except Exception:
+                    row = None
+
+        # 4) fallback: cadastro de facções pelo nome (quando não localizar ID)
+        if not _tem_algo(row) and _table_exists("cadastro_faccoes"):
             cols_f = _columns_of("cadastro_faccoes")
             if all(c in cols_f for c in ["titular_da_conta", "cpf", "banco", "agencia", "conta", "pix", "nome"]):
                 try:
@@ -1653,7 +1733,12 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             corte_id = 0
         self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"], finalizado_id=corte_id or None)
-        self._carregar_dados_bancarios_prestador(mapping["costureira"], mapping["tipo_servico"])
+        self._carregar_dados_bancarios_prestador(
+            mapping["costureira"],
+            mapping["tipo_servico"],
+            finalizado_id=corte_id or None,
+            codigo=mapping["codigo"],
+        )
         if corte_id:
             self._carregar_adiantamento_faccao(mapping["codigo"], corte_id)
 
