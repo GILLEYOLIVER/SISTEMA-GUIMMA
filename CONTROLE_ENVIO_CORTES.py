@@ -731,10 +731,28 @@ class EnvioCortes(ctk.CTkFrame):
             self.prestadores_filtrados = self._prestadores_full
             nomes = [_nome_visivel(r[1]) for r in self._prestadores_full if len(r) > 1]
         else:
-            self.prestadores_filtrados = []
-            for prestador in self._prestadores_full:
-                if len(prestador) > 3 and _normalizar_texto(prestador[3]) == servico_normalizado:
-                    self.prestadores_filtrados.append(prestador)
+            try:
+                from BANCO_DE_DADOS_PG import get_conn, get_schema
+
+                with get_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(f"SET LOCAL search_path = {get_schema()};")
+                        cur.execute(
+                            f"""
+                            SELECT id, COALESCE(nome,''), COALESCE(telefone,''), COALESCE(tipo_prestador,'Facção')
+                              FROM {get_schema()}.cadastro_faccoes
+                             WHERE ativo = TRUE
+                               AND LOWER(TRIM(COALESCE(tipo_prestador, 'Facção'))) = LOWER(TRIM(%s))
+                             ORDER BY nome
+                            """,
+                            (servico_selecionado,),
+                        )
+                        self.prestadores_filtrados = cur.fetchall()
+            except Exception:
+                self.prestadores_filtrados = []
+                for prestador in self._prestadores_full:
+                    if len(prestador) > 3 and _normalizar_texto(prestador[3]) == servico_normalizado:
+                        self.prestadores_filtrados.append(prestador)
 
             if not self.prestadores_filtrados:
                 nomes = ["Nenhum prestador encontrado"]
