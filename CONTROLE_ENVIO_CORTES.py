@@ -1550,6 +1550,7 @@ class EnvioCortes(ctk.CTkFrame):
         import re
         import sys
         import tempfile
+        import shutil
         import webbrowser
 
         # ReportLab
@@ -1642,6 +1643,32 @@ class EnvioCortes(ctk.CTkFrame):
                 else:
                     url = "file://" + abs_path
                 webbrowser.open(url)
+            except Exception:
+                pass
+
+        def _salvar_automatico(path_pdf: str, dados_envio: dict | None):
+            try:
+                base_dir = os.path.join(os.path.dirname(__file__), "Controle de serviços")
+                os.makedirs(base_dir, exist_ok=True)
+                codigo = ""
+                if dados_envio:
+                    corte_info = dados_envio.get("corte", {}) or {}
+                    codigo = _t(corte_info.get("codigo"))
+                if not codigo:
+                    try:
+                        codigo_entry = getattr(self, "codigo_entry", None)
+                        if codigo_entry is not None:
+                            codigo = codigo_entry.get()
+                    except Exception:
+                        codigo = ""
+                codigo = codigo.strip().replace("/", "-").replace("\\", "-")
+                stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                nome = f"controle_envio_{stamp}"
+                if codigo:
+                    nome += f"_{codigo}"
+                nome += ".pdf"
+                destino = os.path.join(base_dir, nome)
+                shutil.copy2(path_pdf, destino)
             except Exception:
                 pass
 
@@ -2097,6 +2124,7 @@ class EnvioCortes(ctk.CTkFrame):
         # Build
         # ----------------------------
         doc.build(story, onFirstPage=build_footer, onLaterPages=build_footer)
+        _salvar_automatico(caminho_pdf, dados)
 
         if abrir_pdf:
             _open_pdf(caminho_pdf)
