@@ -1626,6 +1626,37 @@ class PagamentoModernUI(ctk.CTkFrame):
                 entry.insert(0, v)
                 entry.configure(state="readonly")
 
+        data_envio = vals[5] if len(vals) > 5 else ""
+        data_chegada = vals[6] if len(vals) > 6 else ""
+        if hasattr(data_envio, "strftime"):
+            data_envio = data_envio.strftime("%d/%m/%Y")
+        if hasattr(data_chegada, "strftime"):
+            data_chegada = data_chegada.strftime("%d/%m/%Y")
+
+        self.data_envio.configure(state="normal")
+        self.data_envio.delete(0, "end")
+        self.data_envio.insert(0, data_envio or "")
+        self.data_envio.configure(state="readonly")
+
+        self.data_chegada.configure(state="normal")
+        self.data_chegada.delete(0, "end")
+        self.data_chegada.insert(0, data_chegada or "")
+        self.data_chegada.configure(state="readonly")
+
+        self.quant_final_entry.configure(state="normal")
+        self.quant_final_entry.delete(0, "end")
+        self.quant_final_entry.insert(0, str(self.quantidade_finalizada))
+        self.quant_final_entry.configure(state="readonly")
+
+        self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"])
+        self._carregar_dados_bancarios_prestador(mapping["costureira"], mapping["tipo_servico"])
+        try:
+            corte_id = int(vals[0])
+        except Exception:
+            corte_id = 0
+        if corte_id:
+            self._carregar_adiantamento_faccao(mapping["codigo"], corte_id)
+
     def _on_select_defeito(self, _event=None):
         """Seleciona um defeito na aba de pagamento."""
         sel = self.defeitos_tree.selection()
