@@ -1183,8 +1183,9 @@ class PagamentoModernUI(ctk.CTkFrame):
         return 0.0
 
     def _carregar_bonificacao_por_corte(self, codigo: str, finalizado_id: int | None = None) -> None:
-        """Define rádio Sim/Não conforme coluna bonificacao (>0 => Sim) em cortes_finalizados."""
+        """Define rádio Sim/Não conforme defeitos no retorno e bonificacao salva."""
         valor_flag = 0.0
+        total_defeitos = 0
         try:
             if finalizado_id is not None:
                 r = _select_one("""
@@ -1208,14 +1209,32 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception as e:
             print("Erro ao ler bonificação:", e)
 
-        if valor_flag > 0:
+        envio_id = self._buscar_envio_id(finalizado_id=finalizado_id, codigo=codigo)
+        if envio_id and _table_exists("controle_retorno_cortes"):
+            try:
+                r_def = _select_one("""
+                    SELECT COALESCE(SUM(total_defeitos), 0)
+                      FROM controle_retorno_cortes
+                     WHERE envio_id = %s
+                """, (envio_id,))
+                if r_def and r_def[0] is not None:
+                    total_defeitos = int(r_def[0] or 0)
+            except Exception:
+                pass
+
+        if total_defeitos > 0:
+            self.bonif_var.set("nao")
+            self.bonificacao_entry.configure(state="disabled")
+            self.bonificacao_entry.delete(0, "end")
+            self.bonificacao_entry.insert(0, "0.00")
+        elif valor_flag > 0:
             self.bonif_var.set("sim")
             self.bonificacao_entry.configure(state="normal")
             self.bonificacao_entry.delete(0, "end")
             self.bonificacao_entry.insert(0, f"{valor_flag:.2f}")
         else:
-            self.bonif_var.set("nao")
-            self.bonificacao_entry.configure(state="disabled")
+            self.bonif_var.set("sim")
+            self.bonificacao_entry.configure(state="normal")
             self.bonificacao_entry.delete(0, "end")
             self.bonificacao_entry.insert(0, "0.00")
 
