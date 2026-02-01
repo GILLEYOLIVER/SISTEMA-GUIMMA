@@ -1024,6 +1024,17 @@ class EnvioCortes(ctk.CTkFrame):
                         ORDER BY ordinal_position
                     """, (get_schema(),))
                     cols = {r[0] for r in cur.fetchall()}
+                    try:
+                        self._garantir_colunas_copias(cur)
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_schema = %s AND table_name = 'cadastro_de_corte'
+                            ORDER BY ordinal_position
+                        """, (get_schema(),))
+                        cols = {r[0] for r in cur.fetchall()}
+                    except Exception:
+                        pass
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao detectar schema do corte: {e}")
             cols = set()
@@ -1060,7 +1071,7 @@ class EnvioCortes(ctk.CTkFrame):
             w = 70 if col in ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "Total"] else 130
             if col in ["ID", "Número"]:
                 w = 100
-            self.cortes_tree.column(col, width=w, anchor="center")
+        self.cortes_tree.column(col, width=w, anchor="center")
 
     def _sql_select_list(self):
         """SELECT padrão: id, numero(qualquer nome do banco), codigo, descricao, pp..g3, total."""
@@ -1077,14 +1088,27 @@ class EnvioCortes(ctk.CTkFrame):
         def col_or_zero(c):
             return c if c in cols else f"0 AS {c}"
 
+        def size_expr(tam):
+            copias_col = f"copias_{tam}"
+            base = f"COALESCE({tam}, 0)" if tam in cols else "0"
+            copias = f"COALESCE({copias_col}, 0)" if copias_col in cols else "0"
+            return f"({base} + {copias}) AS {tam}"
+
+        total_expr = " + ".join([
+            f"(COALESCE({tam}, 0) + COALESCE(copias_{tam}, 0))" if f"copias_{tam}" in cols
+            else f"COALESCE({tam}, 0)"
+            for tam in ["pp", "p", "m", "g", "gg", "g1", "g2", "g3"]
+        ])
+        total_display = f"({total_expr}) AS total_pecas"
+
         return ", ".join([
             "id",
             numero,
             codigo,
             descricao,
-            col_or_zero("pp"), col_or_zero("p"), col_or_zero("m"), col_or_zero("g"),
-            col_or_zero("gg"), col_or_zero("g1"), col_or_zero("g2"), col_or_zero("g3"),
-            total
+            size_expr("pp"), size_expr("p"), size_expr("m"), size_expr("g"),
+            size_expr("gg"), size_expr("g1"), size_expr("g2"), size_expr("g3"),
+            total_display if cols else total
         ])
 
     def _buscar_cortes_iniciais(self):
@@ -1170,17 +1194,7 @@ class EnvioCortes(ctk.CTkFrame):
         self.descricao_entry.configure(state="disabled")
         self.ordem_entry.configure(state="disabled")
 
-        # Preenche grade com saldos
-        cols_tam = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
-        for i, tam in enumerate(cols_tam):
-            idx = 4 + i  # após id, numero, codigo, descricao
-            if idx < len(vals):
-                saldo = safe_int(vals[idx])
-                self.saldo_base[tam] = saldo
-                self.grade_widgets[tam]["disp"].configure(text=str(saldo))
-                self.grade_widgets[tam]["disp_piloto"].configure(text="0")
-
-        self._carregar_copias_disponiveis(corte_id)
+        self._carregar_saldos_corte(corte_id)
 
         # Limpa quantidades enviadas
         for tam in self.tamanhos:
@@ -2287,6 +2301,40 @@ class EnvioCortes(ctk.CTkFrame):
                         self.copias_base[tam_ui] = copias_disp
                         if tam_ui in self.grade_widgets and "disp_piloto" in self.grade_widgets[tam_ui]:
                             self.grade_widgets[tam_ui]["disp_piloto"].configure(text=str(copias_disp))
+        except Exception:
+            pass
+
+    def _carregar_saldos_corte(self, corte_id: int):
+        try:
+            from BANCO_DE_DADOS_PG import get_conn, get_schema
+
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"SET LOCAL search_path = {get_schema()};")
+                    cur.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_schema = %s AND table_name = 'cadastro_de_corte'
+                    """, (get_schema(),))
+                    cols = {r[0] for r in cur.fetchall()}
+                    tamanhos_db = [c for c in ["pp", "p", "m", "g", "gg", "g1", "g2", "g3"] if c in cols]
+                    if not tamanhos_db:
+                        return
+                    select_cols = ", ".join(tamanhos_db)
+                    cur.execute(
+                        f"SELECT {select_cols} FROM {get_schema()}.cadastro_de_corte WHERE id=%s", (corte_id,)
+                    )
+                    row = cur.fetchone()
+                    if not row:
+                        return
+                    for i, col in enumerate(tamanhos_db):
+                        tam_ui = col.upper()
+                        saldo = int(row[i])
+                        self.saldo_base[tam_ui] = saldo
+                        if tam_ui in self.grade_widgets:
+                            self.grade_widgets[tam_ui]["disp"].configure(text=str(saldo))
+                            self.grade_widgets[tam_ui]["disp_piloto"].configure(text="0")
+            self._carregar_copias_disponiveis(corte_id)
         except Exception:
             pass
 
