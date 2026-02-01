@@ -1322,16 +1322,14 @@ class EnvioCortes(ctk.CTkFrame):
             pilotos = safe_int(self.pilotos[tam].get())
             # Valor unitário da peça
             val = parse_valor(self.valores[tam].get())
-            # Número total de peças a enviar = regulares + pilotos
-            qtd_envio = qtd_original + pilotos
-            # Subtotal = total de peças * valor unitário
-            sub = qtd_envio * val
+            # Subtotal considera apenas peças regulares (pilotos/cópias não são pagas)
+            sub = qtd_original * val
             # Atualiza subtotal na UI
             try:
                 self.grade_widgets[tam]["sub"].configure(text=fmt_moeda(sub))
             except Exception:
                 pass
-            total_pecas += qtd_envio
+            total_pecas += qtd_original
             total_valor += sub
         # Atualiza totais na UI
         try:
@@ -1730,7 +1728,7 @@ class EnvioCortes(ctk.CTkFrame):
                 except Exception:
                     pass
 
-                subtotal = (qtd + piloto) * valor_peca
+                subtotal = qtd * valor_peca
                 total_geral += subtotal
 
                 itens.append({
@@ -1776,7 +1774,7 @@ class EnvioCortes(ctk.CTkFrame):
             valor_peca = _num(it.get("valor_peca"), 0.0)
             subtotal = it.get("subtotal")
             if subtotal is None or subtotal == "":
-                subtotal = (qtd + piloto) * valor_peca
+                subtotal = qtd * valor_peca
             subtotal = _num(subtotal, 0.0)
 
             total_geral += subtotal
@@ -2489,9 +2487,9 @@ class EnvioCortes(ctk.CTkFrame):
 
                     # -----------------------------------------------------------------
                     # Compute totals: number of pieces, pilots and total value
-                    # total_pecas -> soma de quantidades enviadas + pilotos totais
+                    # total_pecas -> soma de quantidades regulares enviadas
                     # total_pilotos -> soma de pilotos totais
-                    # valor_total_envio -> (quantidade enviada + pilotos totais) * valor unitário de cada tamanho
+                    # valor_total_envio -> quantidade regular * valor unitário (pilotos/cópias não são pagas)
                     tamanhos_lista = list(self.tamanhos)
                     total_pecas = 0
                     total_pilotos = 0
@@ -2499,10 +2497,10 @@ class EnvioCortes(ctk.CTkFrame):
                     for t in tamanhos_lista:
                         q = qtds.get(t, 0)
                         p = pils.get(t, 0)
-                        total_pecas += q + p
+                        total_pecas += q
                         total_pilotos += p
                         v = parse_valor(self.valores[t].get())
-                        valor_total_envio += (q + p) * v
+                        valor_total_envio += q * v
                     # resumo de pilotos para visualização (ex: "PP:2; P:1")
                     resumo_parts = []
                     for t in tamanhos_lista:
