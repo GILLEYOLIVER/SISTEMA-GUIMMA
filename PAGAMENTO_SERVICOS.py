@@ -1182,16 +1182,24 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         return 0.0
 
-    def _carregar_bonificacao_por_corte(self, codigo: str) -> None:
+    def _carregar_bonificacao_por_corte(self, codigo: str, finalizado_id: int | None = None) -> None:
         """Define rádio Sim/Não conforme coluna bonificacao (>0 => Sim) em cortes_finalizados."""
         valor_flag = 0.0
         try:
-            r = _select_one("""
-                SELECT bonificacao
-                  FROM cortes_finalizados
-                 WHERE codigo = %s
-              ORDER BY id DESC LIMIT 1
-            """, (codigo,))
+            if finalizado_id is not None:
+                r = _select_one("""
+                    SELECT bonificacao
+                      FROM cortes_finalizados
+                     WHERE id = %s
+                  ORDER BY id DESC LIMIT 1
+                """, (finalizado_id,))
+            else:
+                r = _select_one("""
+                    SELECT bonificacao
+                      FROM cortes_finalizados
+                     WHERE codigo = %s
+                  ORDER BY id DESC LIMIT 1
+                """, (codigo,))
             if r and r[0] is not None:
                 try:
                     valor_flag = float(r[0])
@@ -1300,7 +1308,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             pass
 
-        self._carregar_bonificacao_por_corte(codigo)
+        self._carregar_bonificacao_por_corte(codigo, finalizado_id=finalizado_id)
 
 
         # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
