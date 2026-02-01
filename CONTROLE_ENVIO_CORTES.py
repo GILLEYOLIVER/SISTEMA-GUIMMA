@@ -2486,6 +2486,17 @@ class EnvioCortes(ctk.CTkFrame):
                     conn.commit()
 
             messagebox.showinfo("Sucesso", "Envio confirmado e saldo debitado.")
+            deseja_imprimir = messagebox.askyesnocancel(
+                "Controle de Envio",
+                "Deseja imprimir ou salvar o controle de envio?\n\n"
+                "Sim = Imprimir\n"
+                "Não = Salvar PDF\n"
+                "Cancelar = Não fazer agora."
+            )
+            if deseja_imprimir is True:
+                self.preview_impressao()
+            elif deseja_imprimir is False:
+                self.exportar_pdf()
             self._atualizar_saldo_pos_envio(self.corte_selecionado)
             self._recarregar_lista_cortes()
             self._limpar()
