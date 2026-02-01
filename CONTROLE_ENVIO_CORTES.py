@@ -5,6 +5,7 @@ ENVIO_CORTE.py — Envio de Cortes / Controle de Mão de Obra
 import os
 import webbrowser
 import tempfile
+import unicodedata
 from datetime import datetime
 
 import tkinter as tk
@@ -79,6 +80,18 @@ def fmt_moeda(v):
     s = f"{float(v):,.2f}"
     s = s.replace(",", "X").replace(".", ",").replace("X", ".")
     return f"R$ {s}"
+
+
+def _normalizar_texto(valor):
+    texto = " ".join((valor or "").split()).strip().lower()
+    if not texto:
+        return ""
+    texto = unicodedata.normalize("NFKD", texto)
+    return "".join(ch for ch in texto if not unicodedata.combining(ch))
+
+
+def _nome_visivel(valor):
+    return " ".join((valor or "").split())
 
 
 def today_str():
@@ -227,7 +240,8 @@ class EnvioCortes(ctk.CTkFrame):
         linha.pack(fill="x", pady=(6, 2))
 
         # Filtro de serviço - COM TEMA
-        ctk.CTkLabel(linha, text="Filtrar Serviço:", width=100, text_color=self.cor_texto).pack(side="left",
+        ctk.CTkLabel(linha, text="Filtrar Prestador de serviço:", width=170, text_color=self.cor_texto).pack(
+            side="left",
                                                                                                 padx=(2, 5))
 
         self.filtro_servico_cb = ctk.CTkComboBox(
@@ -270,7 +284,9 @@ class EnvioCortes(ctk.CTkFrame):
         self.prestador_busca_cb.bind("<Return>", self._on_costureira_selected)
         self.prestador_busca_cb.bind("<FocusOut>", self._on_costureira_selected)
 
-        ctk.CTkLabel(linha, text="Serviço:", width=80, text_color=self.cor_texto).pack(side="left", padx=(20, 6))
+        ctk.CTkLabel(linha, text="Prestador de serviço:", width=170, text_color=self.cor_texto).pack(
+            side="left", padx=(20, 6)
+        )
 
         # Combobox de tipo de serviço - COM TEMA
         self.tipo_cb = ctk.CTkComboBox(
@@ -667,7 +683,7 @@ class EnvioCortes(ctk.CTkFrame):
             self._prestador_map = {}
             for pid, nome, tel, tipo in rows:
                 # Normaliza o nome removendo espaços duplicados
-                visivel = " ".join((nome or "").split())
+                visivel = _nome_visivel(nome)
                 if visivel:
                     nomes.append(visivel)
                     self._prestador_map[visivel.lower()] = pid
@@ -686,13 +702,16 @@ class EnvioCortes(ctk.CTkFrame):
         """Carrega os tipos de serviços únicos dos prestadores cadastrados"""
         try:
             # Buscar tipos únicos de prestadores cadastrados
-            tipos_unicos = set()
+            tipos_unicos = {}
             for prestador in self._prestadores_full:
                 if len(prestador) > 3 and prestador[3]:
-                    tipos_unicos.add(prestador[3])
+                    tipo = _nome_visivel(prestador[3])
+                    chave = _normalizar_texto(tipo)
+                    if chave and chave not in tipos_unicos:
+                        tipos_unicos[chave] = tipo
 
             if tipos_unicos:
-                return sorted(list(tipos_unicos))
+                return sorted(tipos_unicos.values(), key=str.lower)
 
             return SERVICOS_FIXOS
 
@@ -703,27 +722,28 @@ class EnvioCortes(ctk.CTkFrame):
     def _aplicar_filtro_servico(self):
         """Aplica o filtro de serviço na lista de prestadores"""
         servico_selecionado = self.filtro_servico_var.get()
+        servico_normalizado = _normalizar_texto(servico_selecionado)
 
         if servico_selecionado == "Todos":
             self.prestadores_filtrados = self._prestadores_full
-            nomes = [r[1] for r in self._prestadores_full]
+            nomes = [_nome_visivel(r[1]) for r in self._prestadores_full if len(r) > 1]
         else:
             self.prestadores_filtrados = []
             for prestador in self._prestadores_full:
-                if len(prestador) > 3 and prestador[3] == servico_selecionado:
+                if len(prestador) > 3 and _normalizar_texto(prestador[3]) == servico_normalizado:
                     self.prestadores_filtrados.append(prestador)
 
             if not self.prestadores_filtrados:
                 nomes = [f"Nenhum prestador para {servico_selecionado}"]
             else:
-                nomes = [r[1] for r in self.prestadores_filtrados]
+                nomes = [_nome_visivel(r[1]) for r in self.prestadores_filtrados if len(r) > 1]
 
         self.prestador_busca_cb.configure(values=nomes)
 
         self._prestador_map.clear()
         for prestador in self.prestadores_filtrados:
             if len(prestador) >= 2:
-                nome = prestador[1]
+                nome = _nome_visivel(prestador[1])
                 pid = prestador[0]
                 if nome and not nome.startswith("Nenhum prestador"):
                     self._prestador_map[nome.lower()] = pid
@@ -738,14 +758,16 @@ class EnvioCortes(ctk.CTkFrame):
         termo = self.prestador_busca_cb.get().lower()
 
         if not termo:
-            nomes = [r[1] for r in self.prestadores_filtrados if len(r) > 1 and r[1]]
+            nomes = [_nome_visivel(r[1]) for r in self.prestadores_filtrados if len(r) > 1 and r[1]]
             self.prestador_busca_cb.configure(values=nomes)
             return
 
         filtrados = []
         for prestador in self.prestadores_filtrados:
-            if len(prestador) > 1 and prestador[1] and termo in prestador[1].lower():
-                filtrados.append(prestador[1])
+            if len(prestador) > 1 and prestador[1]:
+                nome_visivel = _nome_visivel(prestador[1])
+                if termo in nome_visivel.lower():
+                    filtrados.append(nome_visivel)
 
         self.prestador_busca_cb.configure(values=filtrados)
 
@@ -758,7 +780,7 @@ class EnvioCortes(ctk.CTkFrame):
         _preencher_banco para carregar os dados.
         """
         # Normalizar o nome (remove múltiplos espaços e pontas) para comparação
-        nome = " ".join((self.prestador_busca_cb.get() or "").split()).strip()
+        nome = _nome_visivel(self.prestador_busca_cb.get())
 
         # Se for indicação de nenhum prestador ou campo vazio, limpar
         if not nome or nome.startswith("Nenhum prestador"):
@@ -774,7 +796,7 @@ class EnvioCortes(ctk.CTkFrame):
             # Fallback: procurar na lista de prestadores filtrados
             for prestador in self.prestadores_filtrados:
                 if len(prestador) > 1:
-                    n = " ".join((prestador[1] or "").split())
+                    n = _nome_visivel(prestador[1])
                     if n.lower() == nome.lower():
                         pid = prestador[0]
                         self._prestador_map[nome.lower()] = pid
