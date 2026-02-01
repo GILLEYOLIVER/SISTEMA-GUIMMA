@@ -4,15 +4,6 @@ git status
 git commit -m "Sincroniza GitHub com estado local"
 git push origin main
 
-
-
-
-git fetch origin --prune
-git status
-git push --force-with-lease origin main
-
-
-
 ___________________________________________________________________________________________________________________
 
 
