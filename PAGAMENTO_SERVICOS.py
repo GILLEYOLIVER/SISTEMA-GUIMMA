@@ -1131,6 +1131,37 @@ class PagamentoModernUI(ctk.CTkFrame):
                         return float(r[0])
                 except Exception:
                     pass
+            else:
+                try:
+                    cols_val = [c for c in [
+                        "valor_pp", "valor_p", "valor_m", "valor_g",
+                        "valor_gg", "valor_g1", "valor_g2", "valor_g3"
+                    ] if c in cols_env]
+                    if cols_val:
+                        r = _select_one(
+                            f"SELECT {', '.join(cols_val)} FROM envios_cortes WHERE id=%s LIMIT 1",
+                            (envio_id,),
+                        )
+                        if r:
+                            for val in r:
+                                if val is not None and float(val or 0) > 0:
+                                    return float(val)
+                except Exception:
+                    pass
+
+        # 2b) tenta via envio_detalhes_tamanho (valor_peca por tamanho)
+        if envio_id and _table_exists("envio_detalhes_tamanho"):
+            cols_det = _columns_of("envio_detalhes_tamanho")
+            if "valor_peca" in cols_det:
+                try:
+                    r = _select_one(
+                        "SELECT MAX(valor_peca) FROM envio_detalhes_tamanho WHERE envio_id = %s",
+                        (envio_id,),
+                    )
+                    if r and r[0] is not None:
+                        return float(r[0])
+                except Exception:
+                    pass
 
         # 3) fallback fluxo antigo
         if _table_exists("controle_envio_cortes"):
@@ -1151,16 +1182,25 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         return 0.0
 
-    def _carregar_bonificacao_por_corte(self, codigo: str) -> None:
-        """Define rádio Sim/Não conforme coluna bonificacao (>0 => Sim) em cortes_finalizados."""
+    def _carregar_bonificacao_por_corte(self, codigo: str, finalizado_id: int | None = None) -> None:
+        """Define rádio Sim/Não conforme defeitos no retorno e bonificacao salva."""
         valor_flag = 0.0
+        total_defeitos = 0
         try:
-            r = _select_one("""
-                SELECT bonificacao
-                  FROM cortes_finalizados
-                 WHERE codigo = %s
-              ORDER BY id DESC LIMIT 1
-            """, (codigo,))
+            if finalizado_id is not None:
+                r = _select_one("""
+                    SELECT bonificacao
+                      FROM cortes_finalizados
+                     WHERE id = %s
+                  ORDER BY id DESC LIMIT 1
+                """, (finalizado_id,))
+            else:
+                r = _select_one("""
+                    SELECT bonificacao
+                      FROM cortes_finalizados
+                     WHERE codigo = %s
+                  ORDER BY id DESC LIMIT 1
+                """, (codigo,))
             if r and r[0] is not None:
                 try:
                     valor_flag = float(r[0])
@@ -1169,14 +1209,32 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception as e:
             print("Erro ao ler bonificação:", e)
 
-        if valor_flag > 0:
-            self.bonif_var.set("sim")
-            self.bonificacao_entry.configure(state="normal")
-            if not self.bonificacao_entry.get().strip():
-                self.bonificacao_entry.insert(0, "0.00")
-        else:
+        envio_id = self._buscar_envio_id(finalizado_id=finalizado_id, codigo=codigo)
+        if envio_id and _table_exists("controle_retorno_cortes"):
+            try:
+                r_def = _select_one("""
+                    SELECT COALESCE(SUM(total_defeitos), 0)
+                      FROM controle_retorno_cortes
+                     WHERE envio_id = %s
+                """, (envio_id,))
+                if r_def and r_def[0] is not None:
+                    total_defeitos = int(r_def[0] or 0)
+            except Exception:
+                pass
+
+        if total_defeitos > 0:
             self.bonif_var.set("nao")
             self.bonificacao_entry.configure(state="disabled")
+            self.bonificacao_entry.delete(0, "end")
+            self.bonificacao_entry.insert(0, "0.00")
+        elif valor_flag > 0:
+            self.bonif_var.set("sim")
+            self.bonificacao_entry.configure(state="normal")
+            self.bonificacao_entry.delete(0, "end")
+            self.bonificacao_entry.insert(0, f"{valor_flag:.2f}")
+        else:
+            self.bonif_var.set("sim")
+            self.bonificacao_entry.configure(state="normal")
             self.bonificacao_entry.delete(0, "end")
             self.bonificacao_entry.insert(0, "0.00")
 
@@ -1249,10 +1307,11 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             pass
 
-    def _carregar_defeitos_e_pagamento(self, codigo: str, tipo_servico: str) -> None:
+    def _carregar_defeitos_e_pagamento(self, codigo: str, tipo_servico: str, finalizado_id: int | None = None) -> None:
         """
         Preenche campos de defeitos, faltantes/estragadas, ajuda e último pagamento salvo (se houver).
         """
+        total_def = 0
         # Defeitos do fluxo novo
         try:
             r = _select_one("""
@@ -1269,9 +1328,28 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             pass
 
+        if total_def <= 0 and _table_exists("controle_retorno_cortes"):
+            envio_id = self._buscar_envio_id(finalizado_id=finalizado_id, codigo=codigo)
+            if envio_id:
+                try:
+                    r_def = _select_one("""
+                        SELECT COALESCE(SUM(total_defeitos), 0)
+                          FROM controle_retorno_cortes
+                         WHERE envio_id = %s
+                    """, (envio_id,))
+                    if r_def and r_def[0] is not None:
+                        total_def = int(r_def[0] or 0)
+                        if total_def > 0:
+                            self.defeito_count_entry.delete(0, "end")
+                            self.defeito_count_entry.insert(0, str(total_def))
+                except Exception:
+                    pass
+
+        self._carregar_bonificacao_por_corte(codigo, finalizado_id=finalizado_id)
+
 
         # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
-        valor_peca = self._buscar_valor_peca(codigo=codigo)
+        valor_peca = self._buscar_valor_peca(codigo=codigo, finalizado_id=finalizado_id)
         self.valor_por_peca = float(valor_peca or 0.0)
         self.valor_peca_entry.configure(state="normal")
         self.valor_peca_entry.delete(0, "end")
@@ -1515,8 +1593,14 @@ class PagamentoModernUI(ctk.CTkFrame):
             messagebox.showerror("Erro", f"Falha ao registrar pagamento:\n{e}")
 
 
-    def _carregar_dados_bancarios_prestador(self, destino: str, servico: str) -> None:
-        """Preenche campos bancários do prestador (último pagamento -> envios_cortes -> cadastro_faccoes)."""
+    def _carregar_dados_bancarios_prestador(
+        self,
+        destino: str,
+        servico: str,
+        finalizado_id: int | None = None,
+        codigo: str | None = None,
+    ) -> None:
+        """Preenche campos bancários do prestador (último pagamento -> cadastro_faccoes/envios_cortes)."""
 
         def _tem_algo(row):
             return bool(row and any((v is not None and str(v).strip() != "") for v in row))
@@ -1555,8 +1639,51 @@ class PagamentoModernUI(ctk.CTkFrame):
                 except Exception:
                     row = None
 
-        # 3) fallback: cadastro de facções (quando for Facção)
-        if not _tem_algo(row) and servico.lower() == "facção".lower() and _table_exists("cadastro_faccoes"):
+        # 3) fallback: prestador_id em cortes_finalizados/envios_cortes -> cadastro_faccoes
+        if not _tem_algo(row) and _table_exists("cadastro_faccoes"):
+            prestador_id = None
+            cols_cf = _columns_of("cortes_finalizados") if _table_exists("cortes_finalizados") else set()
+            for col in ("prestador_id", "faccao_id", "costureira_id"):
+                if col in cols_cf and finalizado_id:
+                    try:
+                        r = _select_one(
+                            f"SELECT {col} FROM cortes_finalizados WHERE id = %s LIMIT 1",
+                            (finalizado_id,),
+                        )
+                        if r and r[0]:
+                            prestador_id = int(r[0])
+                            break
+                    except Exception:
+                        pass
+
+            if prestador_id is None:
+                envio_id = self._buscar_envio_id(finalizado_id=finalizado_id, codigo=codigo)
+                if envio_id and _table_exists("envios_cortes"):
+                    cols_env = _columns_of("envios_cortes")
+                    if "prestador_id" in cols_env:
+                        try:
+                            r = _select_one(
+                                "SELECT prestador_id FROM envios_cortes WHERE id = %s LIMIT 1",
+                                (envio_id,),
+                            )
+                            if r and r[0]:
+                                prestador_id = int(r[0])
+                        except Exception:
+                            pass
+
+            if prestador_id:
+                try:
+                    row = _select_one("""
+                        SELECT titular_da_conta, cpf, banco, agencia, conta, pix
+                          FROM cadastro_faccoes
+                         WHERE id = %s
+                      ORDER BY id DESC LIMIT 1
+                    """, (prestador_id,))
+                except Exception:
+                    row = None
+
+        # 4) fallback: cadastro de facções pelo nome (quando não localizar ID)
+        if not _tem_algo(row) and _table_exists("cadastro_faccoes"):
             cols_f = _columns_of("cadastro_faccoes")
             if all(c in cols_f for c in ["titular_da_conta", "cpf", "banco", "agencia", "conta", "pix", "nome"]):
                 try:
@@ -1625,6 +1752,42 @@ class PagamentoModernUI(ctk.CTkFrame):
                 entry.delete(0, "end")
                 entry.insert(0, v)
                 entry.configure(state="readonly")
+
+        data_envio = vals[5] if len(vals) > 5 else ""
+        data_chegada = vals[6] if len(vals) > 6 else ""
+        if hasattr(data_envio, "strftime"):
+            data_envio = data_envio.strftime("%d/%m/%Y")
+        if hasattr(data_chegada, "strftime"):
+            data_chegada = data_chegada.strftime("%d/%m/%Y")
+
+        self.data_envio.configure(state="normal")
+        self.data_envio.delete(0, "end")
+        self.data_envio.insert(0, data_envio or "")
+        self.data_envio.configure(state="readonly")
+
+        self.data_chegada.configure(state="normal")
+        self.data_chegada.delete(0, "end")
+        self.data_chegada.insert(0, data_chegada or "")
+        self.data_chegada.configure(state="readonly")
+
+        self.quant_final_entry.configure(state="normal")
+        self.quant_final_entry.delete(0, "end")
+        self.quant_final_entry.insert(0, str(self.quantidade_finalizada))
+        self.quant_final_entry.configure(state="readonly")
+
+        try:
+            corte_id = int(vals[0])
+        except Exception:
+            corte_id = 0
+        self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"], finalizado_id=corte_id or None)
+        self._carregar_dados_bancarios_prestador(
+            mapping["costureira"],
+            mapping["tipo_servico"],
+            finalizado_id=corte_id or None,
+            codigo=mapping["codigo"],
+        )
+        if corte_id:
+            self._carregar_adiantamento_faccao(mapping["codigo"], corte_id)
 
     def _on_select_defeito(self, _event=None):
         """Seleciona um defeito na aba de pagamento."""

@@ -547,7 +547,7 @@ class RetornoCortes(ctk.CTkFrame):
             ("Tam.", 60),
             ("Enviado", 80),
             ("Entregue", 90),
-            ("Cópias", 80),
+            ("Pilotos enviadas", 120),
             ("Defeito", 80),
             ("Faltante", 80),
             ("Regulares (pagas)", 120),
@@ -625,7 +625,7 @@ class RetornoCortes(ctk.CTkFrame):
                                                text_color=self.cor_texto)
         self.lbl_total_entregue.pack(side="left", padx=5)
 
-        ctk.CTkLabel(totais, text="Cópias:", width=80, font=("Arial", 12, "bold"),
+        ctk.CTkLabel(totais, text="Pilotos enviadas:", width=140, font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=12)
 
         self.lbl_total_copias = ctk.CTkLabel(totais, text="0", font=("Arial", 12, "bold"),
@@ -953,6 +953,7 @@ class RetornoCortes(ctk.CTkFrame):
                     self.enviado_por_tam[tam] = int(qtd_env)
                     self.pilotos_por_tam[tam] = int(qtd_pil)
                     self.valor_por_tam[tam] = float(val_unit or 0)
+                    self.copias[tam].set(str(qtd_pil))
 
                     self.grade_widgets[tam]["enviado"].configure(text=str(qtd_env))
                     self.grade_widgets[tam]["valor"].configure(text=fmt_moeda(val_unit))
