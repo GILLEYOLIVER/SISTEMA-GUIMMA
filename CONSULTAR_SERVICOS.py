@@ -316,13 +316,14 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         serv_combo = ctk.CTkComboBox(prestador_frame, values=[
             "Todos", "Facção", "Bordado", "Caseador", "Botões",
-            "Estamparia", "Tingimento", "Outros Trabalhos"
+            "Estamparia", "Interna", "Tingimento", "Outros Trabalhos"
         ], width=150, variable=self.servico_var,
                                      fg_color=self.cor_secundaria,
                                      border_color=self.cor_borda,
                                      text_color=self.cor_texto,
                                      button_color=self.cor_primaria,
-                                     button_hover_color=self.cor_hover)
+                                     button_hover_color=self.cor_hover,
+                                     command=lambda _: self._carregar_prestadores(self.servico_var.get()))
         serv_combo.pack(side="left", padx=5)
 
         # Botão buscar
@@ -385,10 +386,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
         tab_hist.grid_columnconfigure(0, weight=1)
 
         # ---- Aba Peças com Defeito ----
-        def_columns = ["data", "servico", "descricao", "quantidade", "status"]
-        def_headers = ["Data", "Serviço", "Descrição", "Quantidade", "Status"]
-        def_widths = [120, 140, 320, 110, 120]
-        def_anchors = ["center", "center", "w", "center", "center"]
+        def_columns = ["data", "envio_id", "codigo", "descricao", "prestador", "tamanho", "defeitos", "servico", "status"]
+        def_headers = ["Data", "Id de Envio", "Código", "Descrição", "Prestador", "Tamanho", "Defeitos", "Serviço", "Status"]
+        def_widths = [110, 90, 110, 300, 160, 80, 80, 120, 110]
+        def_anchors = ["center", "center", "center", "w", "w", "center", "center", "center", "center"]
 
         self.defeito_tree = ttk.Treeview(tab_defeitos, columns=def_columns, show="headings",
                                          height=15, style="Custom.Treeview")
@@ -671,52 +672,77 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         desenhar_calendario()
 
-    def _carregar_prestadores(self):
-        """Carrega lista de prestadores do banco"""
+    def _carregar_prestadores(self, tipo_servico="Todos"):
+        """Carrega lista de prestadores do banco, com filtro opcional por tipo."""
         try:
             conn = get_conn()
             cur = conn.cursor()
             schema = get_schema()
+            tipo_servico = (tipo_servico or "Todos").strip()
+            filtrar_tipo = tipo_servico != "Todos"
 
             prestadores = set()
 
             # De cadastro_faccoes
             try:
-                cur.execute(f"SELECT DISTINCT nome FROM {schema}.cadastro_faccoes WHERE nome IS NOT NULL")
+                if filtrar_tipo:
+                    cur.execute(
+                        f"""
+                        SELECT DISTINCT nome
+                        FROM {schema}.cadastro_faccoes
+                        WHERE nome IS NOT NULL AND tipo_prestador = %s
+                        """,
+                        (tipo_servico,),
+                    )
+                else:
+                    cur.execute(f"SELECT DISTINCT nome FROM {schema}.cadastro_faccoes WHERE nome IS NOT NULL")
                 prestadores.update(r[0] for r in cur.fetchall())
             except Exception:
                 pass
 
             # De controle_envio_cortes
-            for col in ["costureira", "destino", "faccao"]:
+            if not filtrar_tipo:
+                for col in ["costureira", "destino", "faccao"]:
+                    try:
+                        cur.execute(f"SELECT DISTINCT {col} FROM {schema}.controle_envio_cortes WHERE {col} IS NOT NULL")
+                        prestadores.update(r[0] for r in cur.fetchall())
+                    except Exception:
+                        pass
+
+            # De pagamento_corte_acabamento
+            if not filtrar_tipo:
                 try:
-                    cur.execute(f"SELECT DISTINCT {col} FROM {schema}.controle_envio_cortes WHERE {col} IS NOT NULL")
+                    cur.execute(
+                        f"SELECT DISTINCT costureira FROM {schema}.pagamento_corte_acabamento WHERE costureira IS NOT NULL")
                     prestadores.update(r[0] for r in cur.fetchall())
                 except Exception:
                     pass
 
-            # De pagamento_corte_acabamento
-            try:
-                cur.execute(
-                    f"SELECT DISTINCT costureira FROM {schema}.pagamento_corte_acabamento WHERE costureira IS NOT NULL")
-                prestadores.update(r[0] for r in cur.fetchall())
-            except Exception:
-                pass
-
             # De envios_cortes (por prestador_id)
             try:
-                cur.execute(
-                    f"""SELECT DISTINCT cf.nome
-                           FROM {schema}.envios_cortes ec
-                           JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
-                           WHERE cf.nome IS NOT NULL"""
-                )
+                if filtrar_tipo:
+                    cur.execute(
+                        f"""SELECT DISTINCT cf.nome
+                               FROM {schema}.envios_cortes ec
+                               JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
+                               WHERE cf.nome IS NOT NULL AND cf.tipo_prestador = %s""",
+                        (tipo_servico,),
+                    )
+                else:
+                    cur.execute(
+                        f"""SELECT DISTINCT cf.nome
+                               FROM {schema}.envios_cortes ec
+                               JOIN {schema}.cadastro_faccoes cf ON ec.prestador_id = cf.id
+                               WHERE cf.nome IS NOT NULL"""
+                    )
                 prestadores.update(r[0] for r in cur.fetchall())
             except Exception:
                 pass
 
             prestadores_list = sorted(list(prestadores))
             self.prestador_combo.configure(values=prestadores_list)
+            if self.prestador_var.get() not in prestadores_list:
+                self.prestador_var.set("")
 
             cur.close()
         except Exception as e:
@@ -791,6 +817,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     total_valor += valor_total
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em envios: {e}")
 
             # 1b. ENVIOS (envios_cortes)
@@ -866,14 +894,32 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     total_valor += valor_total_envio
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em envios (envios_cortes): {e}")
 
             # 2. RETORNOS/ENTRADAS
             try:
                 filtro_data, params_data = _filtro_data("e.data_chegada")
+                cur.execute(
+                    """
+                    SELECT column_name
+                      FROM information_schema.columns
+                     WHERE table_schema = %s
+                       AND table_name = 'retorno_detalhes_tamanho'
+                    """,
+                    (schema,),
+                )
+                cols_retorno = {row[0] for row in cur.fetchall()}
+                entregue_col = "quantidade_entregue" if "quantidade_entregue" in cols_retorno else (
+                    "entregue" if "entregue" in cols_retorno else None
+                )
+                soma_entregue_sql = "0"
+                if entregue_col:
+                    soma_entregue_sql = f"SUM(COALESCE({entregue_col},0))"
                 sql_retornos = f"""
                     SELECT e.data_chegada, c.servico, c.codigo_corte, c.descricao_corte,
-                           COALESCE((SELECT SUM(COALESCE(quantidade_entregue,0))
+                           COALESCE((SELECT {soma_entregue_sql}
                                FROM {schema}.retorno_detalhes_tamanho r
                                WHERE r.retorno_id = e.id), 0) as qtd,
                            COALESCE(c.valor_peca, 0) as valor_unit,
@@ -902,6 +948,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     total_valor += valor_total
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em retornos: {e}")
 
             # 3. PAGAMENTOS
@@ -936,6 +984,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     total_valor += valor_total
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em pagamentos: {e}")
 
             # 4. HISTÓRICO DE SERVIÇOS
@@ -965,33 +1015,177 @@ class HistoricoServicosPage(ctk.CTkFrame):
                         total_valor += valor
                     registros += 1
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 print(f"Erro em histórico: {e}")
 
-            # 4b. PEÇAS COM DEFEITO (histórico pendente)
+            # 4b. PEÇAS COM DEFEITO (por tamanho + histórico)
             try:
-                filtro_data, params_data = _filtro_data("data")
+                filtro_data, params_data = _filtro_data("e.data_envio")
                 sql_defeitos = f"""
-                    SELECT data, evento, descricao, quantidade, status
-                    FROM {schema}.historico_de_servico
+                    SELECT
+                        e.data_envio,
+                        e.id,
+                        COALESCE(e.codigo_corte, ''),
+                        COALESCE(e.descricao_corte, ''),
+                        COALESCE(cf.nome, ''),
+                        COALESCE(r.tamanho, ''),
+                        COALESCE(r.defeitos, 0),
+                        COALESCE(e.tipo_servico, ''),
+                        COALESCE(e.status_envio, '')
+                    FROM {schema}.retorno_detalhes_tamanho r
+                    JOIN {schema}.envios_cortes e ON e.id = r.envio_id
+                    LEFT JOIN {schema}.cadastro_faccoes cf ON cf.id = e.prestador_id
                     WHERE 1=1
                       {filtro_data}
-                      AND setor = %s
-                      AND (%s = 'Todos' OR evento = %s)
-                      AND status = 'Pendente'
-                    ORDER BY data
+                      AND COALESCE(cf.nome, '') = %s
+                      AND COALESCE(r.defeitos, 0) > 0
+                      AND (%s = 'Todos' OR e.tipo_servico = %s)
+                    ORDER BY e.data_envio DESC, e.id DESC, r.tamanho
                 """
                 cur.execute(sql_defeitos, (*params_data, prestador, servico, servico))
+                rows_defeitos = cur.fetchall()
+                print(f"[Defeitos] retorno_detalhes_tamanho: {len(rows_defeitos)} linhas")
 
-                for row in cur.fetchall():
-                    data, evento, desc, qtd, status = row
+                for row in rows_defeitos:
+                    data_envio, envio_id, codigo, desc, prestador_nome, tamanho, defeitos, servico_envio, status_envio = row
+                    if hasattr(data_envio, "strftime"):
+                        data_envio = data_envio.strftime("%d/%m/%Y")
                     tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
                     if hasattr(self, "defeito_tree") and self.defeito_tree:
                         self.defeito_tree.insert("", "end", values=(
-                            data, evento, desc, qtd or 0, status or "Pendente"
+                            data_envio or "",
+                            envio_id or "",
+                            codigo or "",
+                            desc or "",
+                            prestador_nome or "",
+                            tamanho or "",
+                            defeitos or 0,
+                            servico_envio or "",
+                            status_envio or ""
                         ), tags=(tag,))
                     registros += 1
+
+                cur.execute(
+                    """
+                    SELECT column_name
+                      FROM information_schema.columns
+                     WHERE table_schema = %s
+                       AND table_name = 'historico_de_servico'
+                    """,
+                    (schema,),
+                )
+                cols_hist = {row[0] for row in cur.fetchall()}
+                if {"evento", "descricao", "quantidade", "status", "setor"}.issubset(cols_hist):
+                    data_col = "data" if "data" in cols_hist else (
+                        "data_atualizacao" if "data_atualizacao" in cols_hist else (
+                            "data_envio" if "data_envio" in cols_hist else "data_chegada"
+                        )
+                    )
+                    envio_col = "envio_id" if "envio_id" in cols_hist else (
+                        "envio_corte_id" if "envio_corte_id" in cols_hist else "NULL"
+                    )
+                    filtro_data_hist, params_data_hist = _filtro_data(data_col)
+                    sql_defeitos_hist = f"""
+                        SELECT {data_col}, {envio_col}, evento, descricao, setor, quantidade, status, tipo_servico
+                        FROM {schema}.historico_de_servico
+                        WHERE 1=1
+                          {filtro_data_hist}
+                          AND setor = %s
+                          AND (%s = 'Todos' OR evento = %s)
+                          AND status = 'Pendente'
+                        ORDER BY {data_col} DESC
+                    """
+                    cur.execute(sql_defeitos_hist, (*params_data_hist, prestador, servico, servico))
+                    rows_hist = cur.fetchall()
+                    print(f"[Defeitos] historico_de_servico (setor/evento): {len(rows_hist)} linhas")
+                    for row in rows_hist:
+                        data_hist, envio_id, evento, desc, setor, qtd, status, tipo_servico = row
+                        if hasattr(data_hist, "strftime"):
+                            data_hist = data_hist.strftime("%d/%m/%Y")
+                        tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
+                        if hasattr(self, "defeito_tree") and self.defeito_tree:
+                            self.defeito_tree.insert("", "end", values=(
+                                data_hist or "",
+                                envio_id or "",
+                                "-",
+                                desc or "",
+                                setor or "",
+                                "-",
+                                qtd or 0,
+                                tipo_servico or evento or "",
+                                status or ""
+                            ), tags=(tag,))
+                        registros += 1
+                elif {"prestador", "quantidade_defeitos"}.issubset(cols_hist):
+                    data_col = "data_envio" if "data_envio" in cols_hist else (
+                        "data_chegada" if "data_chegada" in cols_hist else "data_atualizacao"
+                    )
+                    filtro_data_hist, params_data_hist = _filtro_data(f"h.{data_col}")
+                    join_corte = ""
+                    codigo_expr = "''"
+                    desc_expr = "''"
+                    if "corte_id" in cols_hist:
+                        join_corte = f"LEFT JOIN {schema}.cadastro_de_corte c ON c.id = h.corte_id"
+                        codigo_expr = "COALESCE(c.codigo, '')"
+                        desc_expr = "COALESCE(c.descricao, '')"
+                    envio_expr = "h.envio_id" if "envio_id" in cols_hist else "NULL"
+                    servico_cond = "AND (%s = 'Todos' OR h.tipo_servico = %s)" if "tipo_servico" in cols_hist else ""
+                    params = list(params_data_hist) + [prestador]
+                    if "tipo_servico" in cols_hist:
+                        params.extend([servico, servico])
+                    sql_defeitos_hist = f"""
+                        SELECT h.{data_col} AS data_hist,
+                               {envio_expr} AS envio_id,
+                               {codigo_expr} AS codigo,
+                               {desc_expr} AS descricao,
+                               COALESCE(h.prestador, '') AS prestador,
+                               'TOTAL' AS tamanho,
+                               COALESCE(h.quantidade_defeitos, 0) AS defeitos,
+                               {("h.tipo_servico" if "tipo_servico" in cols_hist else "''")} AS servico,
+                               {("h.status" if "status" in cols_hist else "''")} AS status
+                          FROM {schema}.historico_de_servico h
+                          {join_corte}
+                         WHERE 1=1
+                           {filtro_data_hist}
+                           AND COALESCE(h.prestador, '') = %s
+                           AND COALESCE(h.quantidade_defeitos, 0) > 0
+                           {servico_cond}
+                         ORDER BY h.{data_col} DESC
+                    """
+                    cur.execute(sql_defeitos_hist, tuple(params))
+                    rows_hist = cur.fetchall()
+                    print(f"[Defeitos] historico_de_servico (prestador/quantidade_defeitos): {len(rows_hist)} linhas")
+                    for row in rows_hist:
+                        data_hist, envio_id, codigo, desc, prestador_nome, tamanho, defeitos, servico_hist, status_hist = row
+                        if hasattr(data_hist, "strftime"):
+                            data_hist = data_hist.strftime("%d/%m/%Y")
+                        tag = 'evenrow' if registros % 2 == 0 else 'oddrow'
+                        if hasattr(self, "defeito_tree") and self.defeito_tree:
+                            self.defeito_tree.insert("", "end", values=(
+                                data_hist or "",
+                                envio_id or "",
+                                codigo or "",
+                                desc or "",
+                                prestador_nome or "",
+                                tamanho or "",
+                                defeitos or 0,
+                                servico_hist or "",
+                                status_hist or ""
+                            ), tags=(tag,))
+                        registros += 1
             except Exception as e:
-                print(f"Erro em defeitos pendentes: {e}")
+                if conn:
+                    conn.rollback()
+                import traceback
+                print("[Defeitos] Falha ao carregar defeitos pendentes.")
+                print(f"[Defeitos] Prestador={prestador} | Servico={servico} | Todos={todos_registros}")
+                try:
+                    print(f"[Defeitos] Periodo={ini} -> {fim}")
+                except Exception:
+                    pass
+                print(f"[Defeitos] Erro: {e}")
+                traceback.print_exc()
 
             # Calcular tempo médio (simplificado)
             tempo_medio = total_retornos / max(total_envios, 1) if total_envios > 0 else 0
@@ -1166,3 +1360,5 @@ if __name__ == "__main__":
     page.pack(fill="both", expand=True, padx=10, pady=10)
 
     app.mainloop()
+
+# 31/01/2026##

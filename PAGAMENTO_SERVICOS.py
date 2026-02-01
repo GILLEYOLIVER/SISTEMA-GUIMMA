@@ -223,6 +223,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.cor_hover = getattr(self.sistema, "cor_hover", "#334155")
             self.cor_adicionar = getattr(self.sistema, "cor_adicionar", "#3a7ebf")
             self.cor_imprimir = getattr(self.sistema, "cor_imprimir", "#3a7ebf")
+            self.cor_sucesso = getattr(self.sistema, "cor_sucesso", "#22c55e")
         else:
             self.cor_fundo = "#ffffff"
             self.cor_primaria = "#3a7ebf"
@@ -234,6 +235,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.cor_hover = "#2e4a66"
             self.cor_adicionar = "#3a7ebf"
             self.cor_imprimir = "#3a7ebf"
+            self.cor_sucesso = "#22c55e"
 
     def _update_theme_from_host(self):
         """Atualiza as cores baseado no host/sistema - MESMO PADRÃO DO CADASTRO_DE_CORTE"""
@@ -410,7 +412,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             text=text,
             font=ctk.CTkFont(size=9),
             text_color=self.cor_texto
-        ).grid(row=row, column=column, sticky="w", padx=4, pady=2, **kwargs)
+        ).grid(row=row, column=column, sticky="w", padx=4, pady=1, **kwargs)
 
     # ===================== Construção da UI =====================
     def _build_ui(self):
@@ -427,15 +429,15 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="PAGAMENTO DE SERVIÇOS",
             font=ctk.CTkFont(size=16, weight="bold"),
             text_color=self.cor_texto
-        ).grid(row=0, column=0, sticky="w", padx=20, pady=10)
+        ).grid(row=0, column=0, sticky="w", padx=20, pady=6)
 
         # filtros - MESMO ESTILO DO CADASTRO_DE_CORTE
         filter_frame = ctk.CTkFrame(self, fg_color=self.filter_bg, corner_radius=8)
-        filter_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(6, 4))
+        filter_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(4, 2))
         filter_frame.grid_columnconfigure(6, weight=1)
 
         ctk.CTkLabel(filter_frame, text="Origem:", text_color=self.cor_texto).grid(
-            row=0, column=0, padx=(8, 4), pady=6, sticky="w"
+            row=0, column=0, padx=(8, 4), pady=4, sticky="w"
         )
         self.orig_seg = ctk.CTkSegmentedButton(
             filter_frame,
@@ -443,12 +445,13 @@ class PagamentoModernUI(ctk.CTkFrame):
             variable=self.source_var,
             selected_color=self.accent_color,
             fg_color=self.cor_primaria,
+            height=28,
             command=lambda *_: self.pesquisar_finalizados()
         )
-        self.orig_seg.grid(row=0, column=1, padx=4, pady=6)
+        self.orig_seg.grid(row=0, column=1, padx=4, pady=4)
 
         ctk.CTkLabel(filter_frame, text="Setor / Serviço:", text_color=self.cor_texto).grid(
-            row=0, column=2, padx=(12, 4), pady=6, sticky="w"
+            row=0, column=2, padx=(12, 4), pady=4, sticky="w"
         )
         self.filtro_servico_combo = ctk.CTkComboBox(
             filter_frame,
@@ -481,6 +484,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             filter_frame,
             text="🔍",
             width=40,
+            height=28,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -489,14 +493,14 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # conteúdo
         content_frame = ctk.CTkFrame(self, fg_color=self.main_bg, corner_radius=0)
-        content_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=(0, 10))
+        content_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=4, pady=(0, 6))
         content_frame.grid_columnconfigure(0, weight=1)
         content_frame.grid_columnconfigure(1, weight=2)
         content_frame.grid_rowconfigure(0, weight=1)
 
         # painel esquerdo (lista) - MESMO ESTILO DO CADASTRO_DE_CORTE
         left_panel = ctk.CTkFrame(content_frame, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
+        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=2)
         left_panel.grid_rowconfigure(1, weight=1)
         ctk.CTkLabel(
             left_panel,
@@ -505,23 +509,91 @@ class PagamentoModernUI(ctk.CTkFrame):
             text_color=self.cor_texto
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
 
-        tree_container = ctk.CTkFrame(left_panel, fg_color="transparent")
-        tree_container.grid(row=1, column=0, sticky="nsew", padx=8, pady=(4, 8))
+        tabs_left = ctk.CTkTabview(left_panel, fg_color="transparent")
+        tabs_left.grid(row=1, column=0, sticky="nsew", padx=6, pady=(2, 6))
+
+        tab_servicos = tabs_left.add("Serviços")
+        tab_defeitos = tabs_left.add("Defeitos")
+
+        tree_container = ctk.CTkFrame(tab_servicos, fg_color="transparent")
+        tree_container.grid(row=0, column=0, sticky="nsew")
+        tab_servicos.grid_rowconfigure(0, weight=1)
+        tab_servicos.grid_columnconfigure(0, weight=1)
         tree_container.grid_rowconfigure(0, weight=1)
+        tree_container.grid_rowconfigure(1, weight=0)
         tree_container.grid_columnconfigure(0, weight=1)
 
         cols = ("id", "tipo_servico", "codigo", "descricao", "costureira", "data_envio", "data_chegada", "total_qtd")
-        self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=14, style="Custom.Treeview")
+        self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=11, style="Custom.Treeview")
         headings = ["ID", "Serviço", "Código", "Descrição", "Costureira", "Envio", "Chegada", "Qtd"]
+        tree_widths = {
+            "id": 50,
+            "tipo_servico": 85,
+            "codigo": 65,
+            "descricao": 140,
+            "costureira": 110,
+            "data_envio": 75,
+            "data_chegada": 75,
+            "total_qtd": 50,
+        }
         for col, h in zip(cols, headings):
             self.tree.heading(col, text=h)
-            self.tree.column(col, width=70 if col != "descricao" else 140, anchor="center")
+            self.tree.column(col, width=tree_widths.get(col, 80), anchor="center")
         self.tree.grid(row=0, column=0, sticky="nsew")
         vsb = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=vsb.set)
+        hsb = ttk.Scrollbar(tree_container, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
         vsb.grid(row=0, column=1, sticky="ns")
+        hsb.grid(row=1, column=0, sticky="ew")
         self.tree.bind("<Double-1>", self._on_select_item)
         self.tree.bind("<Return>", self._on_select_item)
+
+        defeitos_container = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
+        defeitos_container.grid(row=0, column=0, sticky="nsew")
+        tab_defeitos.grid_rowconfigure(0, weight=1)
+        tab_defeitos.grid_columnconfigure(0, weight=1)
+        defeitos_container.grid_rowconfigure(0, weight=1)
+        defeitos_container.grid_rowconfigure(1, weight=0)
+        defeitos_container.grid_columnconfigure(0, weight=1)
+
+        defeitos_cols = ("id", "prestador", "codigo", "descricao", "tamanho", "quantidade", "data_retorno", "status")
+        self.defeitos_tree = ttk.Treeview(defeitos_container, columns=defeitos_cols, show="headings",
+                                          height=11, style="Custom.Treeview")
+        defeitos_headings = ["ID", "Prestador", "Código", "Descrição", "Tam", "Qtd", "Retorno", "Status"]
+        defeitos_widths = {
+            "id": 50,
+            "prestador": 120,
+            "codigo": 70,
+            "descricao": 140,
+            "tamanho": 45,
+            "quantidade": 55,
+            "data_retorno": 80,
+            "status": 70,
+        }
+        for col, h in zip(defeitos_cols, defeitos_headings):
+            self.defeitos_tree.heading(col, text=h)
+            self.defeitos_tree.column(col, width=defeitos_widths.get(col, 80), anchor="center")
+        self.defeitos_tree.grid(row=0, column=0, sticky="nsew")
+        defeitos_vsb = ttk.Scrollbar(defeitos_container, orient="vertical", command=self.defeitos_tree.yview)
+        defeitos_hsb = ttk.Scrollbar(defeitos_container, orient="horizontal", command=self.defeitos_tree.xview)
+        self.defeitos_tree.configure(yscrollcommand=defeitos_vsb.set, xscrollcommand=defeitos_hsb.set)
+        defeitos_vsb.grid(row=0, column=1, sticky="ns")
+        defeitos_hsb.grid(row=1, column=0, sticky="ew")
+        self.defeitos_tree.bind("<Double-1>", self._on_select_defeito)
+        self.defeitos_tree.bind("<Return>", self._on_select_defeito)
+
+        defeitos_actions = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
+        defeitos_actions.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        ctk.CTkButton(
+            defeitos_actions,
+            text="Marcar Pago",
+            command=self._pagar_defeito,
+            fg_color=self.cor_sucesso,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            height=30,
+            width=120
+        ).pack(side="left", padx=4)
 
 
         # Configurar cores das linhas alternadas (alto contraste)
@@ -544,7 +616,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # resumo de pagamento - MESMO ESTILO DO CADASTRO_DE_CORTE
         summary_frame = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        summary_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=4, pady=(0, 6))
+        summary_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=2, pady=(0, 4))
         summary_frame.grid_columnconfigure(0, weight=1)
         summary_frame.grid_columnconfigure(1, weight=1)
         summary_frame.grid_columnconfigure(2, weight=1)
@@ -555,69 +627,69 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="Resumo de Pagamento",
             font=ctk.CTkFont(size=16, weight="bold"),
             text_color=self.cor_texto
-        ).grid(row=0, column=0, padx=12, pady=(8, 4), sticky="w")
+        ).grid(row=0, column=0, padx=12, pady=(4, 2), sticky="w")
 
         card_base = ctk.CTkFrame(summary_frame, corner_radius=8, fg_color=self.cor_primaria)
-        card_base.grid(row=1, column=0, padx=8, pady=8, sticky="ew")
+        card_base.grid(row=1, column=0, padx=8, pady=6, sticky="ew")
         ctk.CTkLabel(card_base, text="Base (R$)", font=ctk.CTkFont(size=10, weight="bold"), text_color="white").grid(
-            row=0, column=0, sticky="w", padx=8, pady=(6, 0)
+            row=0, column=0, sticky="w", padx=8, pady=(4, 0)
         )
         self.base_entry = ctk.CTkEntry(card_base, state="readonly", fg_color="white", text_color="black")
-        self.base_entry.grid(row=1, column=0, padx=8, pady=(4, 8), sticky="ew")
+        self.base_entry.grid(row=1, column=0, padx=8, pady=(3, 6), sticky="ew")
 
         card_desc = ctk.CTkFrame(summary_frame, corner_radius=8, fg_color=self.cor_primaria)
-        card_desc.grid(row=1, column=1, padx=8, pady=8, sticky="ew")
+        card_desc.grid(row=1, column=1, padx=8, pady=6, sticky="ew")
         ctk.CTkLabel(card_desc, text="Desconto (R$)", font=ctk.CTkFont(size=10, weight="bold"),
                      text_color="white").grid(
-            row=0, column=0, sticky="w", padx=8, pady=(6, 0)
+            row=0, column=0, sticky="w", padx=8, pady=(4, 0)
         )
         self.desconto_entry = ctk.CTkEntry(card_desc, state="readonly", fg_color="white", text_color="black")
-        self.desconto_entry.grid(row=1, column=0, padx=8, pady=(4, 8), sticky="ew")
+        self.desconto_entry.grid(row=1, column=0, padx=8, pady=(3, 6), sticky="ew")
 
         card_total = ctk.CTkFrame(summary_frame, corner_radius=8, fg_color=self.cor_primaria)
-        card_total.grid(row=1, column=2, padx=8, pady=8, sticky="ew")
+        card_total.grid(row=1, column=2, padx=8, pady=6, sticky="ew")
         ctk.CTkLabel(card_total, text="Total a Pagar", font=ctk.CTkFont(size=10, weight="bold"),
                      text_color="white").grid(
-            row=0, column=0, sticky="w", padx=8, pady=(6, 0)
+            row=0, column=0, sticky="w", padx=8, pady=(4, 0)
         )
         self.total_entry = ctk.CTkEntry(card_total, state="readonly", font=ctk.CTkFont(size=14, weight="bold"),
                                         fg_color="white", text_color="black")
-        self.total_entry.grid(row=1, column=0, padx=8, pady=(4, 8), sticky="ew")
+        self.total_entry.grid(row=1, column=0, padx=8, pady=(3, 6), sticky="ew")
 
         destaque = ctk.CTkFrame(summary_frame, corner_radius=8, fg_color=self.cor_primaria)
-        destaque.grid(row=0, column=3, rowspan=2, padx=12, pady=8, sticky="nsew")
+        destaque.grid(row=0, column=3, rowspan=2, padx=12, pady=6, sticky="nsew")
         self.total_destaque = ctk.CTkLabel(
             destaque,
             text="R$ 0.00",
             font=ctk.CTkFont(size=24, weight="bold"),
             text_color="white"
         )
-        self.total_destaque.grid(row=0, column=0, padx=16, pady=(16, 4), sticky="w")
+        self.total_destaque.grid(row=0, column=0, padx=16, pady=(12, 4), sticky="w")
         self.total_lbl = ctk.CTkLabel(
             destaque,
             text="Total a pagar",
             font=ctk.CTkFont(size=11),
             text_color="white"
         )
-        self.total_lbl.grid(row=1, column=0, padx=16, pady=(0, 10), sticky="w")
+        self.total_lbl.grid(row=1, column=0, padx=16, pady=(0, 8), sticky="w")
         self.feedback = ctk.CTkLabel(
             destaque,
             text="",
             font=ctk.CTkFont(size=10),
             text_color="#ffd4d4"
         )
-        self.feedback.grid(row=2, column=0, padx=16, pady=(0, 8), sticky="w")
+        self.feedback.grid(row=2, column=0, padx=16, pady=(0, 6), sticky="w")
 
         # seções inferiores - MESMO ESTILO DO CADASTRO_DE_CORTE
         ident_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        ident_card.grid(row=1, column=0, sticky="nsew", padx=4, pady=4)
+        ident_card.grid(row=1, column=0, sticky="nsew", padx=2, pady=2)
         ident_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             ident_card,
             text="1. Identificação / Quantidades",
             font=ctk.CTkFont(size=12, weight="bold"),
             text_color=self.cor_texto
-        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(8, 4))
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(4, 2))
         self._small_label(ident_card, "Serviço:", 1, 0)
         servico_combo = ctk.CTkComboBox(
             ident_card,
@@ -629,7 +701,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             button_color=self.cor_primaria,
             button_hover_color=self.cor_hover
         )
-        servico_combo.grid(row=1, column=1, padx=8, pady=2, sticky="ew")
+        servico_combo.grid(row=1, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ident_card, "Código:", 2, 0)
         self.ident_codigo = ctk.CTkEntry(
             ident_card,
@@ -638,7 +710,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.ident_codigo.grid(row=2, column=1, padx=8, pady=2, sticky="ew")
+        self.ident_codigo.grid(row=2, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ident_card, "Descrição:", 3, 0)
         self.ident_descricao = ctk.CTkEntry(
             ident_card,
@@ -647,7 +719,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.ident_descricao.grid(row=3, column=1, padx=8, pady=2, sticky="ew")
+        self.ident_descricao.grid(row=3, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ident_card, "Costureira:", 4, 0)
         self.ident_costureira = ctk.CTkEntry(
             ident_card,
@@ -656,7 +728,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.ident_costureira.grid(row=4, column=1, padx=8, pady=2, sticky="ew")
+        self.ident_costureira.grid(row=4, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ident_card, "Data Envio:", 5, 0)
         self.data_envio = ctk.CTkEntry(
             ident_card,
@@ -665,7 +737,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.data_envio.grid(row=5, column=1, padx=8, pady=2, sticky="ew")
+        self.data_envio.grid(row=5, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ident_card, "Data Chegada:", 6, 0)
         self.data_chegada = ctk.CTkEntry(
             ident_card,
@@ -674,7 +746,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.data_chegada.grid(row=6, column=1, padx=8, pady=2, sticky="ew")
+        self.data_chegada.grid(row=6, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ident_card, "Qtd Finalizada:", 7, 0)
         self.quant_final_entry = ctk.CTkEntry(
             ident_card,
@@ -683,7 +755,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.quant_final_entry.grid(row=7, column=1, padx=8, pady=2, sticky="ew")
+        self.quant_final_entry.grid(row=7, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ident_card, "Valor/Peça:", 8, 0)
         self.valor_peca_entry = ctk.CTkEntry(
             ident_card,
@@ -692,17 +764,17 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.valor_peca_entry.grid(row=8, column=1, padx=8, pady=2, sticky="ew")
+        self.valor_peca_entry.grid(row=8, column=1, padx=8, pady=1, sticky="ew")
 
         ajustes_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        ajustes_card.grid(row=1, column=1, sticky="nsew", padx=4, pady=4)
+        ajustes_card.grid(row=1, column=1, sticky="nsew", padx=2, pady=2)
         ajustes_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             ajustes_card,
             text="2. Ajustes Financeiros",
             font=ctk.CTkFont(size=12, weight="bold"),
             text_color=self.cor_texto
-        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(8, 4))
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(4, 2))
         self._small_label(ajustes_card, "Adiantamento (R$):", 1, 0)
         self.adiantamento_entry = ctk.CTkEntry(
             ajustes_card,
@@ -710,7 +782,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.adiantamento_entry.grid(row=1, column=1, padx=8, pady=2, sticky="ew")
+        self.adiantamento_entry.grid(row=1, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ajustes_card, "Ajuda de Custo (R$):", 2, 0)
         self.ajuda_entry = ctk.CTkEntry(
             ajustes_card,
@@ -718,7 +790,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.ajuda_entry.grid(row=2, column=1, padx=8, pady=2, sticky="ew")
+        self.ajuda_entry.grid(row=2, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ajustes_card, "Faltantes:", 3, 0)
         self.faltantes_entry = ctk.CTkEntry(
             ajustes_card,
@@ -726,7 +798,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.faltantes_entry.grid(row=3, column=1, padx=8, pady=2, sticky="ew")
+        self.faltantes_entry.grid(row=3, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(ajustes_card, "Estragadas:", 4, 0)
         self.estragadas_entry = ctk.CTkEntry(
             ajustes_card,
@@ -734,7 +806,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.estragadas_entry.grid(row=4, column=1, padx=8, pady=2, sticky="ew")
+        self.estragadas_entry.grid(row=4, column=1, padx=8, pady=1, sticky="ew")
 
         # --- Bonificação (opcional) ---
         self._small_label(ajustes_card, "Bonificação (R$):", 5, 0)
@@ -745,11 +817,11 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.bonificacao_entry.grid(row=5, column=1, padx=8, pady=2, sticky="ew")
+        self.bonificacao_entry.grid(row=5, column=1, padx=8, pady=1, sticky="ew")
 
         self.bonif_var = tk.StringVar(value="nao")
         bonif_opts = ctk.CTkFrame(ajustes_card, fg_color="transparent")
-        bonif_opts.grid(row=6, column=1, padx=8, pady=(0, 6), sticky="w")
+        bonif_opts.grid(row=6, column=1, padx=8, pady=(0, 4), sticky="w")
         ctk.CTkRadioButton(bonif_opts, text="Não", variable=self.bonif_var, value="nao",
                            command=self._toggle_bonificacao, text_color=self.cor_texto).grid(row=0, column=0,
                                                                                              padx=(0, 12))
@@ -758,14 +830,14 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.bonificacao_entry.bind("<KeyRelease>", lambda ev: self.recalcular())
 
         defeito_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        defeito_card.grid(row=1, column=2, sticky="nsew", padx=4, pady=4)
+        defeito_card.grid(row=1, column=2, sticky="nsew", padx=2, pady=2)
         defeito_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             defeito_card,
             text="3. Defeitos & Adiantamento",
             font=ctk.CTkFont(size=12, weight="bold"),
             text_color=self.cor_texto
-        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(8, 4))
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(4, 2))
         self._small_label(defeito_card, "Peças c/ Defeito:", 1, 0)
         self.defeito_count_entry = ctk.CTkEntry(
             defeito_card,
@@ -773,7 +845,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.defeito_count_entry.grid(row=1, column=1, padx=8, pady=2, sticky="ew")
+        self.defeito_count_entry.grid(row=1, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(defeito_card, "Valor Defeito (R$):", 2, 0)
         self.valor_defeito_entry = ctk.CTkEntry(
             defeito_card,
@@ -781,26 +853,26 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.valor_defeito_entry.grid(row=2, column=1, padx=8, pady=2, sticky="ew")
+        self.valor_defeito_entry.grid(row=2, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(defeito_card, "Observações:", 3, 0)
         self.obs_defeito_text = ctk.CTkTextbox(
             defeito_card,
-            height=80,
+            height=60,
             fg_color=self.cor_secundaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.obs_defeito_text.grid(row=4, column=0, columnspan=2, padx=12, pady=(2, 8), sticky="ew")
+        self.obs_defeito_text.grid(row=4, column=0, columnspan=2, padx=12, pady=(2, 6), sticky="ew")
 
         adiant_frame = ctk.CTkFrame(defeito_card, fg_color=self.cor_primaria, corner_radius=8, border_width=1)
-        adiant_frame.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 8))
+        adiant_frame.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(3, 6))
         adiant_frame.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             adiant_frame,
             text="Adiantamento Registrado",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color="white"
-        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=8, pady=(6, 4))
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=8, pady=(4, 2))
         ctk.CTkLabel(adiant_frame, text="Valor:", font=ctk.CTkFont(size=10), text_color="white").grid(
             row=1, column=0, sticky="e", padx=4
         )
@@ -828,7 +900,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.adiantamento_registrado_saldo_lbl.grid(row=3, column=1, sticky="w", padx=4)
 
         desconto_frame = ctk.CTkFrame(adiant_frame, fg_color="transparent")
-        desconto_frame.grid(row=4, column=0, columnspan=2, sticky="ew", padx=4, pady=(6, 4))
+        desconto_frame.grid(row=4, column=0, columnspan=2, sticky="ew", padx=4, pady=(4, 3))
         desconto_frame.grid_columnconfigure((1, 2), weight=1)
         ctk.CTkLabel(
             desconto_frame,
@@ -849,6 +921,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             desconto_frame,
             text="Aplicar",
             width=80,
+            height=28,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
@@ -858,21 +931,22 @@ class PagamentoModernUI(ctk.CTkFrame):
             adiant_frame,
             text="Descontar 1 parcela",
             width=160,
+            height=28,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto
         )
-        self.descontar_parcela_btn.grid(row=6, column=0, columnspan=2, padx=8, pady=(2, 8))
+        self.descontar_parcela_btn.grid(row=6, column=0, columnspan=2, padx=8, pady=(2, 6))
 
         banco_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
-        banco_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=4, pady=4)
+        banco_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=2, pady=2)
         banco_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
             banco_card,
             text="4. Dados Bancários",
             font=ctk.CTkFont(size=12, weight="bold"),
             text_color=self.cor_texto
-        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(8, 4))
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(4, 2))
         self._small_label(banco_card, "Titular:", 1, 0)
         self.titular_entry = ctk.CTkEntry(
             banco_card,
@@ -880,7 +954,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.titular_entry.grid(row=1, column=1, padx=8, pady=2, sticky="ew")
+        self.titular_entry.grid(row=1, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(banco_card, "CPF:", 2, 0)
         self.cpf_entry = ctk.CTkEntry(
             banco_card,
@@ -888,7 +962,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.cpf_entry.grid(row=2, column=1, padx=8, pady=2, sticky="ew")
+        self.cpf_entry.grid(row=2, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(banco_card, "Banco:", 1, 2)
         self.banco_entry = ctk.CTkEntry(
             banco_card,
@@ -896,7 +970,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.banco_entry.grid(row=1, column=3, padx=8, pady=2, sticky="ew")
+        self.banco_entry.grid(row=1, column=3, padx=8, pady=1, sticky="ew")
         self._small_label(banco_card, "Agência:", 2, 2)
         self.agencia_entry = ctk.CTkEntry(
             banco_card,
@@ -904,7 +978,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.agencia_entry.grid(row=2, column=3, padx=8, pady=2, sticky="ew")
+        self.agencia_entry.grid(row=2, column=3, padx=8, pady=1, sticky="ew")
         self._small_label(banco_card, "Conta:", 3, 0)
         self.conta_entry = ctk.CTkEntry(
             banco_card,
@@ -912,7 +986,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.conta_entry.grid(row=3, column=1, padx=8, pady=2, sticky="ew")
+        self.conta_entry.grid(row=3, column=1, padx=8, pady=1, sticky="ew")
         self._small_label(banco_card, "PIX:", 3, 2)
         self.pix_entry = ctk.CTkEntry(
             banco_card,
@@ -920,15 +994,16 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.pix_entry.grid(row=3, column=3, padx=8, pady=2, sticky="ew")
+        self.pix_entry.grid(row=3, column=3, padx=8, pady=1, sticky="ew")
 
         # ações - MESMO ESTILO DO CADASTRO_DE_CORTE
         actions = ctk.CTkFrame(right_panel, fg_color=self.main_bg)
-        actions.grid(row=3, column=0, columnspan=3, sticky="e", pady=(6, 4), padx=4)
+        actions.grid(row=3, column=0, columnspan=3, sticky="e", pady=(4, 2), padx=2)
         self.salvar_btn = ctk.CTkButton(
             actions,
             text="💾 Salvar",
             width=130,
+            height=32,
             fg_color=self.cor_adicionar,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -939,6 +1014,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             actions,
             text="📤 Exportar CSV",
             width=130,
+            height=32,
             fg_color=self.cor_imprimir,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -949,6 +1025,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             actions,
             text="🔁 Recalcular",
             width=120,
+            height=32,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -959,6 +1036,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             actions,
             text="🖨️ Imprimir",
             width=130,
+            height=32,
             fg_color=self.cor_imprimir,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -1382,6 +1460,60 @@ class PagamentoModernUI(ctk.CTkFrame):
             tag = 'evenrow' if len(self.tree.get_children()) % 2 == 0 else 'oddrow'
             self.tree.insert("", "end", values=r, tags=(tag,))
 
+        self._carregar_defeitos_pagamento()
+
+    def _carregar_defeitos_pagamento(self):
+        if not hasattr(self, "defeitos_tree"):
+            return
+        for iid in self.defeitos_tree.get_children():
+            self.defeitos_tree.delete(iid)
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            cur.execute(f"""
+                SELECT id, prestador, codigo, descricao, tamanho, quantidade, data_retorno, status
+                  FROM {schema}.defeitos_envios
+                 WHERE origem = 'Externo'
+                   AND status IN ('Finalizado', 'Aguardando Pagamento')
+                 ORDER BY COALESCE(data_retorno, criado_em) DESC NULLS LAST, id DESC
+            """)
+            for row in cur.fetchall():
+                defeito_id, prestador, codigo, desc, tamanho, qtd, data_retorno, status = row
+                if hasattr(data_retorno, "strftime"):
+                    data_retorno = data_retorno.strftime("%d/%m/%Y")
+                self.defeitos_tree.insert("", "end", values=(
+                    defeito_id, prestador or "", codigo or "", desc or "", tamanho or "",
+                    qtd or 0, data_retorno or "", status or ""
+                ))
+            conn.close()
+        except Exception as e:
+            print(f"Erro ao carregar defeitos para pagamento: {e}")
+
+    def _pagar_defeito(self):
+        if not hasattr(self, "defeitos_tree"):
+            return
+        sel = self.defeitos_tree.selection()
+        if not sel:
+            messagebox.showwarning("Aviso", "Selecione um defeito para pagamento.")
+            return
+        vals = self.defeitos_tree.item(sel[0], "values")
+        defeito_id = vals[0]
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            schema = get_schema()
+            cur.execute(
+                f"UPDATE {schema}.defeitos_envios SET status = %s, data_pagamento = CURRENT_DATE WHERE id = %s",
+                ("Pago", defeito_id),
+            )
+            conn.commit()
+            conn.close()
+            self._carregar_defeitos_pagamento()
+            messagebox.showinfo("Sucesso", "Pagamento do defeito registrado.")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao registrar pagamento:\n{e}")
+
 
     def _carregar_dados_bancarios_prestador(self, destino: str, servico: str) -> None:
         """Preenche campos bancários do prestador (último pagamento -> envios_cortes -> cadastro_faccoes)."""
@@ -1494,65 +1626,81 @@ class PagamentoModernUI(ctk.CTkFrame):
                 entry.insert(0, v)
                 entry.configure(state="readonly")
 
-        self.data_envio.configure(state="normal");
-        self.data_envio.delete(0, "end");
-        self.data_envio.insert(0, vals[5] or "");
+    def _on_select_defeito(self, _event=None):
+        """Seleciona um defeito na aba de pagamento."""
+        sel = self.defeitos_tree.selection()
+        if not sel:
+            return
+        vals = self.defeitos_tree.item(sel[0]).get("values", [])
+        if not vals:
+            return
+        defeito_id, prestador, codigo, descricao, tamanho, qtd, data_retorno, status = vals
+        self._defeito_selecionado = defeito_id
+
+        data_envio = ""
+        valor_peca = 0.0
+        try:
+            row = _select_one(
+                "SELECT data_envio, valor_peca FROM defeitos_envios WHERE id = %s",
+                (defeito_id,)
+            )
+            if row:
+                data_envio = row[0].strftime("%d/%m/%Y") if hasattr(row[0], "strftime") else (row[0] or "")
+                valor_peca = float(row[1] or 0.0)
+        except Exception:
+            pass
+
+        self.tipo_servico_var.set("Defeito")
+        self.current_mapping = {
+            "tipo_servico": "Defeito",
+            "codigo": codigo,
+            "descricao": descricao,
+            "costureira": prestador,
+        }
+
+        for k, v in self.current_mapping.items():
+            if k in self.ident_entries:
+                entry = self.ident_entries[k]
+                entry.configure(state="normal")
+                entry.delete(0, "end")
+                entry.insert(0, v or "")
+                entry.configure(state="readonly")
+
+        self.data_envio.configure(state="normal")
+        self.data_envio.delete(0, "end")
+        self.data_envio.insert(0, data_envio or "")
         self.data_envio.configure(state="readonly")
-        self.data_chegada.configure(state="normal");
-        self.data_chegada.delete(0, "end");
-        self.data_chegada.insert(0, vals[6] or "");
+
+        self.data_chegada.configure(state="normal")
+        self.data_chegada.delete(0, "end")
+        self.data_chegada.insert(0, data_retorno or "")
         self.data_chegada.configure(state="readonly")
 
+        try:
+            self.quantidade_finalizada = int(qtd or 0)
+        except Exception:
+            self.quantidade_finalizada = 0
+        self.quant_final_entry.configure(state="normal")
+        self.quant_final_entry.delete(0, "end")
+        self.quant_final_entry.insert(0, str(self.quantidade_finalizada))
+        self.quant_final_entry.configure(state="readonly")
 
+        self.defeito_count_entry.delete(0, "end")
+        self.defeito_count_entry.insert(0, str(self.quantidade_finalizada))
+        self.valor_defeito_entry.delete(0, "end")
+        self.valor_defeito_entry.insert(0, "0.00")
+        self.obs_defeito_text.delete("1.0", "end")
+        self.obs_defeito_text.insert("1.0", f"Retrabalho de defeito {tamanho or ''}".strip())
 
-        # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
-        valor_peca = self._buscar_valor_peca(codigo=mapping["codigo"], finalizado_id=int(vals[0]) if vals and vals[0] is not None else None)
         self.valor_por_peca = float(valor_peca or 0.0)
         self.valor_peca_entry.configure(state="normal")
         self.valor_peca_entry.delete(0, "end")
         self.valor_peca_entry.insert(0, f"{self.valor_por_peca:.2f}")
         self.valor_peca_entry.configure(state="readonly")
 
-
-
-        # tentar puxar dados bancários de fluxo antigo (se existirem)
-        try:
-            banco_row = _select_one("""
-                SELECT titular_conta, cpf, banco, agencia, conta, pix
-                  FROM pecas_finalizadas
-                 WHERE codigo = %s AND tipo_servico = %s
-              ORDER BY id DESC LIMIT 1
-            """, (mapping["codigo"], mapping["tipo_servico"]))
-            if banco_row:
-                self.titular_entry.delete(0, "end");
-                self.titular_entry.insert(0, banco_row[0] or "")
-                self.cpf_entry.delete(0, "end");
-                self.cpf_entry.insert(0, banco_row[1] or "")
-                self.banco_entry.delete(0, "end");
-                self.banco_entry.insert(0, banco_row[2] or "")
-                self.agencia_entry.delete(0, "end");
-                self.agencia_entry.insert(0, banco_row[3] or "")
-                self.conta_entry.delete(0, "end");
-                self.conta_entry.insert(0, banco_row[4] or "")
-                self.pix_entry.delete(0, "end");
-                self.pix_entry.insert(0, banco_row[5] or "")
-        except Exception:
-            pass
-
-        self._carregar_dados_bancarios_prestador(mapping["costureira"], mapping["tipo_servico"])
-        self._carregar_bonificacao_por_corte(mapping["codigo"])
+        self._carregar_dados_bancarios_prestador(prestador, "Defeito")
         if not (self.titular_entry.get() or "").strip():
-            self.titular_entry.insert(0, mapping.get("costureira", ""))
-        self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"])
-
-        # busca corte_id finalizado (para adiantamento)
-        corte_id_finalizado = vals[0]
-        try:
-            r = _select_one("SELECT corte_id FROM cortes_finalizados WHERE id = %s LIMIT 1", (corte_id_finalizado,))
-            corte_id_lookup = r[0] if r and r[0] is not None else corte_id_finalizado
-        except Exception:
-            corte_id_lookup = corte_id_finalizado
-        self._carregar_adiantamento_faccao(mapping["codigo"], corte_id_lookup)
+            self.titular_entry.insert(0, prestador or "")
         self.recalcular()
 
     def aplicar_desconto_adiantamento(self):
@@ -2244,3 +2392,5 @@ if __name__ == "__main__":
     app = PagamentoModernUI(root, sistema=MockSistema())
     app.pack(fill="both", expand=True)
     root.mainloop()
+
+# 31/01/2026##

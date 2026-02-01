@@ -1,6 +1,11 @@
+git status
 git add -A
-git commit -m "Sincroniza tudo"
-git push --force-with-lease origin main
+git status
+git commit -m "Sincroniza GitHub com estado local"
+git push origin main
+
+
+
 
 git fetch origin --prune
 git status
@@ -19,3 +24,6 @@ git clean -fd
 
 
 #teste saber se esta igual
+
+
+# 31/01/2026##

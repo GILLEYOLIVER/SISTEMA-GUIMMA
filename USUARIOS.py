@@ -1846,9 +1846,9 @@ class UsuariosPage(ctk.CTkFrame):
                     ],
                 },
                 {
-                    "setor": "FACÇÕES",
+                    "setor": "PRESTADORES",
                     "permissoes": [
-                        {"nome": "Cadastro de Facções", "codigo": "cadastro_faccoes"},
+                        {"nome": "Cadastro de Prestadores", "codigo": "cadastro_faccoes"},
                         {"nome": "Pesquisar Serviço", "codigo": "pesquisar_servico"},
                     ],
                 },
@@ -1856,6 +1856,12 @@ class UsuariosPage(ctk.CTkFrame):
                     "setor": "MÃO DE OBRA",
                     "permissoes": [
                         {"nome": "Controle de Mão de Obra", "codigo": "controle_mao_obra"},
+                    ],
+                },
+                {
+                    "setor": "DEFEITOS",
+                    "permissoes": [
+                        {"nome": "Retrabalho de Defeitos", "codigo": "retrabalho_defeitos"},
                     ],
                 },
                 {
@@ -4844,4 +4850,6 @@ if __name__ == "__main__":
     page.pack(fill="both", expand=True, padx=20, pady=20)
 
     root.mainloop()
-#ultimo 11/12/2025
+
+
+# 31/01/2026##

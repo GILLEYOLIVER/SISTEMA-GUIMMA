@@ -49,14 +49,19 @@
     "class": "ConsultarOrdensPage"
   },
 
-  "Cadastro de Facções": {
-  "file": "CADASTRO_FACCOES.py",
-  "class": "CadastroFaccoesView"
+  "Cadastro de Prestadores": {
+    "file": "CADASTRO_FACCOES.py",
+    "class": "CadastroFaccoesView"
   },
 
   "Pesquisar Serviço": {
     "file": "CONSULTAR_SERVICOS.py",
     "class": "PesquisaServicosPage"
+  },
+
+  "Retrabalho de Defeitos": {
+    "file": "RETRABALHO_DEFEITOS.py",
+    "class": "RetrabalhoDefeitosPage"
   },
 
   "Controle de Mão de Obra": {

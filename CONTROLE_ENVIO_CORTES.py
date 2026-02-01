@@ -234,15 +234,17 @@ class EnvioCortes(ctk.CTkFrame):
             linha,
             width=120,
             values=["Carregando..."],
+            variable=self.filtro_servico_var,
             state="readonly",
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
             button_color=self.cor_primaria, button_hover_color=self.cor_hover,
             text_color=self.cor_texto, dropdown_fg_color=self.cor_secundaria,
-            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover
+            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover,
+            command=self._on_filtro_servico_trocado
         )
         self.filtro_servico_cb.set("Todos")
         self.filtro_servico_cb.pack(side="left", padx=(0, 10))
-        self.filtro_servico_cb.bind("<<ComboboxSelected>>", lambda e: self._aplicar_filtro_servico())
+        self.filtro_servico_cb.bind("<<ComboboxSelected>>", lambda e: self._on_filtro_servico_trocado())
 
         ctk.CTkLabel(linha, text="Buscar Costureira:", width=120, text_color=self.cor_texto).pack(side="left",
                                                                                                   padx=(0, 6))
@@ -281,11 +283,11 @@ class EnvioCortes(ctk.CTkFrame):
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
             button_color=self.cor_primaria, button_hover_color=self.cor_hover,
             text_color=self.cor_texto, dropdown_fg_color=self.cor_secundaria,
-            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover
+            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover,
+            command=self._on_tipo_changed
         )
         self.tipo_cb.set("Facção")
         self.tipo_cb.pack(side="left")
-        self.tipo_cb.bind("<<ComboboxSelected>>", self._on_tipo_changed)
 
         # Bancário (somente leitura) - COM TEMA
         banco = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
@@ -682,6 +684,46 @@ class EnvioCortes(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao carregar prestadores: {e}")
 
+    def _limpar_combo_prestadores(self):
+        """Limpa completamente o combo de prestadores (evita 'guardar' o último selecionado)."""
+        try:
+            # esvazia valores
+            self.prestador_busca_cb.configure(values=[])
+        except Exception:
+            pass
+
+        # limpa seleção/texto
+        try:
+            self.prestador_busca_cb.set("")
+        except Exception:
+            pass
+
+        # CTkComboBox mantém texto no entry interno: limpar também
+        try:
+            self.prestador_busca_cb._entry.delete(0, "end")
+        except Exception:
+            pass
+
+        # reseta estado
+        try:
+            self._prestador_map.clear()
+        except Exception:
+            self._prestador_map = {}
+
+        self._prestador_id = None
+        self._prestador_nome = ""
+        self._tipo_servico = getattr(self, "_tipo_servico", "")
+
+        try:
+            self._preencher_banco(None)
+        except Exception:
+            pass
+
+    def _on_filtro_servico_trocado(self, *_):
+        """Acionado ao trocar o filtro: limpa na hora e aplica o filtro."""
+        self._limpar_combo_prestadores()
+        self._aplicar_filtro_servico(mostrar_mensagem=True)
+
     def _carregar_tipos_servicos(self):
         """Carrega os tipos de serviços únicos dos prestadores cadastrados"""
         try:
@@ -700,38 +742,86 @@ class EnvioCortes(ctk.CTkFrame):
             print(f"Erro ao carregar tipos de serviços: {e}")
             return SERVICOS_FIXOS
 
-    def _aplicar_filtro_servico(self):
-        """Aplica o filtro de serviço na lista de prestadores"""
-        servico_selecionado = self.filtro_servico_var.get()
+    def _aplicar_filtro_servico(self, mostrar_mensagem=False):
+        """Aplica o filtro de serviço na lista de prestadores.
+
+        Regras:
+        - Se o filtro for 'Facção', só aparecem prestadores do tipo 'Facção' (e assim por diante).
+        - Se não houver nenhum prestador para o filtro selecionado, não exibe nada na lista e mostra 'Prestador não encontrado'.
+        - Não deixa o CTkComboBox 'guardar' o último selecionado.
+        """
+
+        # Prioriza o valor visível do combobox (mais confiável)
+        try:
+            servico_selecionado = (self.filtro_servico_cb.get() or "").strip()
+        except Exception:
+            servico_selecionado = ""
+
+        if not servico_selecionado:
+            servico_selecionado = (self.filtro_servico_var.get() or "Todos").strip()
+
+        # mantém variável sincronizada
+        try:
+            self.filtro_servico_var.set(servico_selecionado)
+        except Exception:
+            pass
+
+        def _norm(s):
+            return " ".join(str(s or "").split()).strip().casefold()
+
+        base = list(getattr(self, "_prestadores_full", []) or [])
 
         if servico_selecionado == "Todos":
-            self.prestadores_filtrados = self._prestadores_full
-            nomes = [r[1] for r in self._prestadores_full]
+            filtrados = base
         else:
-            self.prestadores_filtrados = []
-            for prestador in self._prestadores_full:
-                if len(prestador) > 3 and prestador[3] == servico_selecionado:
-                    self.prestadores_filtrados.append(prestador)
+            alvo = _norm(servico_selecionado)
+            filtrados = [p for p in base if len(p) > 3 and _norm(p[3]) == alvo]
 
-            if not self.prestadores_filtrados:
-                nomes = [f"Nenhum prestador para {servico_selecionado}"]
-            else:
-                nomes = [r[1] for r in self.prestadores_filtrados]
+        # Atualiza lista filtrada
+        self.prestadores_filtrados = filtrados
 
-        self.prestador_busca_cb.configure(values=nomes)
+        # Nenhum prestador para esse filtro: lista vazia + mensagem
+        if not filtrados:
+            self._limpar_combo_prestadores()
+            try:
+                self.prestador_busca_cb.configure(state="disabled")
+            except Exception:
+                pass
 
-        self._prestador_map.clear()
-        for prestador in self.prestadores_filtrados:
+            if mostrar_mensagem:
+                messagebox.showwarning("Aviso", "Prestador não encontrado")
+            return
+
+        # Achou: habilita e popula
+        try:
+            self.prestador_busca_cb.configure(state="normal")
+        except Exception:
+            pass
+
+        nomes = []
+        # recria mapa com base nos filtrados
+        self._prestador_map = {}
+        for prestador in filtrados:
             if len(prestador) >= 2:
-                nome = prestador[1]
                 pid = prestador[0]
-                if nome and not nome.startswith("Nenhum prestador"):
+                nome = " ".join(str(prestador[1] or "").split()).strip()
+                if nome:
+                    nomes.append(nome)
                     self._prestador_map[nome.lower()] = pid
 
-        current_selection = self.prestador_busca_cb.get()
+        try:
+            self.prestador_busca_cb.configure(values=nomes)
+        except Exception:
+            pass
+
+        # Se a seleção atual não existe mais, limpar
+        try:
+            current_selection = (self.prestador_busca_cb.get() or "").strip()
+        except Exception:
+            current_selection = ""
+
         if current_selection and current_selection.lower() not in self._prestador_map:
-            self.prestador_busca_cb.set("")
-            self._preencher_banco(None)
+            self._limpar_combo_prestadores()
 
     def _filtrar_combo_prestador(self, event=None):
         """Filtra a lista de prestadores no combobox baseado no texto digitado"""
@@ -884,14 +974,31 @@ class EnvioCortes(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao carregar dados bancários: {e}")
 
-    def _on_tipo_changed(self, event=None):
-        """Quando o tipo de serviço é alterado"""
-        self._tipo_servico = self.tipo_cb.get()
+    def _on_tipo_changed(self, *_):
+        """Quando o tipo de serviço é alterado.
 
-        valores_filtro = self.filtro_servico_cb.cget("values")
-        if valores_filtro and self._tipo_servico in valores_filtro:
-            self.filtro_servico_var.set(self._tipo_servico)
-            self._aplicar_filtro_servico()
+        Regra: o combo de prestadores (nomes) deve sempre refletir APENAS o tipo selecionado em 'Serviço'.
+        """
+        try:
+            self._tipo_servico = (self.tipo_cb.get() or "").strip()
+        except Exception:
+            self._tipo_servico = ""
+
+        # Sincroniza o filtro interno com o serviço escolhido (mesmo que não esteja na lista do filtro visual)
+        try:
+            self.filtro_servico_var.set(self._tipo_servico or "Todos")
+        except Exception:
+            pass
+
+        try:
+            # alguns temas/CTkComboBox podem impedir set se valor não estiver em values; por isso try/except
+            if hasattr(self, "filtro_servico_cb"):
+                self.filtro_servico_cb.set(self._tipo_servico or "Todos")
+        except Exception:
+            pass
+
+        # Limpa e aplica imediatamente (evita 'guardar' última seleção)
+        self._on_filtro_servico_trocado()
 
     # ----------------------------- Métodos de Corte -----------------------------
     def _resolver_corte_schema(self):
@@ -2469,4 +2576,4 @@ if __name__ == "__main__":
     app = EnvioCortes(root)
     root.mainloop()
 
-#30/01/2026
+# 31/01/2026##

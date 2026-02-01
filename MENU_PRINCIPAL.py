@@ -892,7 +892,7 @@ class OperaMenuApp(ctk.CTk):
         "ORDENS DE CORTE": "TESOURA.png",
         "REGISTRO DE CORTE": "FOLHA DE PAPEL.png",
         "ESTOQUE": "ESTOQUE.png",
-        "FACÇÕES": "FABRICA.png",
+        "PRESTADORES": "FABRICA.png",
         "MÃO DE OBRA": "PESSOAS.png",
         "PRODUÇÃO": "PRODUÇAO.png",
         "ACABAMENTO": "FERRAMENTAS.png",
@@ -911,8 +911,8 @@ class OperaMenuApp(ctk.CTk):
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
-        "FACÇÕES": ["Cadastro de Facções", "Pesquisar Serviço"],
-        "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento"],
+        "PRESTADORES": ["Cadastro de Prestadores", "Pesquisar Serviço"],
+        "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento", "Retrabalho de Defeitos"],
         "FINANCEIRO": [
             "Pagamento de Serviços", "Custo Produto", "Folha Pagamento",
             "Fechamento Mensal", "Contas a Pagar", "Adiantamento", "Adiantamentos Pendentes"
@@ -944,8 +944,8 @@ class OperaMenuApp(ctk.CTk):
             "Saída de Estoque": "ESTOQUE.png",
             "Relatórios": "RELATORIO 2.png",
         },
-        "FACÇÕES": {
-            "Cadastro de Facções": "FACÇAO.png",
+        "PRESTADORES": {
+            "Cadastro de Prestadores": "FACÇAO.png",
             "Pesquisar Serviço": "CONSULTAR ORDENS.png",
         },
         "MÃO DE OBRA": {
@@ -957,6 +957,7 @@ class OperaMenuApp(ctk.CTk):
         "ACABAMENTO": {
             "Registro Acabamento": "ACABAMENTO.png",
             "Finalizar Corte / Acabamento": "ACABAMENTO.png",
+            "Retrabalho de Defeitos": "ACABAMENTO.png",
         },
         "FINANCEIRO": {
             "Pagamento de Serviços": "DINHEIRO.png",
@@ -997,9 +998,10 @@ class OperaMenuApp(ctk.CTk):
         "Entrada de Estoque": "estoque_entrada",
         "Saída de Estoque": "estoque_saida",
         "Relatórios": "estoque_relatorios",
-        "Cadastro de Facções": "cadastro_faccoes",
+        "Cadastro de Prestadores": "cadastro_faccoes",
         "Pesquisar Serviço": "pesquisar_servico",
         "Controle de Mão de Obra": "controle_mao_obra",
+        "Retrabalho de Defeitos": "retrabalho_defeitos",
         "Produção": "Producao",
         "Registro Acabamento": "registro_acabamento",
         "Finalizar Corte / Acabamento": "finalizar_corte",
@@ -2294,12 +2296,14 @@ class OperaMenuApp(ctk.CTk):
                 "Saída de Estoque": "registrar saídas de estoque",
                 "Relatórios": "acessar relatórios de estoque",
 
-                # FACÇÕES
-                "Cadastro de Facções": "cadastrar facções",
+                # PRESTADORES
+                "Cadastro de Prestadores": "cadastrar prestadores",
                 "Pesquisar Serviço": "pesquisar serviços",
 
                 # MÃO DE OBRA
                 "Controle de Mão de Obra": "controlar mão de obra",
+                # DEFEITOS
+                "Retrabalho de Defeitos": "tratar defeitos",
 
                 # PRODUÇÃO
                 "Produção": "acessar o módulo de produção",
@@ -3405,4 +3409,4 @@ if __name__ == "__main__":
     main()
     # fechado aqui
 
-#15/12/2025
+# 31/01/2026##

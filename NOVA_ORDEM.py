@@ -445,16 +445,6 @@ class OrdemCorte(ctk.CTkFrame):
         )
         salvar_btn.pack(side="right", padx=10)
 
-        cancelar_btn = ctk.CTkButton(
-            btn_frame,
-            text="Cancelar",
-            command=self.master.destroy,
-            fg_color=getattr(self.sistema, 'cor_selecao', '#D32F2F'),
-            hover_color="#B71C1C",
-            text_color="#FFFFFF"
-        )
-        cancelar_btn.pack(side="right", padx=10)
-
     def criar_grade_corte(self):
         grade_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
         grade_frame.pack(fill="x", pady=10, padx=20)
@@ -653,30 +643,40 @@ class OrdemCorte(ctk.CTkFrame):
             return
 
         if row:
+            # Se ainda não há uma grade definida (modelo não selecionado),
+            # não travamos nada: liberamos todos os tamanhos para edição.
+            if not getattr(self, "grade_disponivel", None):
+                self.grade_disponivel = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+
             valores = row
             for i, val in enumerate(valores, start=1):
                 campo = self.campos_grade.get(f"porcent_{i}")
-                if campo:
-                    # Habilita o campo temporariamente para preencher
-                    estado_original = campo.cget("state")
-                    campo.configure(state="normal")
-                    campo.delete(0, "end")
-                    # Formata o valor usando a função de formatação
-                    if val is not None:
-                        valor_formatado = self.formatar_para_inteiro_se_possivel(val)
-                        campo.insert(0, valor_formatado)
-                    else:
-                        campo.insert(0, "0")
-                    # Restaura o estado original baseado na grade disponível
-                    mapeamento_tamanhos = {
-                        1: "PP", 2: "P", 3: "M", 4: "G",
-                        5: "GG", 6: "G1", 7: "G2", 8: "G3"
-                    }
-                    tamanho = mapeamento_tamanhos.get(i)
-                    if tamanho and tamanho in self.grade_disponivel:
-                        campo.configure(state="normal")
-                    else:
-                        campo.configure(state="disabled")
+                if not campo:
+                    continue
+
+                # Mantém o estado atual (habilitado/desabilitado):
+                # a preferência apenas PREENCHE valores, não bloqueia edição.
+                estado_original = campo.cget("state")
+                campo.configure(state="normal")  # precisa estar normal para inserir
+                campo.delete(0, "end")
+
+                if val is not None:
+                    valor_formatado = self.formatar_para_inteiro_se_possivel(val)
+                    campo.insert(0, valor_formatado)
+                else:
+                    campo.insert(0, "0")
+
+                # Restaura o estado original (depois normalizamos pela grade do modelo)
+                try:
+                    campo.configure(state=estado_original)
+                except Exception:
+                    pass
+
+            # Garante estados corretos conforme a grade do modelo (PP..G3 disponíveis)
+            try:
+                self.atualizar_campos_grade()
+            except Exception:
+                pass
 
             # Mostra mensagem sutil no console
             print(f"✅ Preferência '{nome}' aplicada automaticamente")
@@ -1832,3 +1832,5 @@ if __name__ == "__main__":
             print(f"Falha ao iniciar a interface gráfica: {gui_exc}")
     except Exception as e:
         print(f"Erro inesperado ao iniciar a aplicação: {e}")
+
+# 31/01/2026##
