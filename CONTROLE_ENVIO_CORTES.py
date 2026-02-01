@@ -460,6 +460,7 @@ class EnvioCortes(ctk.CTkFrame):
             ("Tam.", 60),
             ("Disponível", 90),
             ("Cópias Ret. Corte", 90),
+            ("Disp. Piloto", 90),
             ("Enviar", 90),
             ("Pilotos", 90),
             ("Valor/Peça (R$)", 120),
@@ -502,6 +503,10 @@ class EnvioCortes(ctk.CTkFrame):
             # Ao editar o campo de cópias, atualize o valor original e recalcule o saldo de cópias
             ent_cop.bind("<KeyRelease>", lambda e, T=tam: self._on_copias_edit(T))
 
+            # Disponível para piloto (cópias retiradas que ainda não foram usadas como pilotos)
+            lbl_disp_piloto = ctk.CTkLabel(row, text="0", width=90, text_color=self.cor_texto)
+            lbl_disp_piloto.pack(side="left", padx=2)
+
             # Quantidade a enviar (depois de subtrair cópias)
             ent_qtd = ctk.CTkEntry(row, width=90, textvariable=self.quantidades[tam],
                                    fg_color=self.cor_terciaria, border_color=self.cor_borda, text_color=self.cor_texto)
@@ -532,6 +537,7 @@ class EnvioCortes(ctk.CTkFrame):
             # Armazenar widgets relevantes
             self.grade_widgets[tam] = {
                 "disp": lbl_disp,
+                "disp_piloto": lbl_disp_piloto,
                 "sub": lbl_total,
                 "ent_val": ent_val,
                 "ent_qtd": ent_qtd,
@@ -1170,6 +1176,7 @@ class EnvioCortes(ctk.CTkFrame):
                 saldo = safe_int(vals[idx])
                 self.saldo_base[tam] = saldo
                 self.grade_widgets[tam]["disp"].configure(text=str(saldo))
+                self.grade_widgets[tam]["disp_piloto"].configure(text="0")
 
         # Limpa quantidades enviadas
         for tam in self.tamanhos:
@@ -1242,6 +1249,7 @@ class EnvioCortes(ctk.CTkFrame):
         """
         Regra correta:
         - "Cópias retiradas do corte" diminui SOMENTE o "Disponível".
+        - "Disp. Piloto" mostra as cópias retiradas que ainda não foram usadas como piloto.
         - "ENVIAR" é atualizado automaticamente com o saldo disponível.
         """
         try:
@@ -1258,6 +1266,9 @@ class EnvioCortes(ctk.CTkFrame):
 
             disponivel = max(base - retiradas, 0)
             self.grade_widgets[tam]["disp"].configure(text=str(disponivel))
+            pilotos_enviados = safe_int(self.pilotos[tam].get())
+            disp_piloto = max(retiradas - pilotos_enviados, 0)
+            self.grade_widgets[tam]["disp_piloto"].configure(text=str(disp_piloto))
 
             # Armazena o valor original de cópias digitadas
             self.copias_original[tam] = retiradas
@@ -1281,6 +1292,12 @@ class EnvioCortes(ctk.CTkFrame):
                 self.pilotos[tam].set(0)
         except Exception:
             # Se ocorrer algum erro de conversão, ignore
+            pass
+        try:
+            retiradas = safe_int(self.copias_do_corte[tam].get())
+            disp_piloto = max(retiradas - p, 0)
+            self.grade_widgets[tam]["disp_piloto"].configure(text=str(disp_piloto))
+        except Exception:
             pass
         # Recalcular totais após ajuste
         try:
@@ -1492,6 +1509,7 @@ class EnvioCortes(ctk.CTkFrame):
             self.valores[tam].set("")
             # Reseta o display da coluna "Disponível" e "Subtotal"
             self.grade_widgets[tam]["disp"].configure(text="0")
+            self.grade_widgets[tam]["disp_piloto"].configure(text="0")
             self.grade_widgets[tam]["sub"].configure(text=fmt_moeda(0))
             try:
                 self.grade_widgets[tam]["ent_qtd"].configure(state="normal")
