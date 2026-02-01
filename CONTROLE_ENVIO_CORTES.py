@@ -160,6 +160,8 @@ class EnvioCortes(ctk.CTkFrame):
         # Armazenamos o número original de cópias digitadas para cada tamanho.
         # Este valor é usado para debitar corretamente as cópias no corte.
         self.copias_original = {t: 0 for t in self.tamanhos}
+        # Cópias disponíveis já registradas no corte (usadas para pilotos futuros)
+        self.copias_base = {t: 0 for t in self.tamanhos}
         # Saldo base do corte por tamanho (quantidade disponível original)
         self.saldo_base = {t: 0 for t in self.tamanhos}
         # Valor unitário (como string) para cada tamanho
@@ -460,6 +462,7 @@ class EnvioCortes(ctk.CTkFrame):
             ("Tam.", 60),
             ("Disponível", 90),
             ("Cópias Ret. Corte", 90),
+            ("Disp. Piloto", 90),
             ("Enviar", 90),
             ("Pilotos", 90),
             ("Valor/Peça (R$)", 120),
@@ -502,6 +505,10 @@ class EnvioCortes(ctk.CTkFrame):
             # Ao editar o campo de cópias, atualize o valor original e recalcule o saldo de cópias
             ent_cop.bind("<KeyRelease>", lambda e, T=tam: self._on_copias_edit(T))
 
+            # Disponível para piloto (cópias retiradas que ainda não foram usadas como pilotos)
+            lbl_disp_piloto = ctk.CTkLabel(row, text="0", width=90, text_color=self.cor_texto)
+            lbl_disp_piloto.pack(side="left", padx=2)
+
             # Quantidade a enviar (depois de subtrair cópias)
             ent_qtd = ctk.CTkEntry(row, width=90, textvariable=self.quantidades[tam],
                                    fg_color=self.cor_terciaria, border_color=self.cor_borda, text_color=self.cor_texto)
@@ -532,6 +539,7 @@ class EnvioCortes(ctk.CTkFrame):
             # Armazenar widgets relevantes
             self.grade_widgets[tam] = {
                 "disp": lbl_disp,
+                "disp_piloto": lbl_disp_piloto,
                 "sub": lbl_total,
                 "ent_val": ent_val,
                 "ent_qtd": ent_qtd,
@@ -1016,6 +1024,17 @@ class EnvioCortes(ctk.CTkFrame):
                         ORDER BY ordinal_position
                     """, (get_schema(),))
                     cols = {r[0] for r in cur.fetchall()}
+                    try:
+                        self._garantir_colunas_copias(cur)
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_schema = %s AND table_name = 'cadastro_de_corte'
+                            ORDER BY ordinal_position
+                        """, (get_schema(),))
+                        cols = {r[0] for r in cur.fetchall()}
+                    except Exception:
+                        pass
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao detectar schema do corte: {e}")
             cols = set()
@@ -1052,7 +1071,7 @@ class EnvioCortes(ctk.CTkFrame):
             w = 70 if col in ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "Total"] else 130
             if col in ["ID", "Número"]:
                 w = 100
-            self.cortes_tree.column(col, width=w, anchor="center")
+        self.cortes_tree.column(col, width=w, anchor="center")
 
     def _sql_select_list(self):
         """SELECT padrão: id, numero(qualquer nome do banco), codigo, descricao, pp..g3, total."""
@@ -1069,14 +1088,27 @@ class EnvioCortes(ctk.CTkFrame):
         def col_or_zero(c):
             return c if c in cols else f"0 AS {c}"
 
+        def size_expr(tam):
+            copias_col = f"copias_{tam}"
+            base = f"COALESCE({tam}, 0)" if tam in cols else "0"
+            copias = f"COALESCE({copias_col}, 0)" if copias_col in cols else "0"
+            return f"({base} + {copias}) AS {tam}"
+
+        total_expr = " + ".join([
+            f"(COALESCE({tam}, 0) + COALESCE(copias_{tam}, 0))" if f"copias_{tam}" in cols
+            else f"COALESCE({tam}, 0)"
+            for tam in ["pp", "p", "m", "g", "gg", "g1", "g2", "g3"]
+        ])
+        total_display = f"({total_expr}) AS total_pecas"
+
         return ", ".join([
             "id",
             numero,
             codigo,
             descricao,
-            col_or_zero("pp"), col_or_zero("p"), col_or_zero("m"), col_or_zero("g"),
-            col_or_zero("gg"), col_or_zero("g1"), col_or_zero("g2"), col_or_zero("g3"),
-            total
+            size_expr("pp"), size_expr("p"), size_expr("m"), size_expr("g"),
+            size_expr("gg"), size_expr("g1"), size_expr("g2"), size_expr("g3"),
+            total_display if cols else total
         ])
 
     def _buscar_cortes_iniciais(self):
@@ -1162,14 +1194,7 @@ class EnvioCortes(ctk.CTkFrame):
         self.descricao_entry.configure(state="disabled")
         self.ordem_entry.configure(state="disabled")
 
-        # Preenche grade com saldos
-        cols_tam = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
-        for i, tam in enumerate(cols_tam):
-            idx = 4 + i  # após id, numero, codigo, descricao
-            if idx < len(vals):
-                saldo = safe_int(vals[idx])
-                self.saldo_base[tam] = saldo
-                self.grade_widgets[tam]["disp"].configure(text=str(saldo))
+        self._carregar_saldos_corte(corte_id)
 
         # Limpa quantidades enviadas
         for tam in self.tamanhos:
@@ -1242,6 +1267,7 @@ class EnvioCortes(ctk.CTkFrame):
         """
         Regra correta:
         - "Cópias retiradas do corte" diminui SOMENTE o "Disponível".
+        - "Disp. Piloto" mostra as cópias retiradas que ainda não foram usadas como piloto.
         - "ENVIAR" é atualizado automaticamente com o saldo disponível.
         """
         try:
@@ -1258,6 +1284,10 @@ class EnvioCortes(ctk.CTkFrame):
 
             disponivel = max(base - retiradas, 0)
             self.grade_widgets[tam]["disp"].configure(text=str(disponivel))
+            pilotos_enviados = safe_int(self.pilotos[tam].get())
+            copias_base = int(self.copias_base.get(tam, 0) or 0)
+            disp_piloto = max(copias_base + retiradas - pilotos_enviados, 0)
+            self.grade_widgets[tam]["disp_piloto"].configure(text=str(disp_piloto))
 
             # Armazena o valor original de cópias digitadas
             self.copias_original[tam] = retiradas
@@ -1282,6 +1312,13 @@ class EnvioCortes(ctk.CTkFrame):
         except Exception:
             # Se ocorrer algum erro de conversão, ignore
             pass
+        try:
+            retiradas = safe_int(self.copias_do_corte[tam].get())
+            copias_base = int(self.copias_base.get(tam, 0) or 0)
+            disp_piloto = max(copias_base + retiradas - p, 0)
+            self.grade_widgets[tam]["disp_piloto"].configure(text=str(disp_piloto))
+        except Exception:
+            pass
         # Recalcular totais após ajuste
         try:
             self._recalcular()
@@ -1299,16 +1336,14 @@ class EnvioCortes(ctk.CTkFrame):
             pilotos = safe_int(self.pilotos[tam].get())
             # Valor unitário da peça
             val = parse_valor(self.valores[tam].get())
-            # Número total de peças a enviar = regulares + pilotos
-            qtd_envio = qtd_original + pilotos
-            # Subtotal = total de peças * valor unitário
-            sub = qtd_envio * val
+            # Subtotal considera apenas peças regulares (pilotos/cópias não são pagas)
+            sub = qtd_original * val
             # Atualiza subtotal na UI
             try:
                 self.grade_widgets[tam]["sub"].configure(text=fmt_moeda(sub))
             except Exception:
                 pass
-            total_pecas += qtd_envio
+            total_pecas += qtd_original
             total_valor += sub
         # Atualiza totais na UI
         try:
@@ -1492,6 +1527,7 @@ class EnvioCortes(ctk.CTkFrame):
             self.valores[tam].set("")
             # Reseta o display da coluna "Disponível" e "Subtotal"
             self.grade_widgets[tam]["disp"].configure(text="0")
+            self.grade_widgets[tam]["disp_piloto"].configure(text="0")
             self.grade_widgets[tam]["sub"].configure(text=fmt_moeda(0))
             try:
                 self.grade_widgets[tam]["ent_qtd"].configure(state="normal")
@@ -1528,6 +1564,7 @@ class EnvioCortes(ctk.CTkFrame):
         import re
         import sys
         import tempfile
+        import shutil
         import webbrowser
 
         # ReportLab
@@ -1623,6 +1660,72 @@ class EnvioCortes(ctk.CTkFrame):
             except Exception:
                 pass
 
+        def _salvar_automatico(path_pdf: str, dados_envio: dict | None):
+            try:
+                base_dir = os.path.join(os.path.dirname(__file__), "Controle de serviços")
+                os.makedirs(base_dir, exist_ok=True)
+                codigo = ""
+                descricao = ""
+                tamanhos_nome = ""
+                if dados_envio:
+                    corte_info = dados_envio.get("corte", {}) or {}
+                    codigo = _t(corte_info.get("codigo"))
+                    descricao = _t(corte_info.get("descricao"))
+                    itens_envio = dados_envio.get("itens", []) or []
+                    tamanhos_enviados = []
+                    for it in itens_envio:
+                        tam = _t(it.get("tam")).upper()
+                        qtd = _int(it.get("qtd"), 0)
+                        piloto = _int(it.get("piloto"), 0)
+                        if tam and (qtd > 0 or piloto > 0):
+                            tamanhos_enviados.append(tam)
+                    if tamanhos_enviados:
+                        tamanhos_nome = ",".join(tamanhos_enviados)
+                if not codigo:
+                    try:
+                        codigo_entry = getattr(self, "codigo_entry", None)
+                        if codigo_entry is not None:
+                            codigo = codigo_entry.get()
+                    except Exception:
+                        codigo = ""
+                if not descricao:
+                    try:
+                        descricao_entry = getattr(self, "descricao_entry", None)
+                        if descricao_entry is not None:
+                            descricao = descricao_entry.get()
+                    except Exception:
+                        descricao = ""
+                if not tamanhos_nome:
+                    try:
+                        tamanhos_enviados = []
+                        for tam in getattr(self, "tamanhos", []):
+                            qtd = safe_int(self.quantidades[tam].get())
+                            piloto = safe_int(self.pilotos[tam].get())
+                            if qtd > 0 or piloto > 0:
+                                tamanhos_enviados.append(tam)
+                        if tamanhos_enviados:
+                            tamanhos_nome = ",".join(tamanhos_enviados)
+                    except Exception:
+                        tamanhos_nome = ""
+                codigo = codigo.strip().replace("/", "-").replace("\\", "-")
+                descricao = descricao.strip().replace("/", "-").replace("\\", "-")
+                tamanhos_nome = tamanhos_nome.strip().replace("/", "-").replace("\\", "-")
+                data_envio = datetime.now().strftime("%d-%m-%Y")
+                nome_partes = ["Controle_envio"]
+                if codigo:
+                    nome_partes.append(codigo)
+                if descricao:
+                    nome_partes.append(descricao)
+                if tamanhos_nome:
+                    nome_partes.append(tamanhos_nome)
+                nome_partes.append(data_envio)
+                nome = "_".join([p for p in nome_partes if p]).replace("__", "_")
+                nome += ".pdf"
+                destino = os.path.join(base_dir, nome)
+                shutil.copy2(path_pdf, destino)
+            except Exception:
+                pass
+
         # ----------------------------
         # Caminho do PDF
         # ----------------------------
@@ -1706,7 +1809,7 @@ class EnvioCortes(ctk.CTkFrame):
                 except Exception:
                     pass
 
-                subtotal = (qtd + piloto) * valor_peca
+                subtotal = qtd * valor_peca
                 total_geral += subtotal
 
                 itens.append({
@@ -1752,7 +1855,7 @@ class EnvioCortes(ctk.CTkFrame):
             valor_peca = _num(it.get("valor_peca"), 0.0)
             subtotal = it.get("subtotal")
             if subtotal is None or subtotal == "":
-                subtotal = (qtd + piloto) * valor_peca
+                subtotal = qtd * valor_peca
             subtotal = _num(subtotal, 0.0)
 
             total_geral += subtotal
@@ -2075,6 +2178,7 @@ class EnvioCortes(ctk.CTkFrame):
         # Build
         # ----------------------------
         doc.build(story, onFirstPage=build_footer, onLaterPages=build_footer)
+        _salvar_automatico(caminho_pdf, dados)
 
         if abrir_pdf:
             _open_pdf(caminho_pdf)
@@ -2101,6 +2205,7 @@ class EnvioCortes(ctk.CTkFrame):
             with get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(f"SET LOCAL search_path = {get_schema()};")
+                    self._garantir_colunas_copias(cur)
                     # Obter colunas disponíveis
                     cur.execute("""
                         SELECT column_name 
@@ -2113,7 +2218,8 @@ class EnvioCortes(ctk.CTkFrame):
                         messagebox.showerror("Erro", "Tabela cadastro_de_corte não possui colunas de tamanho.")
                         return False
 
-                    select_cols = ", ".join(tamanhos_db)
+                    copias_cols = [f"copias_{c}" for c in tamanhos_db]
+                    select_cols = ", ".join(tamanhos_db + copias_cols)
                     cur.execute(f"SELECT {select_cols} FROM {get_schema()}.cadastro_de_corte WHERE id=%s",
                                 (self.corte_selecionado,))
                     row = cur.fetchone()
@@ -2122,12 +2228,23 @@ class EnvioCortes(ctk.CTkFrame):
                         return False
 
                     atual = {tam.upper(): int(row[i]) for i, tam in enumerate(tamanhos_db)}
+                    copias_atual = {
+                        tam.upper(): int(row[i + len(tamanhos_db)]) for i, tam in enumerate(tamanhos_db)
+                    }
                     for tam in tamanhos_db:
                         TAM = tam.upper()
-                        enviar = safe_int(self.quantidades[TAM].get()) + safe_int(self.pilotos[TAM].get())
-                        if enviar > atual[TAM]:
+                        enviar_regular = safe_int(self.quantidades[TAM].get())
+                        copias_retiradas = safe_int(self.copias_do_corte[TAM].get())
+                        pilotos = safe_int(self.pilotos[TAM].get())
+                        if enviar_regular + copias_retiradas > atual[TAM]:
                             messagebox.showerror("Erro",
-                                                 f"Saldo insuficiente para {TAM}. Disponível: {atual[TAM]}, enviar: {enviar}.")
+                                                 f"Saldo insuficiente para {TAM}. Disponível: {atual[TAM]}, "
+                                                 f"retirar/enviar: {enviar_regular + copias_retiradas}.")
+                            return False
+                        if pilotos > copias_atual[TAM] + copias_retiradas:
+                            messagebox.showerror("Erro",
+                                                 f"Pilotos insuficientes para {TAM}. Disponível: "
+                                                 f"{copias_atual[TAM] + copias_retiradas}, pilotos: {pilotos}.")
                             return False
 
         except Exception as e:
@@ -2136,7 +2253,92 @@ class EnvioCortes(ctk.CTkFrame):
 
         return True
 
-    def _debitar_do_corte(self, cur, corte_id: int, qtds: dict, copias: dict):
+    def _garantir_colunas_copias(self, cur):
+        from BANCO_DE_DADOS_PG import get_schema
+
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_schema = %s AND table_name = 'cadastro_de_corte'
+        """, (get_schema(),))
+        cols = {r[0] for r in cur.fetchall()}
+        tamanhos_cols = [c for c in ["pp", "p", "m", "g", "gg", "g1", "g2", "g3"] if c in cols]
+        for tam in tamanhos_cols:
+            col = f"copias_{tam}"
+            if col not in cols:
+                cur.execute(
+                    f"ALTER TABLE {get_schema()}.cadastro_de_corte ADD COLUMN {col} INTEGER DEFAULT 0"
+                )
+
+    def _carregar_copias_disponiveis(self, corte_id: int):
+        try:
+            from BANCO_DE_DADOS_PG import get_conn, get_schema
+
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"SET LOCAL search_path = {get_schema()};")
+                    self._garantir_colunas_copias(cur)
+                    cur.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_schema = %s AND table_name = 'cadastro_de_corte'
+                    """, (get_schema(),))
+                    cols = {r[0] for r in cur.fetchall()}
+                    tamanhos_cols = [c for c in ["pp", "p", "m", "g", "gg", "g1", "g2", "g3"] if c in cols]
+                    copias_cols = [f"copias_{c}" for c in tamanhos_cols]
+                    if not copias_cols:
+                        return
+                    select_cols = ", ".join(copias_cols)
+                    cur.execute(
+                        f"SELECT {select_cols} FROM {get_schema()}.cadastro_de_corte WHERE id=%s", (corte_id,)
+                    )
+                    row = cur.fetchone()
+                    if not row:
+                        return
+                    for i, tam in enumerate(tamanhos_cols):
+                        tam_ui = tam.upper()
+                        copias_disp = int(row[i])
+                        self.copias_base[tam_ui] = copias_disp
+                        if tam_ui in self.grade_widgets and "disp_piloto" in self.grade_widgets[tam_ui]:
+                            self.grade_widgets[tam_ui]["disp_piloto"].configure(text=str(copias_disp))
+        except Exception:
+            pass
+
+    def _carregar_saldos_corte(self, corte_id: int):
+        try:
+            from BANCO_DE_DADOS_PG import get_conn, get_schema
+
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"SET LOCAL search_path = {get_schema()};")
+                    cur.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_schema = %s AND table_name = 'cadastro_de_corte'
+                    """, (get_schema(),))
+                    cols = {r[0] for r in cur.fetchall()}
+                    tamanhos_db = [c for c in ["pp", "p", "m", "g", "gg", "g1", "g2", "g3"] if c in cols]
+                    if not tamanhos_db:
+                        return
+                    select_cols = ", ".join(tamanhos_db)
+                    cur.execute(
+                        f"SELECT {select_cols} FROM {get_schema()}.cadastro_de_corte WHERE id=%s", (corte_id,)
+                    )
+                    row = cur.fetchone()
+                    if not row:
+                        return
+                    for i, col in enumerate(tamanhos_db):
+                        tam_ui = col.upper()
+                        saldo = int(row[i])
+                        self.saldo_base[tam_ui] = saldo
+                        if tam_ui in self.grade_widgets:
+                            self.grade_widgets[tam_ui]["disp"].configure(text=str(saldo))
+                            self.grade_widgets[tam_ui]["disp_piloto"].configure(text="0")
+            self._carregar_copias_disponiveis(corte_id)
+        except Exception:
+            pass
+
+    def _debitar_do_corte(self, cur, corte_id: int, qtds: dict, copias: dict, pilotos: dict):
         """
         Debita do cadastro_de_corte as quantidades enviadas (qtds) e as cópias retiradas do corte.
 
@@ -2153,6 +2355,7 @@ class EnvioCortes(ctk.CTkFrame):
         :param corte_id: id do corte no cadastro_de_corte
         :param qtds: dict com quantidades regulares a enviar por tamanho (PP, P, ..., G3)
         :param copias: dict com o número de cópias originais retiradas para cada tamanho (PP, P, ..., G3)
+        :param pilotos: dict com o número de pilotos a enviar por tamanho (PP, P, ..., G3)
         """
         from BANCO_DE_DADOS_PG import get_schema
 
@@ -2173,16 +2376,23 @@ class EnvioCortes(ctk.CTkFrame):
         if not tamanhos_cols:
             raise ValueError("Tabela cadastro_de_corte não possui colunas de tamanho (PP..G3).")
 
-        select_cols = ", ".join(tamanhos_cols + ([total_col] if total_col else []))
+        self._garantir_colunas_copias(cur)
+        copias_cols = [f"copias_{c}" for c in tamanhos_cols]
+        select_cols = ", ".join(tamanhos_cols + copias_cols + ([total_col] if total_col else []))
         cur.execute(f"SELECT {select_cols} FROM {get_schema()}.cadastro_de_corte WHERE id=%s", (corte_id,))
         row = cur.fetchone()
         if not row:
             raise ValueError("Corte não encontrado.")
 
         atual = {tam.upper(): int(row[i]) for i, tam in enumerate(tamanhos_cols)}
-        atual_total = int(row[len(tamanhos_cols)]) if total_col else None
+        copias_atual = {
+            tam.upper(): int(row[i + len(tamanhos_cols)]) for i, tam in enumerate(tamanhos_cols)
+        }
+        total_idx = len(tamanhos_cols) + len(copias_cols)
+        atual_total = int(row[total_idx]) if total_col else None
 
         novo = {}
+        novo_copias = {}
         debito_total = 0
         for tam in tamanhos_cols:
             TAM = tam.upper()
@@ -2190,14 +2400,22 @@ class EnvioCortes(ctk.CTkFrame):
             qtd = int(qtds.get(TAM, 0))
             # cópias originais retiradas do corte
             cop = int(copias.get(TAM, 0))
+            pilotos_envio = int(pilotos.get(TAM, 0))
             enviar = qtd + cop
             debito_total += enviar
             if enviar > atual[TAM]:
                 raise ValueError(f"Saldo insuficiente para {TAM}. Tentando debitar {enviar}, saldo {atual[TAM]}.")
             novo[tam] = atual[TAM] - enviar
+            disp_copias = copias_atual[TAM] + cop
+            if pilotos_envio > disp_copias:
+                raise ValueError(
+                    f"Cópias insuficientes para pilotos {TAM}. Disponível: {disp_copias}, pilotos: {pilotos_envio}."
+                )
+            novo_copias[f"copias_{tam}"] = max(disp_copias - pilotos_envio, 0)
 
         valores_set = ", ".join([f"{tam}=%s" for tam in tamanhos_cols])
-        params = [novo[tam] for tam in tamanhos_cols]
+        valores_set += ", " + ", ".join([f"copias_{tam}=%s" for tam in tamanhos_cols])
+        params = [novo[tam] for tam in tamanhos_cols] + [novo_copias[f"copias_{tam}"] for tam in tamanhos_cols]
 
         if total_col is not None and atual_total is not None:
             novo_total = max(atual_total - debito_total, 0)
@@ -2244,7 +2462,7 @@ class EnvioCortes(ctk.CTkFrame):
                         copias_orig[t] = orig
                         # Cópi as remanescentes (não utilizadas como pilotos) não podem ser negativas
                         leftover_copies[t] = max(orig - pil, 0)
-                    self._debitar_do_corte(cur, self.corte_selecionado, qtds, copias_orig)
+                    self._debitar_do_corte(cur, self.corte_selecionado, qtds, copias_orig, pils)
 
                     # 2. Insere na tabela de envios
                     cur.execute("""
@@ -2385,9 +2603,9 @@ class EnvioCortes(ctk.CTkFrame):
 
                     # -----------------------------------------------------------------
                     # Compute totals: number of pieces, pilots and total value
-                    # total_pecas -> soma de quantidades enviadas + pilotos totais
+                    # total_pecas -> soma de quantidades regulares enviadas
                     # total_pilotos -> soma de pilotos totais
-                    # valor_total_envio -> (quantidade enviada + pilotos totais) * valor unitário de cada tamanho
+                    # valor_total_envio -> quantidade regular * valor unitário (pilotos/cópias não são pagas)
                     tamanhos_lista = list(self.tamanhos)
                     total_pecas = 0
                     total_pilotos = 0
@@ -2395,10 +2613,10 @@ class EnvioCortes(ctk.CTkFrame):
                     for t in tamanhos_lista:
                         q = qtds.get(t, 0)
                         p = pils.get(t, 0)
-                        total_pecas += q + p
+                        total_pecas += q
                         total_pilotos += p
                         v = parse_valor(self.valores[t].get())
-                        valor_total_envio += (q + p) * v
+                        valor_total_envio += q * v
                     # resumo de pilotos para visualização (ex: "PP:2; P:1")
                     resumo_parts = []
                     for t in tamanhos_lista:
@@ -2486,12 +2704,100 @@ class EnvioCortes(ctk.CTkFrame):
                     conn.commit()
 
             messagebox.showinfo("Sucesso", "Envio confirmado e saldo debitado.")
+            deseja_imprimir = self._dialogo_impressao_salvar()
+            if deseja_imprimir is True:
+                self.preview_impressao()
+            elif deseja_imprimir is False:
+                self.exportar_pdf()
             self._atualizar_saldo_pos_envio(self.corte_selecionado)
             self._recarregar_lista_cortes()
             self._limpar()
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao confirmar envio: {e}")
+
+    def _dialogo_impressao_salvar(self):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Controle de Envio")
+        dialog.resizable(False, False)
+        dialog.configure(fg_color=self.cor_fundo)
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
+        dialog.update_idletasks()
+
+        parent = self.winfo_toplevel()
+        try:
+            parent_x = parent.winfo_rootx()
+            parent_y = parent.winfo_rooty()
+            parent_w = parent.winfo_width()
+            parent_h = parent.winfo_height()
+            dialog_w = dialog.winfo_reqwidth()
+            dialog_h = dialog.winfo_reqheight()
+            pos_x = parent_x + (parent_w - dialog_w) // 2
+            pos_y = parent_y + (parent_h - dialog_h) // 2
+            dialog.geometry(f"+{pos_x}+{pos_y}")
+        except Exception:
+            pass
+
+        resultado = {"valor": None}
+
+        container = ctk.CTkFrame(dialog, fg_color=self.cor_fundo)
+        container.pack(padx=20, pady=20, fill="both", expand=True)
+
+        ctk.CTkLabel(
+            container,
+            text="Deseja imprimir ou salvar o controle de envio?",
+            font=("Arial", 14, "bold"),
+            text_color=self.cor_texto,
+            wraplength=360,
+            justify="center",
+        ).pack(pady=(0, 12))
+
+        ctk.CTkLabel(
+            container,
+            text="Sim = Imprimir\nNão = Salvar PDF\nCancelar = Não fazer agora.",
+            font=("Arial", 12),
+            text_color=self.cor_texto,
+            justify="center",
+        ).pack(pady=(0, 16))
+
+        botoes = ctk.CTkFrame(container, fg_color=self.cor_fundo)
+        botoes.pack(fill="x")
+
+        def _finalizar(valor):
+            resultado["valor"] = valor
+            dialog.destroy()
+
+        ctk.CTkButton(
+            botoes,
+            text="Sim",
+            command=lambda: _finalizar(True),
+            fg_color=self.cor_sucesso,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+        ).pack(fill="x", pady=4)
+
+        ctk.CTkButton(
+            botoes,
+            text="Não",
+            command=lambda: _finalizar(False),
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+        ).pack(fill="x", pady=4)
+
+        ctk.CTkButton(
+            botoes,
+            text="Cancelar",
+            command=lambda: _finalizar(None),
+            fg_color=self.cor_secundaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+        ).pack(fill="x", pady=4)
+
+        dialog.protocol("WM_DELETE_WINDOW", lambda: _finalizar(None))
+        self.wait_window(dialog)
+        return resultado["valor"]
 
     def _atualizar_saldo_pos_envio(self, corte_id: int):
         """
@@ -2526,6 +2832,8 @@ class EnvioCortes(ctk.CTkFrame):
                         tam_ui = col.upper()
                         if tam_ui in self.grade_widgets and "disp" in self.grade_widgets[tam_ui]:
                             self.grade_widgets[tam_ui]["disp"].configure(text=str(int(row[i])))
+                            self.saldo_base[tam_ui] = int(row[i])
+            self._carregar_copias_disponiveis(corte_id)
 
         except Exception:
             pass
@@ -2544,8 +2852,7 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Gera PDF temporário e abre no navegador
         try:
-            pdf_path = self._gerar_pdf()
-            webbrowser.open(pdf_path)
+            self._gerar_pdf(abrir_pdf=True)
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao gerar pré-visualização: {e}")
 
@@ -2576,4 +2883,4 @@ if __name__ == "__main__":
     app = EnvioCortes(root)
     root.mainloop()
 
-# 31/01/2026##
+# 31/01/2026####
