@@ -737,7 +737,7 @@ class EnvioCortes(ctk.CTkFrame):
                     self.prestadores_filtrados.append(prestador)
 
             if not self.prestadores_filtrados:
-                nomes = [f"Nenhum prestador para {servico_selecionado}"]
+                nomes = ["Nenhum prestador encontrado"]
             else:
                 nomes = [_nome_visivel(r[1]) for r in self.prestadores_filtrados if len(r) > 1]
 
