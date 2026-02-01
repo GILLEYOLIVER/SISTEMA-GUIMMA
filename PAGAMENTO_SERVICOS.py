@@ -1249,7 +1249,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             pass
 
-    def _carregar_defeitos_e_pagamento(self, codigo: str, tipo_servico: str) -> None:
+    def _carregar_defeitos_e_pagamento(self, codigo: str, tipo_servico: str, finalizado_id: int | None = None) -> None:
         """
         Preenche campos de defeitos, faltantes/estragadas, ajuda e último pagamento salvo (se houver).
         """
@@ -1271,7 +1271,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
 
         # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
-        valor_peca = self._buscar_valor_peca(codigo=codigo)
+        valor_peca = self._buscar_valor_peca(codigo=codigo, finalizado_id=finalizado_id)
         self.valor_por_peca = float(valor_peca or 0.0)
         self.valor_peca_entry.configure(state="normal")
         self.valor_peca_entry.delete(0, "end")
@@ -1648,12 +1648,12 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.quant_final_entry.insert(0, str(self.quantidade_finalizada))
         self.quant_final_entry.configure(state="readonly")
 
-        self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"])
-        self._carregar_dados_bancarios_prestador(mapping["costureira"], mapping["tipo_servico"])
         try:
             corte_id = int(vals[0])
         except Exception:
             corte_id = 0
+        self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"], finalizado_id=corte_id or None)
+        self._carregar_dados_bancarios_prestador(mapping["costureira"], mapping["tipo_servico"])
         if corte_id:
             self._carregar_adiantamento_faccao(mapping["codigo"], corte_id)
 
