@@ -2721,8 +2721,7 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Gera PDF temporário e abre no navegador
         try:
-            pdf_path = self._gerar_pdf()
-            webbrowser.open(pdf_path)
+            self._gerar_pdf(abrir_pdf=True)
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao gerar pré-visualização: {e}")
 
