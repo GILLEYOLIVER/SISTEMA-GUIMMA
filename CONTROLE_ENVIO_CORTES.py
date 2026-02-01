@@ -248,6 +248,7 @@ class EnvioCortes(ctk.CTkFrame):
             linha,
             width=120,
             values=["Carregando..."],
+            variable=self.filtro_servico_var,
             state="readonly",
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
             button_color=self.cor_primaria, button_hover_color=self.cor_hover,
@@ -691,8 +692,8 @@ class EnvioCortes(ctk.CTkFrame):
             self._prestadores_full = rows
             self.prestadores_filtrados = rows
 
-            # Atualizar o combobox com os nomes
-            self.prestador_busca_cb.configure(values=nomes)
+            # Atualizar o combobox com os nomes respeitando o filtro atual
+            self._aplicar_filtro_servico()
             self._preencher_banco(None)
 
         except Exception as e:
