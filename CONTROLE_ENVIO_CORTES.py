@@ -726,6 +726,7 @@ class EnvioCortes(ctk.CTkFrame):
         """Aplica o filtro de serviço na lista de prestadores"""
         servico_selecionado = self.filtro_servico_var.get()
         servico_normalizado = _normalizar_texto(servico_selecionado)
+        servico_limpo = " ".join((servico_selecionado or "").split()).strip().lower()
 
         if servico_selecionado == "Todos":
             self.prestadores_filtrados = self._prestadores_full
@@ -742,10 +743,11 @@ class EnvioCortes(ctk.CTkFrame):
                             SELECT id, COALESCE(nome,''), COALESCE(telefone,''), COALESCE(tipo_prestador,'Facção')
                               FROM {get_schema()}.cadastro_faccoes
                              WHERE ativo = TRUE
-                               AND LOWER(TRIM(COALESCE(tipo_prestador, 'Facção'))) = LOWER(TRIM(%s))
+                               AND LOWER(REGEXP_REPLACE(TRIM(COALESCE(tipo_prestador, 'Facção')), '\\s+', ' ', 'g'))
+                                   = %s
                              ORDER BY nome
                             """,
-                            (servico_selecionado,),
+                            (servico_limpo,),
                         )
                         self.prestadores_filtrados = cur.fetchall()
             except Exception:
@@ -755,7 +757,8 @@ class EnvioCortes(ctk.CTkFrame):
                         self.prestadores_filtrados.append(prestador)
 
             if not self.prestadores_filtrados:
-                nomes = ["Nenhum prestador encontrado"]
+                nomes = []
+                messagebox.showinfo("Aviso", "Prestador não encontrado.")
             else:
                 nomes = [_nome_visivel(r[1]) for r in self.prestadores_filtrados if len(r) > 1]
 
@@ -770,8 +773,11 @@ class EnvioCortes(ctk.CTkFrame):
                     self._prestador_map[nome.lower()] = pid
 
         current_selection = self.prestador_busca_cb.get()
-        if current_selection and current_selection.lower() not in self._prestador_map:
-            self.prestador_busca_cb.set("")
+        if current_selection:
+            if current_selection.lower() not in self._prestador_map:
+                self.prestador_busca_cb.set("")
+                self._preencher_banco(None)
+        else:
             self._preencher_banco(None)
 
     def _filtrar_combo_prestador(self, event=None):
