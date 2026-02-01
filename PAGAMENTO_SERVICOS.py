@@ -1311,6 +1311,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         """
         Preenche campos de defeitos, faltantes/estragadas, ajuda e último pagamento salvo (se houver).
         """
+        total_def = 0
         # Defeitos do fluxo novo
         try:
             r = _select_one("""
@@ -1326,6 +1327,23 @@ class PagamentoModernUI(ctk.CTkFrame):
                 self.defeito_count_entry.insert(0, str(total_def))
         except Exception:
             pass
+
+        if total_def <= 0 and _table_exists("controle_retorno_cortes"):
+            envio_id = self._buscar_envio_id(finalizado_id=finalizado_id, codigo=codigo)
+            if envio_id:
+                try:
+                    r_def = _select_one("""
+                        SELECT COALESCE(SUM(total_defeitos), 0)
+                          FROM controle_retorno_cortes
+                         WHERE envio_id = %s
+                    """, (envio_id,))
+                    if r_def and r_def[0] is not None:
+                        total_def = int(r_def[0] or 0)
+                        if total_def > 0:
+                            self.defeito_count_entry.delete(0, "end")
+                            self.defeito_count_entry.insert(0, str(total_def))
+                except Exception:
+                    pass
 
         self._carregar_bonificacao_por_corte(codigo, finalizado_id=finalizado_id)
 
