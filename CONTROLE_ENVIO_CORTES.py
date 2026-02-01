@@ -1696,17 +1696,16 @@ class EnvioCortes(ctk.CTkFrame):
                 codigo = codigo.strip().replace("/", "-").replace("\\", "-")
                 descricao = descricao.strip().replace("/", "-").replace("\\", "-")
                 tamanhos_nome = tamanhos_nome.strip().replace("/", "-").replace("\\", "-")
-                stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                nome_partes = ["controle_envio", stamp]
+                data_envio = datetime.now().strftime("%d-%m-%Y")
+                nome_partes = ["Controle_envio"]
                 if codigo:
                     nome_partes.append(codigo)
                 if descricao:
                     nome_partes.append(descricao)
                 if tamanhos_nome:
                     nome_partes.append(tamanhos_nome)
-                nome = "_".join(nome_partes)
-                if codigo:
-                    nome = nome.replace("__", "_")
+                nome_partes.append(data_envio)
+                nome = "_".join([p for p in nome_partes if p]).replace("__", "_")
                 nome += ".pdf"
                 destino = os.path.join(base_dir, nome)
                 shutil.copy2(path_pdf, destino)
@@ -2676,6 +2675,21 @@ class EnvioCortes(ctk.CTkFrame):
         dialog.configure(fg_color=self.cor_fundo)
         dialog.transient(self.winfo_toplevel())
         dialog.grab_set()
+        dialog.update_idletasks()
+
+        parent = self.winfo_toplevel()
+        try:
+            parent_x = parent.winfo_rootx()
+            parent_y = parent.winfo_rooty()
+            parent_w = parent.winfo_width()
+            parent_h = parent.winfo_height()
+            dialog_w = dialog.winfo_reqwidth()
+            dialog_h = dialog.winfo_reqheight()
+            pos_x = parent_x + (parent_w - dialog_w) // 2
+            pos_y = parent_y + (parent_h - dialog_h) // 2
+            dialog.geometry(f"+{pos_x}+{pos_y}")
+        except Exception:
+            pass
 
         resultado = {"valor": None}
 
