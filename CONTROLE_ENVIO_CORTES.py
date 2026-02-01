@@ -253,7 +253,8 @@ class EnvioCortes(ctk.CTkFrame):
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
             button_color=self.cor_primaria, button_hover_color=self.cor_hover,
             text_color=self.cor_texto, dropdown_fg_color=self.cor_secundaria,
-            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover
+            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover,
+            command=lambda _: self._aplicar_filtro_servico()
         )
         self.filtro_servico_cb.set("Todos")
         self.filtro_servico_cb.pack(side="left", padx=(0, 10))
@@ -298,7 +299,8 @@ class EnvioCortes(ctk.CTkFrame):
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
             button_color=self.cor_primaria, button_hover_color=self.cor_hover,
             text_color=self.cor_texto, dropdown_fg_color=self.cor_secundaria,
-            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover
+            dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover,
+            command=self._on_tipo_changed
         )
         self.tipo_cb.set("Facção")
         self.tipo_cb.pack(side="left")
