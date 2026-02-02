@@ -1273,6 +1273,19 @@ class PagamentoModernUI(ctk.CTkFrame):
             row = None
         else:
             cols_ad = _columns_of("adiantamento_faccao")
+            codigo_str = (str(codigo_modelo or "")).strip()
+            codigo_variants = []
+            if codigo_str:
+                codigo_variants.append(codigo_str)
+                if codigo_str.isdigit():
+                    codigo_nozeros = str(int(codigo_str))
+                    if codigo_nozeros not in codigo_variants:
+                        codigo_variants.append(codigo_nozeros)
+                    codigo_padded = codigo_nozeros.zfill(4)
+                    if codigo_padded not in codigo_variants:
+                        codigo_variants.append(codigo_padded)
+            if not codigo_variants:
+                codigo_variants = [codigo_str]
 
             def _buscar(sql, params):
                 try:
@@ -1286,10 +1299,10 @@ class PagamentoModernUI(ctk.CTkFrame):
                     """
                     SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
                       FROM adiantamento_faccao
-                     WHERE codigo_modelo = %s AND envio_id = %s
+                     WHERE codigo_modelo = ANY(%s) AND envio_id = %s
                   ORDER BY id DESC LIMIT 1
                     """,
-                    (codigo_modelo, envio_id),
+                    (codigo_variants, envio_id),
                 )
 
             if not row and envio_id and "corte_id" in cols_ad and _table_exists("envios_cortes"):
@@ -1306,10 +1319,10 @@ class PagamentoModernUI(ctk.CTkFrame):
                         """
                         SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
                           FROM adiantamento_faccao
-                         WHERE codigo_modelo = %s AND corte_id = %s
+                         WHERE codigo_modelo = ANY(%s) AND corte_id = %s
                       ORDER BY id DESC LIMIT 1
                         """,
-                        (codigo_modelo, corte_envio_id),
+                        (codigo_variants, corte_envio_id),
                     )
 
             if not row and corte_id and "corte_id" in cols_ad:
@@ -1317,10 +1330,10 @@ class PagamentoModernUI(ctk.CTkFrame):
                     """
                     SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
                       FROM adiantamento_faccao
-                     WHERE codigo_modelo = %s AND corte_id = %s
+                     WHERE codigo_modelo = ANY(%s) AND corte_id = %s
                   ORDER BY id DESC LIMIT 1
                     """,
-                    (codigo_modelo, corte_id),
+                    (codigo_variants, corte_id),
                 )
 
             if not row:
@@ -1328,10 +1341,10 @@ class PagamentoModernUI(ctk.CTkFrame):
                     """
                     SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
                       FROM adiantamento_faccao
-                     WHERE codigo_modelo = %s
+                     WHERE codigo_modelo = ANY(%s)
                   ORDER BY id DESC LIMIT 1
                     """,
-                    (codigo_modelo,),
+                    (codigo_variants,),
                 )
 
             if not row and prestador_nome and "faccao" in cols_ad:
@@ -1339,10 +1352,10 @@ class PagamentoModernUI(ctk.CTkFrame):
                     """
                     SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
                       FROM adiantamento_faccao
-                     WHERE codigo_modelo = %s AND faccao ILIKE %s
+                     WHERE codigo_modelo = ANY(%s) AND faccao ILIKE %s
                   ORDER BY id DESC LIMIT 1
                     """,
-                    (codigo_modelo, prestador_nome),
+                    (codigo_variants, prestador_nome),
                 )
 
         if not row:
