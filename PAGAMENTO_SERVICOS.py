@@ -1240,36 +1240,74 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         self.recalcular()
 
-    def _carregar_adiantamento_faccao(self, codigo_modelo: str, corte_id: int) -> None:
+    def _carregar_adiantamento_faccao(
+        self,
+        codigo_modelo: str,
+        corte_id: int | None,
+        envio_id: int | None = None,
+    ) -> None:
         """
-        Lê adiantamento_faccao. Primeiro (codigo_modelo + corte_id); fallback só (codigo_modelo).
+        Lê adiantamento_faccao. Prioriza vinculo por envio_id (quando existir),
+        depois por corte_id e, por fim, apenas pelo código do modelo.
         """
         self._adiantamento_faccao_record = None
         row = None
 
-        # tentativa 1
-        try:
-            row = _select_one("""
-                SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
-                  FROM adiantamento_faccao
-                 WHERE codigo_modelo = %s AND corte_id = %s
-              ORDER BY id DESC LIMIT 1
-            """, (codigo_modelo, corte_id))
-        except Exception as e:
-            print("lookup adiantamento 1 falhou:", e)
+        if not _table_exists("adiantamento_faccao"):
             row = None
-        # fallback
-        if not row:
-            try:
-                row = _select_one("""
+        else:
+            cols_ad = _columns_of("adiantamento_faccao")
+
+            def _buscar(sql, params):
+                try:
+                    return _select_one(sql, params)
+                except Exception as e:
+                    print("lookup adiantamento falhou:", e)
+                    return None
+
+            if envio_id and "envio_id" in cols_ad:
+                row = _buscar(
+                    """
+                    SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
+                      FROM adiantamento_faccao
+                     WHERE codigo_modelo = %s AND envio_id = %s
+                  ORDER BY id DESC LIMIT 1
+                    """,
+                    (codigo_modelo, envio_id),
+                )
+
+            if not row and corte_id and "corte_id" in cols_ad:
+                row = _buscar(
+                    """
+                    SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
+                      FROM adiantamento_faccao
+                     WHERE codigo_modelo = %s AND corte_id = %s
+                  ORDER BY id DESC LIMIT 1
+                    """,
+                    (codigo_modelo, corte_id),
+                )
+
+            if not row and envio_id and "corte_id" in cols_ad:
+                row = _buscar(
+                    """
+                    SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
+                      FROM adiantamento_faccao
+                     WHERE codigo_modelo = %s AND corte_id = %s
+                  ORDER BY id DESC LIMIT 1
+                    """,
+                    (codigo_modelo, envio_id),
+                )
+
+            if not row:
+                row = _buscar(
+                    """
                     SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
                       FROM adiantamento_faccao
                      WHERE codigo_modelo = %s
                   ORDER BY id DESC LIMIT 1
-                """, (codigo_modelo,))
-            except Exception as e:
-                print("lookup adiantamento 2 falhou:", e)
-                row = None
+                    """,
+                    (codigo_modelo,),
+                )
 
         if not row:
             # reset painel
@@ -1277,9 +1315,9 @@ class PagamentoModernUI(ctk.CTkFrame):
                 self.adiantamento_registrado_valor_lbl.configure(text="R$ 0.00")
                 self.adiantamento_registrado_parcelas_lbl.configure(text="0")
                 self.adiantamento_registrado_saldo_lbl.configure(text="R$ 0.00")
-                self.adiantamento_entry.delete(0, "end");
+                self.adiantamento_entry.delete(0, "end")
                 self.adiantamento_entry.insert(0, "0.00")
-                self.adiantamento_desconto_entry.delete(0, "end");
+                self.adiantamento_desconto_entry.delete(0, "end")
                 self.adiantamento_desconto_entry.insert(0, "0.00")
                 self.recalcular()
             except Exception:
@@ -1299,9 +1337,9 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.adiantamento_registrado_valor_lbl.configure(text=f"R$ {valor:.2f}")
             self.adiantamento_registrado_parcelas_lbl.configure(text=str(parcelas))
             self.adiantamento_registrado_saldo_lbl.configure(text=f"R$ {valor:.2f}")
-            self.adiantamento_entry.delete(0, "end");
+            self.adiantamento_entry.delete(0, "end")
             self.adiantamento_entry.insert(0, f"{valor:.2f}")
-            self.adiantamento_desconto_entry.delete(0, "end");
+            self.adiantamento_desconto_entry.delete(0, "end")
             self.adiantamento_desconto_entry.insert(0, f"{valor:.2f}")
             self.recalcular()
         except Exception:
@@ -1786,8 +1824,13 @@ class PagamentoModernUI(ctk.CTkFrame):
             finalizado_id=corte_id or None,
             codigo=mapping["codigo"],
         )
-        if corte_id:
-            self._carregar_adiantamento_faccao(mapping["codigo"], corte_id)
+        envio_id = self._buscar_envio_id(finalizado_id=corte_id or None, codigo=mapping["codigo"])
+        if corte_id or envio_id:
+            self._carregar_adiantamento_faccao(
+                mapping["codigo"],
+                corte_id if corte_id else None,
+                envio_id=envio_id,
+            )
 
     def _on_select_defeito(self, _event=None):
         """Seleciona um defeito na aba de pagamento."""
