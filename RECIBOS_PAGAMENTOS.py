@@ -13,6 +13,7 @@ from datetime import datetime
 import customtkinter as ctk
 import tkinter.ttk as ttk
 from tkinter import filedialog, messagebox
+from TEMAS import get_contraste_texto
 
 
 class RecibosPagamentosPage(ctk.CTkFrame):
@@ -101,13 +102,19 @@ class RecibosPagamentosPage(ctk.CTkFrame):
         self.search_entry.grid(row=0, column=1, padx=(0, 12), pady=8, sticky="ew")
         self.search_entry.bind("<Return>", lambda _e: self._load_receipts())
 
+        def _btn_text(color: str) -> str:
+            try:
+                return get_contraste_texto(color)
+            except Exception:
+                return self.theme.cor_texto
+
         ctk.CTkButton(
             toolbar,
             text="🔄 Atualizar",
             command=self._load_receipts,
             fg_color=self.theme.cor_primaria,
             hover_color=self.theme.cor_hover,
-            text_color="white",
+            text_color=_btn_text(self.theme.cor_primaria),
         ).grid(row=0, column=2, padx=6, pady=8)
 
         ctk.CTkButton(
@@ -116,7 +123,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
             command=self._imprimir_selecionado,
             fg_color=self.theme.cor_destaque,
             hover_color=self.theme.cor_hover,
-            text_color="white",
+            text_color=_btn_text(self.theme.cor_destaque),
         ).grid(row=0, column=3, padx=6, pady=8)
 
         ctk.CTkButton(
@@ -125,7 +132,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
             command=self._exportar_selecionado,
             fg_color=self.theme.cor_primaria,
             hover_color=self.theme.cor_hover,
-            text_color="white",
+            text_color=_btn_text(self.theme.cor_primaria),
         ).grid(row=0, column=4, padx=(6, 12), pady=8)
 
         content = ctk.CTkFrame(self, fg_color=self.theme.cor_terciaria)
