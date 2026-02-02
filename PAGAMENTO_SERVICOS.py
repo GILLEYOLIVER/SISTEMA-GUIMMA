@@ -1245,6 +1245,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         codigo_modelo: str,
         corte_id: int | None,
         envio_id: int | None = None,
+        prestador_nome: str | None = None,
     ) -> None:
         """
         Lê adiantamento_faccao. Prioriza vinculo por envio_id (quando existir),
@@ -1276,6 +1277,26 @@ class PagamentoModernUI(ctk.CTkFrame):
                     (codigo_modelo, envio_id),
                 )
 
+            if not row and envio_id and "corte_id" in cols_ad and _table_exists("envios_cortes"):
+                try:
+                    corte_envio = _select_one(
+                        "SELECT corte_id FROM envios_cortes WHERE id = %s LIMIT 1",
+                        (envio_id,),
+                    )
+                    corte_envio_id = int(corte_envio[0]) if corte_envio and corte_envio[0] is not None else None
+                except Exception:
+                    corte_envio_id = None
+                if corte_envio_id:
+                    row = _buscar(
+                        """
+                        SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
+                          FROM adiantamento_faccao
+                         WHERE codigo_modelo = %s AND corte_id = %s
+                      ORDER BY id DESC LIMIT 1
+                        """,
+                        (codigo_modelo, corte_envio_id),
+                    )
+
             if not row and corte_id and "corte_id" in cols_ad:
                 row = _buscar(
                     """
@@ -1287,17 +1308,6 @@ class PagamentoModernUI(ctk.CTkFrame):
                     (codigo_modelo, corte_id),
                 )
 
-            if not row and envio_id and "corte_id" in cols_ad:
-                row = _buscar(
-                    """
-                    SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
-                      FROM adiantamento_faccao
-                     WHERE codigo_modelo = %s AND corte_id = %s
-                  ORDER BY id DESC LIMIT 1
-                    """,
-                    (codigo_modelo, envio_id),
-                )
-
             if not row:
                 row = _buscar(
                     """
@@ -1307,6 +1317,17 @@ class PagamentoModernUI(ctk.CTkFrame):
                   ORDER BY id DESC LIMIT 1
                     """,
                     (codigo_modelo,),
+                )
+
+            if not row and prestador_nome and "faccao" in cols_ad:
+                row = _buscar(
+                    """
+                    SELECT id, COALESCE(valor, 0) AS v, forma_pagamento, COALESCE(parcelas, 1)
+                      FROM adiantamento_faccao
+                     WHERE codigo_modelo = %s AND faccao ILIKE %s
+                  ORDER BY id DESC LIMIT 1
+                    """,
+                    (codigo_modelo, prestador_nome),
                 )
 
         if not row:
@@ -1830,6 +1851,7 @@ class PagamentoModernUI(ctk.CTkFrame):
                 mapping["codigo"],
                 corte_id if corte_id else None,
                 envio_id=envio_id,
+                prestador_nome=mapping.get("costureira"),
             )
 
     def _on_select_defeito(self, _event=None):
