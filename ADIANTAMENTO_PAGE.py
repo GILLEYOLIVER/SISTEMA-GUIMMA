@@ -624,6 +624,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
 
             if self._db_has_table("opera.cortes_finalizados"):
                 cols_cf = self._db_columns("opera.cortes_finalizados")
+                corte_id_expr = "cf.corte_id" if "corte_id" in cols_cf else "cf.id"
                 codigo_expr = "cf.codigo" if "codigo" in cols_cf else (
                     "cf.codigo_corte" if "codigo_corte" in cols_cf else "''"
                 )
@@ -698,7 +699,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
 
                 sql_cf = f"""
                     SELECT
-                        cf.id AS corte_id,
+                        {corte_id_expr} AS corte_id,
                         {codigo_expr} AS codigo_corte,
                         {prestador_nome_expr} AS prestador,
                         {tipo_prestador_expr} AS tipo,
