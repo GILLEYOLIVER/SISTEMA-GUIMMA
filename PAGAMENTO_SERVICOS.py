@@ -1103,6 +1103,21 @@ class PagamentoModernUI(ctk.CTkFrame):
             pass
         return None
 
+    def _buscar_corte_id_origem(self, finalizado_id: int | None = None) -> int | None:
+        """Tenta obter o corte_id original a partir de cortes_finalizados (se existir)."""
+        if not finalizado_id or not _table_exists("cortes_finalizados"):
+            return None
+        cols_cf = _columns_of("cortes_finalizados")
+        if "corte_id" not in cols_cf:
+            return None
+        try:
+            r = _select_one("SELECT corte_id FROM cortes_finalizados WHERE id = %s LIMIT 1", (finalizado_id,))
+            if r and r[0] is not None:
+                return int(r[0])
+        except Exception:
+            pass
+        return None
+
     def _buscar_valor_peca(self, codigo: str, finalizado_id: int | None = None) -> float:
         """Busca o valor por peça no fluxo novo (envios_cortes) e cai no antigo se necessário."""
         # 1) se cortes_finalizados já tiver valor_peca/valor_por_peca, usa direto
@@ -1838,6 +1853,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             corte_id = int(vals[0])
         except Exception:
             corte_id = 0
+        corte_id_origem = self._buscar_corte_id_origem(corte_id or None)
         self._carregar_defeitos_e_pagamento(mapping["codigo"], mapping["tipo_servico"], finalizado_id=corte_id or None)
         self._carregar_dados_bancarios_prestador(
             mapping["costureira"],
@@ -1846,10 +1862,10 @@ class PagamentoModernUI(ctk.CTkFrame):
             codigo=mapping["codigo"],
         )
         envio_id = self._buscar_envio_id(finalizado_id=corte_id or None, codigo=mapping["codigo"])
-        if corte_id or envio_id:
+        if corte_id_origem or corte_id or envio_id:
             self._carregar_adiantamento_faccao(
                 mapping["codigo"],
-                corte_id if corte_id else None,
+                corte_id_origem if corte_id_origem else (corte_id if corte_id else None),
                 envio_id=envio_id,
                 prestador_nome=mapping.get("costureira"),
             )
