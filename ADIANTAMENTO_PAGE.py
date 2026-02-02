@@ -385,6 +385,45 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             # se falhar, assume que não existe (mantém compatibilidade)
             return False
 
+    def _db_has_table(self, table_qualified: str) -> bool:
+        """Checa se uma tabela existe no schema informado."""
+        try:
+            schema = "public"
+            table = table_qualified
+            if "." in table_qualified:
+                schema, table = table_qualified.split(".", 1)
+            r = db.fetch_one(
+                """
+                SELECT 1
+                  FROM information_schema.tables
+                 WHERE table_schema = %s AND table_name = %s
+                 LIMIT 1
+                """,
+                (schema, table),
+            )
+            return bool(r)
+        except Exception:
+            return False
+
+    def _db_columns(self, table_qualified: str) -> set[str]:
+        """Retorna o conjunto de colunas existentes numa tabela."""
+        try:
+            schema = "public"
+            table = table_qualified
+            if "." in table_qualified:
+                schema, table = table_qualified.split(".", 1)
+            rows = db.fetch_all(
+                """
+                SELECT column_name
+                  FROM information_schema.columns
+                 WHERE table_schema = %s AND table_name = %s
+                """,
+                (schema, table),
+            )
+            return {r.get("column_name") for r in (rows or []) if r.get("column_name")}
+        except Exception:
+            return set()
+
     def _load_tipos_prestador(self):
         """Carrega os tipos cadastrados em opera.cadastro_faccoes (tipo_prestador)."""
         tipos = ["Todos"]
@@ -564,18 +603,15 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             """
 
         try:
-            rows = db.fetch_all(sql, tuple(params) if params else None)
-
-            for item in self.tree_cortes.get_children():
-                self.tree_cortes.delete(item)
-
-            for r in rows or []:
+            rows = []
+            rows_envios = db.fetch_all(sql, tuple(params) if params else None)
+            for r in rows_envios or []:
                 codigo_corte = r.get("codigo_corte")
                 if isinstance(codigo_corte, (int, float)) or (
                         isinstance(codigo_corte, str) and str(codigo_corte).isdigit()):
                     codigo_corte = str(codigo_corte).zfill(4)
 
-                new_row = (
+                rows.append((
                     r.get("corte_id"),
                     codigo_corte,
                     r.get("prestador") or "",
@@ -584,7 +620,122 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
                     r.get("status") or "",
                     r.get("data_envio"),
                     r.get("qtd_pecas"),
+                ))
+
+            if self._db_has_table("opera.cortes_finalizados"):
+                cols_cf = self._db_columns("opera.cortes_finalizados")
+                corte_id_expr = "cf.corte_id" if "corte_id" in cols_cf else "cf.id"
+                codigo_expr = "cf.codigo" if "codigo" in cols_cf else (
+                    "cf.codigo_corte" if "codigo_corte" in cols_cf else "''"
                 )
+                desc_expr = "cf.descricao" if "descricao" in cols_cf else (
+                    "cf.descricao_corte" if "descricao_corte" in cols_cf else "''"
+                )
+                prest_expr = "cf.costureira" if "costureira" in cols_cf else (
+                    "cf.destino" if "destino" in cols_cf else "''"
+                )
+                tipo_expr = "cf.tipo_servico" if "tipo_servico" in cols_cf else (
+                    "cf.servico" if "servico" in cols_cf else "''"
+                )
+                envio_expr = "cf.data_envio" if "data_envio" in cols_cf else (
+                    "cf.data_saida" if "data_saida" in cols_cf else "NULL"
+                )
+
+                def _q(col_new, col_old):
+                    if col_new in cols_cf:
+                        return f"COALESCE(cf.{col_new},0)"
+                    if col_old in cols_cf:
+                        return f"COALESCE(cf.{col_old},0)"
+                    return "0"
+
+                total_qtd_expr = " + ".join([
+                    _q("qtd_pp", "pp"),
+                    _q("qtd_p", "p"),
+                    _q("qtd_m", "m"),
+                    _q("qtd_g", "g"),
+                    _q("qtd_gg", "gg"),
+                    _q("qtd_g1", "g1"),
+                    _q("qtd_g2", "g2"),
+                    _q("qtd_g3", "g3"),
+                ])
+
+                join_sql = ""
+                prestador_nome_expr = prest_expr
+                tipo_prestador_expr = "''"
+                prestador_id_col = None
+                for col in ("prestador_id", "faccao_id", "costureira_id"):
+                    if col in cols_cf:
+                        prestador_id_col = col
+                        break
+
+                if prestador_id_col and self._db_has_table("opera.cadastro_faccoes"):
+                    join_sql = "LEFT JOIN opera.cadastro_faccoes cfacc ON cfacc.id = cf." + prestador_id_col
+                    prestador_nome_expr = "COALESCE(cfacc.nome, '')"
+                    if self._db_has_column("opera.cadastro_faccoes", "tipo_prestador"):
+                        tipo_prestador_expr = "COALESCE(cfacc.tipo_prestador, '')"
+
+                where_parts_cf = []
+                params_cf = []
+
+                if prestador_id is not None and prestador_id_col:
+                    where_parts_cf.append(f"cf.{prestador_id_col} = %s")
+                    params_cf.append(prestador_id)
+                elif prestador_nome:
+                    where_parts_cf.append(f"{prestador_nome_expr} ILIKE %s")
+                    params_cf.append(f"%{prestador_nome}%")
+
+                if termo:
+                    like = f"%{termo}%"
+                    where_parts_cf.append(
+                        f"({codigo_expr} ILIKE %s OR {desc_expr} ILIKE %s OR {tipo_expr} ILIKE %s)"
+                    )
+                    params_cf += [like, like, like]
+
+                if tipo and tipo != "Todos" and tipo_prestador_expr != "''":
+                    where_parts_cf.append(f"{tipo_prestador_expr} = %s")
+                    params_cf.append(tipo)
+
+                where_sql_cf = ("WHERE " + " AND ".join(where_parts_cf)) if where_parts_cf else ""
+
+                sql_cf = f"""
+                    SELECT
+                        {corte_id_expr} AS corte_id,
+                        {codigo_expr} AS codigo_corte,
+                        {prestador_nome_expr} AS prestador,
+                        {tipo_prestador_expr} AS tipo,
+                        {tipo_expr} AS servico,
+                        'Finalizado' AS status,
+                        {envio_expr} AS data_envio,
+                        ({total_qtd_expr}) AS qtd_pecas
+                      FROM opera.cortes_finalizados cf
+                      {join_sql}
+                      {where_sql_cf}
+                  ORDER BY cf.id DESC
+                     LIMIT 300
+                """
+
+                rows_finalizados = db.fetch_all(sql_cf, tuple(params_cf) if params_cf else None)
+                for r in rows_finalizados or []:
+                    codigo_corte = r.get("codigo_corte")
+                    if isinstance(codigo_corte, (int, float)) or (
+                            isinstance(codigo_corte, str) and str(codigo_corte).isdigit()):
+                        codigo_corte = str(codigo_corte).zfill(4)
+
+                    rows.append((
+                        r.get("corte_id"),
+                        codigo_corte,
+                        r.get("prestador") or "",
+                        r.get("tipo") or "",
+                        r.get("servico") or "",
+                        r.get("status") or "",
+                        r.get("data_envio"),
+                        r.get("qtd_pecas") or 0,
+                    ))
+
+            for item in self.tree_cortes.get_children():
+                self.tree_cortes.delete(item)
+
+            for new_row in rows:
                 self.tree_cortes.insert("", "end", values=new_row)
 
         except Exception as e:
