@@ -1223,11 +1223,8 @@ class EnvioCortes(ctk.CTkFrame):
             if primeiro_valor:
                 for tam in self.tamanhos:
                     self.valores[tam].set(primeiro_valor)
-            for tam in self.tamanhos:
-                self.grade_widgets[tam]["ent_val"].configure(state="disabled")
-        else:
-            for tam in self.tamanhos:
-                self.grade_widgets[tam]["ent_val"].configure(state="normal")
+        for tam in self.tamanhos:
+            self.grade_widgets[tam]["ent_val"].configure(state="normal")
 
     def _on_valor_edit(self, tam):
         if self._atualizando_valor:
@@ -1437,7 +1434,23 @@ class EnvioCortes(ctk.CTkFrame):
         nav = ctk.CTkFrame(top)
         nav.pack(fill="x", padx=10, pady=5)
 
-        lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
+        meses_pt = [
+            "",
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro",
+        ]
+
+        lbl_mes = ctk.CTkLabel(nav, text=f"{meses_pt[mes]} {ano}", font=("Arial", 14))
         ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
         ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
@@ -1460,7 +1473,7 @@ class EnvioCortes(ctk.CTkFrame):
             elif mes < 1:
                 mes = 12
                 ano -= 1
-            lbl_mes.configure(text=f"{_cal.month_name[mes]} {ano}")
+            lbl_mes.configure(text=f"{meses_pt[mes]} {ano}")
             desenhar_calendario()
 
         def desenhar_calendario():
