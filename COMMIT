@@ -6,7 +6,7 @@ git push origin main
 
 ___________________________________________________________________________________
 
-empurrar forçaco
+empurrar forçado
 git fetch origin
 git push --force-with-lease origin main
 
@@ -19,7 +19,7 @@ git reset --hard origin/main
 git clean -fd
 
 
-#teste saber se esta igual
+
 
 
 # 31/01/2026##

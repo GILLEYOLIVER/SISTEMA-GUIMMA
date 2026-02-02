@@ -600,9 +600,10 @@ CREATE TABLE IF NOT EXISTS opera.entrada_acabamento (
     total_regulares INTEGER,
     valor_total NUMERIC(12,2),
     pago BOOLEAN DEFAULT FALSE,
+    pagamento_id INTEGER,  -- COLUNA ADICIONADA
+    valor_pago NUMERIC(12,2),  -- COLUNA ADICIONADA
     data_pagamento DATE
 );
-
 -- [TABELA 26] entrada_acabamento_detalhes - Detalhes da entrada de acabamento
 CREATE TABLE IF NOT EXISTS opera.entrada_acabamento_detalhes (
     id SERIAL PRIMARY KEY,
@@ -656,8 +657,10 @@ CREATE TABLE IF NOT EXISTS opera.cortes_finalizados (
     status VARCHAR(50),
     data_conferencia TIMESTAMP,
     valor_peca NUMERIC(12,2),
-    bonificacao NUMERIC(12,2) DEFAULT 0.00,  -- CORRIGIDO: era BOOLEAN, agora NUMERIC
+    bonificacao NUMERIC(12,2) DEFAULT 0.00,
     pago BOOLEAN DEFAULT FALSE,
+    pagamento_id INTEGER,  -- COLUNA ADICIONADA: ID do pagamento
+    valor_pago NUMERIC(12,2),  -- COLUNA ADICIONADA: Valor total pago
     data_pagamento DATE,
     qtd_pp INTEGER DEFAULT 0,
     qtd_p INTEGER DEFAULT 0,
@@ -1022,43 +1025,80 @@ CREATE TABLE IF NOT EXISTS opera.historico_de_servico (
 
 -- [TABELA 46] defeitos_envios - Retrabalho de defeitos
 CREATE TABLE IF NOT EXISTS opera.defeitos_envios (
-    id SERIAL PRIMARY KEY,
-    historico_id BIGINT,
-    envio_id INTEGER,
-    envio_corte_id INTEGER,
+    id BIGSERIAL PRIMARY KEY,
+
+    -- vínculos (pelo menos um deles deve existir)
+    historico_id BIGINT REFERENCES opera.historico_de_servico(id) ON DELETE SET NULL,
+    envio_id INTEGER REFERENCES opera.controle_envio_cortes(id) ON DELETE SET NULL,
+    envio_corte_id INTEGER REFERENCES opera.controle_envio_cortes(id) ON DELETE SET NULL,
+
     codigo VARCHAR(50),
     descricao TEXT,
     prestador VARCHAR(200),
+
     tamanho VARCHAR(10),
     quantidade INTEGER DEFAULT 0,
+
     tipo_servico VARCHAR(50),
     valor_peca NUMERIC(12,2) DEFAULT 0,
+
     origem VARCHAR(20) DEFAULT 'Externo',
     status VARCHAR(50) DEFAULT 'Pendente',
+
     data_envio DATE,
     data_retorno DATE,
     data_finalizacao DATE,
+
     hora_envio TIME,
     hora_retorno TIME,
     hora_finalizacao TIME,
+
     previsao_entrega DATE,
+
     tel_encarregado VARCHAR(50),
     tel_acabamento VARCHAR(50),
+
     aviamentos TEXT,
     outros TEXT,
     observacoes TEXT,
+
     data_pagamento DATE,
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- regras de integridade
+    CONSTRAINT chk_defeitos_envios_quantidade_nao_negativa CHECK (quantidade IS NULL OR quantidade >= 0),
+    CONSTRAINT chk_defeitos_envios_valor_peca_nao_negativo CHECK (valor_peca IS NULL OR valor_peca >= 0),
+
+    -- precisa ter pelo menos 1 vínculo
+    CONSTRAINT chk_defeitos_envios_vinculo CHECK (
+        historico_id IS NOT NULL OR envio_id IS NOT NULL OR envio_corte_id IS NOT NULL
+    )
 );
 
-CREATE INDEX IF NOT EXISTS idx_defeitos_envio_status ON opera.defeitos_envios (status);
-CREATE INDEX IF NOT EXISTS idx_defeitos_envio_prestador ON opera.defeitos_envios (prestador);
+-- índices de busca
+CREATE INDEX IF NOT EXISTS idx_defeitos_envio_status
+    ON opera.defeitos_envios (status);
+
+CREATE INDEX IF NOT EXISTS idx_defeitos_envio_prestador
+    ON opera.defeitos_envios (prestador);
+
+CREATE INDEX IF NOT EXISTS idx_defeitos_envio_envio_id
+    ON opera.defeitos_envios (envio_id);
+
+CREATE INDEX IF NOT EXISTS idx_defeitos_envio_historico_id
+    ON opera.defeitos_envios (historico_id);
+
+-- unicidade (evita duplicar a mesma linha de tamanho para o mesmo envio)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_defeitos_envio_unico
     ON opera.defeitos_envios (envio_id, tamanho)
     WHERE envio_id IS NOT NULL AND tamanho IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_defeitos_envio_hist_unico
-    ON opera.defeitos_envios (historico_id)
-    WHERE historico_id IS NOT NULL;
+
+-- unicidade por histórico + tamanho (NÃO use historico_id único sozinho)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_defeitos_envio_hist_tamanho_unico
+    ON opera.defeitos_envios (historico_id, tamanho)
+    WHERE historico_id IS NOT NULL AND tamanho IS NOT NULL;
+
 
 ----------------------------------------
 -- 14. TABELAS DE PRICING E RELATÓRIOS
