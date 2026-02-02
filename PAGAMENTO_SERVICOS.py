@@ -3186,6 +3186,21 @@ class PagamentoModernUI(ctk.CTkFrame):
             try:
                 if messagebox.askyesno("Imprimir", "Deseja imprimir o comprovante agora?"):
                     self.imprimir_recibo(recibo_data)
+                else:
+                    recibos_dir = os.path.join(os.getcwd(), "RECIBOS_DE_PAGAMENTOS")
+                    os.makedirs(recibos_dir, exist_ok=True)
+                    prestador = (recibo_data or {}).get("costureira") or (recibo_data or {}).get("tipo_servico") or ""
+                    data_stamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    valor_stamp = f"{total:.2f}".replace(".", "_")
+                    base_name = f"RECIBO_{prestador}_{data_stamp}_R$_{valor_stamp}"
+                    base_name = self._sanitize_filename_part(base_name.upper())
+                    auto_path = os.path.join(recibos_dir, f"{base_name}.pdf")
+                    self.imprimir_recibo(
+                        recibo_data,
+                        path=auto_path,
+                        abrir_arquivo=False,
+                        exibir_mensagem=True,
+                    )
             except Exception:
                 pass
 
@@ -3238,7 +3253,19 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao salvar CSV: {e}")
 
-    def imprimir_recibo(self, recibo_data: dict | None = None):
+    def _sanitize_filename_part(self, value: str) -> str:
+        invalid = '<>:"/\\|?*'
+        for char in invalid:
+            value = value.replace(char, "")
+        return value.replace(" ", "_")
+
+    def imprimir_recibo(
+        self,
+        recibo_data: dict | None = None,
+        path: str | None = None,
+        abrir_arquivo: bool = True,
+        exibir_mensagem: bool = True,
+    ):
         try:
             from reportlab.pdfgen import canvas as pdfcanvas
             from reportlab.lib.pagesizes import A4
@@ -3265,12 +3292,6 @@ class PagamentoModernUI(ctk.CTkFrame):
                 return f"R$ {v:,.2f}"
             except:
                 return "-"
-
-        def sanitize_filename_part(s):
-            invalid = '<>:"/\\|?*'
-            for c in invalid:
-                s = s.replace(c, "")
-            return s.replace(" ", "_")
 
         def display_data_pag(v):
             if not v:
@@ -3351,19 +3372,20 @@ class PagamentoModernUI(ctk.CTkFrame):
             data_pag = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
         nome_facacao = costureira if costureira else tipo_servico
-        base_name = f"RECIBO_{tipo_servico}_{nome_facacao}_{codigo}_{descricao}"
-        base_name = sanitize_filename_part(base_name.upper())
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-        default_name = f"{base_name}_{timestamp}.pdf"
-
-        path = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            initialfile=default_name,
-            filetypes=[("PDF", "*.pdf")],
-            title="Salvar Recibo"
-        )
         if not path:
-            return
+            base_name = f"RECIBO_{tipo_servico}_{nome_facacao}_{codigo}_{descricao}"
+            base_name = self._sanitize_filename_part(base_name.upper())
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+            default_name = f"{base_name}_{timestamp}.pdf"
+
+            path = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                initialfile=default_name,
+                filetypes=[("PDF", "*.pdf")],
+                title="Salvar Recibo"
+            )
+            if not path:
+                return
 
         try:
             c = pdfcanvas.Canvas(path, pagesize=A4)
@@ -3533,20 +3555,21 @@ class PagamentoModernUI(ctk.CTkFrame):
             c.showPage()
             c.save()
 
-            # Tentar abrir
-            try:
-                if os.name == "nt":
-                    os.startfile(path)
-                else:
-                    import subprocess, sys
-                    if sys.platform == "darwin":
-                        subprocess.run(["open", path])
+            if abrir_arquivo:
+                try:
+                    if os.name == "nt":
+                        os.startfile(path)
                     else:
-                        subprocess.run(["xdg-open", path])
-            except Exception:
-                pass
+                        import subprocess, sys
+                        if sys.platform == "darwin":
+                            subprocess.run(["open", path])
+                        else:
+                            subprocess.run(["xdg-open", path])
+                except Exception:
+                    pass
 
-            messagebox.showinfo("Recibo", f"Recibo gerado em: {path}")
+            if exibir_mensagem:
+                messagebox.showinfo("Recibo", f"Recibo gerado em: {path}")
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao gerar recibo: {e}")
 
