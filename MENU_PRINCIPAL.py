@@ -914,7 +914,7 @@ class OperaMenuApp(ctk.CTk):
         "PRESTADORES": ["Cadastro de Prestadores", "Pesquisar Serviço"],
         "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento", "Retrabalho de Defeitos"],
         "FINANCEIRO": [
-            "Pagamento de Serviços", "Custo Produto", "Folha Pagamento",
+            "Pagamento de Serviços", "Recibos de Pagamentos", "Custo Produto", "Folha Pagamento",
             "Fechamento Mensal", "Contas a Pagar", "Adiantamento", "Adiantamentos Pendentes"
         ],
         "RELATÓRIOS": ["Produção", "Serviços Externos", "Modelos Produzidos", "Acabamento"],
@@ -961,6 +961,7 @@ class OperaMenuApp(ctk.CTk):
         },
         "FINANCEIRO": {
             "Pagamento de Serviços": "DINHEIRO.png",
+            "Recibos de Pagamentos": "IMPRESSORA.png",
             "Custo Produto": "DINHEIRO.png",
             "Folha Pagamento": "DINHEIRO.png",
             "Fechamento Mensal": "DINHEIRO.png",
@@ -1006,6 +1007,7 @@ class OperaMenuApp(ctk.CTk):
         "Registro Acabamento": "registro_acabamento",
         "Finalizar Corte / Acabamento": "finalizar_corte",
         "Pagamento de Serviços": "pagamento_servicos",
+        "Recibos de Pagamentos": "recibos_pagamentos",
         "Custo Produto": "custo_produto",
         "Folha Pagamento": "folha_pagamento",
         "Fechamento Mensal": "fechamento_mensal",
@@ -2314,6 +2316,7 @@ class OperaMenuApp(ctk.CTk):
 
                 # FINANCEIRO
                 "Pagamento de Serviços": "efetuar pagamentos de serviços",
+                "Recibos de Pagamentos": "visualizar recibos de pagamentos",
                 "Custo Produto": "calcular custos de produtos",
                 "Folha Pagamento": "acessar folha de pagamento",
                 "Fechamento Mensal": "realizar fechamentos mensais",

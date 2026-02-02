@@ -2926,6 +2926,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         # Transação no banco de dados - TUDO MANUALMENTE
         conn = None
         pagamento_id = None
+        recibo_data = None
 
         try:
             # 1. Abrir conexão
@@ -2987,6 +2988,13 @@ class PagamentoModernUI(ctk.CTkFrame):
                 "observacoes_defeito": obs_defeito if obs_defeito else None,
                 "estornado": False,
                 "pago": True
+            }
+            recibo_data = {
+                **payload,
+                "data_pagamento_display": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                "base_f": base,
+                "desconto_f": desconto_pecas,
+                "total_f": total
             }
 
             # 6. Verificar colunas existentes na tabela
@@ -3177,7 +3185,22 @@ class PagamentoModernUI(ctk.CTkFrame):
         if pagamento_id:  # Só perguntar se o pagamento foi salvo com sucesso
             try:
                 if messagebox.askyesno("Imprimir", "Deseja imprimir o comprovante agora?"):
-                    self.imprimir_recibo()
+                    self.imprimir_recibo(recibo_data)
+                else:
+                    recibos_dir = os.path.join(os.getcwd(), "RECIBOS_DE_PAGAMENTOS")
+                    os.makedirs(recibos_dir, exist_ok=True)
+                    prestador = (recibo_data or {}).get("costureira") or (recibo_data or {}).get("tipo_servico") or ""
+                    data_stamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    valor_stamp = f"{total:.2f}".replace(".", "_")
+                    base_name = f"RECIBO_{prestador}_{data_stamp}_R$_{valor_stamp}"
+                    base_name = self._sanitize_filename_part(base_name.upper())
+                    auto_path = os.path.join(recibos_dir, f"{base_name}.pdf")
+                    self.imprimir_recibo(
+                        recibo_data,
+                        path=auto_path,
+                        abrir_arquivo=False,
+                        exibir_mensagem=True,
+                    )
             except Exception:
                 pass
 
@@ -3230,7 +3253,19 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao salvar CSV: {e}")
 
-    def imprimir_recibo(self):
+    def _sanitize_filename_part(self, value: str) -> str:
+        invalid = '<>:"/\\|?*'
+        for char in invalid:
+            value = value.replace(char, "")
+        return value.replace(" ", "_")
+
+    def imprimir_recibo(
+        self,
+        recibo_data: dict | None = None,
+        path: str | None = None,
+        abrir_arquivo: bool = True,
+        exibir_mensagem: bool = True,
+    ):
         try:
             from reportlab.pdfgen import canvas as pdfcanvas
             from reportlab.lib.pagesizes import A4
@@ -3258,57 +3293,99 @@ class PagamentoModernUI(ctk.CTkFrame):
             except:
                 return "-"
 
-        def sanitize_filename_part(s):
-            invalid = '<>:"/\\|?*'
-            for c in invalid:
-                s = s.replace(c, "")
-            return s.replace(" ", "_")
+        def display_data_pag(v):
+            if not v:
+                return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            v = str(v).strip()
+            for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+                try:
+                    dt = datetime.strptime(v, fmt)
+                    return dt.strftime("%d/%m/%Y %H:%M:%S") if "H" in fmt else dt.strftime("%d/%m/%Y")
+                except Exception:
+                    continue
+            return v
 
-        tipo_servico = safe_str(self.tipo_servico_var.get())
-        codigo = safe_str(self.ident_entries.get("codigo").get())
-        descricao = safe_str(self.ident_entries.get("descricao").get())
-        costureira = safe_str(self.ident_entries.get("costureira").get())
-        data_envio = safe_str(self.data_envio.get())
-        data_chegada = safe_str(self.data_chegada.get())
+        if recibo_data:
+            tipo_servico = safe_str(recibo_data.get("tipo_servico"))
+            codigo = safe_str(recibo_data.get("codigo"))
+            descricao = safe_str(recibo_data.get("descricao"))
+            costureira = safe_str(recibo_data.get("costureira"))
+            data_envio = safe_str(recibo_data.get("data_envio"))
+            data_chegada = safe_str(recibo_data.get("data_chegada"))
 
-        qtd_finalizada = to_float(self.quant_final_entry.get())
-        valor_peca_f = to_float(self.valor_peca_entry.get())
-        adiantamento_f = to_float(self.adiantamento_entry.get())
-        ajuda_f = to_float(self.ajuda_entry.get())
-        bonificacao_f = (to_float(self.bonificacao_entry.get())
-                         if (getattr(self, 'bonif_var', None) and self.bonif_var.get() == 'sim') else 0.0)
-        faltantes_f = to_float(self.faltantes_entry.get())
-        estragadas_f = to_float(self.estragadas_entry.get())
-        pecas_com_defeito = to_float(self.defeito_count_entry.get())
-        valor_defeito_f = to_float(self.valor_defeito_entry.get())
-        observacoes_defeito = safe_str(self.obs_defeito_text.get("1.0", "end")).strip()
+            qtd_finalizada = to_float(recibo_data.get("quantidade_finalizada"))
+            valor_peca_f = to_float(recibo_data.get("valor_por_peca"))
+            adiantamento_f = to_float(recibo_data.get("adiantamento"))
+            ajuda_f = to_float(recibo_data.get("ajuda_custo"))
+            bonificacao_f = to_float(recibo_data.get("bonificacao"))
+            faltantes_f = to_float(recibo_data.get("pecas_faltantes"))
+            estragadas_f = to_float(recibo_data.get("pecas_estragadas"))
+            pecas_com_defeito = to_float(recibo_data.get("pecas_com_defeito"))
+            valor_defeito_f = to_float(recibo_data.get("valor_defeito"))
+            observacoes_defeito = safe_str(recibo_data.get("observacoes_defeito")).strip()
 
-        base_f = qtd_finalizada * valor_peca_f
-        desconto_f = (faltantes_f + estragadas_f) * valor_peca_f + valor_defeito_f
-        total_f = base_f + ajuda_f + bonificacao_f - adiantamento_f - desconto_f
+            base_f = to_float(recibo_data.get("base_f")) or (qtd_finalizada * valor_peca_f)
+            desconto_f = to_float(recibo_data.get("desconto_f"))
+            if not desconto_f:
+                desconto_f = (faltantes_f + estragadas_f) * valor_peca_f + valor_defeito_f
+            total_f = to_float(recibo_data.get("total_f"))
+            if not total_f:
+                total_f = base_f + ajuda_f + bonificacao_f - adiantamento_f - desconto_f
 
-        titular = safe_str(self.titular_entry.get())
-        cpf = safe_str(self.cpf_entry.get())
-        banco = safe_str(self.banco_entry.get())
-        agencia = safe_str(self.agencia_entry.get())
-        conta = safe_str(self.conta_entry.get())
-        pix = safe_str(self.pix_entry.get())
-        data_pag = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            titular = safe_str(recibo_data.get("titular_conta"))
+            cpf = safe_str(recibo_data.get("cpf"))
+            banco = safe_str(recibo_data.get("banco"))
+            agencia = safe_str(recibo_data.get("agencia"))
+            conta = safe_str(recibo_data.get("conta"))
+            pix = safe_str(recibo_data.get("pix"))
+            data_pag = display_data_pag(recibo_data.get("data_pagamento_display") or recibo_data.get("data_pagamento"))
+        else:
+            tipo_servico = safe_str(self.tipo_servico_var.get())
+            codigo = safe_str(self.ident_entries.get("codigo").get())
+            descricao = safe_str(self.ident_entries.get("descricao").get())
+            costureira = safe_str(self.ident_entries.get("costureira").get())
+            data_envio = safe_str(self.data_envio.get())
+            data_chegada = safe_str(self.data_chegada.get())
+
+            qtd_finalizada = to_float(self.quant_final_entry.get())
+            valor_peca_f = to_float(self.valor_peca_entry.get())
+            adiantamento_f = to_float(self.adiantamento_entry.get())
+            ajuda_f = to_float(self.ajuda_entry.get())
+            bonificacao_f = (to_float(self.bonificacao_entry.get())
+                             if (getattr(self, 'bonif_var', None) and self.bonif_var.get() == 'sim') else 0.0)
+            faltantes_f = to_float(self.faltantes_entry.get())
+            estragadas_f = to_float(self.estragadas_entry.get())
+            pecas_com_defeito = to_float(self.defeito_count_entry.get())
+            valor_defeito_f = to_float(self.valor_defeito_entry.get())
+            observacoes_defeito = safe_str(self.obs_defeito_text.get("1.0", "end")).strip()
+
+            base_f = qtd_finalizada * valor_peca_f
+            desconto_f = (faltantes_f + estragadas_f) * valor_peca_f + valor_defeito_f
+            total_f = base_f + ajuda_f + bonificacao_f - adiantamento_f - desconto_f
+
+            titular = safe_str(self.titular_entry.get())
+            cpf = safe_str(self.cpf_entry.get())
+            banco = safe_str(self.banco_entry.get())
+            agencia = safe_str(self.agencia_entry.get())
+            conta = safe_str(self.conta_entry.get())
+            pix = safe_str(self.pix_entry.get())
+            data_pag = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
         nome_facacao = costureira if costureira else tipo_servico
-        base_name = f"RECIBO_{tipo_servico}_{nome_facacao}_{codigo}_{descricao}"
-        base_name = sanitize_filename_part(base_name.upper())
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-        default_name = f"{base_name}_{timestamp}.pdf"
-
-        path = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            initialfile=default_name,
-            filetypes=[("PDF", "*.pdf")],
-            title="Salvar Recibo"
-        )
         if not path:
-            return
+            base_name = f"RECIBO_{tipo_servico}_{nome_facacao}_{codigo}_{descricao}"
+            base_name = self._sanitize_filename_part(base_name.upper())
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+            default_name = f"{base_name}_{timestamp}.pdf"
+
+            path = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                initialfile=default_name,
+                filetypes=[("PDF", "*.pdf")],
+                title="Salvar Recibo"
+            )
+            if not path:
+                return
 
         try:
             c = pdfcanvas.Canvas(path, pagesize=A4)
@@ -3478,20 +3555,21 @@ class PagamentoModernUI(ctk.CTkFrame):
             c.showPage()
             c.save()
 
-            # Tentar abrir
-            try:
-                if os.name == "nt":
-                    os.startfile(path)
-                else:
-                    import subprocess, sys
-                    if sys.platform == "darwin":
-                        subprocess.run(["open", path])
+            if abrir_arquivo:
+                try:
+                    if os.name == "nt":
+                        os.startfile(path)
                     else:
-                        subprocess.run(["xdg-open", path])
-            except Exception:
-                pass
+                        import subprocess, sys
+                        if sys.platform == "darwin":
+                            subprocess.run(["open", path])
+                        else:
+                            subprocess.run(["xdg-open", path])
+                except Exception:
+                    pass
 
-            messagebox.showinfo("Recibo", f"Recibo gerado em: {path}")
+            if exibir_mensagem:
+                messagebox.showinfo("Recibo", f"Recibo gerado em: {path}")
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao gerar recibo: {e}")
 
