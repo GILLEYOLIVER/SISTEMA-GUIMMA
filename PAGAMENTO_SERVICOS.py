@@ -924,7 +924,8 @@ class PagamentoModernUI(ctk.CTkFrame):
             height=28,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
-            text_color=self.cor_texto
+            text_color=self.cor_texto,
+            command=self.aplicar_desconto_adiantamento
         )
         self.aplicar_desconto_btn.grid(row=0, column=2, padx=4)
         self.descontar_parcela_btn = ctk.CTkButton(
@@ -934,7 +935,8 @@ class PagamentoModernUI(ctk.CTkFrame):
             height=28,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
-            text_color=self.cor_texto
+            text_color=self.cor_texto,
+            command=self.descontar_parcela_adiantamento
         )
         self.descontar_parcela_btn.grid(row=6, column=0, columnspan=2, padx=8, pady=(2, 6))
 
@@ -2007,41 +2009,45 @@ class PagamentoModernUI(ctk.CTkFrame):
         messagebox.showinfo("Sucesso",
                             f"Descontado R$ {desconto:.2f} do adiantamento. Saldo restante: R$ {novo_saldo:.2f}")
 
-    def descontar_uma_parcela(self):
+    def descontar_parcela_adiantamento(self):
         if not self._adiantamento_faccao_record:
             messagebox.showwarning("Aviso", "Nenhum adiantamento carregado para descontar.")
             return
 
-        restante = float(self._adiantamento_faccao_record.get("valor_restante", 0) or 0)
+        restante = float(self._adiantamento_faccao_record.get("valor_restante", 0.0) or 0)
         parcelas_atual = int(self._adiantamento_faccao_record.get("parcelas", 0) or 0)
 
-        if parcelas_atual <= 0 or restante <= 0:
-            messagebox.showinfo("Info", "Não há parcelas restantes para descontar.")
+        if restante <= 0 or parcelas_atual <= 0:
+            messagebox.showwarning("Aviso", "Não há parcelas disponíveis para descontar.")
             return
 
         valor_parcela = (restante / parcelas_atual) if parcelas_atual > 0 else restante
-        desconto = valor_parcela
-        novo_saldo = max(restante - desconto, 0.0)
+        desconto = min(valor_parcela, restante)
+        novo_saldo = restante - desconto
         novo_parcelas = max(parcelas_atual - 1, 0)
 
         try:
-            _exec("UPDATE adiantamento_faccao SET valor=%s, parcelas=%s WHERE id=%s",
-                  (novo_saldo, novo_parcelas, self._adiantamento_faccao_record["id"]))
+            _exec(
+                "UPDATE adiantamento_faccao SET valor=%s, parcelas=%s WHERE id=%s",
+                (novo_saldo, novo_parcelas, self._adiantamento_faccao_record["id"]),
+            )
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao descontar parcela: {e}")
+            messagebox.showerror("Erro", f"Falha ao aplicar desconto no adiantamento: {e}")
             return
 
         self._adiantamento_faccao_record["valor_restante"] = novo_saldo
         self._adiantamento_faccao_record["parcelas"] = novo_parcelas
         self.adiantamento_registrado_saldo_lbl.configure(text=f"R$ {novo_saldo:.2f}")
         self.adiantamento_registrado_parcelas_lbl.configure(text=str(novo_parcelas))
-        self.adiantamento_entry.delete(0, "end");
+        self.adiantamento_entry.delete(0, "end")
         self.adiantamento_entry.insert(0, f"{desconto:.2f}")
-        self.adiantamento_desconto_entry.delete(0, "end");
+        self.adiantamento_desconto_entry.delete(0, "end")
         self.adiantamento_desconto_entry.insert(0, f"{novo_saldo:.2f}")
         self.recalcular()
-        messagebox.showinfo("Sucesso",
-                            f"Descontado 1 parcela de R$ {desconto:.2f}. Saldo restante: R$ {novo_saldo:.2f}")
+        messagebox.showinfo(
+            "Sucesso",
+            f"Descontada 1 parcela de R$ {desconto:.2f}. Saldo restante: R$ {novo_saldo:.2f}",
+        )
 
     def recalcular(self):
         def _f(entry):
