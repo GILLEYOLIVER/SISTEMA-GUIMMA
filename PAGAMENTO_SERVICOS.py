@@ -901,13 +901,32 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         desconto_frame = ctk.CTkFrame(adiant_frame, fg_color="transparent")
         desconto_frame.grid(row=4, column=0, columnspan=2, sticky="ew", padx=4, pady=(4, 3))
-        desconto_frame.grid_columnconfigure((1, 2), weight=1)
+        desconto_frame.grid_columnconfigure((1, 2, 3), weight=1)
         ctk.CTkLabel(
             desconto_frame,
-            text="Descontar do adiantamento:",
+            text="Valor atual:",
             font=ctk.CTkFont(size=9),
             text_color="white"
         ).grid(row=0, column=0, sticky="e", padx=4)
+        self.adiantamento_valor_atual_entry = ctk.CTkEntry(
+            desconto_frame,
+            width=100,
+            state="readonly",
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto_entry
+        )
+        self.adiantamento_valor_atual_entry.grid(row=0, column=1, padx=4, sticky="w")
+        self.adiantamento_valor_atual_entry.configure(state="normal")
+        self.adiantamento_valor_atual_entry.delete(0, "end")
+        self.adiantamento_valor_atual_entry.insert(0, "0.00")
+        self.adiantamento_valor_atual_entry.configure(state="readonly")
+        ctk.CTkLabel(
+            desconto_frame,
+            text="Valor a descontar:",
+            font=ctk.CTkFont(size=9),
+            text_color="white"
+        ).grid(row=1, column=0, sticky="e", padx=4)
         self.adiantamento_desconto_entry = ctk.CTkEntry(
             desconto_frame,
             width=100,
@@ -915,7 +934,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
-        self.adiantamento_desconto_entry.grid(row=0, column=1, padx=4, sticky="w")
+        self.adiantamento_desconto_entry.grid(row=1, column=1, padx=4, sticky="w")
         self.adiantamento_desconto_entry.bind("<Return>", lambda e: self.aplicar_desconto_adiantamento())
         self.aplicar_desconto_btn = ctk.CTkButton(
             desconto_frame,
@@ -927,7 +946,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             text_color=self.cor_texto,
             command=self.aplicar_desconto_adiantamento
         )
-        self.aplicar_desconto_btn.grid(row=0, column=2, padx=4)
+        self.aplicar_desconto_btn.grid(row=1, column=2, padx=4)
         self.descontar_parcela_btn = ctk.CTkButton(
             adiant_frame,
             text="Descontar 1 parcela",
@@ -1368,6 +1387,10 @@ class PagamentoModernUI(ctk.CTkFrame):
                 self.adiantamento_registrado_saldo_lbl.configure(text="R$ 0.00")
                 self.adiantamento_entry.delete(0, "end")
                 self.adiantamento_entry.insert(0, "0.00")
+                self.adiantamento_valor_atual_entry.configure(state="normal")
+                self.adiantamento_valor_atual_entry.delete(0, "end")
+                self.adiantamento_valor_atual_entry.insert(0, "0.00")
+                self.adiantamento_valor_atual_entry.configure(state="readonly")
                 self.adiantamento_desconto_entry.delete(0, "end")
                 self.adiantamento_desconto_entry.insert(0, "0.00")
                 self.recalcular()
@@ -1390,6 +1413,10 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.adiantamento_registrado_saldo_lbl.configure(text=f"R$ {valor:.2f}")
             self.adiantamento_entry.delete(0, "end")
             self.adiantamento_entry.insert(0, f"{valor:.2f}")
+            self.adiantamento_valor_atual_entry.configure(state="normal")
+            self.adiantamento_valor_atual_entry.delete(0, "end")
+            self.adiantamento_valor_atual_entry.insert(0, f"{valor:.2f}")
+            self.adiantamento_valor_atual_entry.configure(state="readonly")
             self.adiantamento_desconto_entry.delete(0, "end")
             self.adiantamento_desconto_entry.insert(0, f"{valor:.2f}")
             self.recalcular()
@@ -2001,9 +2028,13 @@ class PagamentoModernUI(ctk.CTkFrame):
         self._adiantamento_faccao_record["parcelas"] = novo_parcelas
         self.adiantamento_registrado_saldo_lbl.configure(text=f"R$ {novo_saldo:.2f}")
         self.adiantamento_registrado_parcelas_lbl.configure(text=str(novo_parcelas))
-        self.adiantamento_entry.delete(0, "end");
+        self.adiantamento_entry.delete(0, "end")
         self.adiantamento_entry.insert(0, f"{desconto:.2f}")
-        self.adiantamento_desconto_entry.delete(0, "end");
+        self.adiantamento_valor_atual_entry.configure(state="normal")
+        self.adiantamento_valor_atual_entry.delete(0, "end")
+        self.adiantamento_valor_atual_entry.insert(0, f"{novo_saldo:.2f}")
+        self.adiantamento_valor_atual_entry.configure(state="readonly")
+        self.adiantamento_desconto_entry.delete(0, "end")
         self.adiantamento_desconto_entry.insert(0, f"{novo_saldo:.2f}")
         self.recalcular()
         messagebox.showinfo("Sucesso",
@@ -2041,6 +2072,10 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.adiantamento_registrado_parcelas_lbl.configure(text=str(novo_parcelas))
         self.adiantamento_entry.delete(0, "end")
         self.adiantamento_entry.insert(0, f"{desconto:.2f}")
+        self.adiantamento_valor_atual_entry.configure(state="normal")
+        self.adiantamento_valor_atual_entry.delete(0, "end")
+        self.adiantamento_valor_atual_entry.insert(0, f"{novo_saldo:.2f}")
+        self.adiantamento_valor_atual_entry.configure(state="readonly")
         self.adiantamento_desconto_entry.delete(0, "end")
         self.adiantamento_desconto_entry.insert(0, f"{novo_saldo:.2f}")
         self.recalcular()
