@@ -40,12 +40,96 @@ ORIGEM_OPTIONS = ["Cortes a Pagar", "Cortes Pagos"]  # rótulos da interface
 
 
 # ===================== Helpers de banco (PG) =====================
+# ===================== Helpers de banco (PG) =====================
 def _with_search_path(cur):
     """Garante que estamos usando o schema configurado."""
     try:
         cur.execute(f"SET LOCAL search_path = {get_schema()};")
     except Exception:
         pass
+
+def _select_all(sql: str, params=()):
+    """Executa SELECT e retorna todas as linhas."""
+    conn = get_conn()
+    cur = None
+    try:
+        cur = conn.cursor()
+        _with_search_path(cur)
+        cur.execute(sql, params)
+        return cur.fetchall()
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+def _select_one(sql: str, params=()):
+    """Executa SELECT e retorna uma linha."""
+    conn = get_conn()
+    cur = None
+    try:
+        cur = conn.cursor()
+        _with_search_path(cur)
+        cur.execute(sql, params)
+        return cur.fetchone()
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+def _exec(sql: str, params=()):
+    """Executa uma query (INSERT/UPDATE/DELETE)."""
+    conn = get_conn()
+    cur = None
+    try:
+        cur = conn.cursor()
+        _with_search_path(cur)
+        cur.execute(sql, params)
+        conn.commit()
+        return True
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise e
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+# Nova função para gerenciar transações manuais
+def _get_connection():
+    """Obtém uma conexão para transações manuais."""
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        _with_search_path(cur)
+        cur.close()
+        return conn
+    except Exception as e:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        raise e
 
 
 def _select_all(sql: str, params=()):
@@ -2785,19 +2869,23 @@ class PagamentoModernUI(ctk.CTkFrame):
             except:
                 return ""
 
+        # Obter valores dos campos
         adiantamento = _f(self.adiantamento_entry)
         ajuda = _f(self.ajuda_entry)
         faltantes = _i(self.faltantes_entry)
         estragadas = _i(self.estragadas_entry)
         pecas_com_defeito = _i(self.defeito_count_entry)
         valor_defeito = _f(self.valor_defeito_entry)
+
         try:
             bonificacao = _f(self.bonificacao_entry) if (
                     getattr(self, "bonif_var", None) and self.bonif_var.get() == "sim") else 0.0
         except Exception:
             bonificacao = 0.0
+
         obs_defeito = (self.obs_defeito_text.get("1.0", "end") or "").strip()
 
+        # Dados de identificação
         tipo_servico = self.tipo_servico_var.get()
         codigo = _s(self.ident_entries.get("codigo"))
         descricao = _s(self.ident_entries.get("descricao"))
@@ -2805,6 +2893,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         data_envio = _s(self.data_envio)
         data_chegada = _s(self.data_chegada)
 
+        # Dados bancários
         titular = _s(self.titular_entry)
         cpf = _s(self.cpf_entry)
         banco = _s(self.banco_entry)
@@ -2812,17 +2901,20 @@ class PagamentoModernUI(ctk.CTkFrame):
         conta = _s(self.conta_entry)
         pix = _s(self.pix_entry)
 
+        # Cálculos financeiros
         base = int(self.quantidade_finalizada) * float(self.valor_por_peca)
         desconto_pecas = (faltantes + estragadas) * float(self.valor_por_peca) + valor_defeito
         total = base + ajuda + bonificacao - adiantamento - desconto_pecas
-        data_pag = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        data_pag = datetime.now().strftime("%Y-%m-%d")
 
+        # Determinar origem
         try:
             origem_lista_raw = self.source_var.get()
         except Exception:
             origem_lista_raw = "Finalizados"
         origem_lista = map_origem(origem_lista_raw)
 
+        # Obter ID do item selecionado
         selecionado_id = None
         try:
             sel = self.tree.selection()
@@ -2831,122 +2923,263 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             selecionado_id = None
 
-        cols_exist = _columns_of("pagamento_corte_acabamento")
-        if not cols_exist:
-            messagebox.showerror("Erro", "Tabela pagamento_corte_acabamento não encontrada no PostgreSQL.")
-            return
+        # Transação no banco de dados - TUDO MANUALMENTE
+        conn = None
+        pagamento_id = None
 
-        payload = {
-            "tipo_servico": tipo_servico,
-            "codigo": codigo,
-            "descricao": descricao,
-            "costureira": costureira,
-            "data_envio": data_envio,
-            "data_chegada": data_chegada,
-            "quantidade_finalizada": int(self.quantidade_finalizada),
-            "valor_por_peca": float(self.valor_por_peca),
-            "adiantamento": float(adiantamento),
-            "ajuda_custo": float(ajuda),
-            "pecas_faltantes": int(faltantes),
-            "pecas_estragadas": int(estragadas),
-            "desconto_pecas": float(desconto_pecas),
-            "bonificacao": float(bonificacao),
-            "total_pago": float(total),
-            "titular_conta": titular,
-            "cpf": cpf,
-            "banco": banco,
-            "agencia": agencia,
-            "conta": conta,
-            "pix": pix,
-            "data_pagamento": data_pag,
-            "pecas_com_defeito": int(pecas_com_defeito),
-            "valor_defeito": float(valor_defeito),
-            "observacoes_defeito": obs_defeito,
-            "estornado": False,  # Corrigido para boolean
-        }
-
-        # compatibilidade: bonificacao pode ser BOOLEAN em alguns esquemas
         try:
-            dt, udt = _column_type("pagamento_corte_acabamento", "bonificacao")
-            if dt == "boolean":
-                payload["bonificacao"] = bool(float(bonificacao or 0) > 0)
-        except Exception:
-            pass
+            # 1. Abrir conexão
+            conn = get_conn()
 
-        # compatibilidade: estornado já é boolean (corrigido acima)
-        try:
-            dt, udt = _column_type("pagamento_corte_acabamento", "estornado")
-            if dt == "boolean":
-                payload["estornado"] = False
-        except Exception:
-            pass
-
-        cols = [c for c in payload.keys() if c in cols_exist]
-        vals = [payload[c] for c in cols]
-        marcadores = ", ".join(["%s"] * len(cols))
-
-        # Transação
-        conn = get_conn()
-        try:
+            # 2. Criar cursor
             cur = conn.cursor()
-            _with_search_path(cur)
 
-            # INSERT com RETURNING id (mais seguro que currval)
-            cur.execute(
-                f"INSERT INTO pagamento_corte_acabamento ({', '.join(cols)}) VALUES ({marcadores}) RETURNING id", vals)
+            # 3. Definir schema
+            try:
+                schema = get_schema()
+                cur.execute(f"SET search_path TO {schema}")
+            except Exception as e:
+                print(f"DEBUG: Erro ao definir schema: {e}")
+
+            # 4. Primeiro verificar se a tabela existe
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.tables 
+                    WHERE table_schema = current_schema() 
+                    AND table_name = 'pagamento_corte_acabamento'
+                )
+            """)
+            tabela_existe = cur.fetchone()[0]
+
+            if not tabela_existe:
+                messagebox.showerror("Erro", "Tabela pagamento_corte_acabamento não existe.")
+                cur.close()
+                conn.close()
+                return
+
+            # 5. Preparar dados para inserção
+            payload = {
+                "tipo_servico": tipo_servico,
+                "codigo": codigo,
+                "descricao": descricao,
+                "costureira": costureira,
+                "data_envio": data_envio if data_envio else None,
+                "data_chegada": data_chegada if data_chegada else None,
+                "quantidade_finalizada": int(self.quantidade_finalizada),
+                "valor_por_peca": float(self.valor_por_peca),
+                "adiantamento": float(adiantamento),
+                "ajuda_custo": float(ajuda),
+                "pecas_faltantes": int(faltantes),
+                "pecas_estragadas": int(estragadas),
+                "desconto_pecas": float(desconto_pecas),
+                "bonificacao": float(bonificacao),
+                "total_pago": float(total),
+                "titular_conta": titular if titular else None,
+                "cpf": cpf if cpf else None,
+                "banco": banco if banco else None,
+                "agencia": agencia if agencia else None,
+                "conta": conta if conta else None,
+                "pix": pix if pix else None,
+                "data_pagamento": data_pag,
+                "pecas_com_defeito": int(pecas_com_defeito),
+                "valor_defeito": float(valor_defeito),
+                "observacoes_defeito": obs_defeito if obs_defeito else None,
+                "estornado": False,
+                "pago": True
+            }
+
+            # 6. Verificar colunas existentes na tabela
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_schema = current_schema() 
+                AND table_name = 'pagamento_corte_acabamento'
+            """)
+            colunas_existentes = [row[0] for row in cur.fetchall()]
+
+            # 7. Filtrar colunas que existem
+            cols = [c for c in payload.keys() if c in colunas_existentes]
+            vals = [payload[c] for c in cols]
+
+            # 8. Inserir registro na tabela de pagamentos
+            marcadores = ", ".join(["%s"] * len(cols))
+            insert_sql = f"""
+                INSERT INTO pagamento_corte_acabamento ({', '.join(cols)}) 
+                VALUES ({marcadores}) 
+                RETURNING id
+            """
+
+            cur.execute(insert_sql, vals)
             pagamento_id = cur.fetchone()[0]
 
+            print(f"DEBUG: Pagamento inserido com ID: {pagamento_id}")
+
+            # 9. Atualizar tabela de origem se houver item selecionado
             if selecionado_id:
                 if origem_lista == "Finalizados":
-                    # CORREÇÃO: usar TRUE ao invés de 1 para boolean
+                    # Verificar se cortes_finalizados existe
                     cur.execute("""
-                        UPDATE cortes_finalizados
-                           SET pago = TRUE,
-                               pagamento_id = %s,
-                               valor_pago = %s,
-                               data_pagamento = %s
-                         WHERE id = %s
-                    """, (pagamento_id, total, data_pag, selecionado_id))
-                else:
-                    if _table_exists("entrada_acabamento"):
-                        # CORREÇÃO: usar TRUE ao invés de 1 para boolean
+                        SELECT EXISTS (
+                            SELECT 1 
+                            FROM information_schema.tables 
+                            WHERE table_schema = current_schema() 
+                            AND table_name = 'cortes_finalizados'
+                        )
+                    """)
+                    tabela_cortes_existe = cur.fetchone()[0]
+
+                    if tabela_cortes_existe:
+                        # Verificar colunas disponíveis
                         cur.execute("""
-                            UPDATE entrada_acabamento
-                               SET pago = TRUE,
-                                   pagamento_id = %s,
-                                   valor_pago = %s,
-                                   data_pagamento = %s
-                             WHERE id = %s
-                        """, (pagamento_id, total, data_pag, selecionado_id))
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_schema = current_schema() 
+                            AND table_name = 'cortes_finalizados'
+                        """)
+                        colunas_cortes = [row[0] for row in cur.fetchall()]
 
-            # CORREÇÃO: Também atualizar a tabela pagamento_corte_acabamento com TRUE
-            cur.execute("""
-                UPDATE pagamento_corte_acabamento
-                   SET pago = TRUE
-                 WHERE id = %s
-            """, (pagamento_id,))
+                        tem_pagamento_id = 'pagamento_id' in colunas_cortes
+                        tem_valor_pago = 'valor_pago' in colunas_cortes
+                        tem_data_pagamento = 'data_pagamento' in colunas_cortes
+                        tem_pago = 'pago' in colunas_cortes
 
+                        # Montar UPDATE dinamicamente
+                        update_parts = []
+                        update_params = []
+
+                        if tem_pago:
+                            update_parts.append("pago = TRUE")
+
+                        if tem_pagamento_id:
+                            update_parts.append("pagamento_id = %s")
+                            update_params.append(pagamento_id)
+
+                        if tem_valor_pago:
+                            update_parts.append("valor_pago = %s")
+                            update_params.append(total)
+
+                        if tem_data_pagamento:
+                            update_parts.append("data_pagamento = %s")
+                            update_params.append(data_pag)
+
+                        if update_parts:
+                            update_sql = f"""
+                                UPDATE cortes_finalizados 
+                                SET {', '.join(update_parts)} 
+                                WHERE id = %s
+                            """
+                            update_params.append(selecionado_id)
+
+                            cur.execute(update_sql, update_params)
+                            print(f"DEBUG: Cortes_finalizados atualizado")
+
+                else:  # Entradas
+                    # Verificar se entrada_acabamento existe
+                    cur.execute("""
+                        SELECT EXISTS (
+                            SELECT 1 
+                            FROM information_schema.tables 
+                            WHERE table_schema = current_schema() 
+                            AND table_name = 'entrada_acabamento'
+                        )
+                    """)
+                    tabela_entrada_existe = cur.fetchone()[0]
+
+                    if tabela_entrada_existe:
+                        # Verificar colunas disponíveis
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_schema = current_schema() 
+                            AND table_name = 'entrada_acabamento'
+                        """)
+                        colunas_entrada = [row[0] for row in cur.fetchall()]
+
+                        tem_pagamento_id = 'pagamento_id' in colunas_entrada
+                        tem_valor_pago = 'valor_pago' in colunas_entrada
+                        tem_data_pagamento = 'data_pagamento' in colunas_entrada
+                        tem_pago = 'pago' in colunas_entrada
+
+                        # Montar UPDATE dinamicamente
+                        update_parts = []
+                        update_params = []
+
+                        if tem_pago:
+                            update_parts.append("pago = TRUE")
+
+                        if tem_pagamento_id:
+                            update_parts.append("pagamento_id = %s")
+                            update_params.append(pagamento_id)
+
+                        if tem_valor_pago:
+                            update_parts.append("valor_pago = %s")
+                            update_params.append(total)
+
+                        if tem_data_pagamento:
+                            update_parts.append("data_pagamento = %s")
+                            update_params.append(data_pag)
+
+                        if update_parts:
+                            update_sql = f"""
+                                UPDATE entrada_acabamento 
+                                SET {', '.join(update_parts)} 
+                                WHERE id = %s
+                            """
+                            update_params.append(selecionado_id)
+
+                            cur.execute(update_sql, update_params)
+                            print(f"DEBUG: Entrada_acabamento atualizado")
+
+            # 10. Commit
             conn.commit()
-            messagebox.showinfo("Sucesso", "Pagamento registrado com sucesso!")
-            self.pesquisar_finalizados()
-        except Exception as e:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-            messagebox.showerror("Erro", f"Falha ao salvar o pagamento: {e}")
-            return
-        finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
+            print(f"DEBUG: Commit realizado com sucesso")
 
-        try:
-            if messagebox.askyesno("Imprimir", "Deseja imprimir o comprovante agora?"):
-                self.imprimir_recibo()
-        except Exception:
-            pass
+            # 11. Fechar cursor
+            cur.close()
+
+            # 12. Feedback ao usuário
+            messagebox.showinfo("Sucesso", f"Pagamento registrado com sucesso! (ID: {pagamento_id})")
+
+            # 13. Atualizar lista
+            self.pesquisar_finalizados()
+
+            # 14. Limpar formulário
+            self.limpar_pagamento()
+
+        except Exception as e:
+            # Rollback em caso de erro
+            if conn:
+                try:
+                    conn.rollback()
+                    print(f"DEBUG: Rollback realizado devido a erro")
+                except Exception:
+                    pass
+
+            # Log do erro completo
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"DEBUG: Erro completo no salvamento do pagamento:\n{error_details}")
+
+            # Mensagem amigável ao usuário
+            messagebox.showerror("Erro", f"Falha ao salvar o pagamento:\n{str(e)}")
+
+        finally:
+            # Fechar conexão
+            if conn:
+                try:
+                    conn.close()
+                    print(f"DEBUG: Conexão fechada")
+                except Exception:
+                    pass
+
+        # 15. Perguntar sobre impressão do comprovante
+        if pagamento_id:  # Só perguntar se o pagamento foi salvo com sucesso
+            try:
+                if messagebox.askyesno("Imprimir", "Deseja imprimir o comprovante agora?"):
+                    self.imprimir_recibo()
+            except Exception:
+                pass
 
     # ===================== Outras ações (exportar/imprimir) =====================
     def exportar_csv(self):
