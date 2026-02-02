@@ -2252,6 +2252,16 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             pass
 
+        # compatibilidade: estornado pode ser BOOLEAN em alguns esquemas
+        try:
+            dt, udt = _column_type("pagamento_corte_acabamento", "estornado")
+            if dt == "boolean":
+                payload["estornado"] = False
+            else:
+                payload["estornado"] = 0
+        except Exception:
+            pass
+
         cols = [c for c in payload.keys() if c in cols_exist]
         vals = [payload[c] for c in cols]
         marcadores = ", ".join(["%s"] * len(cols))
