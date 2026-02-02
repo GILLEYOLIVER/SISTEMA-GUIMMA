@@ -15,6 +15,11 @@ import tkinter.ttk as ttk
 from tkinter import filedialog, messagebox
 from TEMAS import get_contraste_texto
 
+SERVICE_FILTER_OPTIONS = [
+    "Todos", "Facção", "Bordado", "Caseador", "Botões",
+    "Estamparia", "Tingimento", "Outros Trabalhos"
+]
+
 
 class RecibosPagamentosPage(ctk.CTkFrame):
     PAGE_TITLE = "Recibos de Pagamentos"
@@ -84,6 +89,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
         toolbar = ctk.CTkFrame(self, fg_color=self.theme.cor_secundaria)
         toolbar.grid(row=1, column=0, sticky="ew", padx=8, pady=(4, 6))
         toolbar.grid_columnconfigure(1, weight=1)
+        toolbar.grid_columnconfigure(3, weight=0)
 
         ctk.CTkLabel(
             toolbar,
@@ -102,6 +108,23 @@ class RecibosPagamentosPage(ctk.CTkFrame):
         self.search_entry.grid(row=0, column=1, padx=(0, 12), pady=8, sticky="ew")
         self.search_entry.bind("<Return>", lambda _e: self._load_receipts())
 
+        self.prestador_var = ctk.StringVar(value="Todos")
+        self.prestador_combo = ctk.CTkComboBox(
+            toolbar,
+            values=SERVICE_FILTER_OPTIONS,
+            variable=self.prestador_var,
+            fg_color=self.theme.cor_terciaria,
+            border_color=self.theme.cor_borda,
+            text_color=self.theme.cor_texto,
+            button_color=self.theme.cor_primaria,
+            button_hover_color=self.theme.cor_hover,
+            dropdown_fg_color=self.theme.cor_terciaria,
+            dropdown_hover_color=self.theme.cor_hover,
+            dropdown_text_color=self.theme.cor_texto,
+            command=lambda _v: self._load_receipts(),
+        )
+        self.prestador_combo.grid(row=0, column=2, padx=(0, 12), pady=8, sticky="w")
+
         def _btn_text(color: str) -> str:
             try:
                 return get_contraste_texto(color)
@@ -115,7 +138,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
             fg_color=self.theme.cor_primaria,
             hover_color=self.theme.cor_hover,
             text_color=_btn_text(self.theme.cor_primaria),
-        ).grid(row=0, column=2, padx=6, pady=8)
+        ).grid(row=0, column=3, padx=6, pady=8)
 
         ctk.CTkButton(
             toolbar,
@@ -124,7 +147,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
             fg_color=self.theme.cor_destaque,
             hover_color=self.theme.cor_hover,
             text_color=_btn_text(self.theme.cor_destaque),
-        ).grid(row=0, column=3, padx=6, pady=8)
+        ).grid(row=0, column=4, padx=6, pady=8)
 
         ctk.CTkButton(
             toolbar,
@@ -133,7 +156,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
             fg_color=self.theme.cor_primaria,
             hover_color=self.theme.cor_hover,
             text_color=_btn_text(self.theme.cor_primaria),
-        ).grid(row=0, column=4, padx=(6, 12), pady=8)
+        ).grid(row=0, column=5, padx=(6, 12), pady=8)
 
         content = ctk.CTkFrame(self, fg_color=self.theme.cor_terciaria)
         content.grid(row=2, column=0, sticky="nsew", padx=8, pady=(0, 8))
@@ -210,6 +233,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
 
     def _load_receipts(self):
         termo = (self.search_var.get() or "").strip().lower()
+        prestador_filtro = (self.prestador_var.get() or "Todos").strip().lower()
         for item in self.tree.get_children():
             self.tree.delete(item)
 
@@ -228,6 +252,9 @@ class RecibosPagamentosPage(ctk.CTkFrame):
         for filename in arquivos:
             info = self._parse_receipt_filename(filename)
             path = os.path.join(self.receipts_dir, filename)
+            if prestador_filtro != "todos":
+                if prestador_filtro not in info["prestador"].lower():
+                    continue
             if termo:
                 haystack = " ".join([info["prestador"], info["data"], info["valor"], filename]).lower()
                 if termo not in haystack:
