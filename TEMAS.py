@@ -960,6 +960,23 @@ def ajustar_hover(cor_base, fator=0.8):
         return cor_base
 
 
+def _blend(base_hex: str, target_hex: str, t: float) -> str:
+    """Mistura duas cores hex com fator t (0-1)."""
+    try:
+        base = (base_hex or "").strip().lstrip("#")
+        target = (target_hex or "").strip().lstrip("#")
+        if len(base) != 6 or len(target) != 6:
+            return base_hex
+        br, bg, bb = (int(base[0:2], 16), int(base[2:4], 16), int(base[4:6], 16))
+        tr, tg, tb = (int(target[0:2], 16), int(target[2:4], 16), int(target[4:6], 16))
+        r = int(br + (tr - br) * t)
+        g = int(bg + (tg - bg) * t)
+        b = int(bb + (tb - bb) * t)
+        return f"#{max(0, min(255, r)):02x}{max(0, min(255, g)):02x}{max(0, min(255, b)):02x}".upper()
+    except Exception:
+        return base_hex
+
+
 def aplicar_estilo_treeview(
     *,
     style: "ttk.Style" | None = None,
@@ -986,45 +1003,77 @@ def aplicar_estilo_treeview(
         except Exception:
             pass
 
-        texto_padrao = cor_texto or get_contraste_texto(cor_linhas)
-        texto_selecao = get_contraste_texto(cor_selecao)
-        texto_header = get_contraste_texto(cor_cabecalho)
+        tema_escuro = is_dark_color(cor_fundo)
+
+        if tema_escuro:
+            tree_bg = cor_linhas
+            tree_fg = cor_texto or get_contraste_texto(cor_linhas)
+            field_bg = cor_linhas
+            heading_bg = cor_cabecalho
+            heading_fg = get_contraste_texto(heading_bg)
+            zebra_even = cor_fundo
+            zebra_odd = cor_linhas
+            select_bg = _blend(heading_bg, "#FFFFFF", 0.18)
+            select_fg = get_contraste_texto(select_bg)
+            border = cor_borda
+        else:
+            tree_bg = "#FFFFFF"
+            tree_fg = "#000000"
+            field_bg = "#FFFFFF"
+            heading_bg = "#EEEEEE"
+            heading_fg = "#000000"
+            zebra_even = "#FFFFFF"
+            zebra_odd = "#D9D9D9"
+            select_bg = "#B7D7FF"
+            select_fg = "#000000"
+            border = "#C7C7C7"
 
         style.configure(
             prefixo,
-            background=cor_linhas,
-            fieldbackground=cor_linhas,
-            foreground=texto_padrao,
-            rowheight=altura_linha,
-            bordercolor=cor_borda,
+            background=tree_bg,
+            fieldbackground=field_bg,
+            foreground=tree_fg,
+            rowheight=26,
+            bordercolor=border,
             borderwidth=1,
             font=("Arial", 10),
+            relief="solid",
         )
 
         style.configure(
             f"{prefixo}.Heading",
-            background=cor_cabecalho,
-            foreground=texto_header,
+            background=heading_bg,
+            foreground=heading_fg,
             relief="flat",
             font=("Arial", 10, "bold"),
+            borderwidth=0,
+            padding=(8, 6),
         )
 
         style.map(
             prefixo,
-            background=[("selected", cor_selecao)],
-            foreground=[("selected", texto_selecao)],
+            background=[("selected", select_bg)],
+            foreground=[("selected", select_fg)],
         )
+
+        if (heading_fg or "").lower() in ("#000", "#000000", "black"):
+            heading_hover_bg = _blend(heading_bg, "#000000", 0.14)
+            heading_pressed_bg = _blend(heading_bg, "#000000", 0.24)
+        else:
+            heading_hover_bg = _blend(heading_bg, "#FFFFFF", 0.14)
+            heading_pressed_bg = _blend(heading_bg, "#FFFFFF", 0.24)
 
         style.map(
             f"{prefixo}.Heading",
-            background=[("active", ajustar_hover(cor_cabecalho))],
+            background=[("active", heading_hover_bg), ("pressed", heading_pressed_bg)],
+            foreground=[("active", heading_fg), ("pressed", heading_fg)],
             relief=[("active", "flat"), ("pressed", "flat")],
         )
 
-        return style
+        return style, (zebra_even, zebra_odd)
     except Exception as e:
         print(f"[Temas] Erro ao aplicar estilo Treeview: {e}")
-        return None
+        return None, None
 
 
 def aplicar_tags_alternadas(tree: ttk.Treeview, cor_par: str, cor_impar: str):
@@ -1055,7 +1104,7 @@ def padronizar_treeview(tree: ttk.Treeview, prefixo: str | None = None):
 
         nome_prefixo = prefixo or tree.cget("style") or "Treeview"
 
-        estilo = aplicar_estilo_treeview(
+        estilo, zebra = aplicar_estilo_treeview(
             prefixo=nome_prefixo,
             cor_fundo=cor_fundo,
             cor_linhas=cor_secundaria,
@@ -1067,7 +1116,10 @@ def padronizar_treeview(tree: ttk.Treeview, prefixo: str | None = None):
 
         if estilo:
             tree.configure(style=nome_prefixo)
-            aplicar_tags_alternadas(tree, cor_secundaria, cor_fundo)
+            if zebra:
+                aplicar_tags_alternadas(tree, zebra[0], zebra[1])
+            else:
+                aplicar_tags_alternadas(tree, cor_secundaria, cor_fundo)
     except Exception as e:
         print(f"[Temas] Erro ao padronizar Treeview: {e}")
 
