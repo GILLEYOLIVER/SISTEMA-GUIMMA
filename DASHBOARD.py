@@ -220,6 +220,9 @@ class DashboardPage(ctk.CTkFrame):
                                      ["Corte", "Facção", "Bordado", "Caseador", "Botões", "Estamparia", "Tingimento",
                                       "Acabamento"])
         self.selected_depart = ctk.StringVar(value="Todos")
+        self.painel_prod_periodo_var = ctk.StringVar(value="7 dias")
+        self.painel_prod_grafico_var = ctk.StringVar(value="Barras")
+        self.painel_prod_setor_var = ctk.StringVar(value="Todos")
 
         # Estado gráfico
         self.fig_grafico = None
@@ -261,6 +264,7 @@ class DashboardPage(ctk.CTkFrame):
         frame_est = ctk.CTkFrame(duplo_section, fg_color="#F8F9FA", corner_radius=10)
         frame_est.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
         frame_est.grid_rowconfigure(2, weight=1)
+        frame_est.grid_rowconfigure(3, weight=0)
         frame_est.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(frame_est, text="ESTOQUE", font=("Arial", 14, "bold"),
@@ -282,7 +286,7 @@ class DashboardPage(ctk.CTkFrame):
         self.combo_tipo_estoque.set("Tecidos")
 
         tabela_frame = ctk.CTkFrame(frame_est, fg_color="#F8F9FA")
-        tabela_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=4)
+        tabela_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(4, 2))
         tabela_frame.grid_columnconfigure(0, weight=1)
         tabela_frame.grid_rowconfigure(0, weight=1)
 
@@ -295,6 +299,83 @@ class DashboardPage(ctk.CTkFrame):
         self.tree_est.configure(yscroll=sb_e.set)
         sb_e.grid(row=0, column=1, sticky="ns")
         self.tree_est.grid(row=0, column=0, sticky="nsew")
+
+        area_extra = ctk.CTkFrame(frame_est, fg_color="#F8F9FA", corner_radius=8, height=190)
+        area_extra.grid(row=3, column=0, sticky="nsew", padx=10, pady=(2, 8))
+        area_extra.grid_columnconfigure(0, weight=1)
+        area_extra.grid_rowconfigure(2, weight=0)
+        area_extra.grid_rowconfigure(1, weight=0)
+        area_extra.grid_rowconfigure(0, weight=0)
+        cabecalho_painel = ctk.CTkFrame(area_extra, fg_color="transparent")
+        cabecalho_painel.grid(row=0, column=0, sticky="ew", padx=8, pady=(6, 2))
+        cabecalho_painel.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(
+            cabecalho_painel,
+            text="Painel de produção (indicadores visuais)",
+            font=("Arial", 12, "bold"),
+            text_color="#2C3E50",
+        ).grid(row=0, column=0, sticky="w")
+
+        filtros_painel = ctk.CTkFrame(cabecalho_painel, fg_color="transparent")
+        filtros_painel.grid(row=0, column=1, sticky="e")
+
+        self.combo_painel_setor = ctk.CTkComboBox(
+            filtros_painel,
+            values=["Todos", "Ordem Corte", "Corte Pronto", "Enviado", "Conferência", "Pendente", "Pago"],
+            variable=self.painel_prod_setor_var,
+            command=lambda _: self._atualizar_painel_producao(),
+            width=140,
+            height=24,
+        )
+        self.combo_painel_setor.pack(side="left", padx=(0, 6))
+
+        self.combo_painel_periodo = ctk.CTkComboBox(
+            filtros_painel,
+            values=["7 dias", "15 dias", "30 dias"],
+            variable=self.painel_prod_periodo_var,
+            command=lambda _: self._atualizar_painel_producao(),
+            width=90,
+            height=24,
+        )
+        self.combo_painel_periodo.pack(side="left", padx=(0, 6))
+
+        self.combo_painel_grafico = ctk.CTkComboBox(
+            filtros_painel,
+            values=["Barras", "Linha", "Rosca"],
+            variable=self.painel_prod_grafico_var,
+            command=lambda _: self._atualizar_painel_producao(),
+            width=90,
+            height=24,
+        )
+        self.combo_painel_grafico.pack(side="left")
+
+        indicadores_frame = ctk.CTkFrame(area_extra, fg_color="transparent")
+        indicadores_frame.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 6))
+        for i in range(3):
+            indicadores_frame.grid_columnconfigure(i, weight=1)
+
+        def _card(titulo, cor):
+            card = ctk.CTkFrame(indicadores_frame, fg_color="#FFFFFF", corner_radius=10)
+            ctk.CTkLabel(card, text=titulo, font=("Arial", 11), text_color="#6B7280").pack(anchor="w", padx=10, pady=(6, 0))
+            valor_lbl = ctk.CTkLabel(card, text="0", font=("Arial", 15, "bold"), text_color="#2C3E50")
+            valor_lbl.pack(anchor="w", padx=10, pady=(2, 2))
+            barra = ctk.CTkProgressBar(card, progress_color=cor, height=6)
+            barra.set(0.0)
+            barra.pack(fill="x", padx=10, pady=(0, 8))
+            return card, valor_lbl, barra
+
+        card_and, self.lbl_painel_andamento, self.pb_painel_andamento = _card("Ordens em andamento", "#3B82F6")
+        card_and.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+
+        card_atr, self.lbl_painel_atrasos, self.pb_painel_atrasos = _card("Atrasos críticos", "#EF4444")
+        card_atr.grid(row=0, column=1, sticky="nsew", padx=6)
+
+        card_efi, self.lbl_painel_eficiencia, self.pb_painel_eficiencia = _card("Eficiência diária", "#10B981")
+        card_efi.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
+
+        self.painel_prod_chart = ctk.CTkCanvas(area_extra, bg="#FFFFFF", highlightthickness=0, height=80)
+        self.painel_prod_chart.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 6))
 
         self._atualizar_tabela_estoque()
 
@@ -786,6 +867,136 @@ class DashboardPage(ctk.CTkFrame):
         except:
             return {"cortes": 0, "pecas": 0}
 
+    def _contar_atrasos_criticos_db(self, dias: int = 7) -> int:
+        try:
+            if not self.POSTGRES_DISPONIVEL:
+                return 0
+
+            if not _table_exists_pg("envios_cortes") or not _table_exists_pg("controle_retorno_cortes"):
+                return 0
+
+            schema = get_schema()
+            row = _fetch_one(f"""
+                SELECT COUNT(*) FROM {schema}.envios_cortes e
+                LEFT JOIN {schema}.controle_retorno_cortes r ON r.envio_id = e.id
+                WHERE r.id IS NULL AND e.data_envio <= CURRENT_DATE - INTERVAL '{dias} days'
+            """)
+            if row:
+                return int(row[0] or 0) if not isinstance(row, dict) else int(list(row.values())[0] or 0)
+            return 0
+        except:
+            return 0
+
+    def _eficiencia_diaria_db(self, dias: int = 7) -> float:
+        dados = self._buscar_dados_fluxo(dias)
+        try:
+            pagos = dados["quantidades"][5]
+            pendente = dados["quantidades"][4]
+            total = pagos + pendente
+            if total <= 0:
+                return 0.0
+            return (pagos / total) * 100.0
+        except Exception:
+            return 0.0
+
+    def _atualizar_painel_producao(self):
+        try:
+            periodo = self.painel_prod_periodo_var.get() or "7 dias"
+            dias = int((periodo.split() or ["7"])[0])
+        except Exception:
+            dias = 7
+
+        dados_fluxo = self._buscar_dados_fluxo(dias)
+        total_fluxo = max(1, sum(dados_fluxo.get("quantidades", [])))
+
+        andamento = self._contar_em_andamento_db()
+        atrasos = self._contar_atrasos_criticos_db(dias=7)
+        eficiencia = self._eficiencia_diaria_db(dias=dias)
+
+        if hasattr(self, "lbl_painel_andamento"):
+            self.lbl_painel_andamento.configure(text=str(andamento))
+            self.pb_painel_andamento.set(min(1.0, andamento / total_fluxo))
+
+        if hasattr(self, "lbl_painel_atrasos"):
+            self.lbl_painel_atrasos.configure(text=str(atrasos))
+            self.pb_painel_atrasos.set(min(1.0, atrasos / total_fluxo))
+
+        if hasattr(self, "lbl_painel_eficiencia"):
+            self.lbl_painel_eficiencia.configure(text=f"{eficiencia:.0f}%")
+            self.pb_painel_eficiencia.set(min(1.0, eficiencia / 100.0))
+
+        self._desenhar_grafico_painel(dados_fluxo)
+
+    def _desenhar_grafico_painel(self, dados_fluxo: dict):
+        if not hasattr(self, "painel_prod_chart"):
+            return
+
+        canvas = self.painel_prod_chart
+        canvas.delete("all")
+
+        largura = canvas.winfo_width()
+        altura = canvas.winfo_height()
+        if largura <= 10 or altura <= 10:
+            self.after(100, lambda: self._desenhar_grafico_painel(dados_fluxo))
+            return
+
+        setor = self.painel_prod_setor_var.get() or "Todos"
+        tipo = self.painel_prod_grafico_var.get() or "Barras"
+
+        etapas = dados_fluxo.get("etapas", [])
+        valores = dados_fluxo.get("quantidades", [])
+
+        if setor != "Todos" and setor in etapas:
+            idx = etapas.index(setor)
+            valor_setor = valores[idx] if idx < len(valores) else 0
+            total = sum(valores)
+            etapas = [setor, "Outros"]
+            valores = [valor_setor, max(0, total - valor_setor)]
+
+        if not valores:
+            return
+
+        max_val = max(valores) if max(valores) > 0 else 1
+        cores = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#0EA5E9", "#64748B"]
+
+        if tipo == "Rosca":
+            total = sum(valores)
+            start = 0
+            cx, cy = largura / 2, altura / 2
+            raio = min(largura, altura) / 2 - 6
+            for i, val in enumerate(valores):
+                ext = (val / total) * 360 if total else 0
+                canvas.create_arc(
+                    cx - raio, cy - raio, cx + raio, cy + raio,
+                    start=start, extent=ext, fill=cores[i % len(cores)], outline=""
+                )
+                start += ext
+            canvas.create_oval(cx - raio * 0.7, cy - raio * 0.7, cx + raio * 0.7, cy + raio * 0.7,
+                               fill="#FFFFFF", outline="")
+        elif tipo == "Linha":
+            padding = 12
+            step = (largura - 2 * padding) / max(1, len(valores) - 1)
+            pontos = []
+            for i, val in enumerate(valores):
+                x = padding + i * step
+                y = altura - padding - (val / max_val) * (altura - 2 * padding)
+                pontos.extend([x, y])
+            if len(pontos) >= 4:
+                canvas.create_line(*pontos, fill="#3B82F6", width=2, smooth=True)
+                for i in range(0, len(pontos), 2):
+                    canvas.create_oval(pontos[i] - 3, pontos[i + 1] - 3, pontos[i] + 3, pontos[i + 1] + 3,
+                                       fill="#3B82F6", outline="")
+        else:
+            padding = 12
+            largura_barra = (largura - 2 * padding) / max(1, len(valores))
+            for i, val in enumerate(valores):
+                x0 = padding + i * largura_barra + 4
+                x1 = padding + (i + 1) * largura_barra - 4
+                altura_barra = (val / max_val) * (altura - 2 * padding)
+                y0 = altura - padding - altura_barra
+                y1 = altura - padding
+                canvas.create_rectangle(x0, y0, x1, y1, fill=cores[i % len(cores)], outline="")
+
     def _ultimos_finalizados_from_db(self, limite: int = 3):
         try:
             if not self.POSTGRES_DISPONIVEL:
@@ -981,12 +1192,31 @@ class DashboardPage(ctk.CTkFrame):
         parent_frame.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="cards")
 
         def mk_card(col, titulo, lbl_attr, cor):
-            card = ctk.CTkFrame(parent_frame, fg_color=self.cor_secundaria, corner_radius=10, border_width=1,
-                                border_color=self.cor_borda)
+            card = ctk.CTkFrame(
+                parent_frame,
+                fg_color="#FFFFFF",
+                corner_radius=12,
+                border_width=1,
+                border_color="#E2E8F0",
+            )
             card.grid(row=0, column=col, padx=6, sticky="nsew")
-            ctk.CTkLabel(card, text=titulo, font=("Arial", 14, "bold"), text_color=self.cor_texto).pack(pady=(6, 2))
-            lbl = ctk.CTkLabel(card, text="0", font=("Arial", 12, "bold"), text_color=cor)
-            lbl.pack(pady=(0, 6))
+
+            header = ctk.CTkFrame(card, fg_color="transparent")
+            header.pack(fill="x", padx=12, pady=(8, 0))
+            ctk.CTkLabel(
+                header,
+                text=titulo,
+                font=("Arial", 11, "bold"),
+                text_color="#64748B",
+            ).pack(anchor="w")
+
+            lbl = ctk.CTkLabel(card, text="0", font=("Arial", 18, "bold"), text_color=cor)
+            lbl.pack(anchor="w", padx=12, pady=(4, 6))
+
+            barra = ctk.CTkProgressBar(card, progress_color=cor, height=6)
+            barra.set(0.0)
+            barra.pack(fill="x", padx=12, pady=(0, 10))
+            setattr(self, f"{lbl_attr}_bar", barra)
             setattr(self, lbl_attr, lbl)
 
         mk_card(0, "Em Andamento", "lbl_card_andamento", self.cor_destaque)
@@ -999,24 +1229,32 @@ class DashboardPage(ctk.CTkFrame):
     def atualizar_cards_resumo(self):
         try:
             self.lbl_card_andamento.configure(text=str(self._contar_em_andamento_db()))
+            if hasattr(self, "lbl_card_andamento_bar"):
+                self.lbl_card_andamento_bar.set(min(1.0, self._contar_em_andamento_db() / 100.0))
         except:
             pass
 
         try:
             prod_7d = self._sum_producao_periodo("semana")
             self.lbl_card_finalizadas_7d.configure(text=str(prod_7d["cortes"]))
+            if hasattr(self, "lbl_card_finalizadas_7d_bar"):
+                self.lbl_card_finalizadas_7d_bar.set(min(1.0, prod_7d["cortes"] / 100.0))
         except:
             pass
 
         try:
             prod_sem = self._sum_producao_periodo("semana")
             self.lbl_card_prod_semanal.configure(text=f"Cortes: {prod_sem['cortes']}\nPeças: {prod_sem['pecas']}")
+            if hasattr(self, "lbl_card_prod_semanal_bar"):
+                self.lbl_card_prod_semanal_bar.set(min(1.0, prod_sem["cortes"] / 100.0))
         except:
             pass
 
         try:
             prod_mes = self._sum_producao_periodo("mes")
             self.lbl_card_prod_mensal.configure(text=f"Cortes: {prod_mes['cortes']}\nPeças: {prod_mes['pecas']}")
+            if hasattr(self, "lbl_card_prod_mensal_bar"):
+                self.lbl_card_prod_mensal_bar.set(min(1.0, prod_mes["cortes"] / 100.0))
         except:
             pass
 
@@ -1101,6 +1339,7 @@ class DashboardPage(ctk.CTkFrame):
     def atualizar_dashboard(self):
         try:
             self.atualizar_cards_resumo()
+            self._atualizar_painel_producao()
             self._preencher_tabela_andamento()
             self._atualizar_tabela_estoque()
             if getattr(self, "tipo_grafico", "producao") == "producao":

@@ -2412,7 +2412,7 @@ class UsuariosPage(ctk.CTkFrame):
                 "dica_senha": "",
                 "telefone": "",
                 "departamento": "",
-                "tema_preferido": "Noite Urbana"
+                "tema_preferido": "NOTURNO"
             }
             self.usuario_var.set(demo["usuario"])
             self.email_var.set(demo["email"])
