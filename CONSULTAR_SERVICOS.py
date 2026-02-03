@@ -176,38 +176,23 @@ class HistoricoServicosPage(ctk.CTkFrame):
         tema_atual = ctk.get_appearance_mode()
 
         if tema_atual == "Dark":
-            cor_fundo = self.cor_secundaria
-            cor_texto = self.cor_texto
-            cor_campo = self.cor_secundaria
-            cor_selecao = self.cor_primaria
-            heading_bg = self.cor_primaria
-            heading_fg = "#ffffff"
+            cor_fundo = self.cor_fundo
+            cor_linhas = self.cor_secundaria
         else:
-            cor_fundo = "#f0f0f0"
-            cor_texto = "black"
-            cor_campo = "#f0f0f0"
-            cor_selecao = self.cor_primaria
-            heading_bg = "#2C3E50"
-            heading_fg = "#ffffff"
+            cor_fundo = "#ffffff"
+            cor_linhas = "#f0f0f0"
 
-        self.style.configure("Custom.Treeview",
-                             background=cor_fundo,
-                             foreground=cor_texto,
-                             fieldbackground=cor_campo,
-                             borderwidth=0,
-                             highlightthickness=0,
-                             rowheight=25)
-
-        self.style.configure("Custom.Treeview.Heading",
-                             background=heading_bg,
-                             foreground=heading_fg,
-                             relief="flat",
-                             borderwidth=1,
-                             font=('Arial', 10, 'bold'))
-
-        self.style.map('Custom.Treeview',
-                       background=[('selected', cor_selecao)],
-                       foreground=[('selected', "white")])
+        TEMAS.aplicar_estilo_treeview(
+            style=self.style,
+            prefixo="Custom.Treeview",
+            cor_fundo=cor_fundo,
+            cor_linhas=cor_linhas,
+            cor_cabecalho=self.cor_primaria,
+            cor_texto=self.cor_texto,
+            cor_borda=self.cor_borda,
+            cor_selecao=self.cor_primaria,
+            altura_linha=25,
+        )
 
     def setup_ui(self):
         """Configuração completa da interface gráfica com MESMO ESTILO DO CADASTRO_DE_CORTE"""
@@ -462,8 +447,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
             cor_linha_impar = "#f0f0f0"
 
         if hasattr(self, 'tree') and self.tree:
-            self.tree.tag_configure("oddrow", background=cor_linha_impar)
-            self.tree.tag_configure("evenrow", background=cor_linha_par)
+            TEMAS.aplicar_tags_alternadas(self.tree, cor_linha_par, cor_linha_impar)
+        if hasattr(self, 'defeito_tree') and self.defeito_tree:
+            TEMAS.aplicar_tags_alternadas(self.defeito_tree, cor_linha_par, cor_linha_impar)
 
     # CORREÇÃO: Adicionar método para atualizar tema dinamicamente
     def atualizar_tema(self):
