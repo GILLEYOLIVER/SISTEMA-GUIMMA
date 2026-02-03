@@ -286,10 +286,10 @@ class DashboardPage(ctk.CTkFrame):
         tabela_frame.grid_columnconfigure(0, weight=1)
         tabela_frame.grid_rowconfigure(0, weight=1)
 
-        self.tree_est = ttk.Treeview(tabela_frame, columns=self.cols_estoque, show="headings", height=6)
+        self.tree_est = ttk.Treeview(tabela_frame, columns=self.cols_estoque, show="headings", height=5)
         for col in self.cols_estoque:
             self.tree_est.heading(col, text=col)
-            self.tree_est.column(col, anchor="w", width=120)
+            self.tree_est.column(col, anchor="w", width=100, stretch=True)
 
         sb_e = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.tree_est.yview)
         self.tree_est.configure(yscroll=sb_e.set)
@@ -355,19 +355,22 @@ class DashboardPage(ctk.CTkFrame):
         cols = ("Código", "Descrição", "Cortador", "Data Registro",
                 "Qtd. Desejada", "Dias Estimados", "Horas Estimadas", "Origem")
 
-        self.tree_and = ttk.Treeview(tree_container, columns=cols, show="headings", height=4)
+        self.tree_and = ttk.Treeview(tree_container, columns=cols, show="headings", height=3)
 
         for c in cols:
             self.tree_and.heading(c, text=c)
-            self.tree_and.column(c, anchor="center", width=120)
+            if c == "Descrição":
+                self.tree_and.column(c, anchor="w", width=170, stretch=True)
+            elif c in ("Código", "Cortador", "Origem"):
+                self.tree_and.column(c, anchor="center", width=80, stretch=False)
+            elif c == "Data Registro":
+                self.tree_and.column(c, anchor="center", width=110, stretch=False)
+            else:
+                self.tree_and.column(c, anchor="center", width=90, stretch=False)
 
         sb1 = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree_and.yview)
         self.tree_and.configure(yscroll=sb1.set)
         sb1.pack(side="right", fill="y")
-
-        sb2 = ttk.Scrollbar(tree_container, orient="horizontal", command=self.tree_and.xview)
-        self.tree_and.configure(xscroll=sb2.set)
-        sb2.pack(side="bottom", fill="x")
 
         self.tree_and.pack(fill="x", padx=5, pady=4)
 
