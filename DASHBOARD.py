@@ -1190,12 +1190,31 @@ class DashboardPage(ctk.CTkFrame):
         parent_frame.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="cards")
 
         def mk_card(col, titulo, lbl_attr, cor):
-            card = ctk.CTkFrame(parent_frame, fg_color=self.cor_secundaria, corner_radius=10, border_width=1,
-                                border_color=self.cor_borda)
+            card = ctk.CTkFrame(
+                parent_frame,
+                fg_color="#FFFFFF",
+                corner_radius=14,
+                border_width=1,
+                border_color="#E2E8F0",
+            )
             card.grid(row=0, column=col, padx=6, sticky="nsew")
-            ctk.CTkLabel(card, text=titulo, font=("Arial", 14, "bold"), text_color=self.cor_texto).pack(pady=(6, 2))
-            lbl = ctk.CTkLabel(card, text="0", font=("Arial", 12, "bold"), text_color=cor)
-            lbl.pack(pady=(0, 6))
+
+            header = ctk.CTkFrame(card, fg_color="transparent")
+            header.pack(fill="x", padx=12, pady=(8, 0))
+            ctk.CTkLabel(
+                header,
+                text=titulo,
+                font=("Arial", 12, "bold"),
+                text_color="#64748B",
+            ).pack(anchor="w")
+
+            lbl = ctk.CTkLabel(card, text="0", font=("Arial", 20, "bold"), text_color=cor)
+            lbl.pack(anchor="w", padx=12, pady=(4, 10))
+
+            barra = ctk.CTkProgressBar(card, progress_color=cor)
+            barra.set(0.0)
+            barra.pack(fill="x", padx=12, pady=(0, 10))
+            setattr(self, f"{lbl_attr}_bar", barra)
             setattr(self, lbl_attr, lbl)
 
         mk_card(0, "Em Andamento", "lbl_card_andamento", self.cor_destaque)
@@ -1208,24 +1227,32 @@ class DashboardPage(ctk.CTkFrame):
     def atualizar_cards_resumo(self):
         try:
             self.lbl_card_andamento.configure(text=str(self._contar_em_andamento_db()))
+            if hasattr(self, "lbl_card_andamento_bar"):
+                self.lbl_card_andamento_bar.set(min(1.0, self._contar_em_andamento_db() / 100.0))
         except:
             pass
 
         try:
             prod_7d = self._sum_producao_periodo("semana")
             self.lbl_card_finalizadas_7d.configure(text=str(prod_7d["cortes"]))
+            if hasattr(self, "lbl_card_finalizadas_7d_bar"):
+                self.lbl_card_finalizadas_7d_bar.set(min(1.0, prod_7d["cortes"] / 100.0))
         except:
             pass
 
         try:
             prod_sem = self._sum_producao_periodo("semana")
             self.lbl_card_prod_semanal.configure(text=f"Cortes: {prod_sem['cortes']}\nPeças: {prod_sem['pecas']}")
+            if hasattr(self, "lbl_card_prod_semanal_bar"):
+                self.lbl_card_prod_semanal_bar.set(min(1.0, prod_sem["cortes"] / 100.0))
         except:
             pass
 
         try:
             prod_mes = self._sum_producao_periodo("mes")
             self.lbl_card_prod_mensal.configure(text=f"Cortes: {prod_mes['cortes']}\nPeças: {prod_mes['pecas']}")
+            if hasattr(self, "lbl_card_prod_mensal_bar"):
+                self.lbl_card_prod_mensal_bar.set(min(1.0, prod_mes["cortes"] / 100.0))
         except:
             pass
 
