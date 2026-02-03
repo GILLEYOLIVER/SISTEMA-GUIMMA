@@ -194,9 +194,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
                              highlightthickness=0,
                              rowheight=25)
 
+        heading_fg = self.cor_texto if tema_atual == "Dark" else "#ffffff"
         self.style.configure("Custom.Treeview.Heading",
                              background=self.cor_primaria,
-                             foreground=self.cor_texto,
+                             foreground=heading_fg,
                              relief="flat",
                              borderwidth=1,
                              font=('Arial', 10, 'bold'))
@@ -475,7 +476,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
         """Atualiza recursivamente as cores dos widgets"""
         try:
             if isinstance(widget, ctk.CTkFrame):
-                if widget.cget('fg_color') != 'transparent':
+                if getattr(widget, "_kind", "") == "kpi":
+                    widget.configure(fg_color=self.cor_secundaria, border_color=self.cor_borda, border_width=1)
+                elif widget.cget('fg_color') != 'transparent':
                     widget.configure(fg_color=self.cor_fundo)
             elif isinstance(widget, ctk.CTkButton):
                 widget.configure(
@@ -510,7 +513,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
     def _criar_kpi(self, parent, col, title, value):
         """Cria um card KPI estilizado - MESMO ESTILO DO CADASTRO_DE_CORTE"""
-        box = ctk.CTkFrame(parent, fg_color=self.cor_primaria, corner_radius=8)
+        box = ctk.CTkFrame(parent, fg_color=self.cor_secundaria, corner_radius=8,
+                           border_width=1, border_color=self.cor_borda)
+        box._kind = "kpi"
         box.grid(row=0, column=col, padx=5, pady=5, sticky="nsew")
         box.grid_columnconfigure(0, weight=1)
 
