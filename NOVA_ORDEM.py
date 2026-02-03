@@ -301,153 +301,171 @@ class OrdemCorte(ctk.CTkFrame):
             return hex_color
 
     def criar_widgets(self):
+        # Janela padrão um pouco mais alta para evitar cortes (sem scroll)
         if isinstance(self.master, (ctk.CTk, ctk.CTkToplevel)):
-            self.master.geometry("900x700")
+            try:
+                # não força se já foi definido externamente
+                if not str(self.master.winfo_geometry()).startswith(("900x", "1000x", "1100x", "1200x")):
+                    self.master.geometry("1100x780")
+            except Exception:
+                self.master.geometry("1100x780")
 
-        self.main_frame = ctk.CTkScrollableFrame(self, fg_color=self.cor_fundo, width=900, height=1123)
+        # ✅ Sem CTkScrollableFrame: página sem barra de rolagem
+        self.main_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         self.main_frame.grid(row=0, column=0, sticky="nsew")
+        self.main_frame.grid_columnconfigure(0, weight=1)
 
-        cabecalho_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo, height=50)
-        cabecalho_frame.pack(fill="x", pady=(20, 10), padx=20)
+        # ===================== CABEÇALHO COMPACTO =====================
+        topo = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
+        topo.pack(fill="x", padx=12, pady=(10, 6))
+        topo.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(cabecalho_frame,
-                     text="ORDEM DE CORTE",
-                     font=("Arial", 18, "bold"),
-                     text_color=self.cor_texto).pack(side="left")
+        ctk.CTkLabel(
+            topo,
+            text="ORDEM DE CORTE",
+            font=("Arial", 18, "bold"),
+            text_color=self.cor_texto
+        ).grid(row=0, column=0, sticky="w")
 
-        busca_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
-        busca_frame.pack(fill="x", padx=20, pady=(5, 10))
+        self.lbl_data_topo = ctk.CTkLabel(
+            topo,
+            text="DATA " + datetime.now().strftime("%d/%m/%Y"),
+            font=("Arial", 12, "bold"),
+            text_color=self.cor_texto
+        )
+        self.lbl_data_topo.grid(row=0, column=1, sticky="e")
 
-        ctk.CTkLabel(busca_frame,
-                     text="Buscar Modelo (Código ou Descrição):",
-                     font=("Arial", 12),
-                     text_color=self.cor_texto).pack(side="left")
+        # ===================== BUSCA (MESMA LINHA / COMPACTO) =====================
+        busca = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
+        busca.pack(fill="x", padx=12, pady=(0, 6))
 
-        self.busca_entry = ctk.CTkEntry(busca_frame,
-                                        width=300,
-                                        placeholder_text="Ex: VEST123 ou Vestido Longo",
-                                        fg_color=self.cor_fundo,
-                                        border_color=self.cor_borda, text_color=self.cor_texto)
-        self.busca_entry.pack(side="left", padx=5)
+        ctk.CTkLabel(
+            busca,
+            text="Buscar Modelo:",
+            font=("Arial", 11),
+            text_color=self.cor_texto
+        ).pack(side="left")
+
+        self.busca_entry = ctk.CTkEntry(
+            busca,
+            width=260,
+            height=28,
+            placeholder_text="Código ou descrição...",
+            fg_color=self.cor_fundo,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto
+        )
+        self.busca_entry.pack(side="left", padx=(6, 6))
         self.busca_entry.bind("<Return>", lambda e: self.buscar_modelo())
 
-        buscar_btn = ctk.CTkButton(busca_frame,
-                                   text="Buscar",
-                                   command=self.buscar_modelo,
-                                   fg_color=self.cor_primaria,
-                                   hover_color=self.cor_hover)
-        buscar_btn.pack(side="left", padx=5)
+        buscar_btn = ctk.CTkButton(
+            busca,
+            text="Buscar",
+            height=28,
+            command=self.buscar_modelo,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        )
+        buscar_btn.pack(side="left", padx=(0, 8))
 
         self.modelos_combo = ctk.CTkComboBox(
-            busca_frame,
+            busca,
             values=["Carregando..."],
-            width=300,
+            width=360,
+            height=28,
             command=self._on_combo_modelo
         )
-        self.modelos_combo.set("Modelos disponíveis")
-        self.modelos_combo.pack(side="left", padx=(10, 0))
+        self.modelos_combo.set("Selecione um modelo")
+        self.modelos_combo.pack(side="left", padx=(0, 0), fill="x", expand=True)
 
-        linha1_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
-        linha1_frame.pack(fill="x", pady=5, padx=20)
+        # ===================== DADOS DO CABEÇALHO (ALINHADOS / 2 LINHAS) =====================
+        info = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
+        info.pack(fill="x", padx=12, pady=(0, 6))
+        info.grid_columnconfigure(0, weight=0)
+        info.grid_columnconfigure(1, weight=0)
+        info.grid_columnconfigure(2, weight=0)
+        info.grid_columnconfigure(3, weight=1)
 
-        ctk.CTkLabel(linha1_frame,
-                     text="CODIGO:",
-                     font=("Arial", 12),
-                     text_color=self.cor_texto).pack(side="left")
+        # Linha 0: Código + Modelo
+        ctk.CTkLabel(info, text="CÓDIGO:", font=("Arial", 11, "bold"), text_color=self.cor_texto).grid(row=0, column=0, sticky="w")
+        self.codigo_entry = ctk.CTkEntry(
+            info, width=110, height=28,
+            fg_color=self.cor_fundo, border_color=self.cor_borda, text_color=self.cor_texto
+        )
+        self.codigo_entry.grid(row=0, column=1, sticky="w", padx=(6, 14), pady=(0, 4))
 
-        self.codigo_entry = ctk.CTkEntry(linha1_frame,
-                                         width=100,
-                                         placeholder_text="___________",
-                                         fg_color=self.cor_fundo,
-                                         border_color=self.cor_borda, text_color=self.cor_texto)
-        self.codigo_entry.pack(side="left", padx=5)
+        ctk.CTkLabel(info, text="MODELO:", font=("Arial", 11, "bold"), text_color=self.cor_texto).grid(row=0, column=2, sticky="w")
+        self.modelo_entry = ctk.CTkEntry(
+            info, height=28,
+            fg_color=self.cor_fundo, border_color=self.cor_borda, text_color=self.cor_texto
+        )
+        self.modelo_entry.grid(row=0, column=3, sticky="ew", padx=(6, 0), pady=(0, 4))
 
-        ctk.CTkLabel(linha1_frame,
-                     text="Modelo:",
-                     font=("Arial", 12),
-                     text_color=self.cor_texto).pack(side="left", padx=10)
+        # Linha 1: Cortador + Auxiliar + Data Finalização
+        linha2 = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
+        linha2.pack(fill="x", padx=12, pady=(0, 6))
+        linha2.grid_columnconfigure(0, weight=0)
+        linha2.grid_columnconfigure(1, weight=0)
+        linha2.grid_columnconfigure(2, weight=0)
+        linha2.grid_columnconfigure(3, weight=1)
+        linha2.grid_columnconfigure(4, weight=0)
+        linha2.grid_columnconfigure(5, weight=0)
 
-        self.modelo_entry = ctk.CTkEntry(linha1_frame,
-                                         width=300,
-                                         placeholder_text="______________________________________",
-                                         fg_color=self.cor_fundo,
-                                         border_color=self.cor_borda, text_color=self.cor_texto)
-        self.modelo_entry.pack(side="left", padx=5)
+        ctk.CTkLabel(linha2, text="CORTADOR:", font=("Arial", 11, "bold"), text_color=self.cor_texto).grid(row=0, column=0, sticky="w")
+        self.cortador_entry = ctk.CTkEntry(
+            linha2, width=170, height=28,
+            fg_color=self.cor_fundo, border_color=self.cor_borda, text_color=self.cor_texto
+        )
+        self.cortador_entry.grid(row=0, column=1, sticky="w", padx=(6, 14))
 
-        ctk.CTkLabel(linha1_frame,
-                     text="DATA " + datetime.now().strftime("%d/%m/%Y"),
-                     font=("Arial", 12),
-                     text_color=self.cor_texto).pack(side="right", padx=10)
+        ctk.CTkLabel(linha2, text="AUXILIAR:", font=("Arial", 11, "bold"), text_color=self.cor_texto).grid(row=0, column=2, sticky="w")
+        self.auxiliar_entry = ctk.CTkEntry(
+            linha2, height=28,
+            fg_color=self.cor_fundo, border_color=self.cor_borda, text_color=self.cor_texto
+        )
+        self.auxiliar_entry.grid(row=0, column=3, sticky="ew", padx=(6, 14))
 
-        linha2_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
-        linha2_frame.pack(fill="x", pady=5, padx=20)
-
-        ctk.CTkLabel(linha2_frame,
-                     text="CORTADOR:",
-                     font=("Arial", 12),
-                     text_color=self.cor_texto).pack(side="left")
-
-        self.cortador_entry = ctk.CTkEntry(linha2_frame,
-                                           width=150,
-                                           placeholder_text="________________",
-                                           fg_color=self.cor_fundo,
-                                           border_color=self.cor_borda, text_color=self.cor_texto)
-        self.cortador_entry.pack(side="left", padx=5)
-
-        ctk.CTkLabel(linha2_frame,
-                     text="AUXILIAR:",
-                     font=("Arial", 12),
-                     text_color=self.cor_texto).pack(side="left", padx=10)
-
-        self.auxiliar_entry = ctk.CTkEntry(linha2_frame,
-                                           width=200,
-                                           placeholder_text="______________________________",
-                                           fg_color=self.cor_fundo,
-                                           border_color=self.cor_borda, text_color=self.cor_texto)
-        self.auxiliar_entry.pack(side="left", padx=5)
-
-        ctk.CTkLabel(linha2_frame,
-                     text="DATA FINALIZAÇÃO:",
-                     font=("Arial", 12),
-                     text_color=self.cor_texto).pack(side="left", padx=10)
-
-        self.data_final_entry = ctk.CTkEntry(linha2_frame,
-                                             width=120,
-                                             placeholder_text="__/__/____",
-                                             fg_color=self.cor_fundo,
-                                             border_color=self.cor_borda, text_color=self.cor_texto)
-        self.data_final_entry.pack(side="left")
+        ctk.CTkLabel(linha2, text="FINALIZAÇÃO:", font=("Arial", 11, "bold"), text_color=self.cor_texto).grid(row=0, column=4, sticky="w")
+        self.data_final_entry = ctk.CTkEntry(
+            linha2, width=120, height=28,
+            placeholder_text="__/__/____",
+            fg_color=self.cor_fundo, border_color=self.cor_borda, text_color=self.cor_texto
+        )
+        self.data_final_entry.grid(row=0, column=5, sticky="w", padx=(6, 0))
 
         # Chamar criar_grade_corte antes de criar_secao_tecidos
         self.criar_grade_corte()
         self.criar_secao_tecidos()
 
         btn_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        btn_frame.pack(fill="x", pady=20, padx=20)
+        btn_frame.pack(fill="x", pady=(10, 12), padx=12)
 
         imprimir_btn = ctk.CTkButton(
             btn_frame,
             text="Imprimir Pré-visualização",
             command=self.previsualizar_impressao,
+            height=32,
             fg_color=getattr(self.sistema, 'cor_selecao', '#4A90E2'),
             hover_color="#357ABD",
             text_color="#FFFFFF"
         )
-        imprimir_btn.pack(side="right", padx=10)
+        imprimir_btn.pack(side="right", padx=8)
 
         salvar_btn = ctk.CTkButton(
             btn_frame,
             text="Salvar Ordem",
             command=self.salvar_ordem,
+            height=32,
             fg_color=getattr(self.sistema, 'cor_selecao', '#2E7D32'),
             hover_color="#1B5E20",
             text_color="#FFFFFF"
         )
-        salvar_btn.pack(side="right", padx=10)
+        salvar_btn.pack(side="right", padx=8)
 
     def criar_grade_corte(self):
         grade_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
-        grade_frame.pack(fill="x", pady=10, padx=20)
+        grade_frame.pack(fill="x", pady=(6, 4), padx=12)
 
         ctk.CTkLabel(
             grade_frame,
@@ -462,7 +480,7 @@ class OrdemCorte(ctk.CTkFrame):
         self.grade_pref_var.trace('w', lambda *args: self._on_grade_pref_change())
 
         pref_frame = ctk.CTkFrame(grade_frame, fg_color=self.cor_fundo)
-        pref_frame.pack(fill="x", pady=(4, 4))
+        pref_frame.pack(fill="x", pady=(2, 2))
 
         ctk.CTkLabel(
             pref_frame,
@@ -503,7 +521,7 @@ class OrdemCorte(ctk.CTkFrame):
         btn_excluir_pref.pack(side="left", padx=6)
 
         header_frame = ctk.CTkFrame(grade_frame, fg_color=self.cor_fundo)
-        header_frame.pack(fill="x", pady=5)
+        header_frame.pack(fill="x", pady=3)
 
         tamanhos = ["TAMANHOS", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "CONSUMO PEÇA"]
         for i, tamanho in enumerate(tamanhos):
@@ -517,7 +535,7 @@ class OrdemCorte(ctk.CTkFrame):
             ).grid(row=0, column=i, padx=2)
 
         porcent_frame = ctk.CTkFrame(grade_frame, fg_color=self.cor_fundo)
-        porcent_frame.pack(fill="x", pady=2)
+        porcent_frame.pack(fill="x", pady=(2, 2))
 
         ctk.CTkLabel(
             porcent_frame,
@@ -551,7 +569,7 @@ class OrdemCorte(ctk.CTkFrame):
         self.campos_grade["consumo_peca"] = consumo
 
         quant_frame = ctk.CTkFrame(grade_frame, fg_color=self.cor_fundo)
-        quant_frame.pack(fill="x", pady=10)
+        quant_frame.pack(fill="x", pady=(6, 6))
 
         ctk.CTkLabel(
             quant_frame,
@@ -862,11 +880,11 @@ class OrdemCorte(ctk.CTkFrame):
 
     def criar_secao_tecidos(self):
         tecidos_main_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
-        tecidos_main_frame.pack(fill="x", pady=10, padx=20)
+        tecidos_main_frame.pack(fill="x", pady=(6, 8), padx=12)
 
         for linha in range(2):
             linha_frame = ctk.CTkFrame(tecidos_main_frame, fg_color=self.cor_fundo)
-            linha_frame.pack(fill="x", pady=10)
+            linha_frame.pack(fill="x", pady=6)
             linha_frame.grid_columnconfigure((0, 1, 2, 3, 4), weight=1, uniform="col")
             self.criar_bloco_tecido(linha_frame, "TECIDO 1", 0, mostrar_rotulos=True)
             self.criar_bloco_largura(linha_frame, 1)
@@ -888,10 +906,10 @@ class OrdemCorte(ctk.CTkFrame):
             text=titulo,
             font=("Arial", 12, "bold"),
             text_color=self.cor_texto
-        ).pack(pady=(5, 5))
+        ).pack(pady=(4, 4))
 
         bloco_frame = ctk.CTkFrame(tecido_frame, fg_color=self.cor_fundo)
-        bloco_frame.pack(fill="both", expand=True, padx=5, pady=(0, 5))
+        bloco_frame.pack(fill="both", expand=True, padx=5, pady=(0, 4))
 
         cor_fundo_canvas = self.sistema.cor_fundo if self.sistema else self.cor_fundo
 
@@ -914,10 +932,10 @@ class OrdemCorte(ctk.CTkFrame):
                 canvas.pack(fill="x", padx=5, pady=(0, 6))
                 canvas.create_line(0, 18, 240, 18, fill=self.cor_borda, width=1)
         else:
-            espacamento = 25
+            espacamento = 22
             canvas = Canvas(
                 bloco_frame,
-                height=130,
+                height=100,
                 bg=cor_fundo_canvas,
                 highlightthickness=0
             )
@@ -946,13 +964,13 @@ class OrdemCorte(ctk.CTkFrame):
 
         canvas = Canvas(
             largura_frame,
-            height=130,
+            height=100,
             bg=cor_fundo_canvas,
             highlightthickness=0
         )
         canvas.pack(fill="x", padx=10, pady=10)
 
-        espacamento = 25
+        espacamento = 22
         for i in range(5):
             y = 15 + i * espacamento
             canvas.create_line(10, y, 280, y, fill=self.cor_borda, width=1)

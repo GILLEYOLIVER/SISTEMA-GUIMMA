@@ -274,49 +274,70 @@ class RetornoCortes(ctk.CTkFrame):
 
     # ----------------------------- UI -----------------------------
     def _build_ui(self):
-        # Frame principal com tema
+        # Frame principal com tema (mais compacto)
         main = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        main.pack(fill="both", expand=True, padx=10, pady=10)
+        main.pack(fill="both", expand=True, padx=6, pady=6)
 
-        # Título + logo - MESMO ESTILO DO CADASTRO_DE_CORTE
+        entry_h = 28
+        f_lbl = ("Arial", 11)
+        f_ent = ("Arial", 11)
+
+        def mk_entry(parent, width, state=None, placeholder=None, readonly=False):
+            e = ctk.CTkEntry(
+                parent, width=width, height=entry_h,
+                placeholder_text=placeholder or "",
+                fg_color=self.cor_secundaria, border_color=self.cor_borda,
+                text_color=self.cor_texto_entry,
+                placeholder_text_color=self.cor_placeholder,
+                font=f_ent
+            )
+            if readonly or state == "disabled":
+                e.configure(state="disabled")
+            return e
+
+        def mk_lbl(parent, text_, width=None, anchor="e"):
+            return ctk.CTkLabel(parent, text=text_, width=width or 0, anchor=anchor, text_color=self.cor_texto, font=f_lbl)
+
+        # ================= Header (título + logo) =================
         head = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        head.pack(fill="x", pady=(0, 8))
+        head.pack(fill="x", pady=(0, 4))
 
-        ctk.CTkLabel(head, text="CONTROLE DE MÃO DE OBRA — Retorno de Cortes",
-                     font=("Arial", 18, "bold"), text_color=self.cor_texto).pack(side="left", padx=10)
+        ctk.CTkLabel(
+            head,
+            text="CONTROLE DE MÃO DE OBRA — Retorno de Cortes",
+            font=("Arial", 16, "bold"),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(6, 0))
 
-        # Logo
+        # Logo (menor)
         try:
             from PIL import Image
             if os.path.exists(LOGO_PATH):
                 img = Image.open(LOGO_PATH)
                 w, h = img.size
-                tw = 140
+                tw = 110
                 th = int(h * (tw / w))
                 self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
-                ctk.CTkLabel(head, image=self.logo_img, text="").pack(side="right", padx=10)
+                ctk.CTkLabel(head, image=self.logo_img, text="").pack(side="right", padx=6)
         except Exception:
             pass
 
-        # Buscar envio - MESMO ESTILO DO CADASTRO_DE_CORTE
+        # ================= Linha 1: Busca =================
         busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        busca.pack(fill="x", pady=6)
+        busca.pack(fill="x", pady=(0, 4))
 
-        ctk.CTkLabel(busca, text="Buscar Envio:", width=120, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-
-        self.busca_entry = ctk.CTkEntry(busca, width=320, placeholder_text="Ordem, código ou descrição",
-                                        fg_color=self.cor_secundaria, border_color=self.cor_borda,
-                                        text_color=self.cor_texto_entry,
-                                        placeholder_text_color=self.cor_placeholder)
-        self.busca_entry.pack(side="left", padx=5)
+        mk_lbl(busca, "Buscar Envio:", width=105).pack(side="left", padx=(0, 6))
+        self.busca_entry = mk_entry(busca, width=320, placeholder="Ordem, código ou descrição")
+        self.busca_entry.pack(side="left")
         self.busca_entry.bind("<Return>", lambda e: self.carregar_envios_pendentes())
 
-        ctk.CTkButton(busca, text="Buscar", width=90, command=self.carregar_envios_pendentes,
-                      fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkButton(
+            busca, text="Buscar", width=90, height=entry_h,
+            command=self.carregar_envios_pendentes,
+            fg_color=self.cor_primaria, hover_color=self.cor_hover,
+            text_color=self.cor_texto, font=f_ent
+        ).pack(side="left", padx=6)
 
-        # Filtro: incluir 'Em Conferência' na listagem - MESMO ESTILO DO CADASTRO_DE_CORTE
         self.cb_mostrar_conf = ctk.CTkCheckBox(
             busca,
             text="Mostrar 'Em Conferência'",
@@ -327,108 +348,116 @@ class RetornoCortes(ctk.CTkFrame):
             fg_color=self.cor_selecao,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
-            checkmark_color=self.cor_texto
+            checkmark_color=self.cor_texto,
+            font=f_lbl
         )
-        self.cb_mostrar_conf.pack(side="left", padx=8)
+        self.cb_mostrar_conf.pack(side="left", padx=(6, 0))
 
-        # Prestador + Serviço (somente leitura) - MESMO ESTILO DO CADASTRO_DE_CORTE
-        prest = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        prest.pack(fill="x", pady=(6, 8))
+        # ================= Linha 2: Cabeçalho (compactado) =================
+        cab = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        cab.pack(fill="x", pady=(0, 4))
 
-        linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        linha.pack(fill="x", pady=(4, 2))
+        # linha A: prestador + serviço + data chegada
+        linha_a = ctk.CTkFrame(cab, fg_color=self.cor_fundo)
+        linha_a.pack(fill="x", pady=(0, 2))
 
-        ctk.CTkLabel(linha, text="Prestador:", width=100, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        mk_lbl(linha_a, "Prestador:", width=80).pack(side="left", padx=(0, 6))
+        self.prestador_entry = mk_entry(linha_a, width=320, readonly=True)
+        self.prestador_entry.pack(side="left")
 
-        self.prestador_entry = ctk.CTkEntry(linha, width=360,
-                                            fg_color=self.cor_secundaria,
-                                            border_color=self.cor_borda,
-                                            text_color=self.cor_texto_entry)
-        self.prestador_entry.pack(side="left", padx=5)
-        self.prestador_entry.configure(state="disabled")
+        mk_lbl(linha_a, "Serviço:", width=60).pack(side="left", padx=(10, 6))
+        self.servico_entry = mk_entry(linha_a, width=190, readonly=True)
+        self.servico_entry.pack(side="left")
 
-        ctk.CTkLabel(linha, text="Serviço:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        mk_lbl(linha_a, "Chegada:", width=70).pack(side="left", padx=(10, 6))
+        self.data_chegada_entry = mk_entry(linha_a, width=110)
+        self.data_chegada_entry.pack(side="left")
+        self.data_chegada_entry.delete(0, tk.END)
+        self.data_chegada_entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
 
-        self.servico_entry = ctk.CTkEntry(linha, width=220,
-                                          fg_color=self.cor_secundaria,
-                                          border_color=self.cor_borda,
-                                          text_color=self.cor_texto_entry)
-        self.servico_entry.pack(side="left", padx=5)
-        self.servico_entry.configure(state="disabled")
+        # linha B: código + ordem + descrição
+        linha_b = ctk.CTkFrame(cab, fg_color=self.cor_fundo)
+        linha_b.pack(fill="x", pady=(0, 2))
 
-        # Dados bancários (somente leitura) - MESMO ESTILO DO CADASTRO_DE_CORTE
-        banco = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        banco.pack(fill="x", pady=(10, 6))
+        mk_lbl(linha_b, "Código:", width=80).pack(side="left", padx=(0, 6))
+        self.codigo_entry = mk_entry(linha_b, width=120, readonly=True)
+        self.codigo_entry.pack(side="left")
 
-        ctk.CTkLabel(banco, text="Dados Bancários do Prestador", font=("Arial", 13, "bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=5, pady=2)
+        mk_lbl(linha_b, "Nº Ordem:", width=80).pack(side="left", padx=(10, 6))
+        self.ordem_entry = mk_entry(linha_b, width=120, readonly=True)
+        self.ordem_entry.pack(side="left")
+
+        mk_lbl(linha_b, "Descrição:", width=80).pack(side="left", padx=(10, 6))
+        self.descricao_entry = mk_entry(linha_b, width=420, readonly=True)
+        self.descricao_entry.pack(side="left", fill="x", expand=True)
+
+        # linha C: telefones (do retorno)
+        linha_c = ctk.CTkFrame(cab, fg_color=self.cor_fundo)
+        linha_c.pack(fill="x")
+
+        mk_lbl(linha_c, "Tel. Encarregado:", width=115).pack(side="left", padx=(0, 6))
+        self.tel_encarregado_entry = mk_entry(linha_c, width=170)
+        self.tel_encarregado_entry.pack(side="left")
+
+        mk_lbl(linha_c, "Tel. Acabamento:", width=115).pack(side="left", padx=(10, 6))
+        self.tel_acabamento_entry = mk_entry(linha_c, width=170)
+        self.tel_acabamento_entry.pack(side="left")
+
+        # ================= Dados Bancários (mais compacto) =================
+        banco = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        banco.pack(fill="x", pady=(0, 6))
+
+        ctk.CTkLabel(
+            banco, text="Dados Bancários (Prestador)", font=("Arial", 12, "bold"),
+            text_color=self.cor_texto
+        ).pack(anchor="w", padx=2, pady=(0, 2))
 
         grid = ctk.CTkFrame(banco, fg_color=self.cor_fundo)
-        grid.pack(fill="x", padx=2)
+        grid.pack(fill="x", padx=0)
 
-        def ro(parent, w=220):
-            e = ctk.CTkEntry(parent, width=w,
-                             fg_color=self.cor_secundaria,
-                             border_color=self.cor_borda,
-                             text_color=self.cor_texto_entry,
-                             state="disabled")
+        def ro(parent, w):
+            e = mk_entry(parent, width=w, readonly=True)
             return e
 
+        # linha 1: Telefone | CPF | Banco | Agência
         l1b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l1b.pack(fill="x", pady=2)
+        l1b.pack(fill="x", pady=(0, 2))
 
-        ctk.CTkLabel(l1b, text="Telefone:", width=90, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-        self.telefone_entry = ro(l1b, 220)
-        self.telefone_entry.pack(side="left", padx=5)
+        mk_lbl(l1b, "Telefone:", width=70).pack(side="left", padx=(0, 6))
+        self.telefone_entry = ro(l1b, 170); self.telefone_entry.pack(side="left")
 
-        ctk.CTkLabel(l1b, text="CPF:", width=60, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-        self.cpf_entry = ro(l1b, 180)
-        self.cpf_entry.pack(side="left", padx=5)
+        mk_lbl(l1b, "CPF:", width=40).pack(side="left", padx=(10, 6))
+        self.cpf_entry = ro(l1b, 150); self.cpf_entry.pack(side="left")
 
-        ctk.CTkLabel(l1b, text="Banco:", width=70, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-        self.banco_entry = ro(l1b, 180)
-        self.banco_entry.pack(side="left", padx=5)
+        mk_lbl(l1b, "Banco:", width=50).pack(side="left", padx=(10, 6))
+        self.banco_entry = ro(l1b, 150); self.banco_entry.pack(side="left")
 
+        mk_lbl(l1b, "Agência:", width=55).pack(side="left", padx=(10, 6))
+        self.agencia_entry = ro(l1b, 120); self.agencia_entry.pack(side="left")
+
+        # linha 2: Conta | PIX | Titular
         l2b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l2b.pack(fill="x", pady=2)
+        l2b.pack(fill="x")
 
-        ctk.CTkLabel(l2b, text="Agência:", width=90, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-        self.agencia_entry = ro(l2b, 160)
-        self.agencia_entry.pack(side="left", padx=5)
+        mk_lbl(l2b, "Conta:", width=70).pack(side="left", padx=(0, 6))
+        self.conta_entry = ro(l2b, 170); self.conta_entry.pack(side="left")
 
-        ctk.CTkLabel(l2b, text="Conta:", width=60, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-        self.conta_entry = ro(l2b, 180)
-        self.conta_entry.pack(side="left", padx=5)
+        mk_lbl(l2b, "PIX:", width=40).pack(side="left", padx=(10, 6))
+        self.pix_entry = ro(l2b, 220); self.pix_entry.pack(side="left")
 
-        ctk.CTkLabel(l2b, text="PIX:", width=70, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-        self.pix_entry = ro(l2b, 220)
-        self.pix_entry.pack(side="left", padx=5)
+        mk_lbl(l2b, "Titular:", width=55).pack(side="left", padx=(10, 6))
+        self.titular_entry = ro(l2b, 260); self.titular_entry.pack(side="left")
 
-        l3b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l3b.pack(fill="x", pady=2)
-
-        ctk.CTkLabel(l3b, text="Titular da Conta:", width=140, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-        self.titular_entry = ro(l3b, 280)
-        self.titular_entry.pack(side="left", padx=5)
-
-        # Tabela de envios pendentes - MESMO ESTILO DO CADASTRO_DE_CORTE
+        # ================= Tabela de envios pendentes =================
         tabela_frame = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        tabela_frame.pack(fill="both", expand=True, pady=8)
+        tabela_frame.pack(fill="both", expand=False, pady=(0, 6))
 
-        # Configurar estilo da Treeview para combinar com o tema
         self.configurar_treeview_theme()
 
         cols = ["ID", "Ordem", "Código", "Descrição", "Prestador", "Data Envio", "Status", "Qtd Peças"]
-        self.envios_tree = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=7, style="Custom.Treeview")
+        self.envios_tree = ttk.Treeview(
+            tabela_frame, columns=cols, show="headings", height=6, style="Custom.Treeview"
+        )
 
         sb = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.envios_tree.yview)
         sb.pack(side="right", fill="y")
@@ -436,13 +465,15 @@ class RetornoCortes(ctk.CTkFrame):
         self.envios_tree.pack(fill="both", expand=True)
 
         for col in cols:
-            self.envios_tree.heading(col, text=col)
-            w = 100 if col in ["ID", "Status"] else (90 if col == "Qtd Peças" else 140)
-            self.envios_tree.column(col, width=w, anchor="center")
+            self.envios_tree.heading(col, text=col, anchor="center")
+            self.envios_tree.column(col, anchor="center", stretch=False)
+
+        self._configurar_treeview_envios_responsiva(tabela_frame, sb, cols)
+
         self.envios_tree.bind("<<TreeviewSelect>>", self.on_envio_selecionado)
         self.envios_tree.bind("<Double-1>", self._aviso_envio_em_conferencia)
 
-        # Cores por status - MESMO ESTILO DO CADASTRO_DE_CORTE
+        # Cores por status
         if ctk.get_appearance_mode() == "Dark":
             cor_linha_par = self.cor_fundo
             cor_linha_impar = self.cor_secundaria
@@ -458,261 +489,229 @@ class RetornoCortes(ctk.CTkFrame):
         except Exception:
             pass
 
-        # Detalhes do corte - MESMO ESTILO DO CADASTRO_DE_CORTE
-        det = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        det.pack(fill="x", pady=6)
-
-        l1 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
-        l1.pack(fill="x", pady=2)
-
-        ctk.CTkLabel(l1, text="Telefone Encarregado:", width=150, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-
-        self.tel_encarregado_entry = ctk.CTkEntry(l1, width=180,
-                                                  fg_color=self.cor_secundaria,
-                                                  border_color=self.cor_borda,
-                                                  text_color=self.cor_texto_entry)
-        self.tel_encarregado_entry.pack(side="left", padx=5)
-
-        ctk.CTkLabel(l1, text="Telefone Acabamento:", width=150, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-
-        self.tel_acabamento_entry = ctk.CTkEntry(l1, width=180,
-                                                 fg_color=self.cor_secundaria,
-                                                 border_color=self.cor_borda,
-                                                 text_color=self.cor_texto_entry)
-        self.tel_acabamento_entry.pack(side="left", padx=5)
-
-        ctk.CTkLabel(l1, text="Data de Chegada:", width=140, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-
-        self.data_chegada_entry = ctk.CTkEntry(l1, width=120,
-                                               fg_color=self.cor_secundaria,
-                                               border_color=self.cor_borda,
-                                               text_color=self.cor_texto_entry)
-        self.data_chegada_entry.pack(side="left", padx=5)
-        self.data_chegada_entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
-
-        l2 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
-        l2.pack(fill="x", pady=2)
-
-        ctk.CTkLabel(l2, text="Código:", width=70, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-
-        self.codigo_entry = ctk.CTkEntry(l2, width=180,
-                                         fg_color=self.cor_secundaria,
-                                         border_color=self.cor_borda,
-                                         text_color=self.cor_texto_entry)
-        self.codigo_entry.pack(side="left", padx=5)
-        self.codigo_entry.configure(state="disabled")
-
-        ctk.CTkLabel(l2, text="Descrição:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-
-        self.descricao_entry = ctk.CTkEntry(l2, width=380,
-                                            fg_color=self.cor_secundaria,
-                                            border_color=self.cor_borda,
-                                            text_color=self.cor_texto_entry)
-        self.descricao_entry.pack(side="left", padx=5)
-        self.descricao_entry.configure(state="disabled")
-
-        ctk.CTkLabel(l2, text="Nº Ordem:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
-
-        self.ordem_entry = ctk.CTkEntry(l2, width=120,
-                                        fg_color=self.cor_secundaria,
-                                        border_color=self.cor_borda,
-                                        text_color=self.cor_texto_entry)
-        self.ordem_entry.pack(side="left", padx=5)
-        self.ordem_entry.configure(state="disabled")
-
-        # Área central (2 colunas) - MESMO ESTILO DO CADASTRO_DE_CORTE
+        # ================= Área central (2 colunas) =================
         mid = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        mid.pack(fill="both", expand=True, pady=6)
+        mid.pack(fill="both", expand=True)
         mid.grid_columnconfigure(0, weight=3)
         mid.grid_columnconfigure(1, weight=2)
         mid.grid_rowconfigure(0, weight=1)
 
-        # ESQ — grade por tamanho - MESMO ESTILO DO CADASTRO_DE_CORTE
+        # ESQ — grade por tamanho
         left = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
-        ctk.CTkLabel(left, text="Controle por Tamanho", font=("Arial", 13, "bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=5, pady=(4, 6))
+        ctk.CTkLabel(left, text="Controle por Tamanho", font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto).pack(anchor="w", padx=4, pady=(2, 4))
 
         header_g = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         header_g.pack(fill="x")
 
         header_specs = [
-            ("Tam.", 60),
-            ("Enviado", 80),
-            ("Entregue", 90),
-            ("Pilotos enviadas", 120),
-            ("Defeito", 80),
-            ("Faltante", 80),
-            ("Regulares (pagas)", 120),
-            ("Valor/Peça", 100),
-            ("Subtotal", 110),
+            ("Tam.", 50),
+            ("Enviado", 70),
+            ("Entregue", 80),
+            ("Pilotos", 70),
+            ("Defeito", 70),
+            ("Faltante", 70),
+            ("Regulares", 90),
+            ("Valor", 80),
+            ("Subtotal", 90),
         ]
         for h, w in header_specs:
             lbl = ctk.CTkLabel(header_g, text=h, width=w, anchor="center",
-                               text_color=self.cor_texto)
+                               text_color=self.cor_texto, font=f_lbl)
             if h == "Entregue":
                 self.header_entregue_label = lbl
-            lbl.pack(side="left", padx=2)
+            lbl.pack(side="left", padx=1)
 
         self.grade_widgets = {}
         for tam in self.tamanhos:
             row = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-            row.pack(fill="x", pady=2)
+            row.pack(fill="x", pady=1)
 
-            ctk.CTkLabel(row, text=tam, width=60, anchor="center",
-                         text_color=self.cor_texto).pack(side="left", padx=2)
+            ctk.CTkLabel(row, text=tam, width=50, anchor="center",
+                         text_color=self.cor_texto, font=f_lbl).pack(side="left", padx=1)
 
-            lbl_env = ctk.CTkLabel(row, text="0", width=80, anchor="center",
-                                   text_color=self.cor_texto)
-            lbl_env.pack(side="left", padx=2)
+            lbl_env = ctk.CTkLabel(row, text="0", width=70, anchor="center",
+                                   text_color=self.cor_texto, font=f_lbl)
+            lbl_env.pack(side="left", padx=1)
 
-            ent_ent = ctk.CTkEntry(row, width=90, textvariable=self.entregues[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
-            ent_ent.pack(side="left", padx=2)
+            ent_ent = ctk.CTkEntry(row, width=80, height=entry_h, textvariable=self.entregues[tam],
+                                   fg_color=self.cor_secundaria, border_color=self.cor_borda,
+                                   text_color=self.cor_texto_entry, font=f_ent)
+            ent_ent.pack(side="left", padx=1)
             ent_ent.bind("<KeyRelease>", self._recalcular)
 
-            ent_cop = ctk.CTkEntry(row, width=80, textvariable=self.copias[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
-            ent_cop.pack(side="left", padx=2)
+            ent_cop = ctk.CTkEntry(row, width=70, height=entry_h, textvariable=self.copias[tam],
+                                   fg_color=self.cor_secundaria, border_color=self.cor_borda,
+                                   text_color=self.cor_texto_entry, font=f_ent)
+            ent_cop.pack(side="left", padx=1)
             ent_cop.bind("<KeyRelease>", self._recalcular)
 
-            ent_def = ctk.CTkEntry(row, width=80, textvariable=self.defeitos[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
-            ent_def.pack(side="left", padx=2)
+            ent_def = ctk.CTkEntry(row, width=70, height=entry_h, textvariable=self.defeitos[tam],
+                                   fg_color=self.cor_secundaria, border_color=self.cor_borda,
+                                   text_color=self.cor_texto_entry, font=f_ent)
+            ent_def.pack(side="left", padx=1)
             ent_def.bind("<KeyRelease>", self._recalcular)
 
-            ent_fal = ctk.CTkEntry(row, width=80, textvariable=self.faltantes[tam],
-                                   fg_color=self.cor_secundaria,
-                                   border_color=self.cor_borda,
-                                   text_color=self.cor_texto_entry)
-            ent_fal.pack(side="left", padx=2)
+            ent_fal = ctk.CTkEntry(row, width=70, height=entry_h, textvariable=self.faltantes[tam],
+                                   fg_color=self.cor_secundaria, border_color=self.cor_borda,
+                                   text_color=self.cor_texto_entry, font=f_ent)
+            ent_fal.pack(side="left", padx=1)
             ent_fal.bind("<KeyRelease>", self._recalcular)
 
-            lbl_reg = ctk.CTkLabel(row, text="0", width=120, anchor="center",
-                                   text_color=self.cor_texto)
-            lbl_reg.pack(side="left", padx=2)
+            lbl_reg = ctk.CTkLabel(row, text="0", width=90, anchor="center",
+                                   text_color=self.cor_texto, font=f_lbl)
+            lbl_reg.pack(side="left", padx=1)
 
-            lbl_val = ctk.CTkLabel(row, text=fmt_moeda(0), width=100, anchor="center",
-                                   text_color=self.cor_texto)
-            lbl_val.pack(side="left", padx=2)
+            lbl_val = ctk.CTkLabel(row, text=fmt_moeda(0), width=80, anchor="center",
+                                   text_color=self.cor_texto, font=f_lbl)
+            lbl_val.pack(side="left", padx=1)
 
-            lbl_sub = ctk.CTkLabel(row, text=fmt_moeda(0), width=110, anchor="center",
-                                   text_color=self.cor_texto)
-            lbl_sub.pack(side="left", padx=2)
+            lbl_sub = ctk.CTkLabel(row, text=fmt_moeda(0), width=90, anchor="center",
+                                   text_color=self.cor_texto, font=f_lbl)
+            lbl_sub.pack(side="left", padx=1)
 
             self.grade_widgets[tam] = {"enviado": lbl_env, "regulares": lbl_reg, "valor": lbl_val, "subtotal": lbl_sub}
 
         totais = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-        totais.pack(fill="x", pady=(6, 8))
+        totais.pack(fill="x", pady=(4, 4))
 
-        ctk.CTkLabel(totais, text="Total Entregue:", width=140, font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        def mk_total_lbl(parent, txt):
+            return ctk.CTkLabel(parent, text=txt, font=("Arial", 11, "bold"), text_color=self.cor_texto)
 
-        self.lbl_total_entregue = ctk.CTkLabel(totais, text="0", font=("Arial", 12, "bold"),
-                                               text_color=self.cor_texto)
-        self.lbl_total_entregue.pack(side="left", padx=5)
+        mk_total_lbl(totais, "Entregue:").pack(side="left", padx=(4, 4))
+        self.lbl_total_entregue = mk_total_lbl(totais, "0"); self.lbl_total_entregue.pack(side="left", padx=(0, 10))
 
-        ctk.CTkLabel(totais, text="Pilotos enviadas:", width=140, font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(side="left", padx=12)
+        mk_total_lbl(totais, "Pilotos:").pack(side="left", padx=(0, 4))
+        self.lbl_total_copias = mk_total_lbl(totais, "0"); self.lbl_total_copias.pack(side="left", padx=(0, 10))
 
-        self.lbl_total_copias = ctk.CTkLabel(totais, text="0", font=("Arial", 12, "bold"),
-                                             text_color=self.cor_texto)
-        self.lbl_total_copias.pack(side="left", padx=5)
+        mk_total_lbl(totais, "Regulares:").pack(side="left", padx=(0, 4))
+        self.lbl_total_regulares = mk_total_lbl(totais, "0"); self.lbl_total_regulares.pack(side="left", padx=(0, 10))
 
-        ctk.CTkLabel(totais, text="Regulares (pagas):", width=160, font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(side="left", padx=12)
-
-        self.lbl_total_regulares = ctk.CTkLabel(totais, text="0", font=("Arial", 12, "bold"),
-                                                text_color=self.cor_texto)
-        self.lbl_total_regulares.pack(side="left", padx=5)
-
-        ctk.CTkLabel(totais, text="Valor Total a Pagar:", width=170, font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(side="left", padx=12)
-
-        self.lbl_valor_total = ctk.CTkLabel(totais, text=fmt_moeda(0), font=("Arial", 12, "bold"),
-                                            text_color=self.cor_texto)
-        self.lbl_valor_total.pack(side="left", padx=5)
+        mk_total_lbl(totais, "Valor Total:").pack(side="left", padx=(0, 4))
+        self.lbl_valor_total = mk_total_lbl(totais, fmt_moeda(0)); self.lbl_valor_total.pack(side="left", padx=(0, 4))
 
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
-        botoes.pack(fill="x", pady=(2, 8))
+        botoes.pack(fill="x", pady=(0, 2))
 
-        ctk.CTkButton(botoes, text="Registrar Entrada", width=160, command=self.registrar_entrada,
+        ctk.CTkButton(botoes, text="Registrar Entrada", width=160, height=entry_h, command=self.registrar_entrada,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
-                      text_color=self.cor_texto, font=("Arial", 12)).pack(side="left", padx=5)
+                      text_color=self.cor_texto, font=f_ent).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Pré-visualizar PDF", width=150, command=self.pre_visualizar_pdf,
+        ctk.CTkButton(botoes, text="Pré-visualizar PDF", width=150, height=entry_h, command=self.pre_visualizar_pdf,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto, font=("Arial", 12)).pack(side="left", padx=5)
+                      text_color=self.cor_texto, font=f_ent).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Exportar PDF", width=120, command=self.exportar_pdf,
+        ctk.CTkButton(botoes, text="Exportar PDF", width=120, height=entry_h, command=self.exportar_pdf,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto, font=("Arial", 12)).pack(side="left", padx=5)
+                      text_color=self.cor_texto, font=f_ent).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Limpar", width=120, command=self.limpar_campos,
+        ctk.CTkButton(botoes, text="Limpar", width=110, height=entry_h, command=self.limpar_campos,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto, font=("Arial", 12)).pack(side="left", padx=5)
+                      text_color=self.cor_texto, font=f_ent).pack(side="left", padx=4)
 
-        # DIR — Piloto/Observações - MESMO ESTILO DO CADASTRO_DE_CORTE
+        # DIR — Piloto/Observações (compacto)
         right = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
         right.grid(row=0, column=1, sticky="nsew")
 
-        ctk.CTkLabel(right, text="Piloto Recebido:", font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(6, 2))
+        ctk.CTkLabel(right, text="Piloto Recebido:", font=("Arial", 11, "bold"),
+                     text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(2, 0))
 
         self.piloto_resumo_lbl = ctk.CTkLabel(right, text="Nenhum.", justify="left",
-                                              text_color=self.cor_texto)
-        self.piloto_resumo_lbl.pack(fill="x", padx=6)
+                                              text_color=self.cor_texto, font=f_lbl)
+        self.piloto_resumo_lbl.pack(fill="x", padx=6, pady=(0, 2))
 
         self.cb_piloto_entregue = ctk.CTkCheckBox(
             right,
-            text="Piloto entregue? (dar baixa na piloto ao salvar)",
+            text="Piloto entregue? (baixar ao salvar)",
             variable=self.piloto_entregue_var,
             fg_color=self.cor_selecao,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
-            checkmark_color=self.cor_texto
+            checkmark_color=self.cor_texto,
+            font=f_lbl
         )
-        self.cb_piloto_entregue.pack(anchor="w", padx=6, pady=(4, 8))
+        self.cb_piloto_entregue.pack(anchor="w", padx=6, pady=(0, 6))
 
-        ctk.CTkLabel(right, text="Aviamentos Recebidos:", font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(8, 2))
+        ctk.CTkLabel(right, text="Aviamentos:", font=("Arial", 11, "bold"),
+                     text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(0, 2))
 
-        self.aviamentos_txt = ctk.CTkTextbox(right, height=90,
+        self.aviamentos_txt = ctk.CTkTextbox(right, height=70,
                                              fg_color=self.cor_secundaria,
                                              border_color=self.cor_borda,
                                              text_color=self.cor_texto_entry)
         self.aviamentos_txt.pack(fill="x", padx=6)
 
-        ctk.CTkLabel(right, text="Outros (linha, renda, aparelhos, etc.) — Recebidos:",
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(8, 2))
+        ctk.CTkLabel(right, text="Outros:", font=("Arial", 11, "bold"),
+                     text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(6, 2))
 
-        self.outros_txt = ctk.CTkTextbox(right, height=90,
+        self.outros_txt = ctk.CTkTextbox(right, height=70,
                                          fg_color=self.cor_secundaria,
                                          border_color=self.cor_borda,
                                          text_color=self.cor_texto_entry)
         self.outros_txt.pack(fill="x", padx=6)
 
-        ctk.CTkLabel(right, text="Observações Gerais:", font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(8, 2))
+        ctk.CTkLabel(right, text="Observações:", font=("Arial", 11, "bold"),
+                     text_color=self.cor_texto).pack(anchor="w", padx=6, pady=(6, 2))
 
-        self.obs_geral_txt = ctk.CTkTextbox(right, height=140,
+        self.obs_geral_txt = ctk.CTkTextbox(right, height=110,
                                             fg_color=self.cor_secundaria,
                                             border_color=self.cor_borda,
                                             text_color=self.cor_texto_entry)
         self.obs_geral_txt.pack(fill="both", expand=True, padx=6, pady=(0, 6))
+
+    def _configurar_treeview_envios_responsiva(self, tabela_frame, sb, cols):
+        """Auto-ajuste das colunas para caber no frame (evita scrollbar horizontal)."""
+        self._env_cols = list(cols)
+        self._env_minw = {
+            "ID": 55, "Ordem": 90, "Código": 80, "Descrição": 220,
+            "Prestador": 160, "Data Envio": 95, "Status": 110, "Qtd Peças": 80
+        }
+        self._env_weight = {
+            "ID": 1.0, "Ordem": 2.0, "Código": 1.6, "Descrição": 6.2,
+            "Prestador": 3.2, "Data Envio": 2.0, "Status": 2.0, "Qtd Peças": 1.5
+        }
+        self._env_resize_after = None
+
+        def _schedule(_evt=None):
+            if self._env_resize_after:
+                self.after_cancel(self._env_resize_after)
+            self._env_resize_after = self.after(80, lambda: self._ajustar_colunas_envios(tabela_frame, sb))
+
+        tabela_frame.bind("<Configure>", _schedule)
+        self.envios_tree.bind("<Configure>", _schedule)
+        self.after(80, lambda: self._ajustar_colunas_envios(tabela_frame, sb))
+
+    def _ajustar_colunas_envios(self, tabela_frame, sb):
+        try:
+            frame_w = tabela_frame.winfo_width()
+            if frame_w <= 10:
+                return
+            sb_w = max(sb.winfo_width(), sb.winfo_reqwidth(), 18)
+            avail = frame_w - sb_w - 6
+            if avail <= 50:
+                return
+
+            weights_sum = sum(self._env_weight.get(c, 1.0) for c in self._env_cols) or 1.0
+
+            widths = {}
+            for c in self._env_cols:
+                w = int(avail * (self._env_weight.get(c, 1.0) / weights_sum))
+                w = max(self._env_minw.get(c, 40), w)
+                widths[c] = w
+
+            used = sum(widths.values())
+            diff = avail - used
+            alvo = "Descrição" if "Descrição" in widths else self._env_cols[0]
+            widths[alvo] = max(self._env_minw.get(alvo, 40), widths[alvo] + diff)
+
+            for c in self._env_cols:
+                self.envios_tree.heading(c, anchor="center")
+                self.envios_tree.column(c, width=widths[c], minwidth=self._env_minw.get(c, 40),
+                                        anchor="center", stretch=False)
+        except Exception:
+            pass
 
     # ----------------------------- Loaders -----------------------------
     def carregar_envios_pendentes(self):

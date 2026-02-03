@@ -5,6 +5,8 @@ from SPLASH import SplashScreenModern
 from LOGUIN import SistemaLoginModerno
 
 
+
+
 def main():
     ctk.set_appearance_mode("Dark")
 

@@ -7,6 +7,9 @@ import time
 
 import customtkinter as ctk
 
+
+
+from UI_TREEVIEW_OPERA import instalar_cabecalho_treeview
 try:
     from PIL import Image, ImageTk
 except Exception:
@@ -73,6 +76,12 @@ class SistemaLoginModerno:
         self.root = root
         self.root.title("OPERA FASHION - Login")
 
+
+        # Treeview: cabeçalho global (cinza + hover)
+        try:
+            instalar_cabecalho_treeview()
+        except Exception:
+            pass
         try:
             self.root.state("zoomed")
         except Exception:

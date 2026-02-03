@@ -7,6 +7,8 @@ git push origin main
 ___________________________________________________________________________________
 
 empurrar forçado
+git status
+git add -A
 git fetch origin
 git push --force-with-lease origin main
 

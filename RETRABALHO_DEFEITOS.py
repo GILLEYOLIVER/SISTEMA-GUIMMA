@@ -524,6 +524,47 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             return valor.strftime("%d/%m/%Y")
         return str(valor or "")
 
+
+    def _centralizar_toplevel(self, win: ctk.CTkToplevel, largura=None, altura=None, parent=None, pad=20):
+        """Centraliza a janela e garante que fique totalmente visível na tela."""
+        try:
+            win.update_idletasks()
+            if largura is None:
+                largura = max(int(win.winfo_reqwidth()), int(win.winfo_width()))
+            if altura is None:
+                altura = max(int(win.winfo_reqheight()), int(win.winfo_height()))
+
+            sw = int(win.winfo_screenwidth())
+            sh = int(win.winfo_screenheight())
+
+            max_w = max(200, sw - pad * 2)
+            max_h = max(200, sh - pad * 2)
+            largura = min(int(largura), max_w)
+            altura = min(int(altura), max_h)
+
+            if parent is not None:
+                try:
+                    parent.update_idletasks()
+                    px = int(parent.winfo_rootx())
+                    py = int(parent.winfo_rooty())
+                    pw = int(parent.winfo_width())
+                    ph = int(parent.winfo_height())
+                    x = px + (pw - largura) // 2
+                    y = py + (ph - altura) // 2
+                except Exception:
+                    x = (sw - largura) // 2
+                    y = (sh - altura) // 2
+            else:
+                x = (sw - largura) // 2
+                y = (sh - altura) // 2
+
+            x = max(pad, min(int(x), sw - largura - pad))
+            y = max(pad, min(int(y), sh - altura - pad))
+
+            win.geometry(f"{largura}x{altura}+{x}+{y}")
+        except Exception:
+            pass
+
     def _abrir_calendario(self, entry, parent=None):
         from datetime import datetime
         import calendar as _cal
@@ -1195,55 +1236,71 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
 
         return caminho_pdf
 
+
     def _abrir_janela_envio_defeito(self, dados, origem, status):
         values = list(dados["values"])
         if len(values) < 8:
             values.extend([""] * (8 - len(values)))
         data, envio_id, codigo, desc, prestador, tamanho, qtd, servico = values[:8]
+
         envio_id_num = int(envio_id) if str(envio_id).isdigit() else None
         envio_info = self._carregar_info_envio(envio_id_num)
         prestador_info = self._carregar_info_prestador(envio_info.get("prestador_id"), prestador)
 
         janela = ctk.CTkToplevel(self)
         janela.title("Pré-visualização do envio de defeito")
-        janela.geometry("780x640")
+        janela.resizable(True, True)
+
+        # comportamento de modal
+        try:
+            janela.transient(self.winfo_toplevel())
+        except Exception:
+            pass
         janela.grab_set()
+        janela.focus_force()
+        janela.lift()
+
+        # layout: área rolável + barra de botões fixa (evita cortar)
+        janela.grid_rowconfigure(0, weight=1)
+        janela.grid_rowconfigure(1, weight=0)
+        janela.grid_columnconfigure(0, weight=1)
+
+        body = ctk.CTkScrollableFrame(janela, fg_color="transparent")
+        body.grid(row=0, column=0, sticky="nsew", padx=14, pady=(14, 8))
+        body.grid_columnconfigure(0, weight=0)
+        body.grid_columnconfigure(1, weight=1)
 
         def _add_row(label, value, row):
-            ctk.CTkLabel(janela, text=label, text_color=self.cor_texto).grid(
-                row=row, column=0, sticky="w", padx=12, pady=4
+            ctk.CTkLabel(body, text=label, text_color=self.cor_texto).grid(
+                row=row, column=0, sticky="w", padx=(0, 10), pady=4
             )
-            lbl = ctk.CTkLabel(janela, text=value, text_color=self.cor_texto)
-            lbl.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+            lbl = ctk.CTkLabel(body, text=value, text_color=self.cor_texto)
+            lbl.grid(row=row, column=1, sticky="w", pady=4)
 
         row = 0
-        _add_row("Prestador:", prestador, row)
-        row += 1
-        _add_row("Código:", codigo, row)
-        row += 1
-        _add_row("Descrição:", desc, row)
-        row += 1
-        _add_row("Tamanho:", tamanho, row)
-        row += 1
-        _add_row("Quantidade:", qtd, row)
-        row += 1
-        _add_row("Serviço:", servico, row)
-        row += 1
+        _add_row("Prestador:", prestador, row); row += 1
+        _add_row("Código:", codigo, row); row += 1
+        _add_row("Descrição:", desc, row); row += 1
+        _add_row("Tamanho:", tamanho, row); row += 1
+        _add_row("Quantidade:", qtd, row); row += 1
+        _add_row("Serviço:", servico, row); row += 1
 
-        ctk.CTkLabel(janela, text="Data Envio:", text_color=self.cor_texto).grid(
-            row=row, column=0, sticky="w", padx=12, pady=4
+        # Data envio
+        ctk.CTkLabel(body, text="Data Envio:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=(0, 10), pady=4
         )
-        data_envio_entry = ctk.CTkEntry(janela, width=140)
+        data_envio_entry = ctk.CTkEntry(body, width=160)
         data_envio_entry.insert(0, self._format_date(envio_info.get("data_envio") or datetime.now().date()))
-        data_envio_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        data_envio_entry.grid(row=row, column=1, sticky="w", pady=4)
         row += 1
 
-        ctk.CTkLabel(janela, text="Previsão Entrega:", text_color=self.cor_texto).grid(
-            row=row, column=0, sticky="w", padx=12, pady=4
+        # Previsão entrega + calendário
+        ctk.CTkLabel(body, text="Previsão Entrega:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=(0, 10), pady=4
         )
-        previsao_frame = ctk.CTkFrame(janela, fg_color="transparent")
-        previsao_frame.grid(row=row, column=1, sticky="w", padx=12, pady=4)
-        previsao_entry = ctk.CTkEntry(previsao_frame, width=140)
+        previsao_frame = ctk.CTkFrame(body, fg_color="transparent")
+        previsao_frame.grid(row=row, column=1, sticky="w", pady=4)
+        previsao_entry = ctk.CTkEntry(previsao_frame, width=160)
         previsao_entry.insert(0, self._format_date(envio_info.get("previsao_entrega")))
         previsao_entry.pack(side="left")
         ctk.CTkButton(
@@ -1255,57 +1312,60 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         previsao_entry.bind("<Double-Button-1>", lambda e: self._abrir_calendario(previsao_entry, parent=janela))
         row += 1
 
-        ctk.CTkLabel(janela, text="Valor/Peça:", text_color=self.cor_texto).grid(
-            row=row, column=0, sticky="w", padx=12, pady=4
+        # Valor/peça
+        ctk.CTkLabel(body, text="Valor/Peça:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=(0, 10), pady=4
         )
-        valor_entry = ctk.CTkEntry(janela, width=140)
+        valor_entry = ctk.CTkEntry(body, width=160)
         valor_entry.insert(0, f"{self._valor_peca_atual():.2f}")
-        valor_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        valor_entry.grid(row=row, column=1, sticky="w", pady=4)
         row += 1
 
-        ctk.CTkLabel(janela, text="Tel. Encarregado:", text_color=self.cor_texto).grid(
-            row=row, column=0, sticky="w", padx=12, pady=4
+        # Telefones
+        ctk.CTkLabel(body, text="Tel. Encarregado:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=(0, 10), pady=4
         )
-        tel_encarregado_entry = ctk.CTkEntry(janela, width=200)
+        tel_encarregado_entry = ctk.CTkEntry(body)
         tel_encarregado_entry.insert(0, envio_info.get("tel_encarregado") or "")
-        tel_encarregado_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        tel_encarregado_entry.grid(row=row, column=1, sticky="ew", pady=4)
         row += 1
 
-        ctk.CTkLabel(janela, text="Tel. Acabamento:", text_color=self.cor_texto).grid(
-            row=row, column=0, sticky="w", padx=12, pady=4
+        ctk.CTkLabel(body, text="Tel. Acabamento:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="w", padx=(0, 10), pady=4
         )
-        tel_acabamento_entry = ctk.CTkEntry(janela, width=200)
+        tel_acabamento_entry = ctk.CTkEntry(body)
         tel_acabamento_entry.insert(0, envio_info.get("tel_acabamento") or "")
-        tel_acabamento_entry.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        tel_acabamento_entry.grid(row=row, column=1, sticky="ew", pady=4)
         row += 1
 
-        ctk.CTkLabel(janela, text="Aviamentos:", text_color=self.cor_texto).grid(
-            row=row, column=0, sticky="nw", padx=12, pady=4
+        # Textos (com largura elástica)
+        ctk.CTkLabel(body, text="Aviamentos:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="nw", padx=(0, 10), pady=4
         )
-        aviamentos_text = ctk.CTkTextbox(janela, width=420, height=60)
-        aviamentos_text.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        aviamentos_text = ctk.CTkTextbox(body, height=70)
+        aviamentos_text.grid(row=row, column=1, sticky="ew", pady=4)
         row += 1
 
-        ctk.CTkLabel(janela, text="Outros:", text_color=self.cor_texto).grid(
-            row=row, column=0, sticky="nw", padx=12, pady=4
+        ctk.CTkLabel(body, text="Outros:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="nw", padx=(0, 10), pady=4
         )
-        outros_text = ctk.CTkTextbox(janela, width=420, height=60)
-        outros_text.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        outros_text = ctk.CTkTextbox(body, height=70)
+        outros_text.grid(row=row, column=1, sticky="ew", pady=4)
         row += 1
 
-        ctk.CTkLabel(janela, text="Observações:", text_color=self.cor_texto).grid(
-            row=row, column=0, sticky="nw", padx=12, pady=4
+        ctk.CTkLabel(body, text="Observações:", text_color=self.cor_texto).grid(
+            row=row, column=0, sticky="nw", padx=(0, 10), pady=4
         )
-        observacoes_text = ctk.CTkTextbox(janela, width=420, height=80)
-        observacoes_text.grid(row=row, column=1, sticky="w", padx=12, pady=4)
+        observacoes_text = ctk.CTkTextbox(body, height=90)
+        observacoes_text.grid(row=row, column=1, sticky="ew", pady=4)
         row += 1
 
         def _coletar_pdf_data():
-            valor = 0.0
             try:
-                valor = float(valor_entry.get().replace(",", "."))
+                valor = float((valor_entry.get() or "0").replace(",", "."))
             except Exception:
                 valor = 0.0
+
             defeito_info = {
                 "codigo": codigo,
                 "descricao": desc,
@@ -1342,20 +1402,15 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
 
         def _confirmar_envio():
             _, defeito_info = _coletar_pdf_data()
-            data_envio = defeito_info.get("data_envio")
-            valor = defeito_info.get("valor_peca")
-            previsao = defeito_info.get("previsao_entrega")
-            tel_enc = defeito_info.get("tel_encarregado")
-            tel_ac = defeito_info.get("tel_acabamento")
             self._registrar_defeito(
                 dados,
                 origem=origem,
                 status=status,
-                data_envio=data_envio,
-                valor_peca=valor,
-                previsao_entrega=previsao,
-                tel_encarregado=tel_enc,
-                tel_acabamento=tel_ac,
+                data_envio=defeito_info.get("data_envio"),
+                valor_peca=defeito_info.get("valor_peca"),
+                previsao_entrega=defeito_info.get("previsao_entrega"),
+                tel_encarregado=defeito_info.get("tel_encarregado"),
+                tel_acabamento=defeito_info.get("tel_acabamento"),
                 aviamentos=defeito_info.get("aviamentos"),
                 outros=defeito_info.get("outros"),
                 observacoes=defeito_info.get("observacoes"),
@@ -1364,16 +1419,35 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             messagebox.showinfo("Sucesso", "Defeito enviado com sucesso.")
 
         botoes = ctk.CTkFrame(janela, fg_color="transparent")
-        botoes.grid(row=row, column=0, columnspan=2, pady=12)
-        ctk.CTkButton(botoes, text="Pré-visualizar", command=_pre_visualizar,
-                      fg_color=self.cor_alerta, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=6)
-        ctk.CTkButton(botoes, text="Enviar", command=_confirmar_envio,
-                      fg_color=self.cor_sucesso, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=6)
-        ctk.CTkButton(botoes, text="Cancelar", command=janela.destroy,
-                      fg_color=self.cor_destaque, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=6)
+        botoes.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 14))
+        botoes.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkButton(
+            botoes, text="Pré-visualizar", command=_pre_visualizar,
+            fg_color=self.cor_alerta, hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=6)
+        ctk.CTkButton(
+            botoes, text="Enviar", command=_confirmar_envio,
+            fg_color=self.cor_sucesso, hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=6)
+        ctk.CTkButton(
+            botoes, text="Cancelar", command=janela.destroy,
+            fg_color=self.cor_destaque, hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        ).pack(side="left", padx=6)
+
+        # Ajusta tamanho e centraliza (sem sair da tela). Se precisar, rola o conteúdo sem cortar.
+        janela.update_idletasks()
+        sw = janela.winfo_screenwidth()
+        sh = janela.winfo_screenheight()
+        req_w = max(720, janela.winfo_reqwidth())
+        req_h = max(520, janela.winfo_reqheight())
+        w = min(req_w + 30, int(sw * 0.92))
+        h = min(req_h + 30, int(sh * 0.90))
+        self._centralizar_toplevel(janela, w, h, parent=self.winfo_toplevel())
+
 
     def _get_defeito_processo(self):
         sel = self.proc_tree.selection()

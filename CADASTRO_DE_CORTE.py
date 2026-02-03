@@ -170,7 +170,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                              fieldbackground=cor_campo,
                              borderwidth=0,
                              highlightthickness=0,
-                             rowheight=25)
+                             rowheight=22)
 
         self.style.configure("Custom.Treeview.Heading",
                              background=self.cor_primaria,
@@ -405,19 +405,20 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             return "OC0001"
 
     def setup_ui(self):
-        """Configuração completa da interface gráfica com MESMO ESTILO DA ENTRADA_ESTOQUE"""
+        """Configuração completa da interface gráfica com MESMO ESTILO DA ENTRADA_ESTOQUE (compacta e sem erros de aspas)."""
         # Atualiza cores baseado no tema atual
         self.obter_cores_por_tema()
 
         # Frame principal
         main_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        main_frame.pack(fill="both", expand=True, padx=8, pady=8)
 
-        # ========== CABEÇALHO - MESMO ESTILO DA SAÍDA ==========
+        # =========================
+        # CABEÇALHO (compacto)
+        # =========================
         header_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
-        header_frame.pack(fill="x", pady=(0, 10))
+        header_frame.pack(fill="x", pady=(0, 6))
 
-        # Título alinhado à esquerda - MESMO ESTILO DA SAÍDA
         ctk.CTkLabel(
             header_frame,
             text="CADASTRO DE ORDEM DE CORTE",
@@ -426,31 +427,23 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         ).pack(side="left", padx=10)
 
         # Logo
-        if hasattr(self, 'logo_image') and self.logo_image:
-            logo_label = ctk.CTkLabel(header_frame, image=self.logo_image, text="")
-            logo_label.pack(side="right", padx=10)
+        if hasattr(self, "logo_image") and self.logo_image:
+            ctk.CTkLabel(header_frame, image=self.logo_image, text="").pack(side="right", padx=10)
         else:
-            ctk.CTkLabel(
-                header_frame,
-                text="[LOGO NÃO CARREGADA]",
-                text_color="red"
-            ).pack(side="right")
+            ctk.CTkLabel(header_frame, text="[LOGO NÃO CARREGADA]", text_color="red").pack(side="right", padx=10)
 
-        # ========== INFORMAÇÕES BÁSICAS - MESMO ESTILO DA SAÍDA ==========
+        # =========================
+        # INFORMAÇÕES BÁSICAS (compacto)
+        # =========================
         info_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
-        info_frame.pack(fill="x", pady=5)
+        info_frame.pack(fill="x", pady=4)
 
-        # Linha 1: Número da Ordem
+        # Linha 1: Nº Ordem
         ordem_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
-        ordem_frame.pack(fill="x", pady=2)
+        ordem_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(
-            ordem_frame,
-            text="Nº ORDEM:",
-            width=80,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(ordem_frame, text="Nº ORDEM:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
+                                                                                                          padx=5)
 
         self.numero_ordem_entry = ctk.CTkEntry(
             ordem_frame,
@@ -460,20 +453,15 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             text_color=self.cor_texto_entry
         )
         self.numero_ordem_entry.pack(side="left", padx=5)
-        self.numero_ordem_entry.insert(0, self.numero_ordem)
+        self.numero_ordem_entry.insert(0, getattr(self, "numero_ordem", ""))
         self.numero_ordem_entry.configure(state="readonly")
 
-        # Linha 2: Código e Descrição (ENTRADAS ENCURTADAS)
+        # Linha 2: Código + Descrição
         codigo_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
-        codigo_frame.pack(fill="x", pady=2)
+        codigo_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(
-            codigo_frame,
-            text="CÓDIGO:",
-            width=80,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(codigo_frame, text="CÓDIGO:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
+                                                                                                         padx=5)
 
         self.codigo_entry = ctk.CTkEntry(
             codigo_frame,
@@ -486,40 +474,29 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.codigo_entry.bind("<FocusOut>", self.buscar_descricao_por_codigo)
         self.codigo_entry.bind("<Return>", self.buscar_descricao_por_codigo)
 
-        ctk.CTkLabel(
-            codigo_frame,
-            text="DESCRIÇÃO:",
-            width=80,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(codigo_frame, text="DESCRIÇÃO:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
+                                                                                                            padx=5)
 
-        # antes: sem width + fill="x", expand=True (muito alongado)
         self.descricao_entry = ctk.CTkEntry(
             codigo_frame,
-            width=450,  # largura controlada
+            width=450,
             fg_color=self.cor_secundaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
         self.descricao_entry.pack(side="left", padx=5)
 
-        # Linha 3: Modelo (COMBOBOX ENCURTADA)
+        # Linha 3: Modelo + recarregar
         sel_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
-        sel_frame.pack(fill="x", pady=2)
+        sel_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(
-            sel_frame,
-            text="MODELO:",
-            width=120,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(sel_frame, text="MODELO:", width=120, anchor="e", text_color=self.cor_texto).pack(side="left",
+                                                                                                       padx=5)
 
         self.modelo_ocf_cb = ctk.CTkComboBox(
             sel_frame,
             values=[],
-            width=350,  # antes 280 + expand; agora largura fixa
+            width=350,
             command=self._on_modelo_ocf_selected,
             fg_color=self.cor_secundaria,
             border_color=self.cor_borda,
@@ -544,15 +521,10 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         # Linha 4: Dimensões
         dimensoes_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
-        dimensoes_frame.pack(fill="x", pady=2)
+        dimensoes_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(
-            dimensoes_frame,
-            text="COMPRIMENTO (m):",
-            width=120,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(dimensoes_frame, text="COMPRIMENTO (m):", width=120, anchor="e", text_color=self.cor_texto).pack(
+            side="left", padx=5)
 
         self.comprimento_entry = ctk.CTkEntry(
             dimensoes_frame,
@@ -567,13 +539,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.comprimento_entry.pack(side="left", padx=5)
         self.comprimento_entry.insert(0, "7.35")
 
-        ctk.CTkLabel(
-            dimensoes_frame,
-            text="LARGURA (m):",
-            width=100,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(dimensoes_frame, text="LARGURA (m):", width=100, anchor="e", text_color=self.cor_texto).pack(
+            side="left", padx=5)
 
         self.largura_entry = ctk.CTkEntry(
             dimensoes_frame,
@@ -588,38 +555,28 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.largura_entry.pack(side="left", padx=5)
         self.largura_entry.insert(0, "1.48")
 
-        # Linha 5: Pessoal (ENTRADAS ENCURTADAS)
+        # Linha 5: Pessoal
         pessoal_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
-        pessoal_frame.pack(fill="x", pady=2)
+        pessoal_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(
-            pessoal_frame,
-            text="CORTADOR:",
-            width=80,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(pessoal_frame, text="CORTADOR:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
+                                                                                                            padx=5)
 
         self.cortador_entry = ctk.CTkEntry(
             pessoal_frame,
-            width=260,  # antes fill="x", expand=True
+            width=260,
             fg_color=self.cor_secundaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
         )
         self.cortador_entry.pack(side="left", padx=5)
 
-        ctk.CTkLabel(
-            pessoal_frame,
-            text="AJUDANTE:",
-            width=80,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(pessoal_frame, text="AJUDANTE:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
+                                                                                                            padx=5)
 
         self.ajudante_entry = ctk.CTkEntry(
             pessoal_frame,
-            width=260,  # antes fill="x", expand=True
+            width=260,
             fg_color=self.cor_secundaria,
             border_color=self.cor_borda,
             text_color=self.cor_texto_entry
@@ -628,15 +585,10 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         # Linha 6: Data
         data_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
-        data_frame.pack(fill="x", pady=2)
+        data_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(
-            data_frame,
-            text="DATA:",
-            width=80,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(data_frame, text="DATA:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
+                                                                                                     padx=5)
 
         self.data_entry = ctk.CTkEntry(
             data_frame,
@@ -648,35 +600,32 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.data_entry.pack(side="left", padx=5)
         self.data_entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
 
-        # ========== TABELA DE TECIDOS - MESMO ESTILO DA SAÍDA ==========
+        # =========================
+        # TABELA DE TECIDOS
+        # =========================
         table_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
-        table_frame.pack(fill="both", expand=True, pady=10)
+        table_frame.pack(fill="both", expand=True, pady=8)
 
-        # Configurar estilo da Treeview para combinar com o tema
+        # Tema da Treeview
         self.configurar_treeview_theme()
 
-        # Criar tabela
-        columns = ["tecido", "col1", "cor", "col2", "composicao", "col3",
-                   "BOBINAS", "col4", "folhas", "col5"] + self.tamanhos + ["total"]
-        headers = ["TECIDO", "", "COR", "", "COMPOSIÇÃO", "",
-                   "BOBINAS", "", "FOLHAS", ""] + self.tamanhos + ["TOTAL PEÇAS"]
+        columns = ["tecido", "col1", "cor", "col2", "composicao", "col3", "BOBINAS", "col4", "folhas",
+                   "col5"] + self.tamanhos + ["total"]
+        headers = ["TECIDO", "", "COR", "", "COMPOSIÇÃO", "", "BOBINAS", "", "FOLHAS", ""] + self.tamanhos + [
+            "TOTAL PEÇAS"]
 
-        self.tree = ttk.Treeview(
-            table_frame,
-            columns=columns,
-            show="headings",
-            height=5,
-            style="Custom.Treeview"
-        )
+        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=4, style="Custom.Treeview")
 
         for col, header in zip(columns, headers):
-            self.tree.heading(col, text=header)
+            self.tree.heading(col, text=header, anchor="center")
+            # largura inicial (vai ser recalculada pela responsiva)
             if header in self.tamanhos or header in ["BOBINAS", "FOLHAS", "TOTAL PEÇAS"]:
                 self.tree.column(col, width=60, anchor="center")
             elif header in ["TECIDO", "COR", "COMPOSIÇÃO"]:
-                self.tree.column(col, width=120, anchor="w")
+                # alinhamento inicial (será centralizado pela responsiva)
+                self.tree.column(col, width=120, anchor="center")
             else:
-                self.tree.column(col, width=5, stretch=False)
+                self.tree.column(col, width=5, stretch=False, anchor="center")
 
         self.tree.column("total", width=80, anchor="center")
 
@@ -685,7 +634,23 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(fill="both", expand=True)
 
-        # Configurar cores das linhas alternadas
+        # Auto-ajuste: colunas cabem no frame (sem scroll horizontal) + centraliza
+        self._configurar_treeview_responsiva_generic(
+            container=table_frame,
+            tree=self.tree,
+            scrollbar=scrollbar,
+            columns=columns,
+            min_widths={
+                "tecido": 120, "cor": 90, "composicao": 120, "BOBINAS": 60, "folhas": 60, "total": 70,
+                "col1": 6, "col2": 6, "col3": 6, "col4": 6, "col5": 6
+            },
+            weights={
+                "tecido": 4.5, "cor": 2.2, "composicao": 3.2, "BOBINAS": 1.3, "folhas": 1.3, "total": 1.6,
+                "col1": 0.1, "col2": 0.1, "col3": 0.1, "col4": 0.1, "col5": 0.1
+            }
+        )
+
+        # Cores alternadas
         if ctk.get_appearance_mode() == "Dark":
             cor_linha_par = self.cor_fundo
             cor_linha_impar = self.cor_secundaria
@@ -696,7 +661,9 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.tree.tag_configure("oddrow", background=cor_linha_impar)
         self.tree.tag_configure("evenrow", background=cor_linha_par)
 
-        # ========== BOTÕES DE AÇÃO - MESMO ESTILO DA SAÍDA ==========
+        # =========================
+        # BOTÕES DE AÇÃO
+        # =========================
         button_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         button_frame.pack(fill="x", pady=5)
 
@@ -731,38 +698,30 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             font=("Arial", 12)
         ).pack(side="left", padx=5)
 
-        # ========== TABELA DE LOTES - MESMO ESTILO DA SAÍDA ==========
+        # =========================
+        # TABELA DE LOTES
+        # =========================
         lotes_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
-        lotes_frame.pack(fill="both", expand=True, pady=10)
+        lotes_frame.pack(fill="both", expand=True, pady=8)
 
-        lote_columns = [
-                           "numero", "tecido", "col1", "cor", "col2", "composicao",
-                           "col3", "bobinas", "col4", "folhas", "col5"
-                       ] + self.tamanhos + ["total"]
+        lote_columns = ["numero", "tecido", "col1", "cor", "col2", "composicao", "col3", "bobinas", "col4", "folhas",
+                        "col5"] + self.tamanhos + ["total"]
+        lote_headers = ["NUMERO", "TECIDO", "", "COR", "", "COMPOSIÇÃO", "", "BOBINAS", "", "FOLHAS",
+                        ""] + self.tamanhos + ["TOTAL LOTE"]
 
-        lote_headers = [
-                           "NUMERO", "TECIDO", "", "COR", "", "COMPOSIÇÃO",
-                           "", "BOBINAS", "", "FOLHAS", ""
-                       ] + self.tamanhos + ["TOTAL LOTE"]
-
-        self.lotes_tree = ttk.Treeview(
-            lotes_frame,
-            columns=lote_columns,
-            show="headings",
-            height=5,
-            style="Custom.Treeview"
-        )
+        self.lotes_tree = ttk.Treeview(lotes_frame, columns=lote_columns, show="headings", height=4,
+                                       style="Custom.Treeview")
 
         for col, header in zip(lote_columns, lote_headers):
-            self.lotes_tree.heading(col, text=header)
+            self.lotes_tree.heading(col, text=header, anchor="center")
             if header == "NUMERO":
                 self.lotes_tree.column(col, width=80, anchor="center")
             elif header == "TECIDO":
-                self.lotes_tree.column(col, width=150, anchor="w")
+                self.lotes_tree.column(col, width=150, anchor="center")
             elif header == "COR":
-                self.lotes_tree.column(col, width=100, anchor="w")
+                self.lotes_tree.column(col, width=100, anchor="center")
             elif header == "COMPOSIÇÃO":
-                self.lotes_tree.column(col, width=150, anchor="w")
+                self.lotes_tree.column(col, width=150, anchor="center")
             elif header == "BOBINAS":
                 self.lotes_tree.column(col, width=80, anchor="center")
             elif header == "FOLHAS":
@@ -772,18 +731,36 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             elif header == "TOTAL LOTE":
                 self.lotes_tree.column(col, width=90, anchor="center")
             else:
-                self.lotes_tree.column(col, width=5, stretch=False)
+                self.lotes_tree.column(col, width=5, stretch=False, anchor="center")
 
         scrollbar_lotes = ttk.Scrollbar(lotes_frame, orient="vertical", command=self.lotes_tree.yview)
         scrollbar_lotes.pack(side="right", fill="y")
         self.lotes_tree.configure(yscrollcommand=scrollbar_lotes.set)
         self.lotes_tree.pack(fill="both", expand=True)
 
-        # Configurar cores das linhas alternadas
+        # Auto-ajuste lotes (sem scroll horizontal) + centraliza
+        self._configurar_treeview_responsiva_generic(
+            container=lotes_frame,
+            tree=self.lotes_tree,
+            scrollbar=scrollbar_lotes,
+            columns=lote_columns,
+            min_widths={
+                "numero": 70, "tecido": 120, "cor": 90, "composicao": 120, "bobinas": 60, "folhas": 60, "total": 70,
+                "col1": 6, "col2": 6, "col3": 6, "col4": 6, "col5": 6
+            },
+            weights={
+                "numero": 1.4, "tecido": 4.0, "cor": 2.2, "composicao": 3.0, "bobinas": 1.2, "folhas": 1.2,
+                "total": 1.6,
+                "col1": 0.1, "col2": 0.1, "col3": 0.1, "col4": 0.1, "col5": 0.1
+            }
+        )
+
         self.lotes_tree.tag_configure("oddrow", background=cor_linha_impar)
         self.lotes_tree.tag_configure("evenrow", background=cor_linha_par)
 
-        # ========== RODAPÉ COM TOTAIS - MESMO ESTILO DA SAÍDA ==========
+        # =========================
+        # RODAPÉ COM TOTAIS
+        # =========================
         footer_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         footer_frame.pack(fill="x", pady=5)
 
@@ -863,17 +840,14 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         )
         self.lbl_rendimento.pack(side="left", padx=5)
 
-        # ========== OBSERVAÇÕES - MESMO ESTILO DA SAÍDA ==========
+        # =========================
+        # OBSERVAÇÕES
+        # =========================
         obs_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         obs_frame.pack(fill="x", pady=5)
 
-        ctk.CTkLabel(
-            obs_frame,
-            text="OBSERVAÇÕES:",
-            width=100,
-            anchor="e",
-            text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        ctk.CTkLabel(obs_frame, text="OBSERVAÇÕES:", width=100, anchor="e", text_color=self.cor_texto).pack(side="left",
+                                                                                                            padx=5)
 
         self.obs_entry = ctk.CTkEntry(
             obs_frame,
@@ -883,11 +857,12 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         )
         self.obs_entry.pack(side="left", fill="x", expand=True, padx=5)
 
-        # ========== BOTÕES FINAIS - MESMO ESTILO DA SAÍDA ==========
+        # =========================
+        # BOTÕES FINAIS
+        # =========================
         action_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         action_frame.pack(fill="x", pady=10)
 
-        # Botão Limpar Tudo
         ctk.CTkButton(
             action_frame,
             text="Limpar Tudo",
@@ -898,7 +873,6 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             font=("Arial", 12)
         ).pack(side="right", padx=5)
 
-        # Botão Salvar Ordem
         ctk.CTkButton(
             action_frame,
             text="Salvar Ordem",
@@ -909,28 +883,148 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             font=("Arial", 14, "bold")
         ).pack(side="right", padx=5)
 
-        # Configurar eventos
+        # =========================
+        # EVENTOS
+        # =========================
         self.comprimento_entry.bind("<KeyRelease>", self.calcular_totais)
         self.largura_entry.bind("<KeyRelease>", self.calcular_totais)
+
         self.tree.bind("<<TreeviewSelect>>", self.calcular_totais)
-        self.tree.bind("<<TreeviewModified>>", self.calcular_totais)
         self.tree.bind("<ButtonRelease-1>", self.calcular_totais)
-        self.lotes_tree.bind("<<TreeviewModified>>", self.calcular_totais)
+
         self.lotes_tree.bind("<ButtonRelease-1>", self.calcular_totais)
 
-        if hasattr(self, 'tecido_cb') and self.tecido_cb is not None:
+        if hasattr(self, "tecido_cb") and self.tecido_cb is not None:
             self.tecido_cb.bind("<<ComboboxSelected>>", self._on_tecido_selected)
 
-        if hasattr(self, 'cor_cb') and self.cor_cb is not None:
+        if hasattr(self, "cor_cb") and self.cor_cb is not None:
             self.cor_cb.bind("<<ComboboxSelected>>", self._atualizar_composicao)
 
-        padronizar_treeviews_container(self)
+        # Se você usa esse helper no projeto, mantém:
+        if "padronizar_treeviews_container" in globals():
+            padronizar_treeviews_container(self)
 
         self.after(100, self.carregar_tecidos)
         self.after(100, self.verificar_inicializacao_widgets)
 
-    # ... (o restante das funções permanecem EXATAMENTE iguais, apenas o visual foi modificado)
-    # Todas as funções de lógica, banco de dados, cálculos, etc. permanecem inalteradas
+    def _configurar_treeview_responsiva_generic(
+            self,
+            container,
+            tree,
+            scrollbar,
+            columns,
+            min_widths=None,
+            weights=None,
+            debounce_ms=80,
+    ):
+        """
+        Configura auto-ajuste de colunas para Treeview caber no container (sem scroll horizontal).
+        - container: frame onde a tree está (ex: table_frame)
+        - tree: ttk.Treeview
+        - scrollbar: ttk.Scrollbar vertical
+        - columns: lista de colunas (mesma usada no Treeview)
+        - min_widths: dict {col: minwidth}
+        - weights: dict {col: peso} (quem deve ganhar mais largura)
+        """
+        self._tv_auto = getattr(self, "_tv_auto", {})
+        key = id(tree)
+
+        self._tv_auto[key] = {
+            "container": container,
+            "tree": tree,
+            "scrollbar": scrollbar,
+            "columns": list(columns),
+            "min_widths": dict(min_widths or {}),
+            "weights": dict(weights or {}),
+            "after_id": None,
+            "debounce_ms": int(debounce_ms),
+        }
+
+        # garante alinhamento central nos cabeçalhos e colunas por padrão
+        for c in columns:
+            tree.heading(c, anchor="center")
+            tree.column(c, anchor="center")
+
+        def _schedule(_evt=None):
+            st = self._tv_auto.get(key)
+            if not st:
+                return
+            if st["after_id"]:
+                try:
+                    self.after_cancel(st["after_id"])
+                except Exception:
+                    pass
+            st["after_id"] = self.after(st["debounce_ms"], lambda: self._ajustar_colunas_treeview_generic(tree))
+
+        container.bind("<Configure>", _schedule)
+        tree.bind("<Configure>", _schedule)
+
+        # primeiro ajuste
+        self.after(60, lambda: self._ajustar_colunas_treeview_generic(tree))
+
+    def _ajustar_colunas_treeview_generic(self, tree):
+        """Recalcula larguras para caber no container (sem scroll horizontal)."""
+        st = getattr(self, "_tv_auto", {}).get(id(tree))
+        if not st:
+            return
+
+        container = st["container"]
+        scrollbar = st["scrollbar"]
+        columns = st["columns"]
+        min_widths = st["min_widths"]
+        weights = st["weights"]
+
+        try:
+            cw = container.winfo_width()
+            if cw <= 10:
+                return
+
+            # reserva espaço da scrollbar vertical
+            sbw = 0
+            try:
+                sbw = max(scrollbar.winfo_width(), scrollbar.winfo_reqwidth(), 18)
+            except Exception:
+                sbw = 18
+
+            avail = cw - sbw - 8
+            if avail <= 50:
+                return
+
+            # pesos padrão = 1
+            wsum = sum(weights.get(c, 1.0) for c in columns) or 1.0
+
+            widths = {}
+            for c in columns:
+                w = int(avail * (weights.get(c, 1.0) / wsum))
+                w = max(int(min_widths.get(c, 40)), w)
+                widths[c] = w
+
+            # ajusta diferença de arredondamento: joga no maior peso (ou na primeira coluna)
+            used = sum(widths.values())
+            diff = avail - used
+            if diff != 0:
+                alvo = None
+                maior = -1
+                for c in columns:
+                    p = weights.get(c, 1.0)
+                    if p > maior:
+                        maior = p
+                        alvo = c
+                alvo = alvo or columns[0]
+                widths[alvo] = max(int(min_widths.get(alvo, 40)), widths[alvo] + diff)
+
+            # aplica
+            for c in columns:
+                tree.heading(c, anchor="center")
+                tree.column(
+                    c,
+                    width=int(widths[c]),
+                    minwidth=int(min_widths.get(c, 40)),
+                    anchor="center",
+                    stretch=False
+                )
+        except Exception:
+            pass
 
     def _validar_numero(self, valor):
         if valor == "":

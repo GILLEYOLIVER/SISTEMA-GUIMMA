@@ -163,47 +163,186 @@ class HistoricoServicosPage(ctk.CTkFrame):
             self.cor_hover = "#2e4a66"
             self.cor_terciaria = "#e5e5e5"
 
+    # ====== Helpers Treeview (contraste / blend / seleção) ======
+    def _hex_to_rgb(self, h: str):
+        h = (h or "").strip().lstrip("#")
+        if len(h) != 6:
+            return (60, 120, 200)
+        return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+    def _rgb_to_hex(self, rgb):
+        r, g, b = rgb
+        return f"#{max(0, min(255, r)):02x}{max(0, min(255, g)):02x}{max(0, min(255, b)):02x}"
+
+    def _blend(self, base_hex: str, target_hex: str, t: float) -> str:
+        br, bg, bb = self._hex_to_rgb(base_hex)
+        tr, tg, tb = self._hex_to_rgb(target_hex)
+        r = int(br + (tr - br) * t)
+        g = int(bg + (tg - bg) * t)
+        b = int(bb + (tb - bb) * t)
+        return self._rgb_to_hex((r, g, b))
+
+    def _fg_for_bg(self, hex_color: str) -> str:
+        r, g, b = self._hex_to_rgb(hex_color)
+        lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+        return "#000000" if lum > 0.62 else "#ffffff"
+
+    def _aplicar_zebra_tree(self, tree: ttk.Treeview):
+        # Reaplica zebra (sem apagar seleção)
+        itens = tree.get_children("")
+        for i, item in enumerate(itens):
+            tags = list(tree.item(item, "tags") or ())
+            if "selectedrow" in tags:
+                continue
+            tree.item(item, tags=("evenrow" if i % 2 == 0 else "oddrow",))
+
+    def _habilitar_selecao_evidente(self, tree: ttk.Treeview):
+        if not hasattr(self, "_treeview_sel_bound"):
+            self._treeview_sel_bound = set()
+        tree_id = str(tree)
+
+        if tree_id in self._treeview_sel_bound:
+            return  # já bindado
+
+        def on_select(_event=None):
+            # remove selectedrow de todos
+            for item in tree.get_children(""):
+                tags = list(tree.item(item, "tags") or ())
+                if "selectedrow" in tags:
+                    tags.remove("selectedrow")
+                    tree.item(item, tags=tuple(tags))
+            # reaplica zebra
+            self._aplicar_zebra_tree(tree)
+            # aplica seleção
+            for item in tree.selection():
+                tree.item(item, tags=("selectedrow",))
+
+        tree.bind("<<TreeviewSelect>>", on_select)
+        self._treeview_sel_bound.add(tree_id)
+
+    def _aplicar_estilo_e_tags_tree(self, tree: ttk.Treeview):
+        # Configura tags com as cores atuais e habilita seleção evidente
+        zebra_even = getattr(self, "_tv_zebra_even", "#ffffff")
+        zebra_odd = getattr(self, "_tv_zebra_odd", "#d9d9d9")
+        sel_bg = getattr(self, "_tv_select_bg", "#b7d7ff")
+        sel_fg = getattr(self, "_tv_select_fg", "#000000")
+
+        tree.tag_configure("evenrow", background=zebra_even)
+        tree.tag_configure("oddrow", background=zebra_odd)
+        tree.tag_configure("selectedrow", background=sel_bg, foreground=sel_fg, font=("Arial", 10, "bold"))
+
+        self._habilitar_selecao_evidente(tree)
+        self._aplicar_zebra_tree(tree)
+
     def configurar_treeview_theme(self):
-        """Configura as cores da Treeview baseado no tema atual - MESMO ESTILO DO CADASTRO_DE_CORTE"""
-        # CORREÇÃO: Garantir que as cores estão atualizadas
+        """Configura as cores da Treeview no estilo padrão (igual às outras páginas)"""
+        # Garantir que as cores estão atualizadas
         self.obter_cores_por_tema()
 
-        if not hasattr(self, 'style'):
+        if not hasattr(self, "style"):
             self.style = ttk.Style()
 
-        self.style.theme_use('default')
+        # No Windows, o tema "clam" respeita melhor as cores do heading
+        try:
+            self.style.theme_use("clam")
+        except Exception:
+            try:
+                self.style.theme_use("default")
+            except Exception:
+                pass
 
         tema_atual = ctk.get_appearance_mode()
 
+        # ====== Paleta padrão (igual ao estilo da imagem) ======
         if tema_atual == "Dark":
-            cor_fundo = self.cor_secundaria
-            cor_texto = self.cor_texto
-            cor_campo = self.cor_secundaria
-            cor_selecao = self.cor_primaria
+            tree_bg = self.cor_secundaria
+            tree_fg = self.cor_texto
+            field_bg = self.cor_secundaria
+
+            # no dark, manter cabeçalho coerente com o tema (primária)
+            heading_bg = self.cor_primaria
+            heading_fg = self._fg_for_bg(heading_bg)
+
+            zebra_even = self.cor_fundo
+            zebra_odd = self.cor_secundaria
+
+            select_bg = self._blend(heading_bg, "#ffffff", 0.18)
+            select_fg = self._fg_for_bg(select_bg)
+
+            border = self.cor_borda
         else:
-            cor_fundo = "#f0f0f0"
-            cor_texto = "black"
-            cor_campo = "#f0f0f0"
-            cor_selecao = self.cor_primaria
+            # Light: cabeçalho cinza claro, zebra branco/cinza, texto preto (igual print)
+            tree_bg = "#ffffff"
+            tree_fg = "#000000"
+            field_bg = "#ffffff"
 
-        self.style.configure("Custom.Treeview",
-                             background=cor_fundo,
-                             foreground=cor_texto,
-                             fieldbackground=cor_campo,
-                             borderwidth=0,
-                             highlightthickness=0,
-                             rowheight=25)
+            heading_bg = "#eeeeee"
+            heading_fg = "#000000"
 
-        self.style.configure("Custom.Treeview.Heading",
-                             background=self.cor_primaria,
-                             foreground=self.cor_texto,
-                             relief="flat",
-                             borderwidth=1,
-                             font=('Arial', 10, 'bold'))
+            zebra_even = "#ffffff"
+            zebra_odd = "#d9d9d9"
 
-        self.style.map('Custom.Treeview',
-                       background=[('selected', cor_selecao)],
-                       foreground=[('selected', "white")])
+            select_bg = "#b7d7ff"  # seleção bem evidente
+            select_fg = "#000000"
+
+            border = "#c7c7c7"
+
+        # ====== Hover do cabeçalho (igual ao que você gostou) ======
+        # Se o texto do cabeçalho for preto (fundo claro), escurece no hover.
+        # Se o texto for branco (fundo escuro), clareia no hover.
+        if (heading_fg or "").lower() in ("#000", "#000000", "black"):
+            heading_hover_bg = self._blend(heading_bg, "#000000", 0.14)
+            heading_pressed_bg = self._blend(heading_bg, "#000000", 0.24)
+        else:
+            heading_hover_bg = self._blend(heading_bg, "#ffffff", 0.14)
+            heading_pressed_bg = self._blend(heading_bg, "#ffffff", 0.24)
+
+        # ====== Estilos ======
+        self.style.configure(
+            "Custom.Treeview",
+            background=tree_bg,
+            foreground=tree_fg,
+            fieldbackground=field_bg,
+            borderwidth=1,
+            relief="solid",
+            rowheight=26,
+            font=("Arial", 10),
+        )
+        # bordas (alguns temas respeitam assim)
+        try:
+            self.style.configure("Custom.Treeview", bordercolor=border, lightcolor=border, darkcolor=border)
+        except Exception:
+            pass
+
+        # Cabeçalho: exatamente no estilo da imagem + hover/pressed
+        self.style.configure(
+            "Custom.Treeview.Heading",
+            background=heading_bg,
+            foreground=heading_fg,
+            relief="flat",
+            borderwidth=0,
+            font=("Arial", 10, "bold"),
+            padding=(8, 6),
+        )
+        self.style.map(
+            "Custom.Treeview.Heading",
+            background=[("active", heading_hover_bg), ("pressed", heading_pressed_bg)],
+            foreground=[("active", heading_fg), ("pressed", heading_fg)],
+            relief=[("pressed", "flat"), ("active", "flat")],
+        )
+
+        # Seleção via style (reforço)
+        self.style.map(
+            "Custom.Treeview",
+            background=[("selected", select_bg)],
+            foreground=[("selected", select_fg)],
+        )
+
+        # Guardar cores para tags (zebra/seleção) e reaplicar
+        self._tv_zebra_even = zebra_even
+        self._tv_zebra_odd = zebra_odd
+        self._tv_select_bg = select_bg
+        self._tv_select_fg = select_fg
 
     def setup_ui(self):
         """Configuração completa da interface gráfica com MESMO ESTILO DO CADASTRO_DE_CORTE"""
@@ -355,6 +494,15 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.configurar_treeview_theme()
 
         tabs = ctk.CTkTabview(table_frame, fg_color=self.cor_fundo)
+        tabs.configure(
+            fg_color=self.cor_fundo,
+            segmented_button_fg_color=self.cor_secundaria,
+            segmented_button_selected_color=self.cor_primaria,
+            segmented_button_selected_hover_color=self.cor_hover,
+            segmented_button_unselected_color=self.cor_secundaria,
+            segmented_button_unselected_hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        )
         tabs.pack(fill="both", expand=True)
 
         tab_hist = tabs.add("Histórico")
@@ -368,7 +516,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         anchors = ["center", "center", "center", "center", "w", "center", "e", "e", "center"]
 
         self.tree = ttk.Treeview(tab_hist, columns=columns, show="headings",
-                                 height=15, style="Custom.Treeview")
+                                 height=10, style="Custom.Treeview")
 
         for col, header, width, anchor in zip(columns, headers, widths, anchors):
             self.tree.heading(col, text=header)
@@ -392,7 +540,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         def_anchors = ["center", "center", "center", "w", "w", "center", "center", "center", "center"]
 
         self.defeito_tree = ttk.Treeview(tab_defeitos, columns=def_columns, show="headings",
-                                         height=15, style="Custom.Treeview")
+                                         height=10, style="Custom.Treeview")
 
         for col, header, width, anchor in zip(def_columns, def_headers, def_widths, def_anchors):
             self.defeito_tree.heading(col, text=header)
@@ -440,19 +588,15 @@ class HistoricoServicosPage(ctk.CTkFrame):
         ).pack(side="right", padx=5)
 
     def _atualizar_cores_linhas(self):
-        """Atualiza cores das linhas alternadas da treeview"""
-        if ctk.get_appearance_mode() == "Dark":
-            cor_linha_par = self.cor_fundo
-            cor_linha_impar = self.cor_secundaria
-        else:
-            cor_linha_par = "#ffffff"
-            cor_linha_impar = "#f0f0f0"
+        """Atualiza zebra/seleção das Treeviews no padrão único"""
+        # Recalcular paleta e estilos
+        self.configurar_treeview_theme()
 
-        if hasattr(self, 'tree') and self.tree:
-            self.tree.tag_configure("oddrow", background=cor_linha_impar)
-            self.tree.tag_configure("evenrow", background=cor_linha_par)
+        for tree_attr in ("tree", "defeito_tree"):
+            tree = getattr(self, tree_attr, None)
+            if tree:
+                self._aplicar_estilo_e_tags_tree(tree)
 
-    # CORREÇÃO: Adicionar método para atualizar tema dinamicamente
     def atualizar_tema(self):
         """Atualiza todas as cores quando o tema muda"""
         print("🎨 Atualizando tema na página de Consulta de Serviços...")
@@ -475,7 +619,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
         """Atualiza recursivamente as cores dos widgets"""
         try:
             if isinstance(widget, ctk.CTkFrame):
-                if widget.cget('fg_color') != 'transparent':
+                if getattr(widget, "_kind", "") == "kpi":
+                    widget.configure(fg_color=self.cor_secundaria, border_color=self.cor_borda, border_width=1)
+                elif widget.cget('fg_color') != 'transparent':
                     widget.configure(fg_color=self.cor_fundo)
             elif isinstance(widget, ctk.CTkButton):
                 widget.configure(
@@ -499,6 +645,16 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     button_color=self.cor_primaria,
                     button_hover_color=self.cor_hover
                 )
+            elif isinstance(widget, ctk.CTkTabview):
+                widget.configure(
+                    fg_color=self.cor_fundo,
+                    segmented_button_fg_color=self.cor_secundaria,
+                    segmented_button_selected_color=self.cor_primaria,
+                    segmented_button_selected_hover_color=self.cor_hover,
+                    segmented_button_unselected_color=self.cor_secundaria,
+                    segmented_button_unselected_hover_color=self.cor_hover,
+                    text_color=self.cor_texto
+                )
 
             # Processar filhos recursivamente
             for child in widget.winfo_children():
@@ -510,7 +666,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
     def _criar_kpi(self, parent, col, title, value):
         """Cria um card KPI estilizado - MESMO ESTILO DO CADASTRO_DE_CORTE"""
-        box = ctk.CTkFrame(parent, fg_color=self.cor_primaria, corner_radius=8)
+        box = ctk.CTkFrame(parent, fg_color=self.cor_secundaria, corner_radius=8,
+                           border_width=1, border_color=self.cor_borda)
+        box._kind = "kpi"
         box.grid(row=0, column=col, padx=5, pady=5, sticky="nsew")
         box.grid_columnconfigure(0, weight=1)
 

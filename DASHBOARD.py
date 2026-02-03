@@ -249,10 +249,10 @@ class DashboardPage(ctk.CTkFrame):
         self.tipos_estoque = ["Tecidos", "Aviamentos", "Insumos", "Escritorio", "Limpeza", "Outros"]
         self.cols_estoque = ("ID", "Número Item", "Descrição", "Código", "Data Entrada", "Quantidade")
 
-        self.frame_cards.pack(fill="x", pady=(0, 4))
+        self.frame_cards.pack(fill="x", pady=(0, 2))
 
         duplo_section = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        duplo_section.pack(fill="both", expand=True, padx=10, pady=(0, 6))
+        duplo_section.pack(fill="both", expand=True, padx=10, pady=(0, 4))
         duplo_section.grid_columnconfigure(0, weight=2)
         duplo_section.grid_columnconfigure(1, weight=3)
         duplo_section.grid_rowconfigure(0, weight=1)
@@ -264,7 +264,7 @@ class DashboardPage(ctk.CTkFrame):
         frame_est.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(frame_est, text="ESTOQUE", font=("Arial", 14, "bold"),
-                     text_color="#2C3E50").grid(row=0, column=0, pady=(6, 2), sticky="w", padx=10)
+                     text_color="#2C3E50").grid(row=0, column=0, pady=(4, 2), sticky="w", padx=10)
 
         filtro_est = ctk.CTkFrame(frame_est, fg_color="#F8F9FA")
         filtro_est.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 4))
@@ -286,10 +286,10 @@ class DashboardPage(ctk.CTkFrame):
         tabela_frame.grid_columnconfigure(0, weight=1)
         tabela_frame.grid_rowconfigure(0, weight=1)
 
-        self.tree_est = ttk.Treeview(tabela_frame, columns=self.cols_estoque, show="headings", height=8)
+        self.tree_est = ttk.Treeview(tabela_frame, columns=self.cols_estoque, show="headings", height=5)
         for col in self.cols_estoque:
             self.tree_est.heading(col, text=col)
-            self.tree_est.column(col, anchor="w", width=120)
+            self.tree_est.column(col, anchor="w", width=100, stretch=True)
 
         sb_e = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.tree_est.yview)
         self.tree_est.configure(yscroll=sb_e.set)
@@ -305,7 +305,7 @@ class DashboardPage(ctk.CTkFrame):
         frame_gra.grid_rowconfigure(2, weight=1)
 
         ctk.CTkLabel(frame_gra, text="STATUS DE PRODUÇÃO", font=("Arial", 14, "bold"),
-                     text_color=self.cor_texto).grid(row=0, column=0, sticky="w", padx=10, pady=(6, 2))
+                     text_color=self.cor_texto).grid(row=0, column=0, sticky="w", padx=10, pady=(4, 2))
 
         self.tempo_menu = ctk.CTkOptionMenu(
             frame_gra, values=["7 dias", "15 dias", "30 dias"],
@@ -327,13 +327,13 @@ class DashboardPage(ctk.CTkFrame):
 
         # PRODUÇÃO EM ANDAMENTO
         frame_and = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        frame_and.pack(fill="x", pady=(0, 4))
+        frame_and.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(frame_and, text="PRODUÇÃO EM ANDAMENTO", font=("Arial", 15, "bold"),
-                     text_color=self.cor_texto).pack(pady=(4, 2))
+                     text_color=self.cor_texto).pack(pady=(2, 2))
 
         filtro_frame = ctk.CTkFrame(frame_and, fg_color="#F8F9FA", corner_radius=6)
-        filtro_frame.pack(fill="x", pady=(2, 2))
+        filtro_frame.pack(fill="x", pady=(2, 1))
 
         ctk.CTkLabel(filtro_frame, text="Departamento:", font=("Arial", 12),
                      text_color="#2C3E50").pack(side="left", padx=(6, 6))
@@ -355,19 +355,22 @@ class DashboardPage(ctk.CTkFrame):
         cols = ("Código", "Descrição", "Cortador", "Data Registro",
                 "Qtd. Desejada", "Dias Estimados", "Horas Estimadas", "Origem")
 
-        self.tree_and = ttk.Treeview(tree_container, columns=cols, show="headings", height=5)
+        self.tree_and = ttk.Treeview(tree_container, columns=cols, show="headings", height=3)
 
         for c in cols:
             self.tree_and.heading(c, text=c)
-            self.tree_and.column(c, anchor="center", width=120)
+            if c == "Descrição":
+                self.tree_and.column(c, anchor="w", width=170, stretch=True)
+            elif c in ("Código", "Cortador", "Origem"):
+                self.tree_and.column(c, anchor="center", width=80, stretch=False)
+            elif c == "Data Registro":
+                self.tree_and.column(c, anchor="center", width=110, stretch=False)
+            else:
+                self.tree_and.column(c, anchor="center", width=90, stretch=False)
 
         sb1 = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree_and.yview)
         self.tree_and.configure(yscroll=sb1.set)
         sb1.pack(side="right", fill="y")
-
-        sb2 = ttk.Scrollbar(tree_container, orient="horizontal", command=self.tree_and.xview)
-        self.tree_and.configure(xscroll=sb2.set)
-        sb2.pack(side="bottom", fill="x")
 
         self.tree_and.pack(fill="x", padx=5, pady=4)
 
@@ -981,9 +984,9 @@ class DashboardPage(ctk.CTkFrame):
             card = ctk.CTkFrame(parent_frame, fg_color=self.cor_secundaria, corner_radius=10, border_width=1,
                                 border_color=self.cor_borda)
             card.grid(row=0, column=col, padx=6, sticky="nsew")
-            ctk.CTkLabel(card, text=titulo, font=("Arial", 14, "bold"), text_color=self.cor_texto).pack(pady=(10, 4))
+            ctk.CTkLabel(card, text=titulo, font=("Arial", 14, "bold"), text_color=self.cor_texto).pack(pady=(6, 2))
             lbl = ctk.CTkLabel(card, text="0", font=("Arial", 12, "bold"), text_color=cor)
-            lbl.pack(pady=(0, 10))
+            lbl.pack(pady=(0, 6))
             setattr(self, lbl_attr, lbl)
 
         mk_card(0, "Em Andamento", "lbl_card_andamento", self.cor_destaque)
