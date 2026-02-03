@@ -356,6 +356,15 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.configurar_treeview_theme()
 
         tabs = ctk.CTkTabview(table_frame, fg_color=self.cor_fundo)
+        tabs.configure(
+            fg_color=self.cor_fundo,
+            segmented_button_fg_color=self.cor_secundaria,
+            segmented_button_selected_color=self.cor_primaria,
+            segmented_button_selected_hover_color=self.cor_hover,
+            segmented_button_unselected_color=self.cor_secundaria,
+            segmented_button_unselected_hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        )
         tabs.pack(fill="both", expand=True)
 
         tab_hist = tabs.add("Histórico")
@@ -501,6 +510,16 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     text_color=self.cor_texto,
                     button_color=self.cor_primaria,
                     button_hover_color=self.cor_hover
+                )
+            elif isinstance(widget, ctk.CTkTabview):
+                widget.configure(
+                    fg_color=self.cor_fundo,
+                    segmented_button_fg_color=self.cor_secundaria,
+                    segmented_button_selected_color=self.cor_primaria,
+                    segmented_button_selected_hover_color=self.cor_hover,
+                    segmented_button_unselected_color=self.cor_secundaria,
+                    segmented_button_unselected_hover_color=self.cor_hover,
+                    text_color=self.cor_texto
                 )
 
             # Processar filhos recursivamente
