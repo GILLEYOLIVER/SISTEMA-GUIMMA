@@ -441,10 +441,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
         """Atualiza cores das linhas alternadas da treeview"""
         if ctk.get_appearance_mode() == "Dark":
             cor_linha_par = self.cor_fundo
-            cor_linha_impar = self.cor_secundaria
+            cor_linha_impar = "#1f2937"
         else:
             cor_linha_par = "#ffffff"
-            cor_linha_impar = "#f0f0f0"
+            cor_linha_impar = "#e0e0e0"
 
         if hasattr(self, 'tree') and self.tree:
             TEMAS.aplicar_tags_alternadas(self.tree, cor_linha_par, cor_linha_impar)
