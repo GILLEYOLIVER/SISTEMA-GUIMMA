@@ -180,11 +180,15 @@ class HistoricoServicosPage(ctk.CTkFrame):
             cor_texto = self.cor_texto
             cor_campo = self.cor_secundaria
             cor_selecao = self.cor_primaria
+            heading_bg = self.cor_primaria
+            heading_fg = "#ffffff"
         else:
             cor_fundo = "#f0f0f0"
             cor_texto = "black"
             cor_campo = "#f0f0f0"
             cor_selecao = self.cor_primaria
+            heading_bg = self.cor_primaria
+            heading_fg = "#ffffff"
 
         self.style.configure("Custom.Treeview",
                              background=cor_fundo,
@@ -194,9 +198,8 @@ class HistoricoServicosPage(ctk.CTkFrame):
                              highlightthickness=0,
                              rowheight=25)
 
-        heading_fg = self.cor_texto if tema_atual == "Dark" else "#ffffff"
         self.style.configure("Custom.Treeview.Heading",
-                             background=self.cor_primaria,
+                             background=heading_bg,
                              foreground=heading_fg,
                              relief="flat",
                              borderwidth=1,
