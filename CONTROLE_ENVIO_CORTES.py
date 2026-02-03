@@ -188,11 +188,11 @@ class EnvioCortes(ctk.CTkFrame):
     def _build_ui(self):
         # Frame principal com tema
         main = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        main.pack(fill="both", expand=True, padx=10, pady=10)
+        main.pack(fill="both", expand=True, padx=10, pady=6)
 
         # Cabeçalho + logo - COM TEMA
         header = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        header.pack(fill="x", pady=(0, 4))
+        header.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(header, text="CONTROLE DE MÃO DE OBRA — Envio de Cortes",
                      font=("Arial", 16, "bold"), text_color=self.cor_texto).pack(side="left", padx=(0, 6))
@@ -205,36 +205,34 @@ class EnvioCortes(ctk.CTkFrame):
             self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
             ctk.CTkLabel(header, image=self.logo_img, text="").pack(side="right")
 
-        # Linha: Buscar Corte - COM TEMA
-        l_busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        l_busca.pack(fill="x", pady=2)
+        # Costureira + Serviço + Dados bancários - COM TEMA
+        prest = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        prest.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(l_busca, text="Buscar Corte:", width=100, text_color=self.cor_texto).pack(side="left", padx=(0, 6))
+        linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
+        linha.pack(fill="x", pady=(0, 2))
 
-        self.busca_entry = ctk.CTkEntry(l_busca, width=260, placeholder_text="Número, código ou descrição",
+        ctk.CTkLabel(linha, text="Buscar Corte:", width=95, text_color=self.cor_texto).pack(side="left", padx=(2, 4))
+
+        self.busca_entry = ctk.CTkEntry(linha, width=240, height=26,
+                                        placeholder_text="Número, código ou descrição",
                                         fg_color=self.cor_terciaria, border_color=self.cor_borda,
                                         text_color=self.cor_texto, placeholder_text_color="#888888")
         self.busca_entry.pack(side="left")
         self.busca_entry.bind("<Return>", lambda e: self.buscar_cortes())
 
-        ctk.CTkButton(l_busca, text="Buscar", width=90, command=self.buscar_cortes,
+        ctk.CTkButton(linha, text="Buscar", width=80, height=26, command=self.buscar_cortes,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=8)
-
-        # Costureira + Serviço + Dados bancários - COM TEMA
-        prest = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        prest.pack(fill="x", pady=4)
-
-        linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        linha.pack(fill="x", pady=(2, 2))
+                      text_color=self.cor_texto).pack(side="left", padx=6)
 
         # Filtro de serviço - COM TEMA
-        ctk.CTkLabel(linha, text="Filtrar Serviço:", width=90, text_color=self.cor_texto).pack(side="left",
-                                                                                                padx=(2, 5))
+        ctk.CTkLabel(linha, text="Filtrar Serviço:", width=85, text_color=self.cor_texto).pack(side="left",
+                                                                                                padx=(6, 4))
 
         self.filtro_servico_cb = ctk.CTkComboBox(
             linha,
-            width=110,
+            width=105,
+            height=26,
             values=["Carregando..."],
             variable=self.filtro_servico_var,
             state="readonly",
@@ -248,15 +246,16 @@ class EnvioCortes(ctk.CTkFrame):
         self.filtro_servico_cb.pack(side="left", padx=(0, 10))
         self.filtro_servico_cb.bind("<<ComboboxSelected>>", lambda e: self._on_filtro_servico_trocado())
 
-        ctk.CTkLabel(linha, text="Buscar Costureira:", width=115, text_color=self.cor_texto).pack(side="left",
-                                                                                                  padx=(0, 6))
+        ctk.CTkLabel(linha, text="Costureira:", width=80, text_color=self.cor_texto).pack(side="left",
+                                                                                          padx=(0, 4))
 
         # Combobox de costureira - COM TEMA
         # Combobox de costureira usando CTkComboBox com callback adequado
         # Valores serão carregados dinamicamente em _carregar_prestadores
         self.prestador_busca_cb = ctk.CTkComboBox(
             linha,
-            width=300,
+            width=260,
+            height=26,
             values=[],
             state="normal",
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
@@ -274,12 +273,13 @@ class EnvioCortes(ctk.CTkFrame):
         self.prestador_busca_cb.bind("<Return>", self._on_costureira_selected)
         self.prestador_busca_cb.bind("<FocusOut>", self._on_costureira_selected)
 
-        ctk.CTkLabel(linha, text="Serviço:", width=70, text_color=self.cor_texto).pack(side="left", padx=(12, 6))
+        ctk.CTkLabel(linha, text="Serviço:", width=60, text_color=self.cor_texto).pack(side="left", padx=(6, 4))
 
         # Combobox de tipo de serviço - COM TEMA
         self.tipo_cb = ctk.CTkComboBox(
             linha,
-            width=200,
+            width=180,
+            height=26,
             values=SERVICOS_FIXOS,
             state="readonly",
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
@@ -293,21 +293,21 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Bancário (somente leitura) - COM TEMA
         banco = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        banco.pack(fill="x", pady=(6, 4))
+        banco.pack(fill="x", pady=(2, 2))
 
         ctk.CTkLabel(banco, text="Dados Bancários do Prestador", font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=4, pady=(0, 2))
+                     text_color=self.cor_texto).pack(anchor="w", padx=4, pady=(0, 1))
 
         grid = ctk.CTkFrame(banco, fg_color=self.cor_fundo)
         grid.pack(fill="x", padx=2)
 
         def ro(parent, w=220):
-            e = ctk.CTkEntry(parent, width=w, fg_color=self.cor_terciaria, border_color=self.cor_borda,
+            e = ctk.CTkEntry(parent, width=w, height=26, fg_color=self.cor_terciaria, border_color=self.cor_borda,
                              text_color=self.cor_texto, state="disabled")
             return e
 
         l1b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l1b.pack(fill="x", pady=2)
+        l1b.pack(fill="x", pady=1)
         ctk.CTkLabel(l1b, text="Telefone:", width=90, text_color=self.cor_texto).pack(side="left", padx=4)
         self.telefone_entry = ro(l1b, 220)
         self.telefone_entry.pack(side="left", padx=4)
@@ -319,7 +319,7 @@ class EnvioCortes(ctk.CTkFrame):
         self.banco_entry.pack(side="left", padx=4)
 
         l2b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l2b.pack(fill="x", pady=2)
+        l2b.pack(fill="x", pady=1)
         ctk.CTkLabel(l2b, text="Agência:", width=90, text_color=self.cor_texto).pack(side="left", padx=4)
         self.agencia_entry = ro(l2b, 160)
         self.agencia_entry.pack(side="left", padx=4)
@@ -331,7 +331,7 @@ class EnvioCortes(ctk.CTkFrame):
         self.pix_entry.pack(side="left", padx=4)
 
         l3b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l3b.pack(fill="x", pady=2)
+        l3b.pack(fill="x", pady=1)
         ctk.CTkLabel(l3b, text="Titular da Conta:", width=140, text_color=self.cor_texto).pack(side="left", padx=4)
         self.titular_entry = ro(l3b, 280)
         self.titular_entry.pack(side="left", padx=4)
