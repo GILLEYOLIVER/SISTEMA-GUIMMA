@@ -1051,3 +1051,5 @@ if __name__ == "__main__":
     pagina.pack(fill="both", expand=True)
 
     root.mainloop()
+
+#03/02/2025

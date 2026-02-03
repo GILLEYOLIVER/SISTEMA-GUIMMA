@@ -1405,3 +1405,5 @@ if __name__ == "__main__":
 
     root.bind('<F5>', lambda e: page.atualizar_dashboard())
     root.mainloop()
+
+#03/02/2025

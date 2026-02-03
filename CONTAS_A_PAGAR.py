@@ -417,3 +417,5 @@ if __name__ == "__main__":
     app = ContasAPagarPage(root)
     app.pack(fill="both", expand=True)
     root.mainloop()
+
+#03/02/2025
