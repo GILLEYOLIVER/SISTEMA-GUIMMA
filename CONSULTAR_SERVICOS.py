@@ -187,7 +187,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
             cor_texto = "black"
             cor_campo = "#f0f0f0"
             cor_selecao = self.cor_primaria
-            heading_bg = self.cor_primaria
+            heading_bg = "#2C3E50"
             heading_fg = "#ffffff"
 
         self.style.configure("Custom.Treeview",
