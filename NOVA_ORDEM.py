@@ -307,24 +307,25 @@ class OrdemCorte(ctk.CTkFrame):
         self.main_frame = ctk.CTkScrollableFrame(self, fg_color=self.cor_fundo, width=900, height=1123)
         self.main_frame.grid(row=0, column=0, sticky="nsew")
 
-        cabecalho_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo, height=50)
-        cabecalho_frame.pack(fill="x", pady=(20, 10), padx=20)
+        cabecalho_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo, height=40)
+        cabecalho_frame.pack(fill="x", pady=(8, 4), padx=20)
 
         ctk.CTkLabel(cabecalho_frame,
                      text="ORDEM DE CORTE",
-                     font=("Arial", 18, "bold"),
+                     font=("Arial", 16, "bold"),
                      text_color=self.cor_texto).pack(side="left")
 
         busca_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
-        busca_frame.pack(fill="x", padx=20, pady=(5, 10))
+        busca_frame.pack(fill="x", padx=20, pady=(2, 6))
 
         ctk.CTkLabel(busca_frame,
                      text="Buscar Modelo (Código ou Descrição):",
-                     font=("Arial", 12),
+                     font=("Arial", 11),
                      text_color=self.cor_texto).pack(side="left")
 
         self.busca_entry = ctk.CTkEntry(busca_frame,
-                                        width=300,
+                                        width=240,
+                                        height=26,
                                         placeholder_text="Ex: VEST123 ou Vestido Longo",
                                         fg_color=self.cor_fundo,
                                         border_color=self.cor_borda, text_color=self.cor_texto)
@@ -334,6 +335,8 @@ class OrdemCorte(ctk.CTkFrame):
         buscar_btn = ctk.CTkButton(busca_frame,
                                    text="Buscar",
                                    command=self.buscar_modelo,
+                                   width=80,
+                                   height=26,
                                    fg_color=self.cor_primaria,
                                    hover_color=self.cor_hover)
         buscar_btn.pack(side="left", padx=5)
@@ -341,7 +344,8 @@ class OrdemCorte(ctk.CTkFrame):
         self.modelos_combo = ctk.CTkComboBox(
             busca_frame,
             values=["Carregando..."],
-            width=300,
+            width=240,
+            height=26,
             command=self._on_combo_modelo
         )
         self.modelos_combo.set("Modelos disponíveis")
