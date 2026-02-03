@@ -126,7 +126,7 @@ class AdiantamentosPendentesPage(ctk.CTkFrame):
         tabela_wrap.grid_columnconfigure(0, weight=1)
 
         cols = ("ID", "Corte ID", "Código", "Facção", "Valor", "Forma", "Parcelas", "Data/Hora")
-        self.tree = ttk.Treeview(tabela_wrap, columns=cols, show="headings", height=12)
+        self.tree = ttk.Treeview(tabela_wrap, columns=cols, show="headings", height=8)
         self.tree.grid(row=0, column=0, sticky="nsew")
         widths = [80, 90, 100, 220, 100, 110, 90, 160]
         for c, w in zip(cols, widths):

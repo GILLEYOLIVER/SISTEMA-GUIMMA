@@ -608,7 +608,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         tree_container.grid_columnconfigure(0, weight=1)
 
         cols = ("id", "tipo_servico", "codigo", "descricao", "costureira", "data_envio", "data_chegada", "total_qtd")
-        self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=11, style="Custom.Treeview")
+        self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=8, style="Custom.Treeview")
         headings = ["ID", "Serviço", "Código", "Descrição", "Costureira", "Envio", "Chegada", "Qtd"]
         tree_widths = {
             "id": 50,
@@ -642,7 +642,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         defeitos_cols = ("id", "prestador", "codigo", "descricao", "tamanho", "quantidade", "data_retorno", "status")
         self.defeitos_tree = ttk.Treeview(defeitos_container, columns=defeitos_cols, show="headings",
-                                          height=11, style="Custom.Treeview")
+                                          height=8, style="Custom.Treeview")
         defeitos_headings = ["ID", "Prestador", "Código", "Descrição", "Tam", "Qtd", "Retorno", "Status"]
         defeitos_widths = {
             "id": 50,

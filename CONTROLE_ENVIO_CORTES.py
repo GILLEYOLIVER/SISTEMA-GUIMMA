@@ -353,7 +353,7 @@ class EnvioCortes(ctk.CTkFrame):
 
         # Configurar colunas da treeview
         cols_ui = ["ID", "Número", "Código", "Descrição", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "Total"]
-        self.cortes_tree = ttk.Treeview(tabela_frame, columns=cols_ui, show="headings", height=7, style="Treeview")
+        self.cortes_tree = ttk.Treeview(tabela_frame, columns=cols_ui, show="headings", height=5, style="Treeview")
 
         # Configurar cabeçalhos
         headers = {

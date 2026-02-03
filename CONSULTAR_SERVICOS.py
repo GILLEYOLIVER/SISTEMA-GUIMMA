@@ -368,7 +368,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         anchors = ["center", "center", "center", "center", "w", "center", "e", "e", "center"]
 
         self.tree = ttk.Treeview(tab_hist, columns=columns, show="headings",
-                                 height=15, style="Custom.Treeview")
+                                 height=10, style="Custom.Treeview")
 
         for col, header, width, anchor in zip(columns, headers, widths, anchors):
             self.tree.heading(col, text=header)
@@ -392,7 +392,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         def_anchors = ["center", "center", "center", "w", "w", "center", "center", "center", "center"]
 
         self.defeito_tree = ttk.Treeview(tab_defeitos, columns=def_columns, show="headings",
-                                         height=15, style="Custom.Treeview")
+                                         height=10, style="Custom.Treeview")
 
         for col, header, width, anchor in zip(def_columns, def_headers, def_widths, def_anchors):
             self.defeito_tree.heading(col, text=header)

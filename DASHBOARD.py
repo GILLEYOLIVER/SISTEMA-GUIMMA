@@ -286,7 +286,7 @@ class DashboardPage(ctk.CTkFrame):
         tabela_frame.grid_columnconfigure(0, weight=1)
         tabela_frame.grid_rowconfigure(0, weight=1)
 
-        self.tree_est = ttk.Treeview(tabela_frame, columns=self.cols_estoque, show="headings", height=5)
+        self.tree_est = ttk.Treeview(tabela_frame, columns=self.cols_estoque, show="headings", height=4)
         for col in self.cols_estoque:
             self.tree_est.heading(col, text=col)
             self.tree_est.column(col, anchor="w", width=100, stretch=True)
@@ -355,7 +355,7 @@ class DashboardPage(ctk.CTkFrame):
         cols = ("Código", "Descrição", "Cortador", "Data Registro",
                 "Qtd. Desejada", "Dias Estimados", "Horas Estimadas", "Origem")
 
-        self.tree_and = ttk.Treeview(tree_container, columns=cols, show="headings", height=3)
+        self.tree_and = ttk.Treeview(tree_container, columns=cols, show="headings", height=2)
 
         for c in cols:
             self.tree_and.heading(c, text=c)
@@ -1025,13 +1025,13 @@ class DashboardPage(ctk.CTkFrame):
             self.frame_ultimos = parent
         elif not hasattr(self, "frame_ultimos") or self.frame_ultimos is None:
             self.frame_ultimos = ctk.CTkFrame(self, fg_color="transparent")
-            self.frame_ultimos.pack(fill="x", pady=(4, 0))
+            self.frame_ultimos.pack(fill="x", pady=(2, 0))
 
         for w in self.frame_ultimos.winfo_children():
             w.destroy()
 
         ctk.CTkLabel(self.frame_ultimos, text="ÚLTIMOS FINALIZADOS (PAGOS)", font=ctk.CTkFont(size=15, weight="bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=10, pady=(0, 4))
+                     text_color=self.cor_texto).pack(anchor="w", padx=10, pady=(0, 2))
 
         row = ctk.CTkFrame(self.frame_ultimos, fg_color="transparent")
         row.pack(fill="x", padx=8)
@@ -1044,22 +1044,22 @@ class DashboardPage(ctk.CTkFrame):
 
         for i, it in enumerate(dados[:3]):
             card = ctk.CTkFrame(row, fg_color=self.cor_secundaria, corner_radius=10, border_width=1,
-                                border_color=self.cor_borda, height=90)
-            card.grid(row=0, column=i, sticky="nsew", padx=8, pady=4)
+                                border_color=self.cor_borda, height=72)
+            card.grid(row=0, column=i, sticky="nsew", padx=8, pady=2)
             card.pack_propagate(False)
 
             ctk.CTkLabel(card, text=f"Cód: {it.get('codigo', '-')}", font=ctk.CTkFont(size=13, weight="bold"),
-                         text_color=self.cor_destaque).pack(pady=(6, 0))
+                         text_color=self.cor_destaque).pack(pady=(4, 0))
 
             desc = it.get('descricao', '-')
             ctk.CTkLabel(card, text=desc[:30] + "..." if len(desc) > 30 else desc, font=ctk.CTkFont(size=12),
-                         text_color=self.cor_texto).pack(pady=(2, 0))
+                         text_color=self.cor_texto).pack(pady=(1, 0))
 
-            ctk.CTkLabel(card, text=f"Peças: {it.get('qtd', 0)}", font=ctk.CTkFont(size=16, weight="bold"),
-                         text_color="#40A9FF").pack(pady=(2, 0))
+            ctk.CTkLabel(card, text=f"Peças: {it.get('qtd', 0)}", font=ctk.CTkFont(size=14, weight="bold"),
+                         text_color="#40A9FF").pack(pady=(1, 0))
 
             ctk.CTkLabel(card, text=it.get("data_str", "-"), font=ctk.CTkFont(size=12), text_color=self.cor_texto).pack(
-                pady=(0, 4))
+                pady=(0, 2))
 
             row.grid_columnconfigure(i, weight=1)
 

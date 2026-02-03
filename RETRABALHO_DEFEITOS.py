@@ -195,7 +195,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             pend_frame,
             columns=("data", "envio", "codigo", "descricao", "prestador", "tamanho", "quantidade", "servico"),
             show="headings",
-            height=8
+            height=6
         )
         for col, label, width in [
             ("data", "Data", 100),
@@ -227,7 +227,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             columns=("id", "prestador", "codigo", "descricao", "tamanho", "quantidade", "origem",
                      "status", "data_envio", "data_retorno"),
             show="headings",
-            height=8
+            height=6
         )
         for col, label, width in [
             ("id", "ID", 60),

@@ -154,7 +154,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             self.tree_frame,
             columns=("ID", "Código", "Prestador", "Tipo", "Serviço", "Status", "Data Envio", "Qtd Peças"),
             show="headings",
-            height=8
+            height=6
         )
         self.tree_cortes.grid(row=0, column=0, sticky="nsew")
         for col, width, anchor in [

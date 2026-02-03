@@ -131,7 +131,7 @@ class FechamentoMensalPage(ctk.CTkFrame):
         wrap_sum.grid_columnconfigure(0, weight=1); wrap_sum.grid_rowconfigure(0, weight=1)
         cols_sum = ("modelo","descricao","destino","costureira","servico","env","ret","falt","def","valor_pago")
         headers_sum = ["MODELO","DESCRIÇÃO","DESTINO","COSTUREIRA","SERVIÇO","ENVIOS","RETORNOS","FALT.","DEF.","VALOR PAGO"]
-        self.tree_sum = ttk.Treeview(wrap_sum, columns=cols_sum, show="headings", height=16)
+        self.tree_sum = ttk.Treeview(wrap_sum, columns=cols_sum, show="headings", height=12)
         widths_sum = [100,240,140,140,120,90,90,90,90,120]
         anchors_sum = ["center","w","w","w","center","center","center","center","center","e"]
         for c,h,w,a in zip(cols_sum, headers_sum, widths_sum, anchors_sum):
@@ -265,7 +265,7 @@ class FechamentoMensalPage(ctk.CTkFrame):
         else:
             cols, headers, widths, anchors = [], [], [], []
 
-        tree = ttk.Treeview(wrap, columns=cols, show="headings", height=18)
+        tree = ttk.Treeview(wrap, columns=cols, show="headings", height=12)
         for c, h, w, a in zip(cols, headers, widths, anchors):
             tree.heading(c, text=h)
             tree.column(c, width=w, anchor=a, stretch=True if c in ("descricao","descricao_corte","obs","tamanho") else False)

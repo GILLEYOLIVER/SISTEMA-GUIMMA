@@ -428,7 +428,7 @@ class RetornoCortes(ctk.CTkFrame):
         self.configurar_treeview_theme()
 
         cols = ["ID", "Ordem", "Código", "Descrição", "Prestador", "Data Envio", "Status", "Qtd Peças"]
-        self.envios_tree = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=7, style="Custom.Treeview")
+        self.envios_tree = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=5, style="Custom.Treeview")
 
         sb = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.envios_tree.yview)
         sb.pack(side="right", fill="y")
