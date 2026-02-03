@@ -587,8 +587,14 @@ class ThemeManager:
             self._apply_palette_to_widget(self.app, palette, self.fonts)
 
             # CORREÇÃO CRÍTICA — EVITA CAIXAS QUADRADAS
-            from TEMAS import remover_bordas_botoes_tema
+            from TEMAS import (
+                padronizar_botoes_container,
+                padronizar_treeviews_container,
+                remover_bordas_botoes_tema,
+            )
             remover_bordas_botoes_tema(self.app)
+            padronizar_treeviews_container(self.app)
+            padronizar_botoes_container(self.app)
 
         except Exception as e:
             print(f"[Tema] Erro ao aplicar tema global: {e}")
@@ -609,7 +615,11 @@ class ThemeManager:
             return
 
         try:
+            from TEMAS import padronizar_botoes_container, padronizar_treeviews_container
+
             self._apply_palette_to_widget(widget, palette, self.fonts)
+            padronizar_treeviews_container(widget)
+            padronizar_botoes_container(widget)
             print(f"[Tema] Tema '{self.current_theme_name}' aplicado ao widget {widget.__class__.__name__}.")
         except Exception as e:
             print(f"[Tema] Não foi possível aplicar tema ao widget {widget}: {e}")
