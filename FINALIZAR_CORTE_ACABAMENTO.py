@@ -284,7 +284,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         # Configurar estilo da Treeview
         self.configurar_treeview_theme()
 
-        self.retornos_tree = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=7,
+        self.retornos_tree = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=5,
                                           style="Custom.Treeview")
         sb = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.retornos_tree.yview)
         sb.pack(side="right", fill="y")

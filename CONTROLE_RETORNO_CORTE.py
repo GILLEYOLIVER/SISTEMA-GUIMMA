@@ -276,14 +276,14 @@ class RetornoCortes(ctk.CTkFrame):
     def _build_ui(self):
         # Frame principal com tema
         main = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        main.pack(fill="both", expand=True, padx=10, pady=10)
+        main.pack(fill="both", expand=True, padx=10, pady=6)
 
         # Título + logo - MESMO ESTILO DO CADASTRO_DE_CORTE
         head = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        head.pack(fill="x", pady=(0, 8))
+        head.pack(fill="x", pady=(0, 4))
 
         ctk.CTkLabel(head, text="CONTROLE DE MÃO DE OBRA — Retorno de Cortes",
-                     font=("Arial", 18, "bold"), text_color=self.cor_texto).pack(side="left", padx=10)
+                     font=("Arial", 16, "bold"), text_color=self.cor_texto).pack(side="left", padx=10)
 
         # Logo
         try:
@@ -291,7 +291,7 @@ class RetornoCortes(ctk.CTkFrame):
             if os.path.exists(LOGO_PATH):
                 img = Image.open(LOGO_PATH)
                 w, h = img.size
-                tw = 140
+                tw = 110
                 th = int(h * (tw / w))
                 self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
                 ctk.CTkLabel(head, image=self.logo_img, text="").pack(side="right", padx=10)
@@ -300,19 +300,21 @@ class RetornoCortes(ctk.CTkFrame):
 
         # Buscar envio - MESMO ESTILO DO CADASTRO_DE_CORTE
         busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        busca.pack(fill="x", pady=6)
+        busca.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(busca, text="Buscar Envio:", width=120, anchor="e",
+        ctk.CTkLabel(busca, text="Buscar Envio:", width=100, anchor="e",
                      text_color=self.cor_texto).pack(side="left", padx=5)
 
-        self.busca_entry = ctk.CTkEntry(busca, width=320, placeholder_text="Ordem, código ou descrição",
+        self.busca_entry = ctk.CTkEntry(busca, width=260, height=26,
+                                        placeholder_text="Ordem, código ou descrição",
                                         fg_color=self.cor_secundaria, border_color=self.cor_borda,
                                         text_color=self.cor_texto_entry,
                                         placeholder_text_color=self.cor_placeholder)
         self.busca_entry.pack(side="left", padx=5)
         self.busca_entry.bind("<Return>", lambda e: self.carregar_envios_pendentes())
 
-        ctk.CTkButton(busca, text="Buscar", width=90, command=self.carregar_envios_pendentes,
+        ctk.CTkButton(busca, text="Buscar", width=80, height=26,
+                      command=self.carregar_envios_pendentes,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=5)
 
@@ -329,29 +331,29 @@ class RetornoCortes(ctk.CTkFrame):
             text_color=self.cor_texto,
             checkmark_color=self.cor_texto
         )
-        self.cb_mostrar_conf.pack(side="left", padx=8)
+        self.cb_mostrar_conf.pack(side="left", padx=6)
 
         # Prestador + Serviço (somente leitura) - MESMO ESTILO DO CADASTRO_DE_CORTE
         prest = ctk.CTkFrame(main, fg_color=self.cor_fundo)
-        prest.pack(fill="x", pady=(6, 8))
+        prest.pack(fill="x", pady=(2, 4))
 
         linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
-        linha.pack(fill="x", pady=(4, 2))
+        linha.pack(fill="x", pady=(0, 2))
 
-        ctk.CTkLabel(linha, text="Prestador:", width=100, anchor="e",
+        ctk.CTkLabel(linha, text="Prestador:", width=90, anchor="e",
                      text_color=self.cor_texto).pack(side="left", padx=5)
 
-        self.prestador_entry = ctk.CTkEntry(linha, width=360,
+        self.prestador_entry = ctk.CTkEntry(linha, width=280, height=26,
                                             fg_color=self.cor_secundaria,
                                             border_color=self.cor_borda,
                                             text_color=self.cor_texto_entry)
         self.prestador_entry.pack(side="left", padx=5)
         self.prestador_entry.configure(state="disabled")
 
-        ctk.CTkLabel(linha, text="Serviço:", width=80, anchor="e",
+        ctk.CTkLabel(linha, text="Serviço:", width=70, anchor="e",
                      text_color=self.cor_texto).pack(side="left", padx=5)
 
-        self.servico_entry = ctk.CTkEntry(linha, width=220,
+        self.servico_entry = ctk.CTkEntry(linha, width=160, height=26,
                                           fg_color=self.cor_secundaria,
                                           border_color=self.cor_borda,
                                           text_color=self.cor_texto_entry)
@@ -428,7 +430,7 @@ class RetornoCortes(ctk.CTkFrame):
         self.configurar_treeview_theme()
 
         cols = ["ID", "Ordem", "Código", "Descrição", "Prestador", "Data Envio", "Status", "Qtd Peças"]
-        self.envios_tree = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=7, style="Custom.Treeview")
+        self.envios_tree = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=5, style="Custom.Treeview")
 
         sb = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.envios_tree.yview)
         sb.pack(side="right", fill="y")

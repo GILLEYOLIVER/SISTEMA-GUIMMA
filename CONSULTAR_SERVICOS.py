@@ -176,34 +176,23 @@ class HistoricoServicosPage(ctk.CTkFrame):
         tema_atual = ctk.get_appearance_mode()
 
         if tema_atual == "Dark":
-            cor_fundo = self.cor_secundaria
-            cor_texto = self.cor_texto
-            cor_campo = self.cor_secundaria
-            cor_selecao = self.cor_primaria
+            cor_fundo = self.cor_fundo
+            cor_linhas = self.cor_secundaria
         else:
-            cor_fundo = "#f0f0f0"
-            cor_texto = "black"
-            cor_campo = "#f0f0f0"
-            cor_selecao = self.cor_primaria
+            cor_fundo = "#ffffff"
+            cor_linhas = "#f0f0f0"
 
-        self.style.configure("Custom.Treeview",
-                             background=cor_fundo,
-                             foreground=cor_texto,
-                             fieldbackground=cor_campo,
-                             borderwidth=0,
-                             highlightthickness=0,
-                             rowheight=25)
-
-        self.style.configure("Custom.Treeview.Heading",
-                             background=self.cor_primaria,
-                             foreground=self.cor_texto,
-                             relief="flat",
-                             borderwidth=1,
-                             font=('Arial', 10, 'bold'))
-
-        self.style.map('Custom.Treeview',
-                       background=[('selected', cor_selecao)],
-                       foreground=[('selected', "white")])
+        TEMAS.aplicar_estilo_treeview(
+            style=self.style,
+            prefixo="Custom.Treeview",
+            cor_fundo=cor_fundo,
+            cor_linhas=cor_linhas,
+            cor_cabecalho=self.cor_primaria,
+            cor_texto=self.cor_texto,
+            cor_borda=self.cor_borda,
+            cor_selecao=self.cor_primaria,
+            altura_linha=25,
+        )
 
     def setup_ui(self):
         """Configuração completa da interface gráfica com MESMO ESTILO DO CADASTRO_DE_CORTE"""
@@ -355,6 +344,15 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.configurar_treeview_theme()
 
         tabs = ctk.CTkTabview(table_frame, fg_color=self.cor_fundo)
+        tabs.configure(
+            fg_color=self.cor_fundo,
+            segmented_button_fg_color=self.cor_secundaria,
+            segmented_button_selected_color=self.cor_primaria,
+            segmented_button_selected_hover_color=self.cor_hover,
+            segmented_button_unselected_color=self.cor_secundaria,
+            segmented_button_unselected_hover_color=self.cor_hover,
+            text_color=self.cor_texto
+        )
         tabs.pack(fill="both", expand=True)
 
         tab_hist = tabs.add("Histórico")
@@ -368,7 +366,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         anchors = ["center", "center", "center", "center", "w", "center", "e", "e", "center"]
 
         self.tree = ttk.Treeview(tab_hist, columns=columns, show="headings",
-                                 height=15, style="Custom.Treeview")
+                                 height=10, style="Custom.Treeview")
 
         for col, header, width, anchor in zip(columns, headers, widths, anchors):
             self.tree.heading(col, text=header)
@@ -392,7 +390,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         def_anchors = ["center", "center", "center", "w", "w", "center", "center", "center", "center"]
 
         self.defeito_tree = ttk.Treeview(tab_defeitos, columns=def_columns, show="headings",
-                                         height=15, style="Custom.Treeview")
+                                         height=10, style="Custom.Treeview")
 
         for col, header, width, anchor in zip(def_columns, def_headers, def_widths, def_anchors):
             self.defeito_tree.heading(col, text=header)
@@ -443,14 +441,15 @@ class HistoricoServicosPage(ctk.CTkFrame):
         """Atualiza cores das linhas alternadas da treeview"""
         if ctk.get_appearance_mode() == "Dark":
             cor_linha_par = self.cor_fundo
-            cor_linha_impar = self.cor_secundaria
+            cor_linha_impar = "#1f2937"
         else:
             cor_linha_par = "#ffffff"
-            cor_linha_impar = "#f0f0f0"
+            cor_linha_impar = "#e0e0e0"
 
         if hasattr(self, 'tree') and self.tree:
-            self.tree.tag_configure("oddrow", background=cor_linha_impar)
-            self.tree.tag_configure("evenrow", background=cor_linha_par)
+            TEMAS.aplicar_tags_alternadas(self.tree, cor_linha_par, cor_linha_impar)
+        if hasattr(self, 'defeito_tree') and self.defeito_tree:
+            TEMAS.aplicar_tags_alternadas(self.defeito_tree, cor_linha_par, cor_linha_impar)
 
     # CORREÇÃO: Adicionar método para atualizar tema dinamicamente
     def atualizar_tema(self):
@@ -475,7 +474,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
         """Atualiza recursivamente as cores dos widgets"""
         try:
             if isinstance(widget, ctk.CTkFrame):
-                if widget.cget('fg_color') != 'transparent':
+                if getattr(widget, "_kind", "") == "kpi":
+                    widget.configure(fg_color=self.cor_secundaria, border_color=self.cor_borda, border_width=1)
+                elif widget.cget('fg_color') != 'transparent':
                     widget.configure(fg_color=self.cor_fundo)
             elif isinstance(widget, ctk.CTkButton):
                 widget.configure(
@@ -499,6 +500,16 @@ class HistoricoServicosPage(ctk.CTkFrame):
                     button_color=self.cor_primaria,
                     button_hover_color=self.cor_hover
                 )
+            elif isinstance(widget, ctk.CTkTabview):
+                widget.configure(
+                    fg_color=self.cor_fundo,
+                    segmented_button_fg_color=self.cor_secundaria,
+                    segmented_button_selected_color=self.cor_primaria,
+                    segmented_button_selected_hover_color=self.cor_hover,
+                    segmented_button_unselected_color=self.cor_secundaria,
+                    segmented_button_unselected_hover_color=self.cor_hover,
+                    text_color=self.cor_texto
+                )
 
             # Processar filhos recursivamente
             for child in widget.winfo_children():
@@ -510,7 +521,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
     def _criar_kpi(self, parent, col, title, value):
         """Cria um card KPI estilizado - MESMO ESTILO DO CADASTRO_DE_CORTE"""
-        box = ctk.CTkFrame(parent, fg_color=self.cor_primaria, corner_radius=8)
+        box = ctk.CTkFrame(parent, fg_color=self.cor_secundaria, corner_radius=8,
+                           border_width=1, border_color=self.cor_borda)
+        box._kind = "kpi"
         box.grid(row=0, column=col, padx=5, pady=5, sticky="nsew")
         box.grid_columnconfigure(0, weight=1)
 

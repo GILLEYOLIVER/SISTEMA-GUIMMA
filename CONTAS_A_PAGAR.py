@@ -151,7 +151,7 @@ class ContasAPagarPage(ctk.CTkFrame):
             hdrs = ["STATUS", "DATA", "CÓDIGO", "DESCRIÇÃO", "COSTUREIRA", "BOAS", "VLR PEÇA", "BASE", "PAGO", "SALDO"]
             wdts = [100, 90, 100, 200, 140, 70, 80, 100, 100, 100]
             self.cols_lan = cols
-            self.tree_lan = ttk.Treeview(wrap, columns=cols, show="headings", height=20, style="Contas.Treeview")
+            self.tree_lan = ttk.Treeview(wrap, columns=cols, show="headings", height=14, style="Contas.Treeview")
             for c, h, w in zip(cols, hdrs, wdts):
                 self.tree_lan.heading(c, text=h, anchor="center")
                 self.tree_lan.column(c, width=w, anchor="center")
@@ -164,7 +164,7 @@ class ContasAPagarPage(ctk.CTkFrame):
             hdrs = ["COSTUREIRA", "CORTES", "BOAS", "BASE (R$)", "PAGO (R$)", "SALDO (R$)"]
             wdts = [180, 80, 80, 110, 110, 110]
             self.cols_res = cols
-            self.tree_res = ttk.Treeview(wrap, columns=cols, show="headings", height=20, style="Contas.Treeview")
+            self.tree_res = ttk.Treeview(wrap, columns=cols, show="headings", height=14, style="Contas.Treeview")
             for c, h, w in zip(cols, hdrs, wdts):
                 self.tree_res.heading(c, text=h, anchor="center")
                 self.tree_res.column(c, width=w, anchor="center")

@@ -274,7 +274,7 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         headers = ["Prestador","CPF","Serviços","Qtd","Base","Descontos","Ajuda/Bonif.","Total Pago","Banco","Agência","Conta","PIX","Lanç."]
         widths = [160,100,140,60,100,100,110,110,120,90,120,140,60]
         anchors = ["w","center","center","center","e","e","e","e","w","center","center","w","center"]
-        self.tree = ttk.Treeview(table_wrap, columns=cols, show="headings", height=18)
+        self.tree = ttk.Treeview(table_wrap, columns=cols, show="headings", height=12)
         for c,h,w,a in zip(cols,headers,widths,anchors):
             self.tree.heading(c, text=h)
             self.tree.column(c, width=w, anchor=a, stretch=True if c in ("prestador","servicos","pix") else False)
