@@ -1626,7 +1626,7 @@ class OperaMenuApp(ctk.CTk):
         if not hasattr(self, 'current_theme_name') or not self.current_theme_name:
             self.current_theme_name = "CLÁSSICO CLARO"
 
-        is_dark_mode = self.current_theme_name.upper() == "CLÁSSICO ESCURO"
+        is_dark_mode = self.current_theme_name.upper() == "NOTURNO"
 
         # ÍCONE DO TEMA – fonte maior (~30%)
         self.icon_theme = ctk.CTkLabel(
@@ -1661,9 +1661,9 @@ class OperaMenuApp(ctk.CTk):
     def _toggle_theme_mode(self):
         """Alterna entre temas respeitando a preferência do usuário."""
 
-        # Se está indo para o modo escuro, sempre usa CLÁSSICO ESCURO
+        # Se está indo para o modo escuro, sempre usa NOTURNO
         if self.theme_switch.get() == 1:
-            novo_tema = "CLÁSSICO ESCURO"
+            novo_tema = "NOTURNO"
             self.current_theme_name = novo_tema
 
             # Salvar preferência apenas se tiver usuário logado
@@ -1682,8 +1682,8 @@ class OperaMenuApp(ctk.CTk):
             if hasattr(self, 'usuario_id') and self.usuario_id:
                 tema_usuario, paleta_personalizada = self.user_manager.load_user_theme_completo()
 
-                # Se o usuário não tem tema definido ou é CLÁSSICO ESCURO, usa CLÁSSICO CLARO como fallback
-                if not tema_usuario or tema_usuario.upper() == "CLÁSSICO ESCURO":
+                # Se o usuário não tem tema definido ou é NOTURNO, usa CLÁSSICO CLARO como fallback
+                if not tema_usuario or tema_usuario.upper() == "NOTURNO":
                     tema_usuario = "CLÁSSICO CLARO"
             else:
                 # Modo Administrador Local - usar CLÁSSICO CLARO como padrão
@@ -1702,7 +1702,7 @@ class OperaMenuApp(ctk.CTk):
         self._add_theme_switch_to_topbar()
 
         # Reaplicar ícone correto (garantia)
-        if self.current_theme_name.upper() == "CLÁSSICO ESCURO":
+        if self.current_theme_name.upper() == "NOTURNO":
             self.icon_theme.configure(text="🌙")
             self.theme_switch.select()
         else:
