@@ -303,10 +303,28 @@ class DashboardPage(ctk.CTkFrame):
         area_extra.grid_rowconfigure(0, weight=1)
         ctk.CTkLabel(
             area_extra,
-            text="Área adicional (produção geral)",
-            font=("Arial", 12, "italic"),
-            text_color="#6B7280",
-        ).grid(row=0, column=0, sticky="n")
+            text="Painel de produção (indicadores visuais)",
+            font=("Arial", 12, "bold"),
+            text_color="#2C3E50",
+        ).grid(row=0, column=0, sticky="w", padx=8, pady=(6, 2))
+
+        indicadores_frame = ctk.CTkFrame(area_extra, fg_color="transparent")
+        indicadores_frame.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 6))
+        for i in range(3):
+            indicadores_frame.grid_columnconfigure(i, weight=1)
+
+        def _card(titulo, valor, cor):
+            card = ctk.CTkFrame(indicadores_frame, fg_color="#FFFFFF", corner_radius=10)
+            ctk.CTkLabel(card, text=titulo, font=("Arial", 11), text_color="#6B7280").pack(anchor="w", padx=10, pady=(6, 0))
+            ctk.CTkLabel(card, text=valor, font=("Arial", 16, "bold"), text_color="#2C3E50").pack(anchor="w", padx=10, pady=(2, 4))
+            barra = ctk.CTkProgressBar(card, progress_color=cor)
+            barra.set(0.72)
+            barra.pack(fill="x", padx=10, pady=(0, 8))
+            return card
+
+        _card("Ordens em andamento", "24", "#3B82F6").grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        _card("Atrasos críticos", "3", "#EF4444").grid(row=0, column=1, sticky="nsew", padx=6)
+        _card("Eficiência diária", "87%", "#10B981").grid(row=0, column=2, sticky="nsew", padx=(6, 0))
 
         self._atualizar_tabela_estoque()
 
