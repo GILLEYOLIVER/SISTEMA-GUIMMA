@@ -261,6 +261,7 @@ class DashboardPage(ctk.CTkFrame):
         frame_est = ctk.CTkFrame(duplo_section, fg_color="#F8F9FA", corner_radius=10)
         frame_est.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
         frame_est.grid_rowconfigure(2, weight=1)
+        frame_est.grid_rowconfigure(3, weight=1)
         frame_est.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(frame_est, text="ESTOQUE", font=("Arial", 14, "bold"),
@@ -282,7 +283,7 @@ class DashboardPage(ctk.CTkFrame):
         self.combo_tipo_estoque.set("Tecidos")
 
         tabela_frame = ctk.CTkFrame(frame_est, fg_color="#F8F9FA")
-        tabela_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=4)
+        tabela_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(4, 2))
         tabela_frame.grid_columnconfigure(0, weight=1)
         tabela_frame.grid_rowconfigure(0, weight=1)
 
@@ -295,6 +296,17 @@ class DashboardPage(ctk.CTkFrame):
         self.tree_est.configure(yscroll=sb_e.set)
         sb_e.grid(row=0, column=1, sticky="ns")
         self.tree_est.grid(row=0, column=0, sticky="nsew")
+
+        area_extra = ctk.CTkFrame(frame_est, fg_color="#F8F9FA", corner_radius=8)
+        area_extra.grid(row=3, column=0, sticky="nsew", padx=10, pady=(2, 8))
+        area_extra.grid_columnconfigure(0, weight=1)
+        area_extra.grid_rowconfigure(0, weight=1)
+        ctk.CTkLabel(
+            area_extra,
+            text="Área adicional (personalizável)",
+            font=("Arial", 12, "italic"),
+            text_color="#6B7280",
+        ).grid(row=0, column=0, sticky="n")
 
         self._atualizar_tabela_estoque()
 
