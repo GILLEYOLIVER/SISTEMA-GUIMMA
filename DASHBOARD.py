@@ -303,7 +303,7 @@ class DashboardPage(ctk.CTkFrame):
         area_extra.grid_rowconfigure(0, weight=1)
         ctk.CTkLabel(
             area_extra,
-            text="Área adicional (personalizável)",
+            text="Área adicional (produção geral)",
             font=("Arial", 12, "italic"),
             text_color="#6B7280",
         ).grid(row=0, column=0, sticky="n")
