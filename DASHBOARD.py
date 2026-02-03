@@ -264,7 +264,7 @@ class DashboardPage(ctk.CTkFrame):
         frame_est = ctk.CTkFrame(duplo_section, fg_color="#F8F9FA", corner_radius=10)
         frame_est.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
         frame_est.grid_rowconfigure(2, weight=1)
-        frame_est.grid_rowconfigure(3, weight=1)
+        frame_est.grid_rowconfigure(3, weight=0)
         frame_est.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(frame_est, text="ESTOQUE", font=("Arial", 14, "bold"),
@@ -300,10 +300,12 @@ class DashboardPage(ctk.CTkFrame):
         sb_e.grid(row=0, column=1, sticky="ns")
         self.tree_est.grid(row=0, column=0, sticky="nsew")
 
-        area_extra = ctk.CTkFrame(frame_est, fg_color="#F8F9FA", corner_radius=8)
+        area_extra = ctk.CTkFrame(frame_est, fg_color="#F8F9FA", corner_radius=8, height=190)
         area_extra.grid(row=3, column=0, sticky="nsew", padx=10, pady=(2, 8))
         area_extra.grid_columnconfigure(0, weight=1)
-        area_extra.grid_rowconfigure(0, weight=1)
+        area_extra.grid_rowconfigure(2, weight=0)
+        area_extra.grid_rowconfigure(1, weight=0)
+        area_extra.grid_rowconfigure(0, weight=0)
         cabecalho_painel = ctk.CTkFrame(area_extra, fg_color="transparent")
         cabecalho_painel.grid(row=0, column=0, sticky="ew", padx=8, pady=(6, 2))
         cabecalho_painel.grid_columnconfigure(1, weight=1)
@@ -349,16 +351,16 @@ class DashboardPage(ctk.CTkFrame):
         self.combo_painel_grafico.pack(side="left")
 
         indicadores_frame = ctk.CTkFrame(area_extra, fg_color="transparent")
-        indicadores_frame.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 6))
+        indicadores_frame.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 6))
         for i in range(3):
             indicadores_frame.grid_columnconfigure(i, weight=1)
 
         def _card(titulo, cor):
             card = ctk.CTkFrame(indicadores_frame, fg_color="#FFFFFF", corner_radius=10)
             ctk.CTkLabel(card, text=titulo, font=("Arial", 11), text_color="#6B7280").pack(anchor="w", padx=10, pady=(6, 0))
-            valor_lbl = ctk.CTkLabel(card, text="0", font=("Arial", 16, "bold"), text_color="#2C3E50")
-            valor_lbl.pack(anchor="w", padx=10, pady=(2, 4))
-            barra = ctk.CTkProgressBar(card, progress_color=cor)
+            valor_lbl = ctk.CTkLabel(card, text="0", font=("Arial", 15, "bold"), text_color="#2C3E50")
+            valor_lbl.pack(anchor="w", padx=10, pady=(2, 2))
+            barra = ctk.CTkProgressBar(card, progress_color=cor, height=6)
             barra.set(0.0)
             barra.pack(fill="x", padx=10, pady=(0, 8))
             return card, valor_lbl, barra
@@ -372,8 +374,8 @@ class DashboardPage(ctk.CTkFrame):
         card_efi, self.lbl_painel_eficiencia, self.pb_painel_eficiencia = _card("Eficiência diária", "#10B981")
         card_efi.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
 
-        self.painel_prod_chart = ctk.CTkCanvas(area_extra, bg="#FFFFFF", highlightthickness=0)
-        self.painel_prod_chart.grid(row=2, column=0, sticky="nsew", padx=8, pady=(0, 6))
+        self.painel_prod_chart = ctk.CTkCanvas(area_extra, bg="#FFFFFF", highlightthickness=0, height=80)
+        self.painel_prod_chart.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 6))
 
         self._atualizar_tabela_estoque()
 
@@ -969,7 +971,7 @@ class DashboardPage(ctk.CTkFrame):
                     start=start, extent=ext, fill=cores[i % len(cores)], outline=""
                 )
                 start += ext
-            canvas.create_oval(cx - raio * 0.55, cy - raio * 0.55, cx + raio * 0.55, cy + raio * 0.55,
+            canvas.create_oval(cx - raio * 0.7, cy - raio * 0.7, cx + raio * 0.7, cy + raio * 0.7,
                                fill="#FFFFFF", outline="")
         elif tipo == "Linha":
             padding = 12
@@ -1193,7 +1195,7 @@ class DashboardPage(ctk.CTkFrame):
             card = ctk.CTkFrame(
                 parent_frame,
                 fg_color="#FFFFFF",
-                corner_radius=14,
+                corner_radius=12,
                 border_width=1,
                 border_color="#E2E8F0",
             )
@@ -1204,14 +1206,14 @@ class DashboardPage(ctk.CTkFrame):
             ctk.CTkLabel(
                 header,
                 text=titulo,
-                font=("Arial", 12, "bold"),
+                font=("Arial", 11, "bold"),
                 text_color="#64748B",
             ).pack(anchor="w")
 
-            lbl = ctk.CTkLabel(card, text="0", font=("Arial", 20, "bold"), text_color=cor)
-            lbl.pack(anchor="w", padx=12, pady=(4, 10))
+            lbl = ctk.CTkLabel(card, text="0", font=("Arial", 18, "bold"), text_color=cor)
+            lbl.pack(anchor="w", padx=12, pady=(4, 6))
 
-            barra = ctk.CTkProgressBar(card, progress_color=cor)
+            barra = ctk.CTkProgressBar(card, progress_color=cor, height=6)
             barra.set(0.0)
             barra.pack(fill="x", padx=12, pady=(0, 10))
             setattr(self, f"{lbl_attr}_bar", barra)
