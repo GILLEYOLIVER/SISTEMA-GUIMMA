@@ -308,32 +308,29 @@ class EnvioCortes(ctk.CTkFrame):
 
         l1b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
         l1b.pack(fill="x", pady=1)
-        ctk.CTkLabel(l1b, text="Telefone:", width=90, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.telefone_entry = ro(l1b, 220)
+        ctk.CTkLabel(l1b, text="Telefone:", width=80, text_color=self.cor_texto).pack(side="left", padx=4)
+        self.telefone_entry = ro(l1b, 190)
         self.telefone_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l1b, text="CPF:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.cpf_entry = ro(l1b, 180)
+        ctk.CTkLabel(l1b, text="CPF:", width=50, text_color=self.cor_texto).pack(side="left", padx=4)
+        self.cpf_entry = ro(l1b, 140)
         self.cpf_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l1b, text="Banco:", width=70, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.banco_entry = ro(l1b, 180)
+        ctk.CTkLabel(l1b, text="Banco:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
+        self.banco_entry = ro(l1b, 140)
         self.banco_entry.pack(side="left", padx=4)
+        ctk.CTkLabel(l1b, text="Agência:", width=70, text_color=self.cor_texto).pack(side="left", padx=4)
+        self.agencia_entry = ro(l1b, 120)
+        self.agencia_entry.pack(side="left", padx=4)
 
         l2b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
         l2b.pack(fill="x", pady=1)
-        ctk.CTkLabel(l2b, text="Agência:", width=90, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.agencia_entry = ro(l2b, 160)
-        self.agencia_entry.pack(side="left", padx=4)
         ctk.CTkLabel(l2b, text="Conta:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.conta_entry = ro(l2b, 180)
+        self.conta_entry = ro(l2b, 150)
         self.conta_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l2b, text="PIX:", width=70, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.pix_entry = ro(l2b, 220)
+        ctk.CTkLabel(l2b, text="PIX:", width=50, text_color=self.cor_texto).pack(side="left", padx=4)
+        self.pix_entry = ro(l2b, 180)
         self.pix_entry.pack(side="left", padx=4)
-
-        l3b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
-        l3b.pack(fill="x", pady=1)
-        ctk.CTkLabel(l3b, text="Titular da Conta:", width=140, text_color=self.cor_texto).pack(side="left", padx=4)
-        self.titular_entry = ro(l3b, 280)
+        ctk.CTkLabel(l2b, text="Titular:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
+        self.titular_entry = ro(l2b, 220)
         self.titular_entry.pack(side="left", padx=4)
 
         # Tabela de cortes - COM TEMA
@@ -364,10 +361,16 @@ class EnvioCortes(ctk.CTkFrame):
 
         for col in cols_ui:
             self.cortes_tree.heading(col, text=headers[col])
-            w = 70 if col in ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "Total"] else 130
-            if col in ["ID", "Número"]:
-                w = 100
-            self.cortes_tree.column(col, width=w, anchor="center")
+            if col == "Descrição":
+                self.cortes_tree.column(col, width=200, anchor="w", stretch=True)
+            elif col in ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "Total"]:
+                self.cortes_tree.column(col, width=45, anchor="center", stretch=False)
+            elif col in ["ID", "Número"]:
+                self.cortes_tree.column(col, width=70, anchor="center", stretch=False)
+            elif col == "Código":
+                self.cortes_tree.column(col, width=70, anchor="center", stretch=False)
+            else:
+                self.cortes_tree.column(col, width=80, anchor="center", stretch=False)
 
         sb = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.cortes_tree.yview)
         sb.pack(side="right", fill="y")
