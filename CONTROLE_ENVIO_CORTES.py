@@ -362,13 +362,13 @@ class EnvioCortes(ctk.CTkFrame):
         for col in cols_ui:
             self.cortes_tree.heading(col, text=headers[col])
             if col == "Descrição":
-                self.cortes_tree.column(col, width=200, anchor="w", stretch=True)
+                self.cortes_tree.column(col, width=180, anchor="w", stretch=True)
             elif col in ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "Total"]:
-                self.cortes_tree.column(col, width=45, anchor="center", stretch=False)
+                self.cortes_tree.column(col, width=35, anchor="center", stretch=False)
             elif col in ["ID", "Número"]:
-                self.cortes_tree.column(col, width=70, anchor="center", stretch=False)
+                self.cortes_tree.column(col, width=60, anchor="center", stretch=False)
             elif col == "Código":
-                self.cortes_tree.column(col, width=70, anchor="center", stretch=False)
+                self.cortes_tree.column(col, width=60, anchor="center", stretch=False)
             else:
                 self.cortes_tree.column(col, width=80, anchor="center", stretch=False)
 
