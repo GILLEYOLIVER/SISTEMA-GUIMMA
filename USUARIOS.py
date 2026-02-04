@@ -1435,19 +1435,25 @@ class UsuariosPage(ctk.CTkFrame):
             body = ctk.CTkFrame(dialog, fg_color="transparent")
             body.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
+            semana_frame = ctk.CTkFrame(body, fg_color="transparent")
+            semana_frame.pack(fill="x", pady=(0, 4))
+
+            dias_frame = ctk.CTkFrame(body, fg_color="transparent")
+            dias_frame.pack(fill="both", expand=True)
+
             def selecionar_dia(dia):
                 entry.delete(0, "end")
                 entry.insert(0, f"{dia:02d}/{mes:02d}/{ano}")
                 dialog.destroy()
 
             def render_calendar():
-                for widget in body.winfo_children():
+                for widget in semana_frame.winfo_children():
+                    widget.destroy()
+                for widget in dias_frame.winfo_children():
                     widget.destroy()
 
                 title_label.configure(text=f"{calendar.month_name[mes].capitalize()} {ano}")
 
-                semana_frame = ctk.CTkFrame(body, fg_color="transparent")
-                semana_frame.pack(fill="x", pady=(0, 4))
                 for idx, nome in enumerate(["D", "S", "T", "Q", "Q", "S", "S"]):
                     ctk.CTkLabel(
                         semana_frame,
@@ -1459,10 +1465,14 @@ class UsuariosPage(ctk.CTkFrame):
                 for row_idx, week in enumerate(calendar.monthcalendar(ano, mes), start=1):
                     for col_idx, day in enumerate(week):
                         if day == 0:
-                            ctk.CTkLabel(body, text="", width=30).grid(row=row_idx, column=col_idx, padx=2, pady=2)
+                            ctk.CTkLabel(
+                                dias_frame,
+                                text="",
+                                width=30
+                            ).grid(row=row_idx, column=col_idx, padx=2, pady=2)
                         else:
                             ctk.CTkButton(
-                                body,
+                                dias_frame,
                                 text=str(day),
                                 width=30,
                                 height=26,
