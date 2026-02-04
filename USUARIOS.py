@@ -1556,20 +1556,22 @@ class UsuariosPage(ctk.CTkFrame):
             botoes = ctk.CTkFrame(container, fg_color="transparent")
             botoes.pack(fill="x", pady=(12, 0))
 
-            ctk.CTkButton(
+            ModernButton(
                 botoes,
-                text="Selecionar",
-                command=aplicar_selecao,
-                fg_color=self.cor_primaria,
-                hover_color=self._darken_color(self.cor_primaria)
+                "Selecionar",
+                aplicar_selecao,
+                "primary",
+                width=120,
+                height=36
             ).pack(side="right")
 
-            ctk.CTkButton(
+            ModernButton(
                 botoes,
-                text="Cancelar",
-                command=dialog.destroy,
-                fg_color=self.cor_secundaria,
-                hover_color=self._darken_color(self.cor_secundaria)
+                "Cancelar",
+                dialog.destroy,
+                "secondary",
+                width=120,
+                height=36
             ).pack(side="right", padx=(0, 8))
 
         except Exception as e:
