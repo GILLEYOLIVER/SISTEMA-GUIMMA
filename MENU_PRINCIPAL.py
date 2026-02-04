@@ -1179,13 +1179,7 @@ class OperaMenuApp(ctk.CTk):
         else:
             self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
 
-        try:
-            if IS_MAC:
-                self.attributes("-zoomed", True)
-            else:
-                self.state("zoomed")
-        except tk.TclError:
-            pass
+        self.after(50, self._maximize_window)
 
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
@@ -1198,6 +1192,16 @@ class OperaMenuApp(ctk.CTk):
         """Ativa ou desativa modo tela cheia real."""
         current_state = self.attributes('-fullscreen')
         self.attributes('-fullscreen', not current_state)
+
+    def _maximize_window(self):
+        """Garante a janela maximizada respeitando a barra de tarefas."""
+        try:
+            if IS_MAC:
+                self.attributes("-zoomed", True)
+            else:
+                self.state("zoomed")
+        except tk.TclError:
+            pass
 
     def ask_quit(self, event=None):
         """Pergunta se o usuário deseja sair."""
