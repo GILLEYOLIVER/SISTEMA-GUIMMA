@@ -93,10 +93,30 @@ def registrar_log_db(usuario: str, pagina: str, acao: str, detalhe: str):
     try:
         schema = get_schema()
         with get_conn() as conn, conn.cursor() as cur:
+            try:
+                cur.execute(
+                    f"""INSERT INTO {schema}.usuario_logs (data_hora, usuario, acao, pagina, detalhe)
+                        VALUES (NOW(), %s, %s, %s, %s)""",
+                    (usuario or "Sistema", acao or "", pagina or "", detalhe or ""),
+                )
+                conn.commit()
+                return
+            except Exception:
+                conn.rollback()
+
+            usuario_id = None
+            if usuario:
+                cur.execute(
+                    f"SELECT id FROM {schema}.usuarios WHERE usuario = %s LIMIT 1",
+                    (usuario,),
+                )
+                row = cur.fetchone()
+                usuario_id = row[0] if row else None
+
             cur.execute(
-                f"""INSERT INTO {schema}.usuario_logs (data_hora, usuario, acao, pagina, detalhe)
+                f"""INSERT INTO {schema}.usuario_logs (data_hora, usuario_id, acao, pagina, detalhe)
                     VALUES (NOW(), %s, %s, %s, %s)""",
-                (usuario or "Sistema", acao or "", pagina or "", detalhe or ""),
+                (usuario_id, acao or "", pagina or "", detalhe or ""),
             )
             conn.commit()
     except Exception as e:
@@ -1885,9 +1905,10 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             schema = get_schema()
             rows = self._fetch_all(
-                f"""SELECT usuario, acao, pagina, data_hora 
-                    FROM {schema}.usuario_logs 
-                    ORDER BY data_hora DESC 
+                f"""SELECT COALESCE(u.usuario, '') AS usuario, ul.acao, ul.pagina, ul.data_hora
+                    FROM {schema}.usuario_logs ul
+                    LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
+                    ORDER BY ul.data_hora DESC
                     LIMIT %s""",
                 (limite,)
             )
@@ -3065,7 +3086,11 @@ class UsuariosPage(ctk.CTkFrame):
 
             # Verificar logs recentes
             logs_recentes = self._fetch_all(
-                f"SELECT usuario, acao, pagina, data_hora FROM {schema}.usuario_logs ORDER BY data_hora DESC LIMIT 5"
+                f"""SELECT COALESCE(u.usuario, '') AS usuario, ul.acao, ul.pagina, ul.data_hora
+                    FROM {schema}.usuario_logs ul
+                    LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
+                    ORDER BY ul.data_hora DESC
+                    LIMIT 5"""
             )
 
             if logs_recentes:
@@ -3215,7 +3240,11 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             schema = get_schema()
             rows = self._fetch_all(
-                f"SELECT data_hora, usuario, acao, pagina, detalhe FROM {schema}.usuario_logs ORDER BY data_hora DESC")
+                f"""SELECT ul.data_hora, COALESCE(u.usuario, '') AS usuario, ul.acao, ul.pagina, ul.detalhe
+                    FROM {schema}.usuario_logs ul
+                    LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
+                    ORDER BY ul.data_hora DESC"""
+            )
             base_dir = os.path.dirname(os.path.abspath(__file__))
             out_dir = os.path.join(base_dir, "relatorios")
             os.makedirs(out_dir, exist_ok=True)
@@ -3615,11 +3644,11 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             schema = get_schema()
             rows = self._fetch_all(
-                f"""SELECT DATE(data_hora) as data, COUNT(DISTINCT usuario)
-                    FROM {schema}.usuario_logs 
-                    WHERE (acao ILIKE '%login%' OR acao ILIKE '%logar%' OR acao ILIKE '%entrou%')
-                    AND data_hora >= CURRENT_DATE - INTERVAL '7 days'
-                    GROUP BY DATE(data_hora) 
+                f"""SELECT DATE(ul.data_hora) as data, COUNT(DISTINCT ul.usuario_id)
+                    FROM {schema}.usuario_logs ul
+                    WHERE (ul.acao ILIKE '%login%' OR ul.acao ILIKE '%logar%' OR ul.acao ILIKE '%entrou%')
+                    AND ul.data_hora >= CURRENT_DATE - INTERVAL '7 days'
+                    GROUP BY DATE(ul.data_hora)
                     ORDER BY data ASC"""
             )
 
@@ -3685,9 +3714,10 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             schema = get_schema()
             rows = self._fetch_all(
-                f"""SELECT usuario, acao, pagina, data_hora 
-                    FROM {schema}.usuario_logs 
-                    ORDER BY data_hora DESC 
+                f"""SELECT COALESCE(u.usuario, '') AS usuario, ul.acao, ul.pagina, ul.data_hora
+                    FROM {schema}.usuario_logs ul
+                    LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
+                    ORDER BY ul.data_hora DESC
                     LIMIT %s""",
                 (limite,)
             )
