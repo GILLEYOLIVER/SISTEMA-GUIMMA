@@ -1179,6 +1179,14 @@ class OperaMenuApp(ctk.CTk):
         else:
             self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
 
+        try:
+            if IS_MAC:
+                self.attributes("-zoomed", True)
+            else:
+                self.state("zoomed")
+        except tk.TclError:
+            pass
+
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
 
