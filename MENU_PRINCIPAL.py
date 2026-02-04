@@ -1173,11 +1173,11 @@ class OperaMenuApp(ctk.CTk):
         screen_height = self.winfo_screenheight()
 
         if IS_WIN:
-            self.geometry(f"{screen_width - 20}x{screen_height - 80}+10+10")
+            self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
         elif IS_MAC:
-            self.geometry(f"{screen_width - 20}x{screen_height - 120}+10+35")
+            self.geometry(f"{screen_width - 20}x{screen_height - 120}+0+25")
         else:
-            self.geometry(f"{screen_width - 20}x{screen_height - 80}+10+10")
+            self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
 
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
