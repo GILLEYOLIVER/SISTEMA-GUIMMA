@@ -138,6 +138,10 @@
   "file": "RELATORIO_ACABAMENTO.py",
   "class": "RelatorioAcabamentoPage"
   },
+  "Logs e Atividades": {
+    "file": "USUARIOS.py",
+    "class": "UsuariosPage"
+  },
 
   "Usuários": {
     "file": "USUARIOS.py",
