@@ -1380,14 +1380,14 @@ class UsuariosPage(ctk.CTkFrame):
         """Abre um calendário simples para escolher a data."""
         try:
             dialog = ctk.CTkToplevel(self)
-            dialog.title("Selecionar data")
+            dialog.title("Calendário")
             dialog.resizable(False, False)
             dialog.transient(self)
             dialog.grab_set()
-            self._centralizar_janela_simples(dialog, 280, 320)
+            self._centralizar_janela_simples(dialog, 320, 360)
 
-            header = ctk.CTkFrame(dialog, fg_color="transparent")
-            header.pack(fill="x", padx=12, pady=(12, 6))
+            header = ctk.CTkFrame(dialog, fg_color="#f1f5f9")
+            header.pack(fill="x", padx=0, pady=0)
 
             today = datetime.now()
             try:
@@ -1398,8 +1398,18 @@ class UsuariosPage(ctk.CTkFrame):
                 ano = today.year
                 mes = today.month
 
-            title_label = ctk.CTkLabel(header, text="", font=ctk.CTkFont(size=14, weight="bold"))
-            title_label.pack(side="left", expand=True)
+            meses_pt = [
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+            ]
+
+            title_label = ctk.CTkLabel(
+                header,
+                text="",
+                font=ctk.CTkFont(size=14, weight="bold"),
+                text_color="#111827"
+            )
+            title_label.pack(side="left", expand=True, pady=8)
 
             def set_month(delta):
                 nonlocal mes, ano
@@ -1414,31 +1424,33 @@ class UsuariosPage(ctk.CTkFrame):
 
             ctk.CTkButton(
                 header,
-                text="◀",
-                width=28,
+                text="❮",
+                width=32,
+                height=28,
                 command=lambda: set_month(-1),
-                fg_color=self.cor_secundaria,
-                hover_color=self._darken_color(self.cor_secundaria),
-                text_color=self.cor_texto
-            ).pack(side="left", padx=(0, 6))
+                fg_color="#3b82f6",
+                hover_color="#2563eb",
+                text_color="white"
+            ).pack(side="left", padx=12, pady=8)
 
             ctk.CTkButton(
                 header,
-                text="▶",
-                width=28,
+                text="❯",
+                width=32,
+                height=28,
                 command=lambda: set_month(1),
-                fg_color=self.cor_secundaria,
-                hover_color=self._darken_color(self.cor_secundaria),
-                text_color=self.cor_texto
-            ).pack(side="right", padx=(6, 0))
+                fg_color="#3b82f6",
+                hover_color="#2563eb",
+                text_color="white"
+            ).pack(side="right", padx=12, pady=8)
 
-            body = ctk.CTkFrame(dialog, fg_color="transparent")
+            body = ctk.CTkFrame(dialog, fg_color="white")
             body.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
-            semana_frame = ctk.CTkFrame(body, fg_color="transparent")
-            semana_frame.pack(fill="x", pady=(0, 4))
+            semana_frame = ctk.CTkFrame(body, fg_color="white")
+            semana_frame.pack(fill="x", pady=(8, 4))
 
-            dias_frame = ctk.CTkFrame(body, fg_color="transparent")
+            dias_frame = ctk.CTkFrame(body, fg_color="white")
             dias_frame.pack(fill="both", expand=True)
 
             def selecionar_dia(dia):
@@ -1452,34 +1464,34 @@ class UsuariosPage(ctk.CTkFrame):
                 for widget in dias_frame.winfo_children():
                     widget.destroy()
 
-                title_label.configure(text=f"{calendar.month_name[mes].capitalize()} {ano}")
+                title_label.configure(text=f"{meses_pt[mes - 1]} {ano}")
 
-                for idx, nome in enumerate(["D", "S", "T", "Q", "Q", "S", "S"]):
+                for idx, nome in enumerate(["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]):
                     ctk.CTkLabel(
                         semana_frame,
                         text=nome,
-                        width=30,
+                        width=36,
                         font=ctk.CTkFont(size=11, weight="bold")
                     ).grid(row=0, column=idx, padx=2)
 
-                for row_idx, week in enumerate(calendar.monthcalendar(ano, mes), start=1):
+                for row_idx, week in enumerate(calendar.Calendar(firstweekday=0).monthdayscalendar(ano, mes), start=1):
                     for col_idx, day in enumerate(week):
                         if day == 0:
                             ctk.CTkLabel(
                                 dias_frame,
                                 text="",
-                                width=30
+                                width=36
                             ).grid(row=row_idx, column=col_idx, padx=2, pady=2)
                         else:
                             ctk.CTkButton(
                                 dias_frame,
                                 text=str(day),
-                                width=30,
-                                height=26,
+                                width=36,
+                                height=30,
                                 command=lambda d=day: selecionar_dia(d),
-                                fg_color=self.cor_secundaria,
-                                hover_color=self._darken_color(self.cor_secundaria),
-                                text_color=self.cor_texto
+                                fg_color="#3b82f6",
+                                hover_color="#2563eb",
+                                text_color="white"
                             ).grid(row=row_idx, column=col_idx, padx=2, pady=2)
 
             render_calendar()
