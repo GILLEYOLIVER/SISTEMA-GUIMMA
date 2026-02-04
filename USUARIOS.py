@@ -3125,13 +3125,13 @@ class UsuariosPage(ctk.CTkFrame):
             # MONTAGEM DA QUERY (CORRETA)
             # -------------------------
             query = f"""
-                SELECT 
+                SELECT
                     data_hora,
-                    usuario,
+                    COALESCE(usuario, '') AS usuario,
                     acao,
                     pagina,
                     detalhe
-                FROM {schema}.vw_usuario_logs
+                FROM {schema}.usuario_logs
                 WHERE 1=1
             """
             params = []
