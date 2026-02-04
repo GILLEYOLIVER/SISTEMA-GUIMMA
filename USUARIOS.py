@@ -3126,12 +3126,13 @@ class UsuariosPage(ctk.CTkFrame):
             # -------------------------
             query = f"""
                 SELECT
-                    data_hora,
-                    COALESCE(usuario, '') AS usuario,
-                    acao,
-                    pagina,
-                    detalhe
-                FROM {schema}.usuario_logs
+                    ul.data_hora,
+                    COALESCE(ul.usuario, u.usuario, '') AS usuario,
+                    ul.acao,
+                    ul.pagina,
+                    ul.detalhe
+                FROM {schema}.usuario_logs ul
+                LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
                 WHERE 1=1
             """
             params = []
@@ -3145,7 +3146,7 @@ class UsuariosPage(ctk.CTkFrame):
                 params.append(data_fim_sql)
 
             if usuario:
-                query += " AND usuario ILIKE %s"
+                query += " AND COALESCE(ul.usuario, u.usuario, '') ILIKE %s"
                 params.append(f"%{usuario}%")
 
             if acao and acao.lower() != "todos":
@@ -3153,7 +3154,10 @@ class UsuariosPage(ctk.CTkFrame):
                 params.append(f"%{acao}%")
 
             if busca:
-                query += " AND (usuario ILIKE %s OR acao ILIKE %s OR pagina ILIKE %s OR detalhe ILIKE %s)"
+                query += (
+                    " AND (COALESCE(ul.usuario, u.usuario, '') ILIKE %s "
+                    "OR ul.acao ILIKE %s OR ul.pagina ILIKE %s OR ul.detalhe ILIKE %s)"
+                )
                 params += [f"%{busca}%"] * 4
 
             query += " ORDER BY data_hora DESC"
