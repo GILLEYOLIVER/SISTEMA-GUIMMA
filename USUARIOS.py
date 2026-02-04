@@ -17,6 +17,7 @@ import os
 import sys
 import csv
 import hashlib
+import calendar
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
@@ -1183,6 +1184,16 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_ini.pack(side="left")
         self.log_ini.insert(0, datetime.now().strftime("%d/%m/%Y"))
+        ctk.CTkButton(
+            date_ini_frame,
+            text="📅",
+            width=32,
+            height=35,
+            command=lambda: self._abrir_calendario(self.log_ini),
+            fg_color=self.cor_secundaria,
+            hover_color=self._darken_color(self.cor_secundaria),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(6, 0))
 
         # Filtro de data fim
         date_fim_frame = ctk.CTkFrame(filters_row, fg_color="transparent")
@@ -1203,6 +1214,16 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_fim.pack(side="left")
         self.log_fim.insert(0, datetime.now().strftime("%d/%m/%Y"))
+        ctk.CTkButton(
+            date_fim_frame,
+            text="📅",
+            width=32,
+            height=35,
+            command=lambda: self._abrir_calendario(self.log_fim),
+            fg_color=self.cor_secundaria,
+            hover_color=self._darken_color(self.cor_secundaria),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(6, 0))
 
         # Filtro de usuário
         user_frame = ctk.CTkFrame(filters_row, fg_color="transparent")
@@ -1354,6 +1375,107 @@ class UsuariosPage(ctk.CTkFrame):
             text_color=self.cor_primaria
         )
         self.logs_count_label.pack(side="right")
+
+    def _abrir_calendario(self, entry):
+        """Abre um calendário simples para escolher a data."""
+        try:
+            dialog = ctk.CTkToplevel(self)
+            dialog.title("Selecionar data")
+            dialog.resizable(False, False)
+            dialog.transient(self)
+            dialog.grab_set()
+            self._centralizar_janela_simples(dialog, 280, 320)
+
+            header = ctk.CTkFrame(dialog, fg_color="transparent")
+            header.pack(fill="x", padx=12, pady=(12, 6))
+
+            today = datetime.now()
+            try:
+                data_atual = datetime.strptime(entry.get().strip(), "%d/%m/%Y")
+                ano = data_atual.year
+                mes = data_atual.month
+            except Exception:
+                ano = today.year
+                mes = today.month
+
+            title_label = ctk.CTkLabel(header, text="", font=ctk.CTkFont(size=14, weight="bold"))
+            title_label.pack(side="left", expand=True)
+
+            def set_month(delta):
+                nonlocal mes, ano
+                mes += delta
+                if mes < 1:
+                    mes = 12
+                    ano -= 1
+                elif mes > 12:
+                    mes = 1
+                    ano += 1
+                render_calendar()
+
+            ctk.CTkButton(
+                header,
+                text="◀",
+                width=28,
+                command=lambda: set_month(-1),
+                fg_color=self.cor_secundaria,
+                hover_color=self._darken_color(self.cor_secundaria),
+                text_color=self.cor_texto
+            ).pack(side="left", padx=(0, 6))
+
+            ctk.CTkButton(
+                header,
+                text="▶",
+                width=28,
+                command=lambda: set_month(1),
+                fg_color=self.cor_secundaria,
+                hover_color=self._darken_color(self.cor_secundaria),
+                text_color=self.cor_texto
+            ).pack(side="right", padx=(6, 0))
+
+            body = ctk.CTkFrame(dialog, fg_color="transparent")
+            body.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+
+            def selecionar_dia(dia):
+                entry.delete(0, "end")
+                entry.insert(0, f"{dia:02d}/{mes:02d}/{ano}")
+                dialog.destroy()
+
+            def render_calendar():
+                for widget in body.winfo_children():
+                    widget.destroy()
+
+                title_label.configure(text=f"{calendar.month_name[mes].capitalize()} {ano}")
+
+                semana_frame = ctk.CTkFrame(body, fg_color="transparent")
+                semana_frame.pack(fill="x", pady=(0, 4))
+                for idx, nome in enumerate(["D", "S", "T", "Q", "Q", "S", "S"]):
+                    ctk.CTkLabel(
+                        semana_frame,
+                        text=nome,
+                        width=30,
+                        font=ctk.CTkFont(size=11, weight="bold")
+                    ).grid(row=0, column=idx, padx=2)
+
+                for row_idx, week in enumerate(calendar.monthcalendar(ano, mes), start=1):
+                    for col_idx, day in enumerate(week):
+                        if day == 0:
+                            ctk.CTkLabel(body, text="", width=30).grid(row=row_idx, column=col_idx, padx=2, pady=2)
+                        else:
+                            ctk.CTkButton(
+                                body,
+                                text=str(day),
+                                width=30,
+                                height=26,
+                                command=lambda d=day: selecionar_dia(d),
+                                fg_color=self.cor_secundaria,
+                                hover_color=self._darken_color(self.cor_secundaria),
+                                text_color=self.cor_texto
+                            ).grid(row=row_idx, column=col_idx, padx=2, pady=2)
+
+            render_calendar()
+
+        except Exception as e:
+            messagebox.showerror("Calendário", f"Erro ao abrir calendário: {e}")
 
     def _abrir_seletor_usuarios_logs(self):
         """Abre seletor de usuários para preencher o filtro de logs."""
