@@ -22,3 +22,12 @@ class MRPPage(ctk.CTkFrame):
             text="Planejamento de necessidades de materiais.",
             font=ctk.CTkFont(size=12)
         ).pack()
+
+
+if __name__ == "__main__":
+    app = ctk.CTk()
+    app.title("MRP - Teste")
+    app.geometry("800x600")
+    page = MRPPage(master=app)
+    page.pack(fill="both", expand=True)
+    app.mainloop()

@@ -22,3 +22,12 @@ class ClientesPage(ctk.CTkFrame):
             text="Cadastro e consulta de clientes para pedidos e relatórios.",
             font=ctk.CTkFont(size=12)
         ).pack()
+
+
+if __name__ == "__main__":
+    app = ctk.CTk()
+    app.title("Clientes - Teste")
+    app.geometry("800x600")
+    page = ClientesPage(master=app)
+    page.pack(fill="both", expand=True)
+    app.mainloop()

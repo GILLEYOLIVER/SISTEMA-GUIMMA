@@ -22,3 +22,12 @@ class ComprasPage(ctk.CTkFrame):
             text="Cadastro de fornecedores, pedidos de compra e recebimento.",
             font=ctk.CTkFont(size=12)
         ).pack()
+
+
+if __name__ == "__main__":
+    app = ctk.CTk()
+    app.title("Compras - Teste")
+    app.geometry("800x600")
+    page = ComprasPage(master=app)
+    page.pack(fill="both", expand=True)
+    app.mainloop()

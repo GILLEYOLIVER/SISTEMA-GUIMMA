@@ -22,3 +22,12 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             text="Capacidade, carga de trabalho e cronograma.",
             font=ctk.CTkFont(size=12)
         ).pack()
+
+
+if __name__ == "__main__":
+    app = ctk.CTk()
+    app.title("Planejamento de Produção - Teste")
+    app.geometry("800x600")
+    page = PlanejamentoProducaoPage(master=app)
+    page.pack(fill="both", expand=True)
+    app.mainloop()

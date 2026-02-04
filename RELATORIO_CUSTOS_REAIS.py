@@ -22,3 +22,12 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
             text="Comparativo de custos planejados x realizados.",
             font=ctk.CTkFont(size=12)
         ).pack()
+
+
+if __name__ == "__main__":
+    app = ctk.CTk()
+    app.title("Custos Reais - Teste")
+    app.geometry("800x600")
+    page = RelatorioCustosReaisPage(master=app)
+    page.pack(fill="both", expand=True)
+    app.mainloop()

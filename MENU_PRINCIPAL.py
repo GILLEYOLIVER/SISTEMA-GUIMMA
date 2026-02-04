@@ -1034,11 +1034,6 @@ class OperaMenuApp(ctk.CTk):
         "Entrada de Estoque": "estoque_entrada",
         "Saída de Estoque": "estoque_saida",
         "Relatórios": "estoque_relatorios",
-        "Compras": "compras",
-        "Clientes": "clientes",
-        "MRP": "mrp",
-        "Planejamento de Produção": "planejamento_producao",
-        "Custos Reais": "relatorio_custos_reais",
         "Cadastro de Prestadores": "cadastro_faccoes",
         "Pesquisar Serviço": "pesquisar_servico",
         "Controle de Mão de Obra": "controle_mao_obra",
@@ -2215,6 +2210,11 @@ class OperaMenuApp(ctk.CTk):
 
         rel_x = btn_x - self_x + btn_frame.winfo_width() + 5
         rel_y = btn_y - self_y
+
+        frame.update_idletasks()
+        frame_h = frame.winfo_reqheight()
+        max_y = max(10, self.winfo_height() - frame_h - 10)
+        rel_y = max(10, min(rel_y, max_y))
 
         frame.place(x=rel_x, y=rel_y)
         frame.lift()
