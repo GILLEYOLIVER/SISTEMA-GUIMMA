@@ -3608,6 +3608,7 @@ class UsuariosPage(ctk.CTkFrame):
         janela_relatorio.geometry("1000x700")
         janela_relatorio.transient(self)
         janela_relatorio.grab_set()
+        self._centralizar_janela_relatorio(janela_relatorio)
 
         # Frame principal com scroll
         main_frame = ctk.CTkScrollableFrame(janela_relatorio, fg_color="white")
@@ -4815,6 +4816,7 @@ class UsuariosPage(ctk.CTkFrame):
             word_window = ctk.CTkToplevel(self)
             word_window.title("Conteúdo para Microsoft Word")
             word_window.geometry("800x600")
+            self._centralizar_janela_simples(word_window, 800, 600)
 
             # Área de texto com conteúdo formatado
             text_area = scrolledtext.ScrolledText(
