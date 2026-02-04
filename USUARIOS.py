@@ -3127,7 +3127,7 @@ class UsuariosPage(ctk.CTkFrame):
             query = f"""
                 SELECT
                     ul.data_hora,
-                    COALESCE(ul.usuario, u.usuario, '') AS usuario,
+                    COALESCE(u.usuario, '') AS usuario,
                     ul.acao,
                     ul.pagina,
                     ul.detalhe
@@ -3146,7 +3146,7 @@ class UsuariosPage(ctk.CTkFrame):
                 params.append(data_fim_sql)
 
             if usuario:
-                query += " AND COALESCE(ul.usuario, u.usuario, '') ILIKE %s"
+                query += " AND COALESCE(u.usuario, '') ILIKE %s"
                 params.append(f"%{usuario}%")
 
             if acao and acao.lower() != "todos":
@@ -3155,7 +3155,7 @@ class UsuariosPage(ctk.CTkFrame):
 
             if busca:
                 query += (
-                    " AND (COALESCE(ul.usuario, u.usuario, '') ILIKE %s "
+                    " AND (COALESCE(u.usuario, '') ILIKE %s "
                     "OR ul.acao ILIKE %s OR ul.pagina ILIKE %s OR ul.detalhe ILIKE %s)"
                 )
                 params += [f"%{busca}%"] * 4
