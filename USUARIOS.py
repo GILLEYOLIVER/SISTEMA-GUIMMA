@@ -1206,14 +1206,28 @@ class UsuariosPage(ctk.CTkFrame):
             font=ctk.CTkFont(size=12, weight="bold")
         ).pack(side="left", padx=(0, 5))
 
+        user_input_frame = ctk.CTkFrame(user_frame, fg_color="transparent")
+        user_input_frame.pack(side="left")
+
         self.log_usuario = ctk.CTkEntry(
-            user_frame,
+            user_input_frame,
             placeholder_text="Nome do usuário...",
             width=150,
             height=35,
             font=ctk.CTkFont(size=12)
         )
         self.log_usuario.pack(side="left")
+
+        ctk.CTkButton(
+            user_input_frame,
+            text="▼",
+            width=28,
+            height=35,
+            command=self._abrir_seletor_usuarios_logs,
+            fg_color=self.cor_secundaria,
+            hover_color=self._darken_color(self.cor_secundaria),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(6, 0))
 
         # Filtro de ação
         action_frame = ctk.CTkFrame(filters_row, fg_color="transparent")
@@ -1320,6 +1334,94 @@ class UsuariosPage(ctk.CTkFrame):
             text_color=self.cor_primaria
         )
         self.logs_count_label.pack(side="right")
+
+    def _abrir_seletor_usuarios_logs(self):
+        """Abre seletor de usuários para preencher o filtro de logs."""
+        try:
+            dialog = ctk.CTkToplevel(self)
+            dialog.title("Selecionar Usuário")
+            dialog.geometry("420x420")
+            dialog.transient(self)
+            dialog.grab_set()
+            self._centralizar_janela_simples(dialog, 420, 420)
+
+            container = ctk.CTkFrame(dialog, fg_color="transparent")
+            container.pack(fill="both", expand=True, padx=16, pady=16)
+
+            ctk.CTkLabel(
+                container,
+                text="Selecione um usuário:",
+                font=ctk.CTkFont(size=14, weight="bold"),
+                text_color=self.cor_texto
+            ).pack(anchor="w", pady=(0, 10))
+
+            lista_frame = ctk.CTkFrame(container, fg_color="transparent")
+            lista_frame.pack(fill="both", expand=True)
+
+            listbox = tk.Listbox(
+                lista_frame,
+                height=12,
+                activestyle="dotbox"
+            )
+            listbox.pack(side="left", fill="both", expand=True)
+
+            scrollbar = tk.Scrollbar(lista_frame, command=listbox.yview)
+            scrollbar.pack(side="right", fill="y")
+            listbox.config(yscrollcommand=scrollbar.set)
+
+            usuarios = []
+            if POSTGRES_AVAILABLE:
+                try:
+                    schema = get_schema()
+                    usuarios = [
+                        row[0] for row in self._fetch_all(
+                            f"SELECT usuario FROM {schema}.usuarios ORDER BY usuario"
+                        ) or []
+                    ]
+                except Exception as e:
+                    print(f"[Logs] erro ao carregar usuários: {e}")
+                    usuarios = []
+            if not usuarios:
+                usuarios = ["Admin", "Operador1", "Operador2", "Estoque", "Cortes", "Financeiro"]
+
+            for usuario in usuarios:
+                listbox.insert("end", usuario)
+
+            def aplicar_selecao(_event=None):
+                try:
+                    selecao = listbox.curselection()
+                    if not selecao:
+                        return
+                    valor = listbox.get(selecao[0])
+                    self.log_usuario.delete(0, "end")
+                    self.log_usuario.insert(0, valor)
+                finally:
+                    dialog.destroy()
+
+            listbox.bind("<Double-Button-1>", aplicar_selecao)
+            listbox.bind("<Return>", aplicar_selecao)
+
+            botoes = ctk.CTkFrame(container, fg_color="transparent")
+            botoes.pack(fill="x", pady=(12, 0))
+
+            ctk.CTkButton(
+                botoes,
+                text="Selecionar",
+                command=aplicar_selecao,
+                fg_color=self.cor_primaria,
+                hover_color=self._darken_color(self.cor_primaria)
+            ).pack(side="right")
+
+            ctk.CTkButton(
+                botoes,
+                text="Cancelar",
+                command=dialog.destroy,
+                fg_color=self.cor_secundaria,
+                hover_color=self._darken_color(self.cor_secundaria)
+            ).pack(side="right", padx=(0, 8))
+
+        except Exception as e:
+            messagebox.showerror("Usuários", f"Erro ao abrir seletor: {e}")
 
     def _build_logs_table(self, parent):
         """Constrói a tabela de logs"""
