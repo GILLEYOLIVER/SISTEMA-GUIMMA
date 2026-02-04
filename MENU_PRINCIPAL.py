@@ -894,7 +894,7 @@ class OperaMenuApp(ctk.CTk):
 
     # Configurações de layout
     SIDEBAR_WIDTH = 300
-    ITEM_HEIGHT = 45
+    ITEM_HEIGHT = 40
 
     # Ícones das categorias
     ICON_MAPPING = {
@@ -1173,11 +1173,11 @@ class OperaMenuApp(ctk.CTk):
         screen_height = self.winfo_screenheight()
 
         if IS_WIN:
-            self.geometry(f"{screen_width}x{screen_height - 40}+0+0")
+            self.geometry(f"{screen_width - 20}x{screen_height - 80}+10+10")
         elif IS_MAC:
-            self.geometry(f"{screen_width}x{screen_height - 105}+0+25")
+            self.geometry(f"{screen_width - 20}x{screen_height - 120}+10+35")
         else:
-            self.geometry(f"{screen_width}x{screen_height - 40}+0+0")
+            self.geometry(f"{screen_width - 20}x{screen_height - 80}+10+10")
 
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
