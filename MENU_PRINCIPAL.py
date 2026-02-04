@@ -894,7 +894,7 @@ class OperaMenuApp(ctk.CTk):
 
     # Configurações de layout
     SIDEBAR_WIDTH = 300
-    ITEM_HEIGHT = 45
+    ITEM_HEIGHT = 40
 
     # Ícones das categorias
     ICON_MAPPING = {
@@ -903,11 +903,14 @@ class OperaMenuApp(ctk.CTk):
         "ORDENS DE CORTE": "TESOURA.png",
         "REGISTRO DE CORTE": "FOLHA DE PAPEL.png",
         "ESTOQUE": "ESTOQUE.png",
+        "COMPRAS": "DINHEIRO.png",
+        "COMERCIAL": "USUARIOS.png",
         "PRESTADORES": "FABRICA.png",
         "MÃO DE OBRA": "PESSOAS.png",
         "PRODUÇÃO": "PRODUÇAO.png",
         "ACABAMENTO": "FERRAMENTAS.png",
         "FINANCEIRO": "DINHEIRO.png",
+        "PLANEJAMENTO": "RELATORIO.png",
         "RELATÓRIOS": "RELATORIO.png",
         "CONFIGURAÇÕES": "ENGRENAGEM.png",
         "BANCO DE DADOS": "BANCO DE DADOS.png",
@@ -921,9 +924,12 @@ class OperaMenuApp(ctk.CTk):
         "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
+        "COMPRAS": ["Compras"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
+        "COMERCIAL": ["Clientes"],
         "PRESTADORES": ["Cadastro de Prestadores", "Pesquisar Serviço"],
         "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento", "Retrabalho de Defeitos"],
+        "PLANEJAMENTO": ["MRP", "Planejamento de Produção", "Custos Reais"],
         "FINANCEIRO": [
             "Pagamento de Serviços", "Recibos de Pagamentos", "Custo Produto", "Folha Pagamento",
             "Fechamento Mensal", "Contas a Pagar", "Adiantamento", "Adiantamentos Pendentes"
@@ -956,10 +962,16 @@ class OperaMenuApp(ctk.CTk):
             "Cadastrar Corte": "CADASTRO_CORTE.png",
             "Consultar Ordens": "CONSULTAR ORDENS.png",
         },
+        "COMPRAS": {
+            "Compras": "DINHEIRO.png",
+        },
         "ESTOQUE": {
             "Entrada de Estoque": "ESTOQUE.png",
             "Saída de Estoque": "ESTOQUE.png",
             "Relatórios": "RELATORIO 2.png",
+        },
+        "COMERCIAL": {
+            "Clientes": "USUARIOS.png",
         },
         "PRESTADORES": {
             "Cadastro de Prestadores": "FACÇAO.png",
@@ -967,6 +979,11 @@ class OperaMenuApp(ctk.CTk):
         },
         "MÃO DE OBRA": {
             "Controle de Mão de Obra": "MAO DE OBRA.png",
+        },
+        "PLANEJAMENTO": {
+            "MRP": "RELATORIO.png",
+            "Planejamento de Produção": "PRODUÇAO.png",
+            "Custos Reais": "RELATORIO.png",
         },
         "PRODUÇÃO": {
             "Produção": "PRODUÇAO.png",
@@ -1156,11 +1173,13 @@ class OperaMenuApp(ctk.CTk):
         screen_height = self.winfo_screenheight()
 
         if IS_WIN:
-            self.geometry(f"{screen_width}x{screen_height - 40}+0+0")
+            self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
         elif IS_MAC:
-            self.geometry(f"{screen_width}x{screen_height - 105}+0+25")
+            self.geometry(f"{screen_width - 20}x{screen_height - 120}+0+25")
         else:
-            self.geometry(f"{screen_width}x{screen_height - 40}+0+0")
+            self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
+
+        self.after(50, self._maximize_window)
 
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
@@ -1173,6 +1192,16 @@ class OperaMenuApp(ctk.CTk):
         """Ativa ou desativa modo tela cheia real."""
         current_state = self.attributes('-fullscreen')
         self.attributes('-fullscreen', not current_state)
+
+    def _maximize_window(self):
+        """Garante a janela maximizada respeitando a barra de tarefas."""
+        try:
+            if IS_MAC:
+                self.attributes("-zoomed", True)
+            else:
+                self.state("zoomed")
+        except tk.TclError:
+            pass
 
     def ask_quit(self, event=None):
         """Pergunta se o usuário deseja sair."""
@@ -2193,6 +2222,12 @@ class OperaMenuApp(ctk.CTk):
 
         rel_x = btn_x - self_x + btn_frame.winfo_width() + 5
         rel_y = btn_y - self_y
+
+        frame.update_idletasks()
+        frame_h = frame.winfo_reqheight()
+        screen_h = self.winfo_screenheight()
+        max_y = max(10, min(self.winfo_height(), screen_h) - frame_h - 10)
+        rel_y = max(10, min(rel_y, max_y))
 
         frame.place(x=rel_x, y=rel_y)
         frame.lift()
