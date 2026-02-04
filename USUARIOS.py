@@ -1573,8 +1573,7 @@ class UsuariosPage(ctk.CTkFrame):
                 "Selecionar",
                 aplicar_selecao,
                 "primary",
-                width=120,
-                height=36
+                width=120
             ).pack(side="right")
 
             ModernButton(
@@ -1582,8 +1581,7 @@ class UsuariosPage(ctk.CTkFrame):
                 "Cancelar",
                 dialog.destroy,
                 "secondary",
-                width=120,
-                height=36
+                width=120
             ).pack(side="right", padx=(0, 8))
 
         except Exception as e:
