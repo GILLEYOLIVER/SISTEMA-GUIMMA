@@ -48,6 +48,10 @@
     "file": "CONSULTAR_ORDENS.py",
     "class": "ConsultarOrdensPage"
   },
+  "Compras": {
+    "file": "COMPRAS.py",
+    "class": "ComprasPage"
+  },
 
   "Cadastro de Prestadores": {
     "file": "CADASTRO_FACCOES.py",
@@ -58,6 +62,10 @@
     "file": "CONSULTAR_SERVICOS.py",
     "class": "PesquisaServicosPage"
   },
+  "Clientes": {
+    "file": "CADASTRO_CLIENTES.py",
+    "class": "ClientesPage"
+  },
 
   "Retrabalho de Defeitos": {
     "file": "RETRABALHO_DEFEITOS.py",
@@ -67,6 +75,18 @@
   "Controle de Mão de Obra": {
     "file": "CONTROLE_ENVIO_CORTES.py",
     "class": "EnvioCortes"
+  },
+  "MRP": {
+    "file": "MRP_PLANEJAMENTO.py",
+    "class": "MRPPage"
+  },
+  "Planejamento de Produção": {
+    "file": "PLANEJAMENTO_PRODUCAO.py",
+    "class": "PlanejamentoProducaoPage"
+  },
+  "Custos Reais": {
+    "file": "RELATORIO_CUSTOS_REAIS.py",
+    "class": "RelatorioCustosReaisPage"
   },
 
   "Registro Acabamento": {
@@ -137,6 +157,10 @@
   "Acabamento": {
   "file": "RELATORIO_ACABAMENTO.py",
   "class": "RelatorioAcabamentoPage"
+  },
+  "Logs e Atividades": {
+    "file": "USUARIOS.py",
+    "class": "UsuariosPage"
   },
 
   "Usuários": {

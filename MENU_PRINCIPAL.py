@@ -33,6 +33,7 @@ from ui_after_guard import (
     reset_tk_default_root,
     safe_after_cancel,
 )
+from LOG_SISTEMA import get_logger
 
 
 
@@ -902,11 +903,14 @@ class OperaMenuApp(ctk.CTk):
         "ORDENS DE CORTE": "TESOURA.png",
         "REGISTRO DE CORTE": "FOLHA DE PAPEL.png",
         "ESTOQUE": "ESTOQUE.png",
+        "COMPRAS": "DINHEIRO.png",
+        "COMERCIAL": "USUARIOS.png",
         "PRESTADORES": "FABRICA.png",
         "MÃO DE OBRA": "PESSOAS.png",
         "PRODUÇÃO": "PRODUÇAO.png",
         "ACABAMENTO": "FERRAMENTAS.png",
         "FINANCEIRO": "DINHEIRO.png",
+        "PLANEJAMENTO": "RELATORIO.png",
         "RELATÓRIOS": "RELATORIO.png",
         "CONFIGURAÇÕES": "ENGRENAGEM.png",
         "BANCO DE DADOS": "BANCO DE DADOS.png",
@@ -920,14 +924,23 @@ class OperaMenuApp(ctk.CTk):
         "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
+        "COMPRAS": ["Compras"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
+        "COMERCIAL": ["Clientes"],
         "PRESTADORES": ["Cadastro de Prestadores", "Pesquisar Serviço"],
         "ACABAMENTO": ["Registro Acabamento", "Finalizar Corte / Acabamento", "Retrabalho de Defeitos"],
+        "PLANEJAMENTO": ["MRP", "Planejamento de Produção", "Custos Reais"],
         "FINANCEIRO": [
             "Pagamento de Serviços", "Recibos de Pagamentos", "Custo Produto", "Folha Pagamento",
             "Fechamento Mensal", "Contas a Pagar", "Adiantamento", "Adiantamentos Pendentes"
         ],
-        "RELATÓRIOS": ["Produção", "Serviços Externos", "Modelos Produzidos", "Acabamento"],
+        "RELATÓRIOS": [
+            "Produção",
+            "Serviços Externos",
+            "Modelos Produzidos",
+            "Acabamento",
+            "Logs e Atividades",
+        ],
         "CONFIGURAÇÕES": ["Trocar Usuário", "Usuários", "Temas"],
         "BANCO DE DADOS": ["Gerenciar", "Backup"],
     }
@@ -949,10 +962,16 @@ class OperaMenuApp(ctk.CTk):
             "Cadastrar Corte": "CADASTRO_CORTE.png",
             "Consultar Ordens": "CONSULTAR ORDENS.png",
         },
+        "COMPRAS": {
+            "Compras": "DINHEIRO.png",
+        },
         "ESTOQUE": {
             "Entrada de Estoque": "ESTOQUE.png",
             "Saída de Estoque": "ESTOQUE.png",
             "Relatórios": "RELATORIO 2.png",
+        },
+        "COMERCIAL": {
+            "Clientes": "USUARIOS.png",
         },
         "PRESTADORES": {
             "Cadastro de Prestadores": "FACÇAO.png",
@@ -960,6 +979,11 @@ class OperaMenuApp(ctk.CTk):
         },
         "MÃO DE OBRA": {
             "Controle de Mão de Obra": "MAO DE OBRA.png",
+        },
+        "PLANEJAMENTO": {
+            "MRP": "RELATORIO.png",
+            "Planejamento de Produção": "PRODUÇAO.png",
+            "Custos Reais": "RELATORIO.png",
         },
         "PRODUÇÃO": {
             "Produção": "PRODUÇAO.png",
@@ -984,6 +1008,7 @@ class OperaMenuApp(ctk.CTk):
             "Serviços Externos": "SERVIÇOS EXTERNOS.png",
             "Modelos Produzidos": "MODELOS PRODUZIDOS.png",
             "Acabamento": "ACABAMENTO.png",
+            "Logs e Atividades": "RELATORIO.png",
         },
         "CONFIGURAÇÕES": {
             "Trocar Usuário": "TROCAR_USUARIO.png",
@@ -1009,6 +1034,11 @@ class OperaMenuApp(ctk.CTk):
         "Entrada de Estoque": "estoque_entrada",
         "Saída de Estoque": "estoque_saida",
         "Relatórios": "estoque_relatorios",
+        "Compras": "compras",
+        "Clientes": "clientes",
+        "MRP": "mrp",
+        "Planejamento de Produção": "planejamento_producao",
+        "Custos Reais": "relatorio_custos_reais",
         "Cadastro de Prestadores": "cadastro_faccoes",
         "Pesquisar Serviço": "pesquisar_servico",
         "Controle de Mão de Obra": "controle_mao_obra",
@@ -1028,6 +1058,7 @@ class OperaMenuApp(ctk.CTk):
         "Serviços Externos": "relatorio_servicos_externos",
         "Modelos Produzidos": "relatorio_modelos_produzidos",
         "Acabamento": "relatorio_acabamento",
+        "Logs e Atividades": "config_usuarios",
         "Trocar Usuário": "trocar_usuario",
         "Usuários": "config_usuarios",
         "Backup": "config_backup",
@@ -1114,6 +1145,7 @@ class OperaMenuApp(ctk.CTk):
         self._build_interface()
         self._load_user_permissions()
         self._setup_bindings()
+        self._setup_activity_logging()
 
         self._preload_complete = True
         self.deiconify()
@@ -1220,6 +1252,151 @@ class OperaMenuApp(ctk.CTk):
             self.protocol("WM_DELETE_WINDOW", self.ask_quit)
         except Exception:
             pass
+
+    def _setup_activity_logging(self):
+        """Configura logging automático das atividades do usuário."""
+        self._activity_logger = get_logger(APP_DIR)
+        self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
+        self._activity_logger.set_pagina(self.current_page or "MenuPrincipal")
+        self._activity_log_cache = {}
+        self._limpar_logs_antigos()
+
+        self.bind_all("<ButtonRelease-1>", self._on_user_click, add="+")
+        self.bind_all("<<TreeviewSelect>>", self._on_treeview_select, add="+")
+        self.bind_all("<<ComboboxSelected>>", self._on_combobox_select, add="+")
+        self.bind_all("<KeyRelease>", self._on_user_key, add="+")
+
+    def _limpar_logs_antigos(self):
+        """Remove logs antigos (arquivo e banco) após 365 dias."""
+        try:
+            self._activity_logger.limpar_logs_antigos(dias_manter=365)
+        except Exception as e:
+            print(f"⚠️ Erro ao limpar logs em arquivo: {e}")
+
+        if not MENU_POSTGRES_AVAILABLE:
+            return
+
+        try:
+            schema = get_schema()
+            with get_conn() as conn, conn.cursor() as cur:
+                cur.execute(
+                    f"DELETE FROM {schema}.usuario_logs "
+                    "WHERE data_hora < NOW() - INTERVAL '365 days'"
+                )
+                conn.commit()
+        except Exception as e:
+            print(f"⚠️ Erro ao limpar logs no banco: {e}")
+
+    def _log_user_activity(self, acao: str, detalhe: str = "", pagina: str | None = None):
+        """Registra atividade do usuário no banco e em arquivo."""
+        pagina_log = pagina or self.current_page or "MenuPrincipal"
+        self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
+        self._activity_logger.set_pagina(pagina_log)
+        detalhe_log = detalhe or ""
+        if pagina_log and "Página:" not in detalhe_log:
+            detalhe_log = f"Página: {pagina_log} | {detalhe_log}".strip(" |")
+        self._activity_logger.log_usuario(acao, {"detalhe": detalhe_log, "pagina": pagina_log})
+        registrar_log_db(self.usuario_nome, acao, pagina_log, detalhe_log)
+
+    def _should_log_event(self, chave: str, intervalo: float = 0.4) -> bool:
+        """Evita logs duplicados em sequência rápida."""
+        agora = time.monotonic()
+        ultimo = self._activity_log_cache.get(chave, 0.0)
+        if (agora - ultimo) < intervalo:
+            return False
+        self._activity_log_cache[chave] = agora
+        return True
+
+    def _on_user_click(self, event):
+        """Registra cliques em botões e elementos clicáveis."""
+        widget = event.widget
+        if not widget or widget is self:
+            return
+
+        try:
+            widget_class = widget.winfo_class()
+        except Exception:
+            widget_class = ""
+
+        clicavel = widget_class in {"Button", "TButton", "CTkButton"}
+        has_command = False
+        texto = ""
+        if hasattr(widget, "cget"):
+            try:
+                texto = widget.cget("text")
+            except Exception:
+                texto = ""
+            try:
+                has_command = bool(widget.cget("command"))
+            except Exception:
+                has_command = False
+
+        if not (clicavel or has_command):
+            return
+
+        acao = "Clique"
+        detalhe = f"{widget_class}"
+        if texto:
+            detalhe = f"{widget_class} | {texto}"
+
+        texto_upper = (texto or "").strip().upper()
+        if any(palavra in texto_upper for palavra in ("SALVAR", "GRAVAR", "CADASTRAR", "ATUALIZAR")):
+            acao = "Salvou"
+        elif any(palavra in texto_upper for palavra in ("EXCLUIR", "APAGAR", "REMOVER", "DELETAR")):
+            acao = "Apagou"
+        elif any(palavra in texto_upper for palavra in ("EDITAR", "ALTERAR")):
+            acao = "Editou"
+
+        if self._should_log_event(f"click:{detalhe}"):
+            self._log_user_activity(acao, detalhe)
+
+    def _on_treeview_select(self, event):
+        """Registra seleção em tabelas."""
+        widget = event.widget
+        if not widget:
+            return
+        try:
+            selection = widget.selection()
+            if not selection:
+                return
+            item_id = selection[0]
+            valores = widget.item(item_id, "values")
+            resumo = ", ".join(str(v) for v in valores[:3]) if valores else str(item_id)
+        except Exception:
+            return
+
+        detalhe = f"Treeview | {resumo}"
+        if self._should_log_event(f"tree:{detalhe}", intervalo=0.8):
+            self._log_user_activity("Selecionou item", detalhe)
+
+    def _on_combobox_select(self, event):
+        """Registra seleção em combos."""
+        widget = event.widget
+        if not widget:
+            return
+        try:
+            valor = widget.get()
+        except Exception:
+            return
+
+        detalhe = f"Combobox | {valor}"
+        if self._should_log_event(f"combo:{detalhe}"):
+            self._log_user_activity("Selecionou opção", detalhe)
+
+    def _on_user_key(self, event):
+        """Registra teclas de ação (atalhos)."""
+        keysym = event.keysym or ""
+        if keysym in {"Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R"}:
+            return
+
+        is_shortcut = bool(event.state & 0x4)
+        is_action_key = keysym in {"Return", "F5", "F11", "Escape"}
+        if not (is_shortcut or is_action_key):
+            return
+
+        detalhe = f"Tecla | {keysym}"
+        if self._should_log_event(f"key:{detalhe}", intervalo=0.6):
+            self._log_user_activity("Atalho", detalhe)
 
     # ===== GERENCIAMENTO DE TEMAS =====
     def _load_initial_theme(self):
@@ -2425,6 +2602,9 @@ class OperaMenuApp(ctk.CTk):
                         frame.atualizar_tema()
                     elif hasattr(frame, "aplicar_tema"):
                         frame.aplicar_tema()
+
+                    if page_name == "Logs e Atividades" and hasattr(frame, "abrir_aba_logs"):
+                        frame.abrir_aba_logs()
                 except Exception as e:
                     print(f"⚠️ Erro ao aplicar tema na página '{page_name}': {e}")
                 # ==================================================================
@@ -2457,16 +2637,12 @@ class OperaMenuApp(ctk.CTk):
 
     def _log_page_access(self, page_name: str):
         """Registra acesso à página no sistema de logs"""
-        if not hasattr(self, 'usuario_nome') or page_name in ["Dashboard", "Trocar Usuário"]:
+        if not hasattr(self, 'usuario_nome'):
             return
 
         try:
-            registrar_log_db(
-                self.usuario_nome,
-                "Navegação",
-                f"Acessou: {page_name}",
-                f"Usuário: {self.usuario_nome} | Página: {page_name}"
-            )
+            detalhe = f"Usuário: {self.usuario_nome} | Página: {page_name}"
+            self._log_user_activity("Navegação", detalhe, pagina=page_name)
         except Exception:
             pass
 
