@@ -1129,6 +1129,14 @@ class UsuariosPage(ctk.CTkFrame):
 
         self._build_logs_table(logs_panel)
 
+    def abrir_aba_logs(self):
+        """Seleciona a aba de logs na interface."""
+        try:
+            if hasattr(self, "notebook"):
+                self.notebook.set("📊  LOGS")
+        except Exception as e:
+            print(f"❌ Erro ao selecionar aba de logs: {e}")
+
     def _build_logs_filters(self, parent):
         """Constrói os filtros de logs"""
         filters_container = ctk.CTkFrame(parent, fg_color="transparent")

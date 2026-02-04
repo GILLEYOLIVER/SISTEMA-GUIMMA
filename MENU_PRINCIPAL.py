@@ -928,7 +928,13 @@ class OperaMenuApp(ctk.CTk):
             "Pagamento de Serviços", "Recibos de Pagamentos", "Custo Produto", "Folha Pagamento",
             "Fechamento Mensal", "Contas a Pagar", "Adiantamento", "Adiantamentos Pendentes"
         ],
-        "RELATÓRIOS": ["Produção", "Serviços Externos", "Modelos Produzidos", "Acabamento"],
+        "RELATÓRIOS": [
+            "Produção",
+            "Serviços Externos",
+            "Modelos Produzidos",
+            "Acabamento",
+            "Logs e Atividades",
+        ],
         "CONFIGURAÇÕES": ["Trocar Usuário", "Usuários", "Temas"],
         "BANCO DE DADOS": ["Gerenciar", "Backup"],
     }
@@ -985,6 +991,7 @@ class OperaMenuApp(ctk.CTk):
             "Serviços Externos": "SERVIÇOS EXTERNOS.png",
             "Modelos Produzidos": "MODELOS PRODUZIDOS.png",
             "Acabamento": "ACABAMENTO.png",
+            "Logs e Atividades": "RELATORIO.png",
         },
         "CONFIGURAÇÕES": {
             "Trocar Usuário": "TROCAR_USUARIO.png",
@@ -1029,6 +1036,7 @@ class OperaMenuApp(ctk.CTk):
         "Serviços Externos": "relatorio_servicos_externos",
         "Modelos Produzidos": "relatorio_modelos_produzidos",
         "Acabamento": "relatorio_acabamento",
+        "Logs e Atividades": "config_usuarios",
         "Trocar Usuário": "trocar_usuario",
         "Usuários": "config_usuarios",
         "Backup": "config_backup",
@@ -2538,6 +2546,9 @@ class OperaMenuApp(ctk.CTk):
                         frame.atualizar_tema()
                     elif hasattr(frame, "aplicar_tema"):
                         frame.aplicar_tema()
+
+                    if page_name == "Logs e Atividades" and hasattr(frame, "abrir_aba_logs"):
+                        frame.abrir_aba_logs()
                 except Exception as e:
                     print(f"⚠️ Erro ao aplicar tema na página '{page_name}': {e}")
                 # ==================================================================
