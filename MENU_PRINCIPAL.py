@@ -2213,7 +2213,8 @@ class OperaMenuApp(ctk.CTk):
 
         frame.update_idletasks()
         frame_h = frame.winfo_reqheight()
-        max_y = max(10, self.winfo_height() - frame_h - 10)
+        screen_h = self.winfo_screenheight()
+        max_y = max(10, min(self.winfo_height(), screen_h) - frame_h - 10)
         rel_y = max(10, min(rel_y, max_y))
 
         frame.place(x=rel_x, y=rel_y)
