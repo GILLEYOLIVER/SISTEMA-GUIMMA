@@ -1285,12 +1285,21 @@ class UsuariosPage(ctk.CTkFrame):
         buttons_frame = ctk.CTkFrame(filters_row2, fg_color="transparent")
         buttons_frame.pack(side="right")
 
+        # Botão Buscar Atividades
+        ModernButton(
+            buttons_frame,
+            "🔎 Buscar Atividades",
+            self._filtrar_logs,
+            "primary",
+            width=150
+        ).pack(side="left", padx=(0, 8))
+
         # Botão Filtrar
         ModernButton(
             buttons_frame,
             "🔍 Filtrar",
             self._filtrar_logs,
-            "primary",
+            "secondary",
             width=100
         ).pack(side="left", padx=(0, 8))
 
@@ -1326,7 +1335,10 @@ class UsuariosPage(ctk.CTkFrame):
         info_frame.pack(fill="x", pady=(8, 0))
 
         # Estatísticas rápidas
-        stats_text = "💡 Dica: Use os filtros para encontrar registros específicos rapidamente"
+        stats_text = (
+            "💡 Dica: busque por usuário, ação, página ou palavras-chave "
+            "(ex.: login, logout, salvou, apagou, editou, cadastro, relatório, estoque)"
+        )
         ctk.CTkLabel(
             info_frame,
             text=stats_text,
