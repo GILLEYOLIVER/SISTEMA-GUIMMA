@@ -1237,19 +1237,44 @@ class OperaMenuApp(ctk.CTk):
         self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
         self._activity_logger.set_pagina(self.current_page or "MenuPrincipal")
         self._activity_log_cache = {}
+        self._limpar_logs_antigos()
 
         self.bind_all("<ButtonRelease-1>", self._on_user_click, add="+")
         self.bind_all("<<TreeviewSelect>>", self._on_treeview_select, add="+")
         self.bind_all("<<ComboboxSelected>>", self._on_combobox_select, add="+")
         self.bind_all("<KeyRelease>", self._on_user_key, add="+")
 
+    def _limpar_logs_antigos(self):
+        """Remove logs antigos (arquivo e banco) após 365 dias."""
+        try:
+            self._activity_logger.limpar_logs_antigos(dias_manter=365)
+        except Exception as e:
+            print(f"⚠️ Erro ao limpar logs em arquivo: {e}")
+
+        if not MENU_POSTGRES_AVAILABLE:
+            return
+
+        try:
+            schema = get_schema()
+            with get_conn() as conn, conn.cursor() as cur:
+                cur.execute(
+                    f"DELETE FROM {schema}.usuario_logs "
+                    "WHERE data_hora < NOW() - INTERVAL '365 days'"
+                )
+                conn.commit()
+        except Exception as e:
+            print(f"⚠️ Erro ao limpar logs no banco: {e}")
+
     def _log_user_activity(self, acao: str, detalhe: str = "", pagina: str | None = None):
         """Registra atividade do usuário no banco e em arquivo."""
         pagina_log = pagina or self.current_page or "MenuPrincipal"
         self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
         self._activity_logger.set_pagina(pagina_log)
-        self._activity_logger.log_usuario(acao, {"detalhe": detalhe, "pagina": pagina_log})
-        registrar_log_db(self.usuario_nome, acao, pagina_log, detalhe or "")
+        detalhe_log = detalhe or ""
+        if pagina_log and "Página:" not in detalhe_log:
+            detalhe_log = f"Página: {pagina_log} | {detalhe_log}".strip(" |")
+        self._activity_logger.log_usuario(acao, {"detalhe": detalhe_log, "pagina": pagina_log})
+        registrar_log_db(self.usuario_nome, acao, pagina_log, detalhe_log)
 
     def _should_log_event(self, chave: str, intervalo: float = 0.4) -> bool:
         """Evita logs duplicados em sequência rápida."""
@@ -1287,12 +1312,21 @@ class OperaMenuApp(ctk.CTk):
         if not (clicavel or has_command):
             return
 
+        acao = "Clique"
         detalhe = f"{widget_class}"
         if texto:
             detalhe = f"{widget_class} | {texto}"
 
+        texto_upper = (texto or "").strip().upper()
+        if any(palavra in texto_upper for palavra in ("SALVAR", "GRAVAR", "CADASTRAR", "ATUALIZAR")):
+            acao = "Salvou"
+        elif any(palavra in texto_upper for palavra in ("EXCLUIR", "APAGAR", "REMOVER", "DELETAR")):
+            acao = "Apagou"
+        elif any(palavra in texto_upper for palavra in ("EDITAR", "ALTERAR")):
+            acao = "Editou"
+
         if self._should_log_event(f"click:{detalhe}"):
-            self._log_user_activity("Clique", detalhe)
+            self._log_user_activity(acao, detalhe)
 
     def _on_treeview_select(self, event):
         """Registra seleção em tabelas."""
