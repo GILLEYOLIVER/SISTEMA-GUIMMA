@@ -941,7 +941,7 @@ class OperaMenuApp(ctk.CTk):
             "Acabamento",
             "Logs e Atividades",
         ],
-        "CONFIGURAÇÕES": ["Trocar Usuário", "Usuários", "Temas"],
+        "CONFIGURAÇÕES": ["Trocar Usuário", "Usuários", "Temas", "Atualização do Sistema"],
         "BANCO DE DADOS": ["Gerenciar", "Backup"],
     }
 
@@ -1015,6 +1015,7 @@ class OperaMenuApp(ctk.CTk):
             "Usuários": "USUARIOS.png",
             "Backup": "BACKUP.png",
             "Temas": "PALETA DE CORES.png",
+            "Atualização do Sistema": "ENGRENAGEM.png",
         },
         "BANCO DE DADOS": {
             "Gerenciar": "ENGRENAGEM.png",
@@ -1058,6 +1059,7 @@ class OperaMenuApp(ctk.CTk):
         "Usuários": "config_usuarios",
         "Backup": "config_backup",
         "Temas": "config_temas",
+        "Atualização do Sistema": "config_atualizacao_sistema",
         "Gerenciar": "banco_dados",
 
     }
@@ -2533,6 +2535,7 @@ class OperaMenuApp(ctk.CTk):
                 # CONFIGURAÇÕES / SISTEMA
                 "Usuários": "gerenciar usuários do sistema",
                 "Temas": "personalizar temas do sistema",
+                "Atualização do Sistema": "atualizar o sistema",
                 "Backup": "realizar backup do sistema",
                 "Gerenciar": "gerenciar banco de dados",
             }
