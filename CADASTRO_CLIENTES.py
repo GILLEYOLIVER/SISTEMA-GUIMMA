@@ -27,6 +27,8 @@ class ClientesPage(ctk.CTkFrame):
         self.entries = {}
         self.tree = None
         self.summary_label = None
+        self.connection_status = None
+        self.kpi_labels = {}
         self.selected_id = None
         self._build()
         self._verificar_conexao()
@@ -34,11 +36,12 @@ class ClientesPage(ctk.CTkFrame):
 
     def _build(self):
         self.configure(fg_color="transparent")
-        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(4, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         self._build_header()
         self._build_toolbar()
+        self._build_kpis()
         self._build_filters()
         self._build_body()
 
@@ -46,6 +49,7 @@ class ClientesPage(ctk.CTkFrame):
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=24, pady=(20, 10))
         header.grid_columnconfigure(0, weight=1)
+        header.grid_columnconfigure(1, weight=0)
 
         ctk.CTkLabel(
             header,
@@ -58,6 +62,14 @@ class ClientesPage(ctk.CTkFrame):
             text="Gestão de contatos, endereços e vínculos para pedidos e relatórios.",
             font=ctk.CTkFont(size=12),
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+
+        status_frame = ctk.CTkFrame(header, corner_radius=18)
+        status_frame.grid(row=0, column=1, rowspan=2, sticky="e")
+        status_frame.grid_columnconfigure(0, weight=1)
+        self.connection_status = ctk.CTkLabel(
+            status_frame, text="Banco: verificando", font=ctk.CTkFont(size=12, weight="bold")
+        )
+        self.connection_status.grid(row=0, column=0, padx=12, pady=8)
 
     def _build_toolbar(self):
         toolbar = ctk.CTkFrame(self)
@@ -77,9 +89,31 @@ class ClientesPage(ctk.CTkFrame):
             row=0, column=4
         )
 
+    def _build_kpis(self):
+        kpi_frame = ctk.CTkFrame(self)
+        kpi_frame.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 12))
+        kpi_frame.grid_columnconfigure((0, 1, 2), weight=1)
+
+        cards = [
+            ("ativos", "Clientes ativos", "0"),
+            ("inativos", "Clientes inativos", "0"),
+            ("total", "Total cadastrados", "0"),
+        ]
+        for idx, (key, title, value) in enumerate(cards):
+            card = ctk.CTkFrame(kpi_frame, corner_radius=14)
+            card.grid(row=0, column=idx, sticky="ew", padx=6)
+            ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=12)).pack(
+                anchor="w", padx=16, pady=(12, 0)
+            )
+            label = ctk.CTkLabel(
+                card, text=value, font=ctk.CTkFont(size=18, weight="bold")
+            )
+            label.pack(anchor="w", padx=16, pady=(4, 12))
+            self.kpi_labels[key] = label
+
     def _build_filters(self):
         filters = ctk.CTkFrame(self)
-        filters.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 12))
+        filters.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 12))
         filters.grid_columnconfigure(4, weight=1)
 
         ctk.CTkLabel(filters, text="Pesquisar").grid(row=0, column=0, padx=(12, 6), pady=10)
@@ -96,7 +130,7 @@ class ClientesPage(ctk.CTkFrame):
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
-        body.grid(row=3, column=0, sticky="nsew", padx=24, pady=(0, 24))
+        body.grid(row=4, column=0, sticky="nsew", padx=24, pady=(0, 24))
         body.grid_columnconfigure(0, weight=1)
         body.grid_columnconfigure(1, weight=2)
         body.grid_rowconfigure(0, weight=1)
@@ -195,8 +229,15 @@ class ClientesPage(ctk.CTkFrame):
             ok, msg = require_ready()
             if not ok:
                 messagebox.showwarning("Banco de dados", msg)
+                if self.connection_status:
+                    self.connection_status.configure(text="Banco: indisponível")
+            else:
+                if self.connection_status:
+                    self.connection_status.configure(text="Banco: conectado")
         except Exception as exc:
             messagebox.showwarning("Banco de dados", f"Não foi possível validar o banco: {exc}")
+            if self.connection_status:
+                self.connection_status.configure(text="Banco: erro de conexão")
 
     def _carregar_clientes(self):
         if self.tree is None:
@@ -248,6 +289,13 @@ class ClientesPage(ctk.CTkFrame):
                 self.summary_label.configure(
                     text=f"Resumo: {total_info[0]} clientes ativos • Total cadastrados {total_info[1]}"
                 )
+            if total_info and self.kpi_labels:
+                ativos = total_info[0] or 0
+                total = total_info[1] or 0
+                inativos = max(total - ativos, 0)
+                self.kpi_labels.get("ativos", self.summary_label).configure(text=str(ativos))
+                self.kpi_labels.get("inativos", self.summary_label).configure(text=str(inativos))
+                self.kpi_labels.get("total", self.summary_label).configure(text=str(total))
         except Exception as exc:
             messagebox.showerror("Clientes", f"Erro ao carregar clientes: {exc}")
 
