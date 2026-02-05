@@ -29,6 +29,7 @@ class ClientesPage(ctk.CTkFrame):
         self.summary_label = None
         self.connection_status = None
         self.kpi_labels = {}
+        self._tabela_clientes_ok = None
         self.selected_id = None
         self._build()
         self._verificar_conexao()
@@ -239,8 +240,48 @@ class ClientesPage(ctk.CTkFrame):
             if self.connection_status:
                 self.connection_status.configure(text="Banco: erro de conexão")
 
+    def _checar_tabela_clientes(self, force=False):
+        if self._tabela_clientes_ok is not None and not force:
+            return self._tabela_clientes_ok
+        try:
+            conn = get_conn()
+            with conn.cursor() as cursor:
+                schema = get_schema()
+                cursor.execute(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM information_schema.tables
+                        WHERE table_schema = %s AND table_name = %s
+                    )
+                    """,
+                    (schema, "cadastro_clientes"),
+                )
+                exists = cursor.fetchone()[0]
+            conn.commit()
+            self._tabela_clientes_ok = bool(exists)
+            if not self._tabela_clientes_ok:
+                messagebox.showwarning(
+                    "Clientes",
+                    "Tabela 'cadastro_clientes' não encontrada. Verifique a instalação do banco.",
+                )
+            return self._tabela_clientes_ok
+        except Exception as exc:
+            self._tabela_clientes_ok = False
+            messagebox.showerror("Clientes", f"Erro ao validar tabela de clientes: {exc}")
+            return False
+
     def _carregar_clientes(self):
         if self.tree is None:
+            return
+        if not self._checar_tabela_clientes():
+            self.tree.delete(*self.tree.get_children())
+            if self.summary_label:
+                self.summary_label.configure(text="Resumo: tabela de clientes indisponível")
+            if self.kpi_labels:
+                self.kpi_labels.get("ativos", self.summary_label).configure(text="-")
+                self.kpi_labels.get("inativos", self.summary_label).configure(text="-")
+                self.kpi_labels.get("total", self.summary_label).configure(text="-")
             return
         self.tree.delete(*self.tree.get_children())
         termo = self.filter_search.get().strip() if hasattr(self, "filter_search") else ""
@@ -310,6 +351,8 @@ class ClientesPage(ctk.CTkFrame):
         return data
 
     def _salvar_cliente(self):
+        if not self._checar_tabela_clientes():
+            return
         dados = self._coletar_dados()
         if not dados.get("nome"):
             messagebox.showwarning("Clientes", "Informe o nome do cliente.")
@@ -381,6 +424,8 @@ class ClientesPage(ctk.CTkFrame):
         if not self.selected_id:
             messagebox.showwarning("Clientes", "Selecione um cliente para inativar.")
             return
+        if not self._checar_tabela_clientes():
+            return
         if not messagebox.askyesno("Clientes", "Deseja inativar este cliente?"):
             return
         try:
@@ -421,6 +466,8 @@ class ClientesPage(ctk.CTkFrame):
             return
         selecionado = self.tree.selection()
         if not selecionado:
+            return
+        if not self._checar_tabela_clientes():
             return
         item = self.tree.item(selecionado[0])
         valores = item.get("values", [])
