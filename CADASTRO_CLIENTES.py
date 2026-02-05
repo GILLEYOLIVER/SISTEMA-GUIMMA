@@ -146,22 +146,22 @@ class ClientesPage(ctk.CTkFrame):
 
         form_fields = ctk.CTkFrame(form_frame, fg_color="transparent")
         form_fields.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))
-        form_fields.grid_columnconfigure(0, weight=1)
+        form_fields.grid_columnconfigure((0, 1), weight=1)
 
-        self._add_entry(form_fields, "Razão Social / Nome", "nome", 0, required=True)
-        self._add_entry(form_fields, "CPF / CNPJ", "documento", 1)
-        self._add_entry(form_fields, "Inscrição Estadual", "inscricao", 2)
-        self._add_entry(form_fields, "E-mail", "email", 3)
-        self._add_entry(form_fields, "Telefone", "telefone", 4)
-        self._add_entry(form_fields, "WhatsApp", "whatsapp", 5)
-        self._add_entry(form_fields, "Endereço", "endereco", 6)
-        self._add_entry(form_fields, "Bairro", "bairro", 7)
-        self._add_entry(form_fields, "Cidade", "cidade", 8)
-        self._add_entry(form_fields, "UF", "uf", 9)
-        self._add_entry(form_fields, "CEP", "cep", 10)
-        self._add_entry(form_fields, "Segmento / Canal", "segmento", 11)
-        self._add_entry(form_fields, "Observações", "observacoes", 12, height=80, multiline=True)
-        self._add_option(form_fields, "Status", "status", ["Ativo", "Inativo"], 13)
+        self._add_entry(form_fields, "Razão Social / Nome", "nome", 0, 0, required=True)
+        self._add_entry(form_fields, "CPF / CNPJ", "documento", 0, 1)
+        self._add_entry(form_fields, "Inscrição Estadual", "inscricao", 1, 0)
+        self._add_entry(form_fields, "E-mail", "email", 1, 1)
+        self._add_entry(form_fields, "Telefone", "telefone", 2, 0)
+        self._add_entry(form_fields, "WhatsApp", "whatsapp", 2, 1)
+        self._add_entry(form_fields, "Endereço", "endereco", 3, 0)
+        self._add_entry(form_fields, "Bairro", "bairro", 3, 1)
+        self._add_entry(form_fields, "Cidade", "cidade", 4, 0)
+        self._add_entry(form_fields, "UF", "uf", 4, 1)
+        self._add_entry(form_fields, "CEP", "cep", 5, 0)
+        self._add_entry(form_fields, "Segmento / Canal", "segmento", 5, 1)
+        self._add_option(form_fields, "Status", "status", ["Ativo", "Inativo"], 6, 0)
+        self._add_entry(form_fields, "Observações", "observacoes", 6, 1, height=60, multiline=True)
 
         list_frame = ctk.CTkFrame(body)
         list_frame.grid(row=0, column=1, sticky="nsew")
@@ -208,21 +208,25 @@ class ClientesPage(ctk.CTkFrame):
         )
         self.summary_label.grid(row=0, column=0, sticky="w", padx=12, pady=8)
 
-    def _add_entry(self, parent, label, key, row, height=None, multiline=False, required=False):
+    def _add_entry(self, parent, label, key, row, column, height=None, multiline=False, required=False):
         label_text = f"{label} *" if required else label
-        ctk.CTkLabel(parent, text=label_text).grid(row=row * 2, column=0, sticky="w", pady=(0, 2))
+        ctk.CTkLabel(parent, text=label_text).grid(
+            row=row * 2, column=column, sticky="w", pady=(0, 2), padx=(0, 12)
+        )
         if multiline:
             entry = ctk.CTkTextbox(parent, height=height or 80)
         else:
             entry = ctk.CTkEntry(parent)
-        entry.grid(row=row * 2 + 1, column=0, sticky="ew", pady=(0, 8))
+        entry.grid(row=row * 2 + 1, column=column, sticky="ew", pady=(0, 8), padx=(0, 12))
         self.entries[key] = entry
 
-    def _add_option(self, parent, label, key, values, row):
-        ctk.CTkLabel(parent, text=label).grid(row=row * 2, column=0, sticky="w", pady=(0, 2))
+    def _add_option(self, parent, label, key, values, row, column):
+        ctk.CTkLabel(parent, text=label).grid(
+            row=row * 2, column=column, sticky="w", pady=(0, 2), padx=(0, 12)
+        )
         option = ctk.CTkOptionMenu(parent, values=values)
         option.set(values[0])
-        option.grid(row=row * 2 + 1, column=0, sticky="w", pady=(0, 8))
+        option.grid(row=row * 2 + 1, column=column, sticky="w", pady=(0, 8), padx=(0, 12))
         self.entries[key] = option
 
     def _verificar_conexao(self):
