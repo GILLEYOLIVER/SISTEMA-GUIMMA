@@ -17,6 +17,7 @@ import os
 import sys
 import csv
 import hashlib
+import calendar
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
@@ -92,10 +93,30 @@ def registrar_log_db(usuario: str, pagina: str, acao: str, detalhe: str):
     try:
         schema = get_schema()
         with get_conn() as conn, conn.cursor() as cur:
+            try:
+                cur.execute(
+                    f"""INSERT INTO {schema}.usuario_logs (data_hora, usuario, acao, pagina, detalhe)
+                        VALUES (NOW(), %s, %s, %s, %s)""",
+                    (usuario or "Sistema", acao or "", pagina or "", detalhe or ""),
+                )
+                conn.commit()
+                return
+            except Exception:
+                conn.rollback()
+
+            usuario_id = None
+            if usuario:
+                cur.execute(
+                    f"SELECT id FROM {schema}.usuarios WHERE usuario = %s LIMIT 1",
+                    (usuario,),
+                )
+                row = cur.fetchone()
+                usuario_id = row[0] if row else None
+
             cur.execute(
-                f"""INSERT INTO {schema}.usuario_logs (data_hora, usuario, acao, pagina, detalhe)
+                f"""INSERT INTO {schema}.usuario_logs (data_hora, usuario_id, acao, pagina, detalhe)
                     VALUES (NOW(), %s, %s, %s, %s)""",
-                (usuario or "Sistema", acao or "", pagina or "", detalhe or ""),
+                (usuario_id, acao or "", pagina or "", detalhe or ""),
             )
             conn.commit()
     except Exception as e:
@@ -1129,6 +1150,14 @@ class UsuariosPage(ctk.CTkFrame):
 
         self._build_logs_table(logs_panel)
 
+    def abrir_aba_logs(self):
+        """Seleciona a aba de logs na interface."""
+        try:
+            if hasattr(self, "notebook"):
+                self.notebook.set("📊  LOGS")
+        except Exception as e:
+            print(f"❌ Erro ao selecionar aba de logs: {e}")
+
     def _build_logs_filters(self, parent):
         """Constrói os filtros de logs"""
         filters_container = ctk.CTkFrame(parent, fg_color="transparent")
@@ -1175,6 +1204,16 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_ini.pack(side="left")
         self.log_ini.insert(0, datetime.now().strftime("%d/%m/%Y"))
+        ctk.CTkButton(
+            date_ini_frame,
+            text="📅",
+            width=32,
+            height=35,
+            command=lambda: self._abrir_calendario(self.log_ini),
+            fg_color=self.cor_secundaria,
+            hover_color=self._darken_color(self.cor_secundaria),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(6, 0))
 
         # Filtro de data fim
         date_fim_frame = ctk.CTkFrame(filters_row, fg_color="transparent")
@@ -1195,6 +1234,16 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_fim.pack(side="left")
         self.log_fim.insert(0, datetime.now().strftime("%d/%m/%Y"))
+        ctk.CTkButton(
+            date_fim_frame,
+            text="📅",
+            width=32,
+            height=35,
+            command=lambda: self._abrir_calendario(self.log_fim),
+            fg_color=self.cor_secundaria,
+            hover_color=self._darken_color(self.cor_secundaria),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(6, 0))
 
         # Filtro de usuário
         user_frame = ctk.CTkFrame(filters_row, fg_color="transparent")
@@ -1206,14 +1255,28 @@ class UsuariosPage(ctk.CTkFrame):
             font=ctk.CTkFont(size=12, weight="bold")
         ).pack(side="left", padx=(0, 5))
 
+        user_input_frame = ctk.CTkFrame(user_frame, fg_color="transparent")
+        user_input_frame.pack(side="left")
+
         self.log_usuario = ctk.CTkEntry(
-            user_frame,
+            user_input_frame,
             placeholder_text="Nome do usuário...",
             width=150,
             height=35,
             font=ctk.CTkFont(size=12)
         )
         self.log_usuario.pack(side="left")
+
+        ctk.CTkButton(
+            user_input_frame,
+            text="▼",
+            width=28,
+            height=35,
+            command=self._abrir_seletor_usuarios_logs,
+            fg_color=self.cor_secundaria,
+            hover_color=self._darken_color(self.cor_secundaria),
+            text_color=self.cor_texto
+        ).pack(side="left", padx=(6, 0))
 
         # Filtro de ação
         action_frame = ctk.CTkFrame(filters_row, fg_color="transparent")
@@ -1263,12 +1326,21 @@ class UsuariosPage(ctk.CTkFrame):
         buttons_frame = ctk.CTkFrame(filters_row2, fg_color="transparent")
         buttons_frame.pack(side="right")
 
+        # Botão Buscar Atividades
+        ModernButton(
+            buttons_frame,
+            "🔎 Buscar Atividades",
+            self._filtrar_logs,
+            "primary",
+            width=150
+        ).pack(side="left", padx=(0, 8))
+
         # Botão Filtrar
         ModernButton(
             buttons_frame,
             "🔍 Filtrar",
             self._filtrar_logs,
-            "primary",
+            "secondary",
             width=100
         ).pack(side="left", padx=(0, 8))
 
@@ -1304,7 +1376,10 @@ class UsuariosPage(ctk.CTkFrame):
         info_frame.pack(fill="x", pady=(8, 0))
 
         # Estatísticas rápidas
-        stats_text = "💡 Dica: Use os filtros para encontrar registros específicos rapidamente"
+        stats_text = (
+            "💡 Dica: busque por usuário, ação, página ou palavras-chave "
+            "(ex.: login, logout, salvou, apagou, editou, cadastro, relatório, estoque)"
+        )
         ctk.CTkLabel(
             info_frame,
             text=stats_text,
@@ -1320,6 +1395,217 @@ class UsuariosPage(ctk.CTkFrame):
             text_color=self.cor_primaria
         )
         self.logs_count_label.pack(side="right")
+
+    def _abrir_calendario(self, entry):
+        """Abre um calendário simples para escolher a data."""
+        try:
+            dialog = ctk.CTkToplevel(self)
+            dialog.title("Calendário")
+            dialog.resizable(False, False)
+            dialog.transient(self)
+            dialog.grab_set()
+            self._centralizar_janela_simples(dialog, 320, 360)
+
+            header = ctk.CTkFrame(dialog, fg_color="#f1f5f9")
+            header.pack(fill="x", padx=0, pady=0)
+
+            today = datetime.now()
+            try:
+                data_atual = datetime.strptime(entry.get().strip(), "%d/%m/%Y")
+                ano = data_atual.year
+                mes = data_atual.month
+            except Exception:
+                ano = today.year
+                mes = today.month
+
+            meses_pt = [
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+            ]
+
+            title_label = ctk.CTkLabel(
+                header,
+                text="",
+                font=ctk.CTkFont(size=14, weight="bold"),
+                text_color="#111827"
+            )
+            title_label.pack(side="left", expand=True, pady=8)
+
+            def set_month(delta):
+                nonlocal mes, ano
+                mes += delta
+                if mes < 1:
+                    mes = 12
+                    ano -= 1
+                elif mes > 12:
+                    mes = 1
+                    ano += 1
+                render_calendar()
+
+            ctk.CTkButton(
+                header,
+                text="❮",
+                width=32,
+                height=28,
+                command=lambda: set_month(-1),
+                fg_color="#3b82f6",
+                hover_color="#2563eb",
+                text_color="white"
+            ).pack(side="left", padx=12, pady=8)
+
+            ctk.CTkButton(
+                header,
+                text="❯",
+                width=32,
+                height=28,
+                command=lambda: set_month(1),
+                fg_color="#3b82f6",
+                hover_color="#2563eb",
+                text_color="white"
+            ).pack(side="right", padx=12, pady=8)
+
+            body = ctk.CTkFrame(dialog, fg_color="white")
+            body.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+
+            semana_frame = ctk.CTkFrame(body, fg_color="white")
+            semana_frame.pack(fill="x", pady=(8, 4))
+
+            dias_frame = ctk.CTkFrame(body, fg_color="white")
+            dias_frame.pack(fill="both", expand=True)
+
+            def selecionar_dia(dia):
+                entry.delete(0, "end")
+                entry.insert(0, f"{dia:02d}/{mes:02d}/{ano}")
+                dialog.destroy()
+
+            def render_calendar():
+                for widget in semana_frame.winfo_children():
+                    widget.destroy()
+                for widget in dias_frame.winfo_children():
+                    widget.destroy()
+
+                title_label.configure(text=f"{meses_pt[mes - 1]} {ano}")
+
+                for idx, nome in enumerate(["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]):
+                    ctk.CTkLabel(
+                        semana_frame,
+                        text=nome,
+                        width=36,
+                        font=ctk.CTkFont(size=11, weight="bold")
+                    ).grid(row=0, column=idx, padx=2)
+
+                for row_idx, week in enumerate(calendar.Calendar(firstweekday=0).monthdayscalendar(ano, mes), start=1):
+                    for col_idx, day in enumerate(week):
+                        if day == 0:
+                            ctk.CTkLabel(
+                                dias_frame,
+                                text="",
+                                width=36
+                            ).grid(row=row_idx, column=col_idx, padx=2, pady=2)
+                        else:
+                            ctk.CTkButton(
+                                dias_frame,
+                                text=str(day),
+                                width=36,
+                                height=30,
+                                command=lambda d=day: selecionar_dia(d),
+                                fg_color="#3b82f6",
+                                hover_color="#2563eb",
+                                text_color="white"
+                            ).grid(row=row_idx, column=col_idx, padx=2, pady=2)
+
+            render_calendar()
+
+        except Exception as e:
+            messagebox.showerror("Calendário", f"Erro ao abrir calendário: {e}")
+
+    def _abrir_seletor_usuarios_logs(self):
+        """Abre seletor de usuários para preencher o filtro de logs."""
+        try:
+            dialog = ctk.CTkToplevel(self)
+            dialog.title("Selecionar Usuário")
+            dialog.geometry("420x420")
+            dialog.transient(self)
+            dialog.grab_set()
+            self._centralizar_janela_simples(dialog, 420, 420)
+
+            container = ctk.CTkFrame(dialog, fg_color="transparent")
+            container.pack(fill="both", expand=True, padx=16, pady=16)
+
+            ctk.CTkLabel(
+                container,
+                text="Selecione um usuário:",
+                font=ctk.CTkFont(size=14, weight="bold"),
+                text_color=self.cor_texto
+            ).pack(anchor="w", pady=(0, 10))
+
+            lista_frame = ctk.CTkFrame(container, fg_color="transparent")
+            lista_frame.pack(fill="both", expand=True)
+
+            listbox = tk.Listbox(
+                lista_frame,
+                height=12,
+                activestyle="dotbox"
+            )
+            listbox.pack(side="left", fill="both", expand=True)
+
+            scrollbar = tk.Scrollbar(lista_frame, command=listbox.yview)
+            scrollbar.pack(side="right", fill="y")
+            listbox.config(yscrollcommand=scrollbar.set)
+
+            usuarios = []
+            if POSTGRES_AVAILABLE:
+                try:
+                    schema = get_schema()
+                    usuarios = [
+                        row[0] for row in self._fetch_all(
+                            f"SELECT usuario FROM {schema}.usuarios ORDER BY usuario"
+                        ) or []
+                    ]
+                except Exception as e:
+                    print(f"[Logs] erro ao carregar usuários: {e}")
+                    usuarios = []
+            if not usuarios:
+                usuarios = ["Admin", "Operador1", "Operador2", "Estoque", "Cortes", "Financeiro"]
+
+            for usuario in usuarios:
+                listbox.insert("end", usuario)
+
+            def aplicar_selecao(_event=None):
+                try:
+                    selecao = listbox.curselection()
+                    if not selecao:
+                        return
+                    valor = listbox.get(selecao[0])
+                    self.log_usuario.delete(0, "end")
+                    self.log_usuario.insert(0, valor)
+                finally:
+                    dialog.destroy()
+
+            listbox.bind("<Double-Button-1>", aplicar_selecao)
+            listbox.bind("<Return>", aplicar_selecao)
+
+            botoes = ctk.CTkFrame(container, fg_color="transparent")
+            botoes.pack(fill="x", pady=(12, 0))
+
+            ModernButton(
+                botoes,
+                "Selecionar",
+                aplicar_selecao,
+                "primary",
+                width=120
+            ).pack(side="right")
+
+            ModernButton(
+                botoes,
+                "Cancelar",
+                dialog.destroy,
+                "secondary",
+                width=120
+            ).pack(side="right", padx=(0, 8))
+
+        except Exception as e:
+            messagebox.showerror("Usuários", f"Erro ao abrir seletor: {e}")
 
     def _build_logs_table(self, parent):
         """Constrói a tabela de logs"""
@@ -1619,9 +1905,10 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             schema = get_schema()
             rows = self._fetch_all(
-                f"""SELECT usuario, acao, pagina, data_hora 
-                    FROM {schema}.usuario_logs 
-                    ORDER BY data_hora DESC 
+                f"""SELECT COALESCE(u.usuario, '') AS usuario, ul.acao, ul.pagina, ul.data_hora
+                    FROM {schema}.usuario_logs ul
+                    LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
+                    ORDER BY ul.data_hora DESC
                     LIMIT %s""",
                 (limite,)
             )
@@ -2799,7 +3086,11 @@ class UsuariosPage(ctk.CTkFrame):
 
             # Verificar logs recentes
             logs_recentes = self._fetch_all(
-                f"SELECT usuario, acao, pagina, data_hora FROM {schema}.usuario_logs ORDER BY data_hora DESC LIMIT 5"
+                f"""SELECT COALESCE(u.usuario, '') AS usuario, ul.acao, ul.pagina, ul.data_hora
+                    FROM {schema}.usuario_logs ul
+                    LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
+                    ORDER BY ul.data_hora DESC
+                    LIMIT 5"""
             )
 
             if logs_recentes:
@@ -2859,13 +3150,14 @@ class UsuariosPage(ctk.CTkFrame):
             # MONTAGEM DA QUERY (CORRETA)
             # -------------------------
             query = f"""
-                SELECT 
-                    data_hora,
-                    usuario,
-                    acao,
-                    pagina,
-                    detalhe
-                FROM {schema}.vw_usuario_logs
+                SELECT
+                    ul.data_hora,
+                    COALESCE(u.usuario, '') AS usuario,
+                    ul.acao,
+                    ul.pagina,
+                    ul.detalhe
+                FROM {schema}.usuario_logs ul
+                LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
                 WHERE 1=1
             """
             params = []
@@ -2879,7 +3171,7 @@ class UsuariosPage(ctk.CTkFrame):
                 params.append(data_fim_sql)
 
             if usuario:
-                query += " AND usuario ILIKE %s"
+                query += " AND COALESCE(u.usuario, '') ILIKE %s"
                 params.append(f"%{usuario}%")
 
             if acao and acao.lower() != "todos":
@@ -2887,7 +3179,10 @@ class UsuariosPage(ctk.CTkFrame):
                 params.append(f"%{acao}%")
 
             if busca:
-                query += " AND (usuario ILIKE %s OR acao ILIKE %s OR pagina ILIKE %s OR detalhe ILIKE %s)"
+                query += (
+                    " AND (COALESCE(u.usuario, '') ILIKE %s "
+                    "OR ul.acao ILIKE %s OR ul.pagina ILIKE %s OR ul.detalhe ILIKE %s)"
+                )
                 params += [f"%{busca}%"] * 4
 
             query += " ORDER BY data_hora DESC"
@@ -2945,7 +3240,11 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             schema = get_schema()
             rows = self._fetch_all(
-                f"SELECT data_hora, usuario, acao, pagina, detalhe FROM {schema}.usuario_logs ORDER BY data_hora DESC")
+                f"""SELECT ul.data_hora, COALESCE(u.usuario, '') AS usuario, ul.acao, ul.pagina, ul.detalhe
+                    FROM {schema}.usuario_logs ul
+                    LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
+                    ORDER BY ul.data_hora DESC"""
+            )
             base_dir = os.path.dirname(os.path.abspath(__file__))
             out_dir = os.path.join(base_dir, "relatorios")
             os.makedirs(out_dir, exist_ok=True)
@@ -3345,11 +3644,11 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             schema = get_schema()
             rows = self._fetch_all(
-                f"""SELECT DATE(data_hora) as data, COUNT(DISTINCT usuario)
-                    FROM {schema}.usuario_logs 
-                    WHERE (acao ILIKE '%login%' OR acao ILIKE '%logar%' OR acao ILIKE '%entrou%')
-                    AND data_hora >= CURRENT_DATE - INTERVAL '7 days'
-                    GROUP BY DATE(data_hora) 
+                f"""SELECT DATE(ul.data_hora) as data, COUNT(DISTINCT ul.usuario_id)
+                    FROM {schema}.usuario_logs ul
+                    WHERE (ul.acao ILIKE '%login%' OR ul.acao ILIKE '%logar%' OR ul.acao ILIKE '%entrou%')
+                    AND ul.data_hora >= CURRENT_DATE - INTERVAL '7 days'
+                    GROUP BY DATE(ul.data_hora)
                     ORDER BY data ASC"""
             )
 
@@ -3415,9 +3714,10 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             schema = get_schema()
             rows = self._fetch_all(
-                f"""SELECT usuario, acao, pagina, data_hora 
-                    FROM {schema}.usuario_logs 
-                    ORDER BY data_hora DESC 
+                f"""SELECT COALESCE(u.usuario, '') AS usuario, ul.acao, ul.pagina, ul.data_hora
+                    FROM {schema}.usuario_logs ul
+                    LEFT JOIN {schema}.usuarios u ON ul.usuario_id = u.id
+                    ORDER BY ul.data_hora DESC
                     LIMIT %s""",
                 (limite,)
             )
@@ -3498,6 +3798,7 @@ class UsuariosPage(ctk.CTkFrame):
         janela_relatorio.geometry("1000x700")
         janela_relatorio.transient(self)
         janela_relatorio.grab_set()
+        self._centralizar_janela_relatorio(janela_relatorio)
 
         # Frame principal com scroll
         main_frame = ctk.CTkScrollableFrame(janela_relatorio, fg_color="white")
@@ -4705,6 +5006,7 @@ class UsuariosPage(ctk.CTkFrame):
             word_window = ctk.CTkToplevel(self)
             word_window.title("Conteúdo para Microsoft Word")
             word_window.geometry("800x600")
+            self._centralizar_janela_simples(word_window, 800, 600)
 
             # Área de texto com conteúdo formatado
             text_area = scrolledtext.ScrolledText(

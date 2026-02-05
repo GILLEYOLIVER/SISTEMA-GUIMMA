@@ -1,0 +1,231 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 1524 >>
+stream
+BT
+/F1 11 Tf
+40 742 Td
+14 TL
+(MAPA COMPLETO DO MENU - SISTEMA GUIMMA) Tj
+T*
+(Gerado em: 04/02/2026 18:06) Tj
+T*
+() Tj
+T*
+(MENU E SUBPAGINAS:) Tj
+T*
+(- Dashboard) Tj
+T*
+(    • Dashboard) Tj
+T*
+(- MODELOS) Tj
+T*
+(    • Cadastrar Modelo) Tj
+T*
+(    • Imprimir Ficha Técnica) Tj
+T*
+(- ORDENS DE CORTE) Tj
+T*
+(    • Nova Ordem) Tj
+T*
+(    • Ordens de Corte Impressão) Tj
+T*
+(- REGISTRO DE CORTE) Tj
+T*
+(    • Cadastrar Corte) Tj
+T*
+(    • Consultar Ordens) Tj
+T*
+(- MÃO DE OBRA) Tj
+T*
+(    • Controle de Mão de Obra) Tj
+T*
+(- ESTOQUE) Tj
+T*
+(    • Entrada de Estoque) Tj
+T*
+(    • Saída de Estoque) Tj
+T*
+(    • Relatórios) Tj
+T*
+(- PRESTADORES) Tj
+T*
+(    • Cadastro de Prestadores) Tj
+T*
+(    • Pesquisar Serviço) Tj
+T*
+(- ACABAMENTO) Tj
+T*
+(    • Registro Acabamento) Tj
+T*
+(    • Finalizar Corte / Acabamento) Tj
+T*
+(    • Retrabalho de Defeitos) Tj
+T*
+(- FINANCEIRO) Tj
+T*
+(    • Pagamento de Serviços) Tj
+T*
+(    • Recibos de Pagamentos) Tj
+T*
+(    • Custo Produto) Tj
+T*
+(    • Folha Pagamento) Tj
+T*
+(    • Fechamento Mensal) Tj
+T*
+(    • Contas a Pagar) Tj
+T*
+(    • Adiantamento) Tj
+T*
+(    • Adiantamentos Pendentes) Tj
+T*
+(- RELATÓRIOS) Tj
+T*
+(    • Produção) Tj
+T*
+(    • Serviços Externos) Tj
+T*
+(    • Modelos Produzidos) Tj
+T*
+(    • Acabamento) Tj
+T*
+(    • Logs e Atividades) Tj
+T*
+(- CONFIGURAÇÕES) Tj
+T*
+(    • Trocar Usuário) Tj
+T*
+(    • Usuários) Tj
+T*
+(    • Temas) Tj
+T*
+(- BANCO DE DADOS) Tj
+T*
+(    • Gerenciar) Tj
+T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 2844 >>
+stream
+BT
+/F1 11 Tf
+40 742 Td
+14 TL
+(    • Backup) Tj
+T*
+() Tj
+T*
+(ROTAS \(menu -> arquivo/classe\):) Tj
+T*
+(- Acabamento: RELATORIO_ACABAMENTO.py :: RelatorioAcabamentoPage) Tj
+T*
+(- Adiantamento: ADIANTAMENTO_PAGE.py :: PagamentoAdiantamentoPage) Tj
+T*
+(- Adiantamentos Pendentes: ADIANTAMENTO_PENDENTE.py :: AdiantamentosPendentesPage) Tj
+T*
+(- Backup: BACKUP.py :: BackupPage) Tj
+T*
+(- Cadastrar Corte: CADASTRO_DE_CORTE.py :: CadastroOrdemCorte) Tj
+T*
+(- Cadastrar Modelo: CADASTRAR_MODELO.py :: CadastrarModeloPage) Tj
+T*
+(- Cadastro de Prestadores: CADASTRO_FACCOES.py :: CadastroFaccoesView) Tj
+T*
+(- Consultar Ordens: CONSULTAR_ORDENS.py :: ConsultarOrdensPage) Tj
+T*
+(- Contas a Pagar: CONTAS_A_PAGAR.py :: ContasAPagarPage) Tj
+T*
+(- Controle de Mão de Obra: CONTROLE_ENVIO_CORTES.py :: EnvioCortes) Tj
+T*
+(- Custo Produto: PRECIFICACAO_PRODUTO.py :: PrecificacaoProdutoPage) Tj
+T*
+(- Dashboard: DASHBOARD.py :: DashboardPage) Tj
+T*
+(- Entrada de Estoque: ENTRADA_ESTOQUE.py :: EntradaEstoqueApp) Tj
+T*
+(- Enviados: PRODUCAO_ENVIADOS.py :: ProducaoEnviadosPage) Tj
+T*
+(- Fechamento Mensal: FECHAMENTO_MENSAL.py :: FechamentoMensalPage) Tj
+T*
+(- Finalizados: PRODUCAO_FINALIZADOS.py :: ProducaoFinalizadosPage) Tj
+T*
+(- Finalizar Corte / Acabamento: FINALIZAR_CORTE_ACABAMENTO.PY :: FinalizacaoCortes) Tj
+T*
+(- Folha Pagamento: FOLHA_PAGAMENTO_SERVICOS.py :: FolhaPagamentoServicosPage) Tj
+T*
+(- Gerenciar: BANCO_DADOS_FABRICA.py :: BancoDadosFabricaApp) Tj
+T*
+(- Imprimir Ficha Técnica: IMPRIMIR_FICHAS_TECNICAS.py :: FichaTecnicaApp) Tj
+T*
+(- Interna: PRODUCAO_INTERNA.py :: ProducaoInternaPage) Tj
+T*
+(- Logs e Atividades: USUARIOS.py :: UsuariosPage) Tj
+T*
+(- Modelos Produzidos: RELATORIO_MODELOS_PRODUZIDOS.py :: RelatorioModelosProduzidosPage) Tj
+T*
+(- Nova Ordem: NOVA_ORDEM.py :: OrdemCorte) Tj
+T*
+(- Ordens de Corte Impressão: REIMPRIMIR-ORDENS-DE-CORTE.py :: OrdensCorteImpressao) Tj
+T*
+(- Pagamento de Serviços: PAGAMENTO_SERVICOS.py :: PagamentoServicosPage) Tj
+T*
+(- Pesquisar Serviço: CONSULTAR_SERVICOS.py :: PesquisaServicosPage) Tj
+T*
+(- Produção: RELATORIO_ENVIO_DETALHADO.py :: RelatorioEnvioDetalhado) Tj
+T*
+(- RELATORIOS: RELATORIO_ENVIO_DETALHADO.py :: RelatorioEnvioDetalhado) Tj
+T*
+(- Recibos de Pagamentos: RECIBOS_PAGAMENTOS.py :: RecibosPagamentosPage) Tj
+T*
+(- Registro Acabamento: CONTROLE_RETORNO_CORTE.py :: RetornoCorteControlPage) Tj
+T*
+(- Relatórios: RELATORIO_ESTOQUE.py :: AdvancedStockReport) Tj
+T*
+(- Retorno: PRODUCAO_RETORNO.py :: ProducaoRetornoPage) Tj
+T*
+(- Retrabalho de Defeitos: RETRABALHO_DEFEITOS.py :: RetrabalhoDefeitosPage) Tj
+T*
+(- Saída de Estoque: SAIDA_ESTOQUE.py :: SaidaEstoquePage) Tj
+T*
+(- Serviços Externos: RELATORIO_SERVICOS_EXTERNOS.py :: RelatorioServicosExternosPage) Tj
+T*
+(- Temas: TEMAS.py :: TemasPage) Tj
+T*
+(- Usuários: USUARIOS.py :: UsuariosPage) Tj
+T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000001767 00000 n 
+0000001893 00000 n 
+0000004789 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+4915
+%%EOF
