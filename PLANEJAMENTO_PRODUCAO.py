@@ -662,12 +662,14 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         from datetime import datetime as _dt
         import calendar as _cal
 
+        parent = entry.winfo_toplevel()
+
         def setar_data(d):
             entry.delete(0, "end")
             entry.insert(0, d.strftime("%d/%m/%Y"))
             top.destroy()
 
-        top = ctk.CTkToplevel(self)
+        top = ctk.CTkToplevel(parent)
         top.title("Calendário")
         top.resizable(False, False)
 
@@ -690,8 +692,9 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             y = ey - H - 6
 
         top.geometry(f"{W}x{H}+{x}+{y}")
-        top.transient(self)
+        top.transient(parent)
         top.grab_set()
+        top.lift()
 
         now = _dt.now()
         ano = now.year
