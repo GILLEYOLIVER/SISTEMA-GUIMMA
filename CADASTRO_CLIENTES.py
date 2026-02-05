@@ -133,11 +133,10 @@ class ClientesPage(ctk.CTkFrame):
         body = ctk.CTkFrame(self, fg_color="transparent")
         body.grid(row=4, column=0, sticky="nsew", padx=24, pady=(0, 24))
         body.grid_columnconfigure(0, weight=1)
-        body.grid_columnconfigure(1, weight=2)
-        body.grid_rowconfigure(0, weight=1)
+        body.grid_rowconfigure(1, weight=1)
 
         form_frame = ctk.CTkFrame(body)
-        form_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        form_frame.grid(row=0, column=0, sticky="ew")
         form_frame.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(
@@ -145,7 +144,7 @@ class ClientesPage(ctk.CTkFrame):
         ).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
 
         form_fields = ctk.CTkFrame(form_frame, fg_color="transparent")
-        form_fields.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))
+        form_fields.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 16))
         form_fields.grid_columnconfigure((0, 1), weight=1)
 
         self._add_entry(form_fields, "Razão Social / Nome", "nome", 0, 0, required=True)
@@ -164,7 +163,7 @@ class ClientesPage(ctk.CTkFrame):
         self._add_entry(form_fields, "Observações", "observacoes", 6, 1, height=60, multiline=True)
 
         list_frame = ctk.CTkFrame(body)
-        list_frame.grid(row=0, column=1, sticky="nsew")
+        list_frame.grid(row=1, column=0, sticky="nsew", pady=(12, 0))
         list_frame.grid_columnconfigure(0, weight=1)
         list_frame.grid_rowconfigure(1, weight=1)
 
