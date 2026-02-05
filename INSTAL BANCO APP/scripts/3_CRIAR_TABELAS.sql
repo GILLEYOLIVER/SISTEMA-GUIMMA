@@ -1457,6 +1457,13 @@ CREATE TABLE IF NOT EXISTS opera.cadastro_clientes (
     data_atualizacao TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_cadastro_clientes_nome
+    ON opera.cadastro_clientes (nome);
+CREATE INDEX IF NOT EXISTS idx_cadastro_clientes_documento
+    ON opera.cadastro_clientes (documento);
+CREATE INDEX IF NOT EXISTS idx_cadastro_clientes_status
+    ON opera.cadastro_clientes (status);
+
 -- [TABELA 49] compras_fornecedores - Fornecedores de compras
 CREATE TABLE IF NOT EXISTS opera.compras_fornecedores (
     id SERIAL PRIMARY KEY,
