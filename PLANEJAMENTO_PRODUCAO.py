@@ -363,6 +363,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.selected_capacidade_id = selecionado[0] if selecionado else None
 
     def _abrir_form_op(self):
+        self.selected_op_id = None
         self._abrir_form_op_dados()
 
     def _editar_op(self):
@@ -452,9 +453,6 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             if not self._checar_tabela("planejamento_ops"):
                 return
             op = op_entry.get().strip()
-            if not op:
-                messagebox.showwarning("Planejamento", "Informe a OP.")
-                return
             inicio = self._parse_data(inicio_entry.get().strip())
             fim = self._parse_data(fim_entry.get().strip())
             try:
@@ -486,6 +484,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             ),
                         )
                     else:
+                        if not op:
+                            op = self._gerar_op_sequencial(cursor, schema)
+                        elif self._op_existe(cursor, schema, op):
+                            messagebox.showwarning("Planejamento", "OP já existe. Use outra numeração.")
+                            return
                         cursor.execute(
                             f"""
                             INSERT INTO {schema}.planejamento_ops
@@ -511,6 +514,30 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         ctk.CTkButton(frame, text="Salvar", command=salvar).grid(
             row=7, column=1, sticky="e", pady=(12, 0)
         )
+
+    def _gerar_op_sequencial(self, cursor, schema):
+        cursor.execute(
+            f"""
+            SELECT MAX(CAST(op AS INTEGER))
+            FROM {schema}.planejamento_ops
+            WHERE op ~ '^[0-9]+$'
+            """
+        )
+        ultimo = cursor.fetchone()[0]
+        proximo = (ultimo or 0) + 1
+        return str(proximo)
+
+    def _op_existe(self, cursor, schema, op):
+        cursor.execute(
+            f"""
+            SELECT 1
+            FROM {schema}.planejamento_ops
+            WHERE op = %s
+            LIMIT 1
+            """,
+            (op,),
+        )
+        return cursor.fetchone() is not None
 
     def _abrir_form_capacidade(self):
         top = ctk.CTkToplevel(self)
