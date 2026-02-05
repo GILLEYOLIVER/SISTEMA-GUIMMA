@@ -20,6 +20,8 @@ class MRPPage(ctk.CTkFrame):
         self.tree_necessidades = None
         self.tree_ordens = None
         self.tree_fornecedores = None
+        self.kpi_labels = {}
+        self.resumo_labels = {}
         self._build()
 
     def _build(self):
@@ -31,6 +33,7 @@ class MRPPage(ctk.CTkFrame):
         self._build_toolbar()
         self._build_filters()
         self._build_results()
+        self._aplicar_filtros()
 
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color="transparent")
@@ -85,14 +88,18 @@ class MRPPage(ctk.CTkFrame):
             command=lambda: self._abrir_calendario(self.mrp_fim_entry),
         ).grid(row=0, column=4, padx=(0, 12), pady=8)
         ctk.CTkLabel(filters, text="Coleção").grid(row=0, column=5, padx=(0, 6), pady=8)
-        ctk.CTkOptionMenu(filters, values=["Todas", "Linha Básica", "Coleção 2026"]).grid(
-            row=0, column=6, padx=(0, 12), pady=8
+        self.filter_colecao = ctk.CTkOptionMenu(
+            filters, values=["Todas", "Linha Básica", "Coleção 2026"]
         )
+        self.filter_colecao.grid(row=0, column=6, padx=(0, 12), pady=8)
         ctk.CTkLabel(filters, text="Status").grid(row=0, column=7, padx=(0, 6), pady=8)
-        ctk.CTkOptionMenu(filters, values=["Crítico", "Atenção", "OK", "Todos"]).grid(
-            row=0, column=8, padx=(0, 12), pady=8
+        self.filter_status = ctk.CTkOptionMenu(
+            filters, values=["Crítico", "Atenção", "OK", "Todos"]
         )
-        ctk.CTkButton(filters, text="Filtrar").grid(row=0, column=9, padx=(0, 12), pady=8)
+        self.filter_status.grid(row=0, column=8, padx=(0, 12), pady=8)
+        ctk.CTkButton(filters, text="Filtrar", command=self._aplicar_filtros).grid(
+            row=0, column=9, padx=(0, 12), pady=8
+        )
 
     def _build_results(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
@@ -103,17 +110,47 @@ class MRPPage(ctk.CTkFrame):
         kpis = ctk.CTkFrame(body)
         kpis.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         kpis.grid_columnconfigure((0, 1, 2, 3), weight=1)
-        for idx, text in enumerate(
-            ["Itens críticos: 0", "Faltantes: 0", "Valor a comprar: R$ 0,00", "Lead time médio: 0 dias"]
-        ):
-            card = ctk.CTkFrame(kpis)
+        kpi_info = [
+            ("criticos", "Itens críticos", "0"),
+            ("faltantes", "Faltantes", "0"),
+            ("valor", "Valor a comprar", "R$ 0,00"),
+            ("lead", "Lead time médio", "0 dias"),
+        ]
+        for idx, (key, title, value) in enumerate(kpi_info):
+            card = ctk.CTkFrame(kpis, corner_radius=14)
             card.grid(row=0, column=idx, padx=6, sticky="ew")
-            ctk.CTkLabel(card, text=text, font=ctk.CTkFont(size=12, weight="bold")).pack(
-                pady=12
+            ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=12)).pack(
+                anchor="w", padx=16, pady=(12, 0)
             )
+            label = ctk.CTkLabel(
+                card, text=value, font=ctk.CTkFont(size=18, weight="bold")
+            )
+            label.pack(anchor="w", padx=16, pady=(4, 12))
+            self.kpi_labels[key] = label
+
+        resumo = ctk.CTkFrame(body)
+        resumo.grid(row=1, column=0, sticky="ew", pady=(0, 12))
+        resumo.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        resumo_info = [
+            ("periodo", "Período", "Não informado"),
+            ("colecao", "Coleção", "Todas"),
+            ("status", "Status", "Todos"),
+            ("atualizacao", "Atualizado em", datetime.now().strftime("%d/%m/%Y %H:%M")),
+        ]
+        for idx, (key, title, value) in enumerate(resumo_info):
+            card = ctk.CTkFrame(resumo, corner_radius=14)
+            card.grid(row=0, column=idx, padx=6, sticky="ew")
+            ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=12)).pack(
+                anchor="w", padx=16, pady=(10, 0)
+            )
+            label = ctk.CTkLabel(
+                card, text=value, font=ctk.CTkFont(size=13, weight="bold")
+            )
+            label.pack(anchor="w", padx=16, pady=(4, 10))
+            self.resumo_labels[key] = label
 
         tabs = ctk.CTkTabview(body)
-        tabs.grid(row=1, column=0, sticky="nsew")
+        tabs.grid(row=2, column=0, sticky="nsew")
 
         necessidades_tab = tabs.add("Necessidades")
         ordens_tab = tabs.add("Ordens Recomendadas")
@@ -225,6 +262,29 @@ class MRPPage(ctk.CTkFrame):
         self.tree_fornecedores.configure(yscrollcommand=tree_scroll.set)
         self.tree_fornecedores.grid(row=0, column=0, sticky="nsew", padx=(12, 0), pady=12)
         tree_scroll.grid(row=0, column=1, sticky="ns", pady=12)
+
+    def _aplicar_filtros(self):
+        inicio = self.mrp_inicio_entry.get().strip() if hasattr(self, "mrp_inicio_entry") else ""
+        fim = self.mrp_fim_entry.get().strip() if hasattr(self, "mrp_fim_entry") else ""
+        if inicio and fim:
+            periodo = f"{inicio} - {fim}"
+        elif inicio:
+            periodo = f"A partir de {inicio}"
+        elif fim:
+            periodo = f"Até {fim}"
+        else:
+            periodo = "Não informado"
+
+        colecao = self.filter_colecao.get() if hasattr(self, "filter_colecao") else "Todas"
+        status = self.filter_status.get() if hasattr(self, "filter_status") else "Todos"
+
+        if self.resumo_labels:
+            self.resumo_labels["periodo"].configure(text=periodo)
+            self.resumo_labels["colecao"].configure(text=colecao)
+            self.resumo_labels["status"].configure(text=status)
+            self.resumo_labels["atualizacao"].configure(
+                text=datetime.now().strftime("%d/%m/%Y %H:%M")
+            )
 
     def _exportar_mrp(self):
         try:

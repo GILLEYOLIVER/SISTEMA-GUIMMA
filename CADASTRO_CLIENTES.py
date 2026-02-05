@@ -27,6 +27,9 @@ class ClientesPage(ctk.CTkFrame):
         self.entries = {}
         self.tree = None
         self.summary_label = None
+        self.connection_status = None
+        self.kpi_labels = {}
+        self._tabela_clientes_ok = None
         self.selected_id = None
         self._build()
         self._verificar_conexao()
@@ -34,18 +37,17 @@ class ClientesPage(ctk.CTkFrame):
 
     def _build(self):
         self.configure(fg_color="transparent")
-        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         self._build_header()
-        self._build_toolbar()
-        self._build_filters()
         self._build_body()
 
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=24, pady=(20, 10))
         header.grid_columnconfigure(0, weight=1)
+        header.grid_columnconfigure(1, weight=0)
 
         ctk.CTkLabel(
             header,
@@ -58,6 +60,14 @@ class ClientesPage(ctk.CTkFrame):
             text="Gestão de contatos, endereços e vínculos para pedidos e relatórios.",
             font=ctk.CTkFont(size=12),
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+
+        status_frame = ctk.CTkFrame(header, corner_radius=18)
+        status_frame.grid(row=0, column=1, rowspan=2, sticky="e")
+        status_frame.grid_columnconfigure(0, weight=1)
+        self.connection_status = ctk.CTkLabel(
+            status_frame, text="Banco: verificando", font=ctk.CTkFont(size=12, weight="bold")
+        )
+        self.connection_status.grid(row=0, column=0, padx=12, pady=8)
 
     def _build_toolbar(self):
         toolbar = ctk.CTkFrame(self)
@@ -77,9 +87,31 @@ class ClientesPage(ctk.CTkFrame):
             row=0, column=4
         )
 
+    def _build_kpis(self):
+        kpi_frame = ctk.CTkFrame(self)
+        kpi_frame.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 12))
+        kpi_frame.grid_columnconfigure((0, 1, 2), weight=1)
+
+        cards = [
+            ("ativos", "Clientes ativos", "0"),
+            ("inativos", "Clientes inativos", "0"),
+            ("total", "Total cadastrados", "0"),
+        ]
+        for idx, (key, title, value) in enumerate(cards):
+            card = ctk.CTkFrame(kpi_frame, corner_radius=14)
+            card.grid(row=0, column=idx, sticky="ew", padx=6)
+            ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=12)).pack(
+                anchor="w", padx=16, pady=(12, 0)
+            )
+            label = ctk.CTkLabel(
+                card, text=value, font=ctk.CTkFont(size=18, weight="bold")
+            )
+            label.pack(anchor="w", padx=16, pady=(4, 12))
+            self.kpi_labels[key] = label
+
     def _build_filters(self):
         filters = ctk.CTkFrame(self)
-        filters.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 12))
+        filters.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 12))
         filters.grid_columnconfigure(4, weight=1)
 
         ctk.CTkLabel(filters, text="Pesquisar").grid(row=0, column=0, padx=(12, 6), pady=10)
@@ -96,52 +128,83 @@ class ClientesPage(ctk.CTkFrame):
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
-        body.grid(row=3, column=0, sticky="nsew", padx=24, pady=(0, 24))
+        body.grid(row=1, column=0, sticky="nsew", padx=24, pady=(0, 24))
         body.grid_columnconfigure(0, weight=1)
-        body.grid_columnconfigure(1, weight=2)
-        body.grid_rowconfigure(0, weight=1)
+        body.grid_rowconfigure(1, weight=1)
 
-        form_frame = ctk.CTkFrame(body)
-        form_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        top_panel = ctk.CTkFrame(body)
+        top_panel.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        top_panel.grid_columnconfigure(0, weight=1)
+        top_panel.grid_columnconfigure(1, weight=0)
+
+        form_frame = ctk.CTkFrame(top_panel, fg_color="transparent")
+        form_frame.grid(row=0, column=0, sticky="ew", padx=12, pady=12)
         form_frame.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(
             form_frame, text="Dados do Cliente", font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
+        ).grid(row=0, column=0, sticky="w", pady=(0, 8))
 
         form_fields = ctk.CTkFrame(form_frame, fg_color="transparent")
-        form_fields.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))
-        form_fields.grid_columnconfigure(0, weight=1)
+        form_fields.grid(row=1, column=0, sticky="ew")
+        form_fields.grid_columnconfigure((0, 1, 2), weight=1)
 
-        self._add_entry(form_fields, "Razão Social / Nome", "nome", 0, required=True)
-        self._add_entry(form_fields, "CPF / CNPJ", "documento", 1)
-        self._add_entry(form_fields, "Inscrição Estadual", "inscricao", 2)
-        self._add_entry(form_fields, "E-mail", "email", 3)
-        self._add_entry(form_fields, "Telefone", "telefone", 4)
-        self._add_entry(form_fields, "WhatsApp", "whatsapp", 5)
-        self._add_entry(form_fields, "Endereço", "endereco", 6)
-        self._add_entry(form_fields, "Bairro", "bairro", 7)
-        self._add_entry(form_fields, "Cidade", "cidade", 8)
-        self._add_entry(form_fields, "UF", "uf", 9)
-        self._add_entry(form_fields, "CEP", "cep", 10)
-        self._add_entry(form_fields, "Segmento / Canal", "segmento", 11)
-        self._add_entry(form_fields, "Observações", "observacoes", 12, height=80, multiline=True)
-        self._add_option(form_fields, "Status", "status", ["Ativo", "Inativo"], 13)
+        self._add_entry(form_fields, "Razão Social / Nome", "nome", 0, 0, required=True)
+        self._add_entry(form_fields, "CPF / CNPJ", "documento", 0, 1)
+        self._add_entry(form_fields, "Inscrição Estadual", "inscricao", 0, 2)
+        self._add_entry(form_fields, "E-mail", "email", 1, 0)
+        self._add_entry(form_fields, "Telefone", "telefone", 1, 1)
+        self._add_entry(form_fields, "WhatsApp", "whatsapp", 1, 2)
+        self._add_entry(form_fields, "Endereço", "endereco", 2, 0)
+        self._add_entry(form_fields, "Bairro", "bairro", 2, 1)
+        self._add_entry(form_fields, "Cidade", "cidade", 2, 2)
+        self._add_entry(form_fields, "UF", "uf", 3, 0)
+        self._add_entry(form_fields, "CEP", "cep", 3, 1)
+        self._add_entry(form_fields, "Segmento / Canal", "segmento", 3, 2)
+        self._add_option(form_fields, "Status", "status", ["Ativo", "Inativo"], 4, 0)
+        self._add_entry(form_fields, "Observações", "observacoes", 4, 1, height=50, multiline=True)
+
+        actions_frame = ctk.CTkFrame(top_panel, fg_color="transparent")
+        actions_frame.grid(row=0, column=1, sticky="ne", padx=12, pady=12)
+        actions_frame.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkButton(actions_frame, text="Novo Cliente", command=self._limpar_formulario).grid(
+            row=0, column=0, sticky="ew", pady=(0, 8)
+        )
+        ctk.CTkButton(actions_frame, text="Salvar", command=self._salvar_cliente).grid(
+            row=1, column=0, sticky="ew", pady=(0, 8)
+        )
+        ctk.CTkButton(actions_frame, text="Inativar", command=self._inativar_cliente).grid(
+            row=2, column=0, sticky="ew", pady=(0, 8)
+        )
+        ctk.CTkButton(actions_frame, text="Exportar", command=self._exportar_cliente).grid(
+            row=3, column=0, sticky="ew"
+        )
 
         list_frame = ctk.CTkFrame(body)
-        list_frame.grid(row=0, column=1, sticky="nsew")
+        list_frame.grid(row=1, column=0, sticky="nsew")
         list_frame.grid_columnconfigure(0, weight=1)
         list_frame.grid_rowconfigure(1, weight=1)
 
-        ctk.CTkLabel(
-            list_frame, text="Clientes Cadastrados", font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
+        filters = ctk.CTkFrame(list_frame)
+        filters.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 6))
+        filters.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(filters, text="Pesquisar").grid(row=0, column=0, padx=(0, 6), pady=8)
+        self.filter_search = ctk.CTkEntry(filters, placeholder_text="Nome, documento, telefone ou e-mail")
+        self.filter_search.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=8)
+        ctk.CTkLabel(filters, text="Status").grid(row=0, column=2, padx=(0, 6), pady=8)
+        self.filter_status = ctk.CTkOptionMenu(filters, values=["Ativo", "Inativo", "Todos"])
+        self.filter_status.grid(row=0, column=3, padx=(0, 12), pady=8)
+        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_clientes).grid(
+            row=0, column=5, pady=8
+        )
 
         self.tree = ttk.Treeview(
             list_frame,
             columns=("id", "nome", "documento", "cidade", "status", "ultima_compra"),
             show="headings",
-            height=12,
+            height=8,
         )
         self.tree.heading("id", text="ID")
         self.tree.heading("nome", text="Nome")
@@ -160,11 +223,11 @@ class ClientesPage(ctk.CTkFrame):
 
         tree_scroll = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=tree_scroll.set)
-        self.tree.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
-        tree_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 16))
+        self.tree.grid(row=1, column=0, sticky="nsew", padx=(12, 0), pady=(0, 8))
+        tree_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 8))
 
         summary = ctk.CTkFrame(list_frame)
-        summary.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 16))
+        summary.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 12))
         summary.grid_columnconfigure(0, weight=1)
         self.summary_label = ctk.CTkLabel(
             summary,
@@ -173,21 +236,25 @@ class ClientesPage(ctk.CTkFrame):
         )
         self.summary_label.grid(row=0, column=0, sticky="w", padx=12, pady=8)
 
-    def _add_entry(self, parent, label, key, row, height=None, multiline=False, required=False):
+    def _add_entry(self, parent, label, key, row, column, height=None, multiline=False, required=False):
         label_text = f"{label} *" if required else label
-        ctk.CTkLabel(parent, text=label_text).grid(row=row * 2, column=0, sticky="w", pady=(0, 2))
+        ctk.CTkLabel(parent, text=label_text).grid(
+            row=row * 2, column=column, sticky="w", pady=(0, 2), padx=(0, 12)
+        )
         if multiline:
             entry = ctk.CTkTextbox(parent, height=height or 80)
         else:
             entry = ctk.CTkEntry(parent)
-        entry.grid(row=row * 2 + 1, column=0, sticky="ew", pady=(0, 8))
+        entry.grid(row=row * 2 + 1, column=column, sticky="ew", pady=(0, 8), padx=(0, 12))
         self.entries[key] = entry
 
-    def _add_option(self, parent, label, key, values, row):
-        ctk.CTkLabel(parent, text=label).grid(row=row * 2, column=0, sticky="w", pady=(0, 2))
+    def _add_option(self, parent, label, key, values, row, column):
+        ctk.CTkLabel(parent, text=label).grid(
+            row=row * 2, column=column, sticky="w", pady=(0, 2), padx=(0, 12)
+        )
         option = ctk.CTkOptionMenu(parent, values=values)
         option.set(values[0])
-        option.grid(row=row * 2 + 1, column=0, sticky="w", pady=(0, 8))
+        option.grid(row=row * 2 + 1, column=column, sticky="w", pady=(0, 8), padx=(0, 12))
         self.entries[key] = option
 
     def _verificar_conexao(self):
@@ -195,11 +262,58 @@ class ClientesPage(ctk.CTkFrame):
             ok, msg = require_ready()
             if not ok:
                 messagebox.showwarning("Banco de dados", msg)
+                if self.connection_status:
+                    self.connection_status.configure(text="Banco: indisponível")
+            else:
+                if self.connection_status:
+                    self.connection_status.configure(text="Banco: conectado")
         except Exception as exc:
             messagebox.showwarning("Banco de dados", f"Não foi possível validar o banco: {exc}")
+            if self.connection_status:
+                self.connection_status.configure(text="Banco: erro de conexão")
+
+    def _checar_tabela_clientes(self, force=False):
+        if self._tabela_clientes_ok is not None and not force:
+            return self._tabela_clientes_ok
+        try:
+            conn = get_conn()
+            with conn.cursor() as cursor:
+                schema = get_schema()
+                cursor.execute(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM information_schema.tables
+                        WHERE table_schema = %s AND table_name = %s
+                    )
+                    """,
+                    (schema, "cadastro_clientes"),
+                )
+                exists = cursor.fetchone()[0]
+            conn.commit()
+            self._tabela_clientes_ok = bool(exists)
+            if not self._tabela_clientes_ok:
+                messagebox.showwarning(
+                    "Clientes",
+                    "Tabela 'cadastro_clientes' não encontrada. Verifique a instalação do banco.",
+                )
+            return self._tabela_clientes_ok
+        except Exception as exc:
+            self._tabela_clientes_ok = False
+            messagebox.showerror("Clientes", f"Erro ao validar tabela de clientes: {exc}")
+            return False
 
     def _carregar_clientes(self):
         if self.tree is None:
+            return
+        if not self._checar_tabela_clientes():
+            self.tree.delete(*self.tree.get_children())
+            if self.summary_label:
+                self.summary_label.configure(text="Resumo: tabela de clientes indisponível")
+            if self.kpi_labels:
+                self.kpi_labels.get("ativos", self.summary_label).configure(text="-")
+                self.kpi_labels.get("inativos", self.summary_label).configure(text="-")
+                self.kpi_labels.get("total", self.summary_label).configure(text="-")
             return
         self.tree.delete(*self.tree.get_children())
         termo = self.filter_search.get().strip() if hasattr(self, "filter_search") else ""
@@ -248,6 +362,13 @@ class ClientesPage(ctk.CTkFrame):
                 self.summary_label.configure(
                     text=f"Resumo: {total_info[0]} clientes ativos • Total cadastrados {total_info[1]}"
                 )
+            if total_info and self.kpi_labels:
+                ativos = total_info[0] or 0
+                total = total_info[1] or 0
+                inativos = max(total - ativos, 0)
+                self.kpi_labels.get("ativos", self.summary_label).configure(text=str(ativos))
+                self.kpi_labels.get("inativos", self.summary_label).configure(text=str(inativos))
+                self.kpi_labels.get("total", self.summary_label).configure(text=str(total))
         except Exception as exc:
             messagebox.showerror("Clientes", f"Erro ao carregar clientes: {exc}")
 
@@ -262,6 +383,8 @@ class ClientesPage(ctk.CTkFrame):
         return data
 
     def _salvar_cliente(self):
+        if not self._checar_tabela_clientes():
+            return
         dados = self._coletar_dados()
         if not dados.get("nome"):
             messagebox.showwarning("Clientes", "Informe o nome do cliente.")
@@ -333,6 +456,8 @@ class ClientesPage(ctk.CTkFrame):
         if not self.selected_id:
             messagebox.showwarning("Clientes", "Selecione um cliente para inativar.")
             return
+        if not self._checar_tabela_clientes():
+            return
         if not messagebox.askyesno("Clientes", "Deseja inativar este cliente?"):
             return
         try:
@@ -373,6 +498,8 @@ class ClientesPage(ctk.CTkFrame):
             return
         selecionado = self.tree.selection()
         if not selecionado:
+            return
+        if not self._checar_tabela_clientes():
             return
         item = self.tree.item(selecionado[0])
         valores = item.get("values", [])
