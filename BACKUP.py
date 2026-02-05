@@ -456,6 +456,7 @@ class BackupPage(ctk.CTkFrame):
         add_row(1, "Porta:", str(self.port))
         add_row(2, "Usuário:", self.user)
         add_row(3, "Banco:", self.database)
+        add_row(4, "Versão:", SISTEMA_VERSAO)
 
         # Status do banco
         self.lbl_status = ctk.CTkLabel(
