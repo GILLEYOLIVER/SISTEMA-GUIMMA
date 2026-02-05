@@ -1,6 +1,12 @@
+import os
 import sys
 
-from sistema_atualizacao import atualizar_sistema
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+from sistema_atualizacao import atualizar_sistema  # noqa: E402
 
 
 def main() -> int:

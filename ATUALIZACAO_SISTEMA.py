@@ -1,5 +1,4 @@
 import threading
-import tkinter as tk
 from tkinter import messagebox
 
 import customtkinter as ctk
@@ -8,9 +7,12 @@ from sistema_atualizacao import atualizar_sistema, downgrade_sistema
 
 
 class AtualizacaoSistemaPage(ctk.CTkFrame):
-    def __init__(self, parent, app=None, **kwargs):
-        super().__init__(parent, **kwargs)
-        self.app = app
+    def __init__(self, master=None, parent=None, app=None, sistema=None, host=None, **kwargs):
+        container = master or parent
+        if container is None:
+            raise ValueError("Container principal não informado para AtualizacaoSistemaPage.")
+        super().__init__(container, **kwargs)
+        self.app = app or sistema or host
 
         self._build_layout()
 
