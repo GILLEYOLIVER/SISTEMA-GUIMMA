@@ -37,13 +37,10 @@ class ClientesPage(ctk.CTkFrame):
 
     def _build(self):
         self.configure(fg_color="transparent")
-        self.grid_rowconfigure(4, weight=1)
+        self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         self._build_header()
-        self._build_toolbar()
-        self._build_kpis()
-        self._build_filters()
         self._build_body()
 
     def _build_header(self):
@@ -131,20 +128,25 @@ class ClientesPage(ctk.CTkFrame):
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
-        body.grid(row=4, column=0, sticky="nsew", padx=24, pady=(0, 24))
+        body.grid(row=1, column=0, sticky="nsew", padx=24, pady=(0, 24))
         body.grid_columnconfigure(0, weight=1)
         body.grid_rowconfigure(1, weight=1)
 
-        form_frame = ctk.CTkFrame(body)
-        form_frame.grid(row=0, column=0, sticky="ew")
+        top_panel = ctk.CTkFrame(body)
+        top_panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        top_panel.grid_columnconfigure(0, weight=1)
+        top_panel.grid_columnconfigure(1, weight=0)
+
+        form_frame = ctk.CTkFrame(top_panel, fg_color="transparent")
+        form_frame.grid(row=0, column=0, sticky="ew", padx=16, pady=16)
         form_frame.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(
             form_frame, text="Dados do Cliente", font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
+        ).grid(row=0, column=0, sticky="w", pady=(0, 8))
 
         form_fields = ctk.CTkFrame(form_frame, fg_color="transparent")
-        form_fields.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 16))
+        form_fields.grid(row=1, column=0, sticky="ew")
         form_fields.grid_columnconfigure((0, 1), weight=1)
 
         self._add_entry(form_fields, "Razão Social / Nome", "nome", 0, 0, required=True)
@@ -162,14 +164,41 @@ class ClientesPage(ctk.CTkFrame):
         self._add_option(form_fields, "Status", "status", ["Ativo", "Inativo"], 6, 0)
         self._add_entry(form_fields, "Observações", "observacoes", 6, 1, height=60, multiline=True)
 
+        actions_frame = ctk.CTkFrame(top_panel, fg_color="transparent")
+        actions_frame.grid(row=0, column=1, sticky="ne", padx=16, pady=16)
+        actions_frame.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkButton(actions_frame, text="Novo Cliente", command=self._limpar_formulario).grid(
+            row=0, column=0, sticky="ew", pady=(0, 8)
+        )
+        ctk.CTkButton(actions_frame, text="Salvar", command=self._salvar_cliente).grid(
+            row=1, column=0, sticky="ew", pady=(0, 8)
+        )
+        ctk.CTkButton(actions_frame, text="Inativar", command=self._inativar_cliente).grid(
+            row=2, column=0, sticky="ew", pady=(0, 8)
+        )
+        ctk.CTkButton(actions_frame, text="Exportar", command=self._exportar_cliente).grid(
+            row=3, column=0, sticky="ew"
+        )
+
         list_frame = ctk.CTkFrame(body)
-        list_frame.grid(row=1, column=0, sticky="nsew", pady=(12, 0))
+        list_frame.grid(row=1, column=0, sticky="nsew")
         list_frame.grid_columnconfigure(0, weight=1)
         list_frame.grid_rowconfigure(1, weight=1)
 
-        ctk.CTkLabel(
-            list_frame, text="Clientes Cadastrados", font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
+        filters = ctk.CTkFrame(list_frame)
+        filters.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 8))
+        filters.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(filters, text="Pesquisar").grid(row=0, column=0, padx=(0, 6), pady=8)
+        self.filter_search = ctk.CTkEntry(filters, placeholder_text="Nome, documento, telefone ou e-mail")
+        self.filter_search.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=8)
+        ctk.CTkLabel(filters, text="Status").grid(row=0, column=2, padx=(0, 6), pady=8)
+        self.filter_status = ctk.CTkOptionMenu(filters, values=["Ativo", "Inativo", "Todos"])
+        self.filter_status.grid(row=0, column=3, padx=(0, 12), pady=8)
+        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_clientes).grid(
+            row=0, column=5, pady=8
+        )
 
         self.tree = ttk.Treeview(
             list_frame,
@@ -194,8 +223,8 @@ class ClientesPage(ctk.CTkFrame):
 
         tree_scroll = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=tree_scroll.set)
-        self.tree.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
-        tree_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 16))
+        self.tree.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 12))
+        tree_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 12))
 
         summary = ctk.CTkFrame(list_frame)
         summary.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 16))
