@@ -133,12 +133,12 @@ class ClientesPage(ctk.CTkFrame):
         body.grid_rowconfigure(1, weight=1)
 
         top_panel = ctk.CTkFrame(body)
-        top_panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        top_panel.grid(row=0, column=0, sticky="ew", pady=(0, 8))
         top_panel.grid_columnconfigure(0, weight=1)
         top_panel.grid_columnconfigure(1, weight=0)
 
         form_frame = ctk.CTkFrame(top_panel, fg_color="transparent")
-        form_frame.grid(row=0, column=0, sticky="ew", padx=16, pady=16)
+        form_frame.grid(row=0, column=0, sticky="ew", padx=12, pady=12)
         form_frame.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(
@@ -147,25 +147,25 @@ class ClientesPage(ctk.CTkFrame):
 
         form_fields = ctk.CTkFrame(form_frame, fg_color="transparent")
         form_fields.grid(row=1, column=0, sticky="ew")
-        form_fields.grid_columnconfigure((0, 1), weight=1)
+        form_fields.grid_columnconfigure((0, 1, 2), weight=1)
 
         self._add_entry(form_fields, "Razão Social / Nome", "nome", 0, 0, required=True)
         self._add_entry(form_fields, "CPF / CNPJ", "documento", 0, 1)
-        self._add_entry(form_fields, "Inscrição Estadual", "inscricao", 1, 0)
-        self._add_entry(form_fields, "E-mail", "email", 1, 1)
-        self._add_entry(form_fields, "Telefone", "telefone", 2, 0)
-        self._add_entry(form_fields, "WhatsApp", "whatsapp", 2, 1)
-        self._add_entry(form_fields, "Endereço", "endereco", 3, 0)
-        self._add_entry(form_fields, "Bairro", "bairro", 3, 1)
-        self._add_entry(form_fields, "Cidade", "cidade", 4, 0)
-        self._add_entry(form_fields, "UF", "uf", 4, 1)
-        self._add_entry(form_fields, "CEP", "cep", 5, 0)
-        self._add_entry(form_fields, "Segmento / Canal", "segmento", 5, 1)
-        self._add_option(form_fields, "Status", "status", ["Ativo", "Inativo"], 6, 0)
-        self._add_entry(form_fields, "Observações", "observacoes", 6, 1, height=60, multiline=True)
+        self._add_entry(form_fields, "Inscrição Estadual", "inscricao", 0, 2)
+        self._add_entry(form_fields, "E-mail", "email", 1, 0)
+        self._add_entry(form_fields, "Telefone", "telefone", 1, 1)
+        self._add_entry(form_fields, "WhatsApp", "whatsapp", 1, 2)
+        self._add_entry(form_fields, "Endereço", "endereco", 2, 0)
+        self._add_entry(form_fields, "Bairro", "bairro", 2, 1)
+        self._add_entry(form_fields, "Cidade", "cidade", 2, 2)
+        self._add_entry(form_fields, "UF", "uf", 3, 0)
+        self._add_entry(form_fields, "CEP", "cep", 3, 1)
+        self._add_entry(form_fields, "Segmento / Canal", "segmento", 3, 2)
+        self._add_option(form_fields, "Status", "status", ["Ativo", "Inativo"], 4, 0)
+        self._add_entry(form_fields, "Observações", "observacoes", 4, 1, height=50, multiline=True)
 
         actions_frame = ctk.CTkFrame(top_panel, fg_color="transparent")
-        actions_frame.grid(row=0, column=1, sticky="ne", padx=16, pady=16)
+        actions_frame.grid(row=0, column=1, sticky="ne", padx=12, pady=12)
         actions_frame.grid_columnconfigure(0, weight=1)
 
         ctk.CTkButton(actions_frame, text="Novo Cliente", command=self._limpar_formulario).grid(
@@ -187,7 +187,7 @@ class ClientesPage(ctk.CTkFrame):
         list_frame.grid_rowconfigure(1, weight=1)
 
         filters = ctk.CTkFrame(list_frame)
-        filters.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 8))
+        filters.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 6))
         filters.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(filters, text="Pesquisar").grid(row=0, column=0, padx=(0, 6), pady=8)
@@ -204,7 +204,7 @@ class ClientesPage(ctk.CTkFrame):
             list_frame,
             columns=("id", "nome", "documento", "cidade", "status", "ultima_compra"),
             show="headings",
-            height=12,
+            height=8,
         )
         self.tree.heading("id", text="ID")
         self.tree.heading("nome", text="Nome")
@@ -223,11 +223,11 @@ class ClientesPage(ctk.CTkFrame):
 
         tree_scroll = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=tree_scroll.set)
-        self.tree.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 12))
-        tree_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 12))
+        self.tree.grid(row=1, column=0, sticky="nsew", padx=(12, 0), pady=(0, 8))
+        tree_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 8))
 
         summary = ctk.CTkFrame(list_frame)
-        summary.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 16))
+        summary.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 12))
         summary.grid_columnconfigure(0, weight=1)
         self.summary_label = ctk.CTkLabel(
             summary,
