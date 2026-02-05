@@ -25,6 +25,8 @@ BACKUP_AUTO = {
     "proximo": None      # timestamp do próximo backup
 }
 
+SISTEMA_VERSAO = "1.0"
+
 
 # Banco / config
 try:
@@ -420,6 +422,13 @@ class BackupPage(ctk.CTkFrame):
             font=ctk.CTkFont(size=18, weight="bold"),
             text_color=self.cor_texto,
         ).pack(side="left")
+
+        ctk.CTkLabel(
+            header,
+            text=f"Versão do Sistema {SISTEMA_VERSAO}",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=self.cor_texto,
+        ).pack(side="right")
 
         # Painel de informações do banco
         info = ctk.CTkFrame(
