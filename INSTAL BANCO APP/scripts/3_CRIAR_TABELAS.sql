@@ -1435,6 +1435,137 @@ BEGIN
 END $$;
 
 ----------------------------------------
+-- 19. COMERCIAL / COMPRAS / MRP / PLANEJAMENTO / CUSTOS
+----------------------------------------
+-- [TABELA 48] cadastro_clientes - Cadastro de clientes
+CREATE TABLE IF NOT EXISTS opera.cadastro_clientes (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(200) NOT NULL,
+    documento VARCHAR(40),
+    inscricao_estadual VARCHAR(40),
+    email VARCHAR(120),
+    telefone VARCHAR(40),
+    whatsapp VARCHAR(40),
+    endereco TEXT,
+    bairro VARCHAR(120),
+    cidade VARCHAR(120),
+    uf VARCHAR(10),
+    cep VARCHAR(20),
+    segmento VARCHAR(120),
+    observacoes TEXT,
+    status VARCHAR(20) DEFAULT 'Ativo',
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 49] compras_fornecedores - Fornecedores de compras
+CREATE TABLE IF NOT EXISTS opera.compras_fornecedores (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(200) NOT NULL,
+    categoria VARCHAR(120),
+    contato VARCHAR(120),
+    telefone VARCHAR(40),
+    email VARCHAR(120),
+    prazo_medio INTEGER DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'Ativo',
+    observacoes TEXT,
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 50] compras_pedidos - Pedidos de compra
+CREATE TABLE IF NOT EXISTS opera.compras_pedidos (
+    id SERIAL PRIMARY KEY,
+    data_pedido DATE DEFAULT CURRENT_DATE,
+    fornecedor_id INTEGER REFERENCES opera.compras_fornecedores(id),
+    descricao TEXT,
+    valor_total NUMERIC(12,2) DEFAULT 0,
+    status VARCHAR(30) DEFAULT 'Em aberto',
+    entrega_prevista DATE,
+    observacoes TEXT,
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 51] compras_recebimentos - Recebimentos de compras
+CREATE TABLE IF NOT EXISTS opera.compras_recebimentos (
+    id SERIAL PRIMARY KEY,
+    pedido_id INTEGER REFERENCES opera.compras_pedidos(id),
+    fornecedor_id INTEGER REFERENCES opera.compras_fornecedores(id),
+    numero_nf VARCHAR(60),
+    data_recebimento DATE,
+    valor_total NUMERIC(12,2) DEFAULT 0,
+    status VARCHAR(30) DEFAULT 'Recebido',
+    observacoes TEXT,
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 52] mrp_necessidades - Necessidades calculadas
+CREATE TABLE IF NOT EXISTS opera.mrp_necessidades (
+    id SERIAL PRIMARY KEY,
+    insumo VARCHAR(200),
+    sku VARCHAR(120),
+    necessario NUMERIC(12,2) DEFAULT 0,
+    estoque NUMERIC(12,2) DEFAULT 0,
+    faltante NUMERIC(12,2) DEFAULT 0,
+    lead_time INTEGER DEFAULT 0,
+    fornecedor VARCHAR(200),
+    status VARCHAR(20) DEFAULT 'OK',
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 53] mrp_ordens_recomendadas - Ordens recomendadas de compra
+CREATE TABLE IF NOT EXISTS opera.mrp_ordens_recomendadas (
+    id SERIAL PRIMARY KEY,
+    insumo VARCHAR(200),
+    quantidade NUMERIC(12,2) DEFAULT 0,
+    fornecedor VARCHAR(200),
+    entrega_prevista DATE,
+    status VARCHAR(30) DEFAULT 'Planejada',
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 54] planejamento_ops - Planejamento das ordens de produção
+CREATE TABLE IF NOT EXISTS opera.planejamento_ops (
+    id SERIAL PRIMARY KEY,
+    op VARCHAR(60),
+    modelo VARCHAR(200),
+    quantidade INTEGER DEFAULT 0,
+    inicio DATE,
+    fim DATE,
+    status VARCHAR(30) DEFAULT 'Planejada',
+    prioridade VARCHAR(20) DEFAULT 'Média',
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 55] planejamento_capacidade - Capacidade por recurso
+CREATE TABLE IF NOT EXISTS opera.planejamento_capacidade (
+    id SERIAL PRIMARY KEY,
+    recurso VARCHAR(200),
+    carga NUMERIC(12,2) DEFAULT 0,
+    capacidade NUMERIC(12,2) DEFAULT 0,
+    ociosidade NUMERIC(12,2) DEFAULT 0,
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 56] custos_reais_categoria - Custos por categoria
+CREATE TABLE IF NOT EXISTS opera.custos_reais_categoria (
+    id SERIAL PRIMARY KEY,
+    categoria VARCHAR(200),
+    valor_planejado NUMERIC(12,2) DEFAULT 0,
+    valor_real NUMERIC(12,2) DEFAULT 0,
+    variacao NUMERIC(12,2) DEFAULT 0,
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 57] custos_reais_ops - Custos por OP
+CREATE TABLE IF NOT EXISTS opera.custos_reais_ops (
+    id SERIAL PRIMARY KEY,
+    op VARCHAR(60),
+    modelo VARCHAR(200),
+    valor_planejado NUMERIC(12,2) DEFAULT 0,
+    valor_real NUMERIC(12,2) DEFAULT 0,
+    data_atualizacao TIMESTAMP DEFAULT NOW()
+);
+
+----------------------------------------
 -- 20. PERMISSÕES E FINALIZAÇÃO
 ----------------------------------------
 GRANT ALL ON SCHEMA opera TO opera_app;

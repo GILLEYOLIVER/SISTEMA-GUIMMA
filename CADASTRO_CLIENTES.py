@@ -198,31 +198,6 @@ class ClientesPage(ctk.CTkFrame):
         except Exception as exc:
             messagebox.showwarning("Banco de dados", f"Não foi possível validar o banco: {exc}")
 
-    def _ensure_table(self, cursor):
-        schema = get_schema()
-        cursor.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {schema}.cadastro_clientes (
-                id SERIAL PRIMARY KEY,
-                nome VARCHAR(200) NOT NULL,
-                documento VARCHAR(40),
-                inscricao_estadual VARCHAR(40),
-                email VARCHAR(120),
-                telefone VARCHAR(40),
-                whatsapp VARCHAR(40),
-                endereco TEXT,
-                bairro VARCHAR(120),
-                cidade VARCHAR(120),
-                uf VARCHAR(10),
-                cep VARCHAR(20),
-                segmento VARCHAR(120),
-                observacoes TEXT,
-                status VARCHAR(20) DEFAULT 'Ativo',
-                data_atualizacao TIMESTAMP DEFAULT NOW()
-            )
-            """
-        )
-
     def _carregar_clientes(self):
         if self.tree is None:
             return
@@ -232,7 +207,6 @@ class ClientesPage(ctk.CTkFrame):
         try:
             conn = get_conn()
             with conn.cursor() as cursor:
-                self._ensure_table(cursor)
                 schema = get_schema()
                 params = []
                 where = []
@@ -295,7 +269,6 @@ class ClientesPage(ctk.CTkFrame):
         try:
             conn = get_conn()
             with conn.cursor() as cursor:
-                self._ensure_table(cursor)
                 schema = get_schema()
                 if self.selected_id:
                     cursor.execute(
