@@ -4,9 +4,13 @@ COMPRAS.py - Módulo de Compras
 Interface para fornecedores, pedidos e recebimentos.
 """
 from datetime import datetime
+import os
+import webbrowser
 from tkinter import messagebox, ttk
 
 import customtkinter as ctk
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 try:
     from BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
@@ -78,8 +82,11 @@ class ComprasPage(ctk.CTkFrame):
         ctk.CTkButton(toolbar, text="Receber", command=self._marcar_recebido).grid(
             row=0, column=3, padx=(0, 8)
         )
-        ctk.CTkButton(toolbar, text="Exportar", command=self._exportar_compras).grid(
+        ctk.CTkButton(toolbar, text="Exportar PDF", command=self._exportar_compras).grid(
             row=0, column=4
+        )
+        ctk.CTkButton(toolbar, text="Imprimir", command=self._imprimir_compras).grid(
+            row=0, column=5
         )
 
     def _build_tabs(self):
@@ -100,19 +107,33 @@ class ComprasPage(ctk.CTkFrame):
 
         filters = ctk.CTkFrame(parent)
         filters.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 12))
-        filters.grid_columnconfigure(6, weight=1)
+        filters.grid_columnconfigure(8, weight=1)
 
         ctk.CTkLabel(filters, text="Período").grid(row=0, column=0, padx=(12, 6), pady=8)
-        ctk.CTkEntry(filters, placeholder_text="De").grid(row=0, column=1, padx=(0, 6), pady=8)
-        ctk.CTkEntry(filters, placeholder_text="Até").grid(row=0, column=2, padx=(0, 12), pady=8)
-        ctk.CTkLabel(filters, text="Status").grid(row=0, column=3, padx=(0, 6), pady=8)
+        self.filter_inicio_entry = ctk.CTkEntry(filters, placeholder_text="De")
+        self.filter_inicio_entry.grid(row=0, column=1, padx=(0, 6), pady=8)
+        ctk.CTkButton(
+            filters,
+            text="📅",
+            width=32,
+            command=lambda: self._abrir_calendario(self.filter_inicio_entry),
+        ).grid(row=0, column=2, padx=(0, 6), pady=8)
+        self.filter_fim_entry = ctk.CTkEntry(filters, placeholder_text="Até")
+        self.filter_fim_entry.grid(row=0, column=3, padx=(0, 12), pady=8)
+        ctk.CTkButton(
+            filters,
+            text="📅",
+            width=32,
+            command=lambda: self._abrir_calendario(self.filter_fim_entry),
+        ).grid(row=0, column=4, padx=(0, 12), pady=8)
+        ctk.CTkLabel(filters, text="Status").grid(row=0, column=5, padx=(0, 6), pady=8)
         ctk.CTkOptionMenu(filters, values=["Em aberto", "Aprovado", "Recebido", "Cancelado"]).grid(
-            row=0, column=4, padx=(0, 12), pady=8
+            row=0, column=6, padx=(0, 12), pady=8
         )
         ctk.CTkEntry(filters, placeholder_text="Fornecedor ou item").grid(
-            row=0, column=5, sticky="ew", padx=(0, 12), pady=8
+            row=0, column=7, sticky="ew", padx=(0, 12), pady=8
         )
-        ctk.CTkButton(filters, text="Filtrar").grid(row=0, column=6, padx=(0, 12), pady=8)
+        ctk.CTkButton(filters, text="Filtrar").grid(row=0, column=8, padx=(0, 12), pady=8)
 
         form = ctk.CTkFrame(parent)
         form.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 12))
@@ -125,6 +146,10 @@ class ComprasPage(ctk.CTkFrame):
 
         self._add_entry(form, "Status", self.pedido_entries, "status", 1, 0)
         self._add_entry(form, "Observações", self.pedido_entries, "observacoes", 1, 2)
+        self.pedido_entries["entrega_prevista"].bind(
+            "<Double-Button-1>",
+            lambda e: self._abrir_calendario(self.pedido_entries["entrega_prevista"]),
+        )
 
         actions = ctk.CTkFrame(parent, fg_color="transparent")
         actions.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 12))
@@ -176,6 +201,10 @@ class ComprasPage(ctk.CTkFrame):
         self._add_entry(info, "Valor", self.recebimento_entries, "valor_total", 1, 0)
         self._add_entry(info, "Data recebimento", self.recebimento_entries, "data_recebimento", 1, 2)
         self._add_entry(info, "Status", self.recebimento_entries, "status", 1, 4)
+        self.recebimento_entries["data_recebimento"].bind(
+            "<Double-Button-1>",
+            lambda e: self._abrir_calendario(self.recebimento_entries["data_recebimento"]),
+        )
         ctk.CTkButton(info, text="Registrar Recebimento", command=self._salvar_recebimento).grid(
             row=0, column=6, padx=(12, 12), pady=8, rowspan=2, sticky="ns"
         )
@@ -755,7 +784,181 @@ class ComprasPage(ctk.CTkFrame):
             return None
 
     def _exportar_compras(self):
-        messagebox.showinfo("Compras", "Exportação será integrada com o módulo de relatórios.")
+        try:
+            caminho = self._gerar_pdf_compras()
+            self._abrir_pdf(caminho)
+        except Exception as exc:
+            messagebox.showerror("Compras", f"Erro ao exportar PDF: {exc}")
+
+    def _imprimir_compras(self):
+        try:
+            caminho = self._gerar_pdf_compras()
+            self._imprimir_pdf(caminho)
+        except Exception as exc:
+            messagebox.showerror("Compras", f"Erro ao imprimir: {exc}")
+
+    def _gerar_pdf_compras(self):
+        nome = f"compras_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        caminho = os.path.abspath(nome)
+        c = canvas.Canvas(caminho, pagesize=A4)
+        largura, altura = A4
+        y = altura - 40
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(40, y, "Relatório de Compras")
+        y -= 24
+        c.setFont("Helvetica", 9)
+        c.drawString(40, y, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        y -= 18
+
+        def escrever_titulo(titulo):
+            nonlocal y
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(40, y, titulo)
+            y -= 16
+            c.setFont("Helvetica", 9)
+
+        def escrever_linhas(linhas):
+            nonlocal y
+            for linha in linhas:
+                if y < 80:
+                    c.showPage()
+                    y = altura - 60
+                c.drawString(40, y, linha)
+                y -= 12
+
+        if self.tree_fornecedores:
+            escrever_titulo("Fornecedores")
+            linhas = []
+            for item in self.tree_fornecedores.get_children():
+                vals = self.tree_fornecedores.item(item)["values"]
+                linhas.append(f"- {vals[0]} | {vals[1]} | {vals[2]} | Prazo {vals[3]} | {vals[4]}")
+            escrever_linhas(linhas or ["Sem dados."])
+            y -= 8
+
+        if self.tree_pedidos:
+            escrever_titulo("Pedidos de Compra")
+            linhas = []
+            for item in self.tree_pedidos.get_children():
+                vals = self.tree_pedidos.item(item)["values"]
+                linhas.append(f"- #{vals[0]} | {vals[2]} | R$ {vals[3]} | {vals[4]} | Entrega {vals[5]}")
+            escrever_linhas(linhas or ["Sem dados."])
+            y -= 8
+
+        if self.tree_recebimentos:
+            escrever_titulo("Recebimentos")
+            linhas = []
+            for item in self.tree_recebimentos.get_children():
+                vals = self.tree_recebimentos.item(item)["values"]
+                linhas.append(f"- NF {vals[0]} | Pedido {vals[1]} | {vals[2]} | {vals[3]} | R$ {vals[4]}")
+            escrever_linhas(linhas or ["Sem dados."])
+
+        c.save()
+        return caminho
+
+    def _abrir_pdf(self, caminho):
+        try:
+            webbrowser.open_new_tab("file://" + caminho)
+        except Exception:
+            if hasattr(os, "startfile"):
+                os.startfile(caminho)  # type: ignore[attr-defined]
+
+    def _imprimir_pdf(self, caminho):
+        if hasattr(os, "startfile"):
+            try:
+                os.startfile(caminho, "print")  # type: ignore[attr-defined]
+                return
+            except Exception:
+                pass
+        self._abrir_pdf(caminho)
+        messagebox.showinfo("Compras", "PDF aberto no navegador. Use Ctrl+P para imprimir.")
+
+    def _abrir_calendario(self, entry):
+        from datetime import datetime as _dt
+        import calendar as _cal
+
+        def setar_data(d):
+            entry.delete(0, "end")
+            entry.insert(0, d.strftime("%d/%m/%Y"))
+            top.destroy()
+
+        top = ctk.CTkToplevel(self)
+        top.title("Calendário")
+        top.resizable(False, False)
+
+        W, H = 300, 300
+        self.update_idletasks()
+        top.update_idletasks()
+
+        ex = entry.winfo_rootx()
+        ey = entry.winfo_rooty()
+        eh = entry.winfo_height()
+
+        x = ex
+        y = ey + eh + 6
+
+        sw = top.winfo_screenwidth()
+        sh = top.winfo_screenheight()
+        if x + W > sw:
+            x = sw - W - 10
+        if y + H > sh:
+            y = ey - H - 6
+
+        top.geometry(f"{W}x{H}+{x}+{y}")
+        top.transient(self)
+        top.grab_set()
+
+        now = _dt.now()
+        ano = now.year
+        mes = now.month
+
+        nav = ctk.CTkFrame(top)
+        nav.pack(fill="x", padx=10, pady=5)
+
+        lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
+        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        lbl_mes.pack(side="left", expand=True)
+        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+
+        dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        frame_dias = ctk.CTkFrame(top)
+        frame_dias.pack(fill="both", expand=True, padx=10, pady=5)
+
+        for i, dia in enumerate(dias_semana):
+            lbl = ctk.CTkLabel(frame_dias, text=dia, width=30, height=30)
+            lbl.grid(row=0, column=i, padx=2, pady=2)
+
+        def mudar_mes(delta):
+            nonlocal mes, ano
+            mes += delta
+            if mes > 12:
+                mes = 1
+                ano += 1
+            elif mes < 1:
+                mes = 12
+                ano -= 1
+            lbl_mes.configure(text=f"{_cal.month_name[mes]} {ano}")
+            desenhar_calendario()
+
+        def desenhar_calendario():
+            for w in frame_dias.grid_slaves():
+                if int(w.grid_info()["row"]) > 0:
+                    w.destroy()
+
+            cal = _cal.monthcalendar(ano, mes)
+            for i, semana in enumerate(cal):
+                for j, dia in enumerate(semana):
+                    if dia == 0:
+                        continue
+                    btn = ctk.CTkButton(
+                        frame_dias,
+                        text=str(dia),
+                        width=30,
+                        height=30,
+                        command=lambda d=dia: setar_data(_dt(ano, mes, d)),
+                    )
+                    btn.grid(row=i + 1, column=j, padx=2, pady=2)
+
+        desenhar_calendario()
 
 
 if __name__ == "__main__":
