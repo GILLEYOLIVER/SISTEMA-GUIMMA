@@ -20,6 +20,8 @@ class AtualizadorApp(ctk.CTk):
 
         ctk.set_appearance_mode("light")
 
+        self._garantir_pasta_updates()
+
         self.title(APP_TITLE)
         self.geometry("980x620")
         self.minsize(900, 560)
@@ -159,6 +161,15 @@ class AtualizadorApp(ctk.CTk):
         except json.JSONDecodeError:
             return APP_DEFAULT_VERSION
         return str(data.get("versao", APP_DEFAULT_VERSION))
+
+    def _garantir_pasta_updates(self) -> None:
+        try:
+            UPDATES_DIR.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            messagebox.showwarning(
+                "Atualizador",
+                f"Não foi possível criar a pasta {UPDATES_DIR}.",
+            )
 
     def _verificar_atualizacoes(self) -> None:
         agora = datetime.now().strftime("%d/%m/%Y %H:%M")
