@@ -10,6 +10,8 @@ import customtkinter as ctk
 
 APP_DEFAULT_VERSION = "1.0"
 APP_TITLE = "Atualizador do Sistema"
+UPDATES_DIR = Path(r"C:\SISTEMA_GUIMMA\updates")
+MANIFEST_FILENAME = "manifest.json"
 
 
 class AtualizadorApp(ctk.CTk):
@@ -26,6 +28,9 @@ class AtualizadorApp(ctk.CTk):
         self._status_value = ctk.StringVar(value="Pronto para verificar atualizações.")
         self._last_check_value = ctk.StringVar(value="Última verificação: --/--/---- --:--")
         self._version_value = ctk.StringVar(value=f"Versão do sistema {self._carregar_versao()}")
+        self._updates_path_value = ctk.StringVar(
+            value=f"Pasta de atualizações: {UPDATES_DIR}",
+        )
 
         self._montar_interface()
 
@@ -69,6 +74,11 @@ class AtualizadorApp(ctk.CTk):
             coluna_info,
             titulo="Verificação",
             valor=self._last_check_value,
+        )
+        self._criar_card(
+            coluna_info,
+            titulo="Origem dos arquivos",
+            valor=self._updates_path_value,
         )
 
         coluna_acao = ctk.CTkFrame(corpo, corner_radius=16, fg_color="#EFF5FF")
@@ -153,14 +163,37 @@ class AtualizadorApp(ctk.CTk):
     def _verificar_atualizacoes(self) -> None:
         agora = datetime.now().strftime("%d/%m/%Y %H:%M")
         self._last_check_value.set(f"Última verificação: {agora}")
-        self._status_value.set("Nenhuma atualização disponível no momento.")
-        messagebox.showinfo("Atualizador", "Verificação concluída: nenhuma atualização encontrada.")
+        manifest_path = UPDATES_DIR / MANIFEST_FILENAME
+        if not manifest_path.exists():
+            self._status_value.set(
+                f"Nenhuma atualização encontrada. Falta {manifest_path}.",
+            )
+            messagebox.showwarning(
+                "Atualizador",
+                f"Manifesto não encontrado em {manifest_path}.",
+            )
+            return
+        self._status_value.set("Manifesto localizado. Pronto para atualizar.")
+        messagebox.showinfo(
+            "Atualizador",
+            f"Manifesto encontrado em {manifest_path}.",
+        )
 
     def _atualizar_sistema(self) -> None:
+        manifest_path = UPDATES_DIR / MANIFEST_FILENAME
+        if not manifest_path.exists():
+            self._status_value.set(
+                "Não foi possível atualizar sem o manifesto.",
+            )
+            messagebox.showwarning(
+                "Atualizador",
+                f"Adicione o manifesto em {manifest_path} para continuar.",
+            )
+            return
         self._status_value.set("Atualização iniciada. Aguarde...")
         messagebox.showinfo(
             "Atualizador",
-            "Aqui o atualizador fará o download, backup e aplicação da nova versão.",
+            "Aqui o atualizador fará backup e aplicará os arquivos de update.",
         )
         self._status_value.set("Atualização simulada concluída.")
 
