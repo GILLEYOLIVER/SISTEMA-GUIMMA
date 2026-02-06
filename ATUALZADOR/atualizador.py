@@ -12,6 +12,7 @@ APP_DEFAULT_VERSION = "1.0"
 APP_TITLE = "Atualizador do Sistema"
 UPDATES_DIR = Path(r"C:\SISTEMA_GUIMMA\updates")
 MANIFEST_FILENAME = "manifest.json"
+REMOTE_FOLDER_URL = "https://drive.google.com/drive/folders/1vmA4cBJqtQ8IFg43uBMWg79S1HiQD2nG"
 
 
 class AtualizadorApp(ctk.CTk):
@@ -32,6 +33,9 @@ class AtualizadorApp(ctk.CTk):
         self._version_value = ctk.StringVar(value=f"Versão do sistema {self._carregar_versao()}")
         self._updates_path_value = ctk.StringVar(
             value=f"Pasta de atualizações: {UPDATES_DIR}",
+        )
+        self._updates_remote_value = ctk.StringVar(
+            value=f"Origem online: {REMOTE_FOLDER_URL}",
         )
 
         self._montar_interface()
@@ -81,6 +85,11 @@ class AtualizadorApp(ctk.CTk):
             coluna_info,
             titulo="Origem dos arquivos",
             valor=self._updates_path_value,
+        )
+        self._criar_card(
+            coluna_info,
+            titulo="Link de distribuição",
+            valor=self._updates_remote_value,
         )
 
         coluna_acao = ctk.CTkFrame(corpo, corner_radius=16, fg_color="#EFF5FF")
@@ -181,7 +190,9 @@ class AtualizadorApp(ctk.CTk):
             )
             messagebox.showwarning(
                 "Atualizador",
-                f"Manifesto não encontrado em {manifest_path}.",
+                "Manifesto não encontrado.\n"
+                f"Adicione {MANIFEST_FILENAME} em {manifest_path}.\n"
+                f"Arquivos publicados em: {REMOTE_FOLDER_URL}",
             )
             return
         self._status_value.set("Manifesto localizado. Pronto para atualizar.")
@@ -198,7 +209,9 @@ class AtualizadorApp(ctk.CTk):
             )
             messagebox.showwarning(
                 "Atualizador",
-                f"Adicione o manifesto em {manifest_path} para continuar.",
+                "Adicione o manifesto para continuar.\n"
+                f"Esperado em: {manifest_path}\n"
+                f"Origem dos arquivos: {REMOTE_FOLDER_URL}",
             )
             return
         self._status_value.set("Atualização iniciada. Aguarde...")
