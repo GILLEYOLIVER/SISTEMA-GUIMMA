@@ -175,6 +175,10 @@
     "file": "TEMAS.py",
     "class": "TemasPage"
   },
+  "Atualizar Sistema": {
+    "file": "ATUALIZAR_SISTEMA.py",
+    "class": "AtualizarSistemaPage"
+  },
 
   "Interna": {
     "file": "PRODUCAO_INTERNA.py",
