@@ -1,5 +1,7 @@
 import json
+import re
 import shutil
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox
@@ -92,9 +94,15 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
     def _buscar_atualizacoes(self):
         manifest = self._carregar_manifest_local()
+        if not manifest:
+            manifest = self._carregar_manifest_drive()
         nova_versao = self._extract_version(manifest)
 
-        if not nova_versao or not self._is_newer_version(nova_versao, self.VERSAO_ATUAL):
+        if not nova_versao:
+            self.status_var.set("Manifesto não encontrado para verificar atualizações.")
+            return
+
+        if not self._is_newer_version(nova_versao, self.VERSAO_ATUAL):
             self.status_var.set("Seu sistema já está atualizado.")
             return
 
@@ -123,10 +131,18 @@ class AtualizarSistemaPage(ctk.CTkFrame):
             download_dir=download_dir,
             source_url=self.SOURCE_URL,
         )
-        self.status_var.set(
-            "Backup criado e pasta de download preparada. "
-            f"Local: {download_dir}"
-        )
+        baixado = self._baixar_arquivos_atualizacao(manifest, download_dir)
+        if not baixado:
+            self.status_var.set("Falha ao baixar arquivos de atualização.")
+            return
+        aplicado = self._aplicar_atualizacao(download_dir, manifest)
+        if aplicado:
+            self.status_var.set(
+                "Atualização aplicada com sucesso. "
+                f"Backup em: {backup_dir}"
+            )
+        else:
+            self.status_var.set("Falha ao aplicar a atualização.")
 
     def _restaurar_ultima_versao(self):
         if not self.backup_root.exists():
@@ -183,6 +199,22 @@ class AtualizarSistemaPage(ctk.CTkFrame):
                 continue
         return {}
 
+    def _carregar_manifest_drive(self) -> dict:
+        folder_id = self._extract_drive_folder_id()
+        if not folder_id:
+            return {}
+        files = self._listar_arquivos_drive(folder_id)
+        manifest = next((f for f in files if f["name"] == "manifest.json"), None)
+        if not manifest:
+            return {}
+        content = self._download_drive_file(manifest["id"])
+        if not content:
+            return {}
+        try:
+            return json.loads(content)
+        except Exception:
+            return {}
+
     def _extract_version(self, manifest: dict) -> str | None:
         if not manifest:
             return None
@@ -203,6 +235,89 @@ class AtualizarSistemaPage(ctk.CTkFrame):
             return tuple(parts)
 
         return parse(nova) > parse(atual)
+
+    def _extract_drive_folder_id(self) -> str | None:
+        match = re.search(r"/folders/([a-zA-Z0-9_-]+)", self.SOURCE_URL)
+        return match.group(1) if match else None
+
+    def _listar_arquivos_drive(self, folder_id: str) -> list[dict]:
+        url = f"https://drive.google.com/drive/folders/{folder_id}"
+        try:
+            with urllib.request.urlopen(url) as response:
+                html = response.read().decode("utf-8", errors="ignore")
+        except Exception:
+            return []
+
+        files = []
+        pattern = re.compile(r'\\[\"([^\"]+?)\",\"([a-zA-Z0-9_-]{10,})\"\\]')
+        for name, file_id in pattern.findall(html):
+            if name.endswith(".py") or name == "manifest.json":
+                files.append({"name": name, "id": file_id})
+        return files
+
+    def _download_drive_file(self, file_id: str) -> str | None:
+        url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        try:
+            with urllib.request.urlopen(url) as response:
+                return response.read().decode("utf-8", errors="ignore")
+        except Exception:
+            return None
+
+    def _baixar_arquivos_atualizacao(self, manifest: dict, download_dir: Path) -> bool:
+        folder_id = self._extract_drive_folder_id()
+        if not folder_id:
+            return False
+
+        files = []
+        manifest_files = manifest.get("files") if isinstance(manifest, dict) else None
+        if isinstance(manifest_files, list):
+            for item in manifest_files:
+                if isinstance(item, dict) and item.get("name"):
+                    files.append({"name": item["name"], "id": item.get("id")})
+                elif isinstance(item, str):
+                    files.append({"name": item, "id": None})
+
+        if not files:
+            files = [f for f in self._listar_arquivos_drive(folder_id) if f["name"].endswith(".py")]
+
+        if not files:
+            return False
+
+        ok = False
+        for file_info in files:
+            name = file_info.get("name")
+            file_id = file_info.get("id")
+            if not name or not name.endswith(".py"):
+                continue
+            if not file_id:
+                match = next(
+                    (f for f in self._listar_arquivos_drive(folder_id) if f["name"] == name),
+                    None,
+                )
+                if not match:
+                    continue
+                file_id = match["id"]
+            content = self._download_drive_file(file_id)
+            if content is None:
+                continue
+            (download_dir / name).write_text(content, encoding="utf-8")
+            ok = True
+        return ok
+
+    def _aplicar_atualizacao(self, download_dir: Path, manifest: dict) -> bool:
+        try:
+            arquivos = list(download_dir.glob("*.py"))
+            if not arquivos:
+                return False
+            for file_path in arquivos:
+                target = self.package_dir / file_path.name
+                if not target.exists():
+                    target = self.base_dir / file_path.name
+                shutil.copy2(file_path, target)
+            return True
+        except Exception as exc:
+            print(f"Erro ao aplicar atualização: {exc}")
+            return False
 
     def _restore_backup(self, backup_dir: Path) -> bool:
         try:
