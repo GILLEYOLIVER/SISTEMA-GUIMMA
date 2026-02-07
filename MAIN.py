@@ -1,8 +1,8 @@
 # main.py
 import customtkinter as ctk
 
-from SPLASH import SplashScreenModern
-from LOGUIN import SistemaLoginModerno
+from PAGINAS_DO_SISTEMA.SPLASH import SplashScreenModern
+from PAGINAS_DO_SISTEMA.LOGUIN import SistemaLoginModerno
 
 
 
