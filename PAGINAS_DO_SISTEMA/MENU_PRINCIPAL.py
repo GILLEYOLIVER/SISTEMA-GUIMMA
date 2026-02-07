@@ -41,6 +41,7 @@ from PAGINAS_DO_SISTEMA.LOG_SISTEMA import get_logger
 # ===== IMPORTAÇÕES DO SISTEMA =====
 try:
     from PAGINAS_DO_SISTEMA.USUARIOS import registrar_log_db
+    from USUARIOS import registrar_log_db
 
     LOGS_DISPONIVEIS = True
     print("✅ Função de logs disponível.")
@@ -87,6 +88,10 @@ ROUTES_PATH = _resolve_app_path("route_map.json")
 SETTINGS_PATH = _resolve_app_path("settings.json")
 ICONS_DIR = _resolve_app_path("icons")
 ICONE_SISTEMA = _resolve_app_path("ICONE_SISTEMA.png")
+ROUTES_PATH = os.path.join(APP_DIR, "route_map.json")
+SETTINGS_PATH = os.path.join(APP_DIR, "settings.json")
+ICONS_DIR = os.path.join(APP_DIR, "icons")
+ICONE_SISTEMA = os.path.join(APP_DIR, "ICONE_SISTEMA.png")
 
 
 # ===== GERENCIADOR DE CONFIGURAÇÕES =====
@@ -3623,4 +3628,5 @@ if __name__ == "__main__":
     main()
     # fechado aqui
 
+#03/02/2025
 #03/02/2025
