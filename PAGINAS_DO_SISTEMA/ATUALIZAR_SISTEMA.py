@@ -4,14 +4,14 @@ import shutil
 import urllib.request
 from datetime import datetime
 from pathlib import Path
-from tkinter import messagebox
+from tkinter import filedialog, messagebox, simpledialog
 
 import customtkinter as ctk
 
 
 class AtualizarSistemaPage(ctk.CTkFrame):
     VERSAO_ATUAL = "1.0"
-    SOURCE_URL = (
+    DEFAULT_SOURCE = (
         "https://drive.google.com/drive/folders/"
         "1vmA4cBJqtQ8IFg43uBMWg79S1HiQD2nG?usp=drive_link"
     )
@@ -24,6 +24,8 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         self.backup_root = self.base_dir / "backup_versoes"
         self.download_root = self.base_dir / "atualizacoes_baixadas"
         self.history_path = self.base_dir / "update_history.json"
+        self.settings_path = self.base_dir / "update_settings.json"
+        self.source_var = ctk.StringVar(value=self._load_source())
         self.status_var = ctk.StringVar(value="Pronto para buscar atualizações.")
         self._build_ui()
 
@@ -50,17 +52,34 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             info,
-            text="Fonte de atualização (Google Drive):",
+            text="Fonte de atualização (online ou local):",
             font=("Segoe UI", 13, "bold"),
         ).pack(anchor="w", padx=20, pady=(12, 2))
 
         ctk.CTkLabel(
             info,
-            text=self.SOURCE_URL,
+            textvariable=self.source_var,
             font=("Segoe UI", 12),
             wraplength=900,
             justify="left",
         ).pack(anchor="w", padx=20, pady=(0, 12))
+
+        source_actions = ctk.CTkFrame(info, corner_radius=12)
+        source_actions.pack(fill="x", padx=20, pady=(0, 12))
+
+        ctk.CTkButton(
+            source_actions,
+            text="Alterar fonte (URL/Drive)",
+            command=self._alterar_fonte_url,
+            width=200,
+        ).pack(side="left", padx=(0, 12), pady=6)
+
+        ctk.CTkButton(
+            source_actions,
+            text="Escolher pasta local",
+            command=self._alterar_fonte_local,
+            width=200,
+        ).pack(side="left", padx=(0, 12), pady=6)
 
         ctk.CTkLabel(
             info,
@@ -93,9 +112,10 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         ).pack(fill="x", padx=20, pady=(10, 0))
 
     def _buscar_atualizacoes(self):
-        manifest = self._carregar_manifest_local()
+        source = self._get_source()
+        manifest = self._carregar_manifest_local(source)
         if not manifest:
-            manifest = self._carregar_manifest_drive()
+            manifest = self._carregar_manifest_drive(source)
         nova_versao = self._extract_version(manifest)
 
         if not nova_versao:
@@ -120,7 +140,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         download_dir.mkdir(parents=True, exist_ok=True)
         origem_path = download_dir / "ORIGEM_ATUALIZACAO.txt"
         origem_path.write_text(
-            f"Fonte: {self.SOURCE_URL}\n"
+            f"Fonte: {source}\n"
             f"Versão detectada: {nova_versao}\n"
             "Baixe os arquivos .py e coloque nesta pasta para aplicar.\n",
             encoding="utf-8",
@@ -129,9 +149,9 @@ class AtualizarSistemaPage(ctk.CTkFrame):
             action="buscar_atualizacoes",
             backup_dir=backup_dir,
             download_dir=download_dir,
-            source_url=self.SOURCE_URL,
+            source_url=source,
         )
-        baixado = self._baixar_arquivos_atualizacao(manifest, download_dir)
+        baixado = self._baixar_arquivos_atualizacao(manifest, download_dir, source)
         if not baixado:
             self.status_var.set("Falha ao baixar arquivos de atualização.")
             return
@@ -164,7 +184,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
                 action="rollback",
                 backup_dir=backup_dir,
                 download_dir=None,
-                source_url=self.SOURCE_URL,
+                source_url=self._get_source(),
             )
             self.status_var.set(f"Versão restaurada a partir de {backup_dir}.")
         else:
@@ -184,12 +204,14 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
         return backup_dir
 
-    def _carregar_manifest_local(self) -> dict:
+    def _carregar_manifest_local(self, source: str) -> dict:
         candidates = [
             self.base_dir / "manifest.json",
             self.base_dir / "update_manifest.json",
             self.download_root / "manifest.json",
         ]
+        if source and Path(source).exists():
+            candidates.insert(0, Path(source) / "manifest.json")
         for path in candidates:
             if not path.exists():
                 continue
@@ -199,8 +221,8 @@ class AtualizarSistemaPage(ctk.CTkFrame):
                 continue
         return {}
 
-    def _carregar_manifest_drive(self) -> dict:
-        folder_id = self._extract_drive_folder_id()
+    def _carregar_manifest_drive(self, source: str) -> dict:
+        folder_id = self._extract_drive_folder_id(source)
         if not folder_id:
             return {}
         files = self._listar_arquivos_drive(folder_id)
@@ -236,8 +258,8 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
         return parse(nova) > parse(atual)
 
-    def _extract_drive_folder_id(self) -> str | None:
-        match = re.search(r"/folders/([a-zA-Z0-9_-]+)", self.SOURCE_URL)
+    def _extract_drive_folder_id(self, source: str) -> str | None:
+        match = re.search(r"/folders/([a-zA-Z0-9_-]+)", source or "")
         return match.group(1) if match else None
 
     def _listar_arquivos_drive(self, folder_id: str) -> list[dict]:
@@ -263,8 +285,11 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         except Exception:
             return None
 
-    def _baixar_arquivos_atualizacao(self, manifest: dict, download_dir: Path) -> bool:
-        folder_id = self._extract_drive_folder_id()
+    def _baixar_arquivos_atualizacao(self, manifest: dict, download_dir: Path, source: str) -> bool:
+        if source and Path(source).exists():
+            return self._copiar_arquivos_locais(manifest, Path(source), download_dir)
+
+        folder_id = self._extract_drive_folder_id(source)
         if not folder_id:
             return False
 
@@ -304,6 +329,30 @@ class AtualizarSistemaPage(ctk.CTkFrame):
             ok = True
         return ok
 
+    def _copiar_arquivos_locais(self, manifest: dict, source_dir: Path, download_dir: Path) -> bool:
+        files = []
+        manifest_files = manifest.get("files") if isinstance(manifest, dict) else None
+        if isinstance(manifest_files, list):
+            for item in manifest_files:
+                if isinstance(item, dict) and item.get("name"):
+                    files.append(item["name"])
+                elif isinstance(item, str):
+                    files.append(item)
+
+        if not files:
+            files = [p.name for p in source_dir.glob("*.py")]
+
+        ok = False
+        for name in files:
+            if not name.endswith(".py"):
+                continue
+            source_file = source_dir / name
+            if not source_file.exists():
+                continue
+            shutil.copy2(source_file, download_dir / name)
+            ok = True
+        return ok
+
     def _aplicar_atualizacao(self, download_dir: Path, manifest: dict) -> bool:
         try:
             arquivos = list(download_dir.glob("*.py"))
@@ -318,6 +367,42 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         except Exception as exc:
             print(f"Erro ao aplicar atualização: {exc}")
             return False
+
+    def _alterar_fonte_url(self):
+        fonte = simpledialog.askstring(
+            "Fonte de atualização",
+            "Informe a URL/pasta do Drive:",
+            initialvalue=self.source_var.get(),
+        )
+        if fonte:
+            self._set_source(fonte.strip())
+
+    def _alterar_fonte_local(self):
+        pasta = filedialog.askdirectory(title="Selecione a pasta de atualizações")
+        if pasta:
+            self._set_source(pasta)
+
+    def _load_source(self) -> str:
+        if self.settings_path.exists():
+            try:
+                data = json.loads(self.settings_path.read_text(encoding="utf-8"))
+                return str(data.get("source", self.DEFAULT_SOURCE))
+            except Exception:
+                return self.DEFAULT_SOURCE
+        return self.DEFAULT_SOURCE
+
+    def _get_source(self) -> str:
+        return self.source_var.get() or self.DEFAULT_SOURCE
+
+    def _set_source(self, value: str):
+        self.source_var.set(value)
+        try:
+            self.settings_path.write_text(
+                json.dumps({"source": value}, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
 
     def _restore_backup(self, backup_dir: Path) -> bool:
         try:
