@@ -206,6 +206,13 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         return backup_dir
 
     def _carregar_manifest_local(self, source: str) -> dict:
+        if source:
+            source_path = Path(source)
+            if source_path.exists() and source_path.is_file() and source_path.suffix == ".json":
+                try:
+                    return json.loads(source_path.read_text(encoding="utf-8"))
+                except Exception:
+                    return {}
         candidates = [
             self.base_dir / "manifest.json",
             self.base_dir / "update_manifest.json",
@@ -223,6 +230,13 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         return {}
 
     def _carregar_manifest_drive(self, source: str) -> dict:
+        if source and source.lower().endswith(".json"):
+            content = self._download_url(source)
+            if content:
+                try:
+                    return json.loads(content)
+                except Exception:
+                    return {}
         folder_id = self._extract_drive_folder_id(source)
         if not folder_id:
             return {}
@@ -266,7 +280,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
     def _listar_arquivos_drive(self, folder_id: str) -> list[dict]:
         url = f"https://drive.google.com/drive/folders/{folder_id}"
         try:
-            with urllib.request.urlopen(url) as response:
+            with urllib.request.urlopen(self._request(url)) as response:
                 html = response.read().decode("utf-8", errors="ignore")
         except Exception:
             return []
@@ -281,7 +295,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
     def _download_drive_file(self, file_id: str) -> str | None:
         url = f"https://drive.google.com/uc?export=download&id={file_id}"
         try:
-            with urllib.request.urlopen(url) as response:
+            with urllib.request.urlopen(self._request(url)) as response:
                 return response.read().decode("utf-8", errors="ignore")
         except Exception:
             return None
@@ -422,10 +436,17 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
     def _download_url(self, url: str) -> str | None:
         try:
-            with urllib.request.urlopen(url) as response:
+            with urllib.request.urlopen(self._request(url)) as response:
                 return response.read().decode("utf-8", errors="ignore")
         except Exception:
             return None
+
+    @staticmethod
+    def _request(url: str) -> urllib.request.Request:
+        return urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
 
     def _validate_sha256(self, content: str, expected: str) -> bool:
         digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
