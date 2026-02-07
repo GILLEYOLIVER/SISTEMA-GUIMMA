@@ -32,7 +32,9 @@ def _carregar_config_json_e_exportar_ambiente():
     if appdata:
         candidatos.append(os.path.join(appdata, "Opera", "config.json"))
     aqui = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.dirname(aqui)
     candidatos.append(os.path.join(aqui, "config.json"))
+    candidatos.append(os.path.join(base_dir, "config.json"))
     candidatos.append(r"C:\ProgramData\Opera\config.json")
 
     for caminho in candidatos:
