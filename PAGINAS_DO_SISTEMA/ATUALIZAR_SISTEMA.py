@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 import shutil
@@ -294,11 +295,20 @@ class AtualizarSistemaPage(ctk.CTkFrame):
             return False
 
         files = []
-        manifest_files = manifest.get("files") if isinstance(manifest, dict) else None
+        manifest_files = None
+        if isinstance(manifest, dict):
+            manifest_files = manifest.get("files") or manifest.get("arquivos")
         if isinstance(manifest_files, list):
             for item in manifest_files:
-                if isinstance(item, dict) and item.get("name"):
-                    files.append({"name": item["name"], "id": item.get("id")})
+                if isinstance(item, dict):
+                    if item.get("name"):
+                        files.append({"name": item["name"], "id": item.get("id")})
+                    elif item.get("destino_relativo"):
+                        files.append({
+                            "destino_relativo": item.get("destino_relativo"),
+                            "url": item.get("url"),
+                            "sha256": item.get("sha256"),
+                        })
                 elif isinstance(item, str):
                     files.append({"name": item, "id": None})
 
@@ -310,6 +320,18 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
         ok = False
         for file_info in files:
+            if file_info.get("destino_relativo") and file_info.get("url"):
+                destino_relativo = file_info.get("destino_relativo")
+                content = self._download_url(file_info["url"])
+                if content is None:
+                    continue
+                if file_info.get("sha256") and not self._validate_sha256(content, file_info["sha256"]):
+                    continue
+                target_path = download_dir / Path(destino_relativo).name
+                target_path.write_text(content, encoding="utf-8")
+                ok = True
+                continue
+
             name = file_info.get("name")
             file_id = file_info.get("id")
             if not name or not name.endswith(".py"):
@@ -331,11 +353,16 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
     def _copiar_arquivos_locais(self, manifest: dict, source_dir: Path, download_dir: Path) -> bool:
         files = []
-        manifest_files = manifest.get("files") if isinstance(manifest, dict) else None
+        manifest_files = None
+        if isinstance(manifest, dict):
+            manifest_files = manifest.get("files") or manifest.get("arquivos")
         if isinstance(manifest_files, list):
             for item in manifest_files:
-                if isinstance(item, dict) and item.get("name"):
-                    files.append(item["name"])
+                if isinstance(item, dict):
+                    if item.get("name"):
+                        files.append(item["name"])
+                    elif item.get("destino_relativo"):
+                        files.append(item["destino_relativo"])
                 elif isinstance(item, str):
                     files.append(item)
 
@@ -344,17 +371,42 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
         ok = False
         for name in files:
-            if not name.endswith(".py"):
+            file_name = Path(name).name
+            if not file_name.endswith(".py"):
                 continue
-            source_file = source_dir / name
+            source_file = source_dir / file_name
             if not source_file.exists():
                 continue
-            shutil.copy2(source_file, download_dir / name)
+            shutil.copy2(source_file, download_dir / file_name)
             ok = True
         return ok
 
     def _aplicar_atualizacao(self, download_dir: Path, manifest: dict) -> bool:
         try:
+            manifest_files = None
+            if isinstance(manifest, dict):
+                manifest_files = manifest.get("files") or manifest.get("arquivos")
+
+            if isinstance(manifest_files, list) and manifest_files:
+                for item in manifest_files:
+                    destino = None
+                    if isinstance(item, dict):
+                        destino = item.get("destino_relativo") or item.get("name")
+                    elif isinstance(item, str):
+                        destino = item
+                    if not destino:
+                        continue
+                    file_name = Path(destino).name
+                    source = download_dir / file_name
+                    if not source.exists():
+                        continue
+                    target = self.package_dir / destino
+                    if not target.exists():
+                        target = self.base_dir / destino
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source, target)
+                return True
+
             arquivos = list(download_dir.glob("*.py"))
             if not arquivos:
                 return False
@@ -367,6 +419,17 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         except Exception as exc:
             print(f"Erro ao aplicar atualização: {exc}")
             return False
+
+    def _download_url(self, url: str) -> str | None:
+        try:
+            with urllib.request.urlopen(url) as response:
+                return response.read().decode("utf-8", errors="ignore")
+        except Exception:
+            return None
+
+    def _validate_sha256(self, content: str, expected: str) -> bool:
+        digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        return digest.lower() == expected.lower()
 
     def _alterar_fonte_url(self):
         fonte = simpledialog.askstring(
