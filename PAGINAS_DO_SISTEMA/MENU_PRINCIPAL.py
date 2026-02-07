@@ -41,7 +41,6 @@ from PAGINAS_DO_SISTEMA.LOG_SISTEMA import get_logger
 # ===== IMPORTAÇÕES DO SISTEMA =====
 try:
     from PAGINAS_DO_SISTEMA.USUARIOS import registrar_log_db
-    from USUARIOS import registrar_log_db
 
     LOGS_DISPONIVEIS = True
     print("✅ Função de logs disponível.")
@@ -88,10 +87,6 @@ ROUTES_PATH = _resolve_app_path("route_map.json")
 SETTINGS_PATH = _resolve_app_path("settings.json")
 ICONS_DIR = _resolve_app_path("icons")
 ICONE_SISTEMA = _resolve_app_path("ICONE_SISTEMA.png")
-ROUTES_PATH = os.path.join(APP_DIR, "route_map.json")
-SETTINGS_PATH = os.path.join(APP_DIR, "settings.json")
-ICONS_DIR = os.path.join(APP_DIR, "icons")
-ICONE_SISTEMA = os.path.join(APP_DIR, "ICONE_SISTEMA.png")
 
 
 # ===== GERENCIADOR DE CONFIGURAÇÕES =====
@@ -124,11 +119,22 @@ class ConfigManager:
     @staticmethod
     def load_routes() -> dict:
         """Carrega rotas do arquivo route_map.json."""
-        try:
-            with open(ROUTES_PATH, "r", encoding="utf-8") as f:
-                return json.load(f) or {}
-        except Exception:
-            return {}
+        candidates = [
+            ROUTES_PATH,
+            os.path.join(BASE_DIR, "route_map.json"),
+            os.path.join(os.getcwd(), "route_map.json"),
+        ]
+        for path in candidates:
+            if not path or not os.path.exists(path):
+                continue
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f) or {}
+                if isinstance(data, dict) and data:
+                    return data
+            except Exception as exc:
+                print(f"⚠️ Falha ao carregar rotas em {path}: {exc}")
+        return {}
 
     @staticmethod
     def ensure_icons_directory():
@@ -3628,5 +3634,4 @@ if __name__ == "__main__":
     main()
     # fechado aqui
 
-#03/02/2025
 #03/02/2025
