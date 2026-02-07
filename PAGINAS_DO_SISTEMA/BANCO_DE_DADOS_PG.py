@@ -94,10 +94,7 @@ DEFAULT_CFG = {
     "fallback_to_postgres": True
 }
 
-_BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 CFG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-if not os.path.exists(CFG_PATH):
-    CFG_PATH = os.path.join(_BASE_DIR, "config.json")
 CONFIG = DEFAULT_CFG.copy()
 
 if os.path.exists(CFG_PATH):
