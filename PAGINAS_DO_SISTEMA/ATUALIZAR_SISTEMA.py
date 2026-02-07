@@ -2,6 +2,7 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
+from tkinter import messagebox
 
 import customtkinter as ctk
 
@@ -90,6 +91,21 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         ).pack(fill="x", padx=20, pady=(10, 0))
 
     def _buscar_atualizacoes(self):
+        manifest = self._carregar_manifest_local()
+        nova_versao = self._extract_version(manifest)
+
+        if not nova_versao or not self._is_newer_version(nova_versao, self.VERSAO_ATUAL):
+            self.status_var.set("Seu sistema já está atualizado.")
+            return
+
+        deseja = messagebox.askyesno(
+            "Nova versão disponível",
+            f"Nova versão disponível: {nova_versao}.\nDeseja atualizar?",
+        )
+        if not deseja:
+            self.status_var.set("Atualização cancelada pelo usuário.")
+            return
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_dir = self._backup_current_version(timestamp)
         download_dir = self.download_root / timestamp
@@ -97,6 +113,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         origem_path = download_dir / "ORIGEM_ATUALIZACAO.txt"
         origem_path.write_text(
             f"Fonte: {self.SOURCE_URL}\n"
+            f"Versão detectada: {nova_versao}\n"
             "Baixe os arquivos .py e coloque nesta pasta para aplicar.\n",
             encoding="utf-8",
         )
@@ -150,6 +167,42 @@ class AtualizarSistemaPage(ctk.CTkFrame):
             shutil.copy2(py_file, backup_pkg / py_file.name)
 
         return backup_dir
+
+    def _carregar_manifest_local(self) -> dict:
+        candidates = [
+            self.base_dir / "manifest.json",
+            self.base_dir / "update_manifest.json",
+            self.download_root / "manifest.json",
+        ]
+        for path in candidates:
+            if not path.exists():
+                continue
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+        return {}
+
+    def _extract_version(self, manifest: dict) -> str | None:
+        if not manifest:
+            return None
+        for key in ("version", "versao", "versão"):
+            value = manifest.get(key)
+            if value:
+                return str(value)
+        return None
+
+    def _is_newer_version(self, nova: str, atual: str) -> bool:
+        def parse(v: str) -> tuple[int, ...]:
+            parts = []
+            for chunk in str(v).split("."):
+                try:
+                    parts.append(int(chunk))
+                except ValueError:
+                    parts.append(0)
+            return tuple(parts)
+
+        return parse(nova) > parse(atual)
 
     def _restore_backup(self, backup_dir: Path) -> bool:
         try:
