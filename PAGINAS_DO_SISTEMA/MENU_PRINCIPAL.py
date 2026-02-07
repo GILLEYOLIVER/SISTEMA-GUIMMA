@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 from datetime import datetime
+import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 from tkinter import messagebox, ttk
@@ -39,6 +40,7 @@ from PAGINAS_DO_SISTEMA.LOG_SISTEMA import get_logger
 
 # ===== IMPORTAÇÕES DO SISTEMA =====
 try:
+    from PAGINAS_DO_SISTEMA.USUARIOS import registrar_log_db
     from USUARIOS import registrar_log_db
 
     LOGS_DISPONIVEIS = True
@@ -71,6 +73,21 @@ except Exception as e:
 IS_MAC = platform.system() == "Darwin"
 IS_WIN = platform.system() == "Windows"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(APP_DIR)
+
+
+def _resolve_app_path(filename: str) -> str:
+    """Resolve caminhos de arquivos compartilhados na raiz do projeto."""
+    local_path = os.path.join(APP_DIR, filename)
+    if os.path.exists(local_path):
+        return local_path
+    return os.path.join(BASE_DIR, filename)
+
+
+ROUTES_PATH = _resolve_app_path("route_map.json")
+SETTINGS_PATH = _resolve_app_path("settings.json")
+ICONS_DIR = _resolve_app_path("icons")
+ICONE_SISTEMA = _resolve_app_path("ICONE_SISTEMA.png")
 ROUTES_PATH = os.path.join(APP_DIR, "route_map.json")
 SETTINGS_PATH = os.path.join(APP_DIR, "settings.json")
 ICONS_DIR = os.path.join(APP_DIR, "icons")
@@ -3611,4 +3628,5 @@ if __name__ == "__main__":
     main()
     # fechado aqui
 
+#03/02/2025
 #03/02/2025
