@@ -13,6 +13,7 @@ packaging/build.py — Build oficial do SISTEMA OPERA (macOS/Windows)
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -42,12 +43,16 @@ ASSET_DIRS = [
 ]
 
 
-def _run(cmd: list[str], cwd: Path | None = None) -> None:
+def _run(cmd: list[str], cwd: Path | None = None, env: dict[str, str] | None = None) -> None:
     print("\n>>>", " ".join(map(str, cmd)))
-    subprocess.run(cmd, check=True, cwd=str(cwd) if cwd else None)
+    subprocess.run(cmd, check=True, cwd=str(cwd) if cwd else None, env=env)
 
 
-def build_pyinstaller(platform_name: str) -> None:
+def build_pyinstaller(
+    platform_name: str,
+    spec_file: Path | None,
+    extra_pyinstaller_args: list[str],
+) -> None:
     if not ENTRYPOINT.exists():
         raise FileNotFoundError(f"ENTRYPOINT não encontrado: {ENTRYPOINT}")
 
@@ -69,6 +74,19 @@ def build_pyinstaller(platform_name: str) -> None:
         "PyInstaller",  # ✅ sempre o python do venv atual
         "--noconfirm",
         "--clean",
+    ]
+
+    default_spec = ROOT / "SistemaOpera.spec"
+    resolved_spec = spec_file or (default_spec if default_spec.exists() else None)
+    if resolved_spec:
+        cmd += extra_pyinstaller_args
+        cmd.append(str(resolved_spec))
+        env = os.environ.copy()
+        env["OPERA_SPEC_ROOT"] = str(ROOT)
+        _run(cmd, cwd=ROOT, env=env)
+        return
+
+    cmd += [
         "--windowed",
         "--name",
         APP_NAME,
@@ -84,6 +102,8 @@ def build_pyinstaller(platform_name: str) -> None:
         "PAGINAS_DO_SISTEMA",
         "--collect-submodules",
         "customtkinter",
+        "--collect-submodules",
+        "fpdf",
     ]
 
     # Ícone só no macOS
@@ -95,10 +115,14 @@ def build_pyinstaller(platform_name: str) -> None:
         if src.exists():
             cmd += ["--add-data", f"{src}{sep}{dest}"]
 
+    cmd += extra_pyinstaller_args
+
     # EntryPoint por último
     cmd.append(str(ENTRYPOINT))
 
-    _run(cmd, cwd=ROOT)
+    env = os.environ.copy()
+    env["OPERA_SPEC_ROOT"] = str(ROOT)
+    _run(cmd, cwd=ROOT, env=env)
 
     # Checagem final
     if platform_name == "macos":
@@ -115,9 +139,21 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     # ✅ agora não é mais obrigatório passar argumento -> Play funciona
     parser.add_argument("--platform", choices=["macos", "windows"], default="macos")
+    parser.add_argument(
+        "--spec",
+        type=Path,
+        default=None,
+        help="Usa um arquivo .spec (ex: SistemaOpera.spec) no lugar dos args padrão.",
+    )
+    parser.add_argument(
+        "--pyinstaller-args",
+        nargs=argparse.REMAINDER,
+        default=[],
+        help="Args adicionais passadas para o PyInstaller (ex: --debug=imports).",
+    )
     args = parser.parse_args()
 
-    build_pyinstaller(args.platform)
+    build_pyinstaller(args.platform, args.spec, args.pyinstaller_args)
 
 
 if __name__ == "__main__":
