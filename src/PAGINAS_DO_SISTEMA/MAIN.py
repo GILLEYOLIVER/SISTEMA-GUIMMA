@@ -22,13 +22,17 @@ def _add_runtime_paths():
         if p_meipass not in sys.path:
             sys.path.insert(0, p_meipass)
 
-    here = os.path.dirname(os.path.abspath(__file__))  # .../PAGINAS_DO_SISTEMA
+    here = os.path.dirname(os.path.abspath(__file__))  # .../src/PAGINAS_DO_SISTEMA
     if here not in sys.path:
         sys.path.insert(0, here)
 
-    root = os.path.dirname(here)  # raiz do projeto
-    if root not in sys.path:
-        sys.path.insert(0, root)
+    src_root = os.path.dirname(here)  # .../src
+    if src_root not in sys.path:
+        sys.path.insert(0, src_root)
+
+    project_root = os.path.dirname(src_root)  # raiz do projeto
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
 
 
 _add_runtime_paths()
