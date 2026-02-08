@@ -14,7 +14,7 @@ SISTEMA-GUIMMA/
     RECIBOS_DE_PAGAMENTOS/
   packaging/             # scripts de build/instalador
   icons/
-  COMMIT
+  COMMIT (não empacotado)
 ```
 
 ## Build (macOS / Windows)
