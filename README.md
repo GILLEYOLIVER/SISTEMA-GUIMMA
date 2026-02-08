@@ -26,6 +26,7 @@ Ele possui **interface moderna**, **sistema avançado de temas**, **permissões 
 - [Como Rodar o Sistema](#%EF%B8%8F-como-rodar-o-sistema)
 - [Requisitos](#-requisitos)
 - [Configurações Extras](#-configurações-extras)
+- [Instalador para Windows e macOS](#-instalador-para-windows-e-macos)
 - [Notas sobre Testes nas Mensagens](#-notas-sobre-testes-nas-mensagens)
 - [Contribuições](#-contribuições)
 - [Licença](#-licença)
