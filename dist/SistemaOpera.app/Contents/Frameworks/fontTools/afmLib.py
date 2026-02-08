@@ -1,0 +1,1 @@
+../../Resources/fontTools/afmLib.py

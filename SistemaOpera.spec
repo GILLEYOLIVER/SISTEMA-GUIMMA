@@ -1,59 +1,74 @@
 # -*- mode: python ; coding: utf-8 -*-
-from pathlib import Path
-import os
-import sys
-
 from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_all
 
-ROOT = Path(
-    os.environ.get(
-        "OPERA_SPEC_ROOT",
-        getattr(sys.modules[__name__], "__file__", Path.cwd()),
-    )
-).resolve().parent
-SRC = ROOT / "src"
-DATA = ROOT / "data"
-PACKAGE_DIR = SRC / "PAGINAS_DO_SISTEMA"
-
+datas = [('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/icons', 'icons'), ('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/data/BANCO_DE_DADOS', 'BANCO_DE_DADOS'), ('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src/PAGINAS_DO_SISTEMA', 'PAGINAS_DO_SISTEMA'), ('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/data/INSTAL_BANCO_APP', 'INSTAL BANCO APP'), ('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/data/RECIBOS_DE_PAGAMENTOS', 'RECIBOS_DE_PAGAMENTOS')]
+binaries = []
 hiddenimports = []
-hiddenimports += collect_submodules("PAGINAS_DO_SISTEMA")
-hiddenimports += collect_submodules("customtkinter")
-hiddenimports += collect_submodules("CTkMessagebox")
-hiddenimports += collect_submodules("PyMuPDF")
-hiddenimports += collect_submodules("fitz")
-hiddenimports += collect_submodules("PyQt5")
-hiddenimports += collect_submodules("bcrypt")
-hiddenimports += collect_submodules("charset_normalizer")
-hiddenimports += collect_submodules("contourpy")
-hiddenimports += collect_submodules("cycler")
-hiddenimports += collect_submodules("darkdetect")
-hiddenimports += collect_submodules("defusedxml")
-hiddenimports += collect_submodules("fonttools")
-hiddenimports += collect_submodules("fpdf")
-hiddenimports += collect_submodules("kiwisolver")
-hiddenimports += collect_submodules("matplotlib")
-hiddenimports += collect_submodules("numpy")
-hiddenimports += collect_submodules("packaging")
-hiddenimports += collect_submodules("PIL")
-hiddenimports += collect_submodules("psycopg2")
-hiddenimports += collect_submodules("pyparsing")
-hiddenimports += collect_submodules("dateutil")
-hiddenimports += collect_submodules("reportlab")
-hiddenimports += collect_submodules("six")
-hiddenimports += collect_submodules("sqlparse")
+hiddenimports += collect_submodules('PAGINAS_DO_SISTEMA')
+tmp_ret = collect_all('altgraph')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('bcrypt')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('charset_normalizer')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('contourpy')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('CTkMessagebox')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('customtkinter')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('cycler')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('darkdetect')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('defusedxml')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('ds_store')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('fontTools')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('fpdf')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('kiwisolver')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('mac_alias')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('macholib')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('matplotlib')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('numpy')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('packaging')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('PIL')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('psycopg2')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('fitz')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('pyparsing')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('PyQt5')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('PyQt5_sip')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('dateutil')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('reportlab')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('six')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('sqlparse')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    [str(PACKAGE_DIR / "MAIN.py")],
-    pathex=[str(SRC)],
-    binaries=[],
-    datas=[
-        (str(ROOT / "icons"), "icons"),
-        (str(DATA / "BANCO_DE_DADOS"), "BANCO_DE_DADOS"),
-        (str(PACKAGE_DIR), "PAGINAS_DO_SISTEMA"),
-        (str(DATA / "INSTAL_BANCO_APP"), "INSTAL BANCO APP"),
-        (str(DATA / "RECIBOS_DE_PAGAMENTOS"), "RECIBOS_DE_PAGAMENTOS"),
-    ],
+    ['/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src/PAGINAS_DO_SISTEMA/MAIN.py'],
+    pathex=['/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src'],
+    binaries=binaries,
+    datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
@@ -69,7 +84,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="SistemaOpera",
+    name='SistemaOpera',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -80,7 +95,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=[str(PACKAGE_DIR / "ICONE_SISTEMA.icns")],
+    icon=['/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src/PAGINAS_DO_SISTEMA/ICONE_SISTEMA.icns'],
 )
 coll = COLLECT(
     exe,
@@ -89,11 +104,11 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="SistemaOpera",
+    name='SistemaOpera',
 )
 app = BUNDLE(
     coll,
-    name="SistemaOpera.app",
-    icon=str(PACKAGE_DIR / "ICONE_SISTEMA.icns"),
+    name='SistemaOpera.app',
+    icon='/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src/PAGINAS_DO_SISTEMA/ICONE_SISTEMA.icns',
     bundle_identifier=None,
 )

@@ -1,0 +1,1 @@
+../../Resources/contourpy/_version.py

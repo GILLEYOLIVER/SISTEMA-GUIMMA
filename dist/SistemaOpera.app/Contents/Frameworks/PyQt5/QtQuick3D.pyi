@@ -1,0 +1,1 @@
+../../Resources/PyQt5/QtQuick3D.pyi

@@ -1,0 +1,1 @@
+../../Resources/psycopg2/errorcodes.py

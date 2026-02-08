@@ -1,0 +1,1 @@
+../../Resources/PyQt5/QtXmlPatterns.pyi

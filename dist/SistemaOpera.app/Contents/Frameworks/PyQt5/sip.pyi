@@ -1,0 +1,1 @@
+../../Resources/PyQt5/sip.pyi
