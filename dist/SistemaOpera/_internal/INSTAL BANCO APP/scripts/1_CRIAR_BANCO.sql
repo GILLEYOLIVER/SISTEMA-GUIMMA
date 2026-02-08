@@ -1,4 +1,0 @@
-
-CREATE DATABASE "BANCO_OPERA" ENCODING 'UTF8';
-
-SELECT '✅ BANCO_OPERA criado com sucesso!' AS status_banco;
