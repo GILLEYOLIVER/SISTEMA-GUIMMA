@@ -9,7 +9,7 @@ __pycache__/
 venv/
 
 # logs e backups
-logs/
+../logs/
 OPERA_SYSTEM/logs/
 backup_banco/
 

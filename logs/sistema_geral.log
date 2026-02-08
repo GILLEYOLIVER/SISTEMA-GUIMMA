@@ -1,0 +1,62 @@
+2026-01-29 00:39:55 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-01-29 21:52:39 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-01-29 21:56:31 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-01-30 19:12:29 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-01-30 19:13:29 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-01-30 19:51:11 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-01-30 21:20:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-01-30 21:20:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Senha carregada do config.json: 11 caracteres
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Configuração - Host: localhost, Porta: 5432, DB: BANCO_OPERA, Senha: Sim
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Tela de backup carregada.
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔧 Configuração: postgres@localhost:5432/BANCO_OPERA
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔍 Verificando conexão na porta 5432...
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ⚠️ Ready_check retornou False na porta 5432
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔄 Tentando conexão direta em localhost:5432...
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ✅ Conexão direta OK na porta 5432 - PostgreSQL 18.0 on x86_64-apple-darwin23.6.0
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Pasta de backups: /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/backup_banco
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Backup inicializada (porta=5432, senha=Sim)
+2026-01-30 22:20:21 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-01-30 22:20:21 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-01-30 22:27:15 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-01-30 22:27:23 | INFO     | OPERA_SYSTEM | [SISTEMA] Execução SQL finalizada
+2026-01-30 22:27:31 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-01-30 23:15:42 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-01-30 23:15:42 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-01-30 23:50:38 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-01-30 23:50:38 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-01-30 23:56:10 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-01-30 23:56:11 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-01-31 20:42:11 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-01-31 20:45:20 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-01-31 20:46:39 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-01-31 22:43:32 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-01-31 22:43:32 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-01-31 23:18:33 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-01-31 23:18:33 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-02-01 14:00:07 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-02-01 14:00:07 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-02-02 00:42:35 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-02-02 00:42:35 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-02-04 16:25:14 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 16:25:58 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 20:21:30 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 20:21:52 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 20:21:57 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 20:22:10 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 20:22:14 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 20:22:33 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 20:22:39 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 20:22:44 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Clique
+2026-02-04 20:22:45 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Clique
+2026-02-04 20:22:46 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Clique
+2026-02-04 20:22:46 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Clique
+2026-02-04 20:23:00 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 23:02:06 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 23:02:13 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-04 23:02:23 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-07 16:56:41 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-07 16:59:41 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-07 17:01:05 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-07 17:01:58 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
+2026-02-07 17:03:07 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Navegação
