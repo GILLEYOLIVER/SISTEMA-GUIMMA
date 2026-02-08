@@ -18,7 +18,7 @@ DisableDirPage=no
 WizardStyle=modern
 
 ; Opcional: se tiver um .ico, ajuste aqui.
-SetupIconFile=..\..\PAGINAS_DO_SISTEMA\ICONE_SISTEMA.ico
+SetupIconFile=..\..\src\PAGINAS_DO_SISTEMA\ICONE_SISTEMA.ico
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
