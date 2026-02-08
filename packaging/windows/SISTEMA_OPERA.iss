@@ -11,13 +11,14 @@ AppPublisher={#AppPublisher}
 DefaultDirName={pf}\{#AppName}
 DefaultGroupName={#AppName}
 OutputBaseFilename=Instalador_{#AppName}
+OutputDir=..\..
 Compression=lzma
 SolidCompression=yes
 DisableDirPage=no
 WizardStyle=modern
 
 ; Opcional: se tiver um .ico, ajuste aqui.
-SetupIconFile=..\..\ICONE_SISTEMA.ico
+SetupIconFile=..\..\PAGINAS_DO_SISTEMA\ICONE_SISTEMA.ico
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"

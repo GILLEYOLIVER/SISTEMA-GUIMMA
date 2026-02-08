@@ -10,7 +10,7 @@ if ! command -v dmgbuild >/dev/null 2>&1; then
   exit 0
 fi
 
-DMG_OUTPUT="$ROOT_DIR/dist/SISTEMA_OPERA.dmg"
+DMG_OUTPUT="$ROOT_DIR/SISTEMA_OPERA.dmg"
 SETTINGS_FILE="$ROOT_DIR/packaging/macos/dmg_settings.py"
 APP_PATH="$ROOT_DIR/dist/SistemaOpera.app"
 

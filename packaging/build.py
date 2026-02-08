@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ENTRYPOINT = ROOT / "MAIN.py"
+ICON_DIR = ROOT / "PAGINAS_DO_SISTEMA"
 
 ASSET_EXTENSIONS = {".json", ".jpg", ".png", ".icns", ".ttf"}
 ASSET_DIRS = ["icons", "BANCO_DE_DADOS", "COMMIT"]
@@ -42,14 +43,28 @@ def build_add_data(platform_name: str) -> list[str]:
     return args
 
 
-def build_pyinstaller(platform_name: str) -> None:
-    icon = None
+def resolve_icon(platform_name: str) -> Path | None:
     if platform_name == "macos":
-        icon = ROOT / "ICONE_SISTEMA.icns"
-    elif platform_name == "windows":
-        ico = ROOT / "ICONE_SISTEMA.ico"
-        png = ROOT / "ICONE_SISTEMA.png"
-        icon = ico if ico.exists() else png
+        for candidate in (ICON_DIR / "ICONE_SISTEMA.icns", ROOT / "ICONE_SISTEMA.icns"):
+            if candidate.exists():
+                return candidate
+    if platform_name == "windows":
+        for candidate in (
+            ICON_DIR / "ICONE_SISTEMA.ico",
+            ROOT / "ICONE_SISTEMA.ico",
+            ICON_DIR / "ICONE_SISTEMA.png",
+            ROOT / "ICONE_SISTEMA.png",
+        ):
+            if candidate.exists():
+                return candidate
+    for candidate in (ICON_DIR / "ICONE_SISTEMA.png", ROOT / "ICONE_SISTEMA.png"):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def build_pyinstaller(platform_name: str) -> None:
+    icon = resolve_icon(platform_name)
 
     command = [
         "python",

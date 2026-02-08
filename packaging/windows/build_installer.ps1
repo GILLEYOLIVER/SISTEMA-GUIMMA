@@ -7,6 +7,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $repoRoot
 
+& $Python packaging/windows/prepare_icon.py
+
 & $Python packaging/build.py --platform windows
 
 $inno = Get-Command iscc.exe -ErrorAction SilentlyContinue
