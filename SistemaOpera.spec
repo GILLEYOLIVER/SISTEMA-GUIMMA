@@ -1,9 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+import sys
 
 from PyInstaller.utils.hooks import collect_submodules
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(getattr(sys.modules[__name__], "__file__", Path.cwd())).resolve().parent
 SRC = ROOT / "src"
 DATA = ROOT / "data"
 PACKAGE_DIR = SRC / "PAGINAS_DO_SISTEMA"
