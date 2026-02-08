@@ -75,9 +75,11 @@ def build_pyinstaller(
         "--clean",
     ]
 
-    if spec_file:
+    default_spec = ROOT / "SistemaOpera.spec"
+    resolved_spec = spec_file or (default_spec if default_spec.exists() else None)
+    if resolved_spec:
         cmd += extra_pyinstaller_args
-        cmd.append(str(spec_file))
+        cmd.append(str(resolved_spec))
         _run(cmd, cwd=ROOT)
         return
 
@@ -97,6 +99,8 @@ def build_pyinstaller(
         "PAGINAS_DO_SISTEMA",
         "--collect-submodules",
         "customtkinter",
+        "--collect-submodules",
+        "fpdf",
     ]
 
     # Ícone só no macOS
