@@ -42,6 +42,8 @@ from PAGINAS_DO_SISTEMA.OPERA_PATHS import ensure_default_tree, get_app_data_dir
 
 os.environ.setdefault("OPERA_DATA_DIR", str(get_app_data_dir()))
 ensure_default_tree()
+if getattr(sys, "_MEIPASS", None):
+    os.chdir(get_app_data_dir())
 
 
 # ==============================================================================
