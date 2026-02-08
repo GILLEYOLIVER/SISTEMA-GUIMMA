@@ -4,7 +4,7 @@
 packaging/build.py — Build oficial do SISTEMA OPERA (macOS/Windows)
 
 ✅ Agora dá pra apertar PLAY (sem argumentos): padrão = macos
-✅ EntryPoint: PAGINAS_DO_SISTEMA/MAIN.py
+✅ EntryPoint: src/PAGINAS_DO_SISTEMA/MAIN.py
 ✅ Inclui assets (inclui PAGINAS_DO_SISTEMA com imagens/fonts)
 ✅ Usa o Python do venv atual (sys.executable)
 ✅ Gera dist/SistemaOpera.app (macOS) ou dist/SistemaOpera/SistemaOpera.exe (Windows)
@@ -20,23 +20,26 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+PACKAGE_DIR = SRC / "PAGINAS_DO_SISTEMA"
+DATA_DIR = ROOT / "data"
 
 # ✅ EntryPoint real
-ENTRYPOINT = ROOT / "PAGINAS_DO_SISTEMA" / "MAIN.py"
+ENTRYPOINT = PACKAGE_DIR / "MAIN.py"
 
 APP_NAME = "SistemaOpera"
 
 # ✅ Ícone do macOS
-ICON_PATH = ROOT / "PAGINAS_DO_SISTEMA" / "ICONE_SISTEMA.icns"
+ICON_PATH = PACKAGE_DIR / "ICONE_SISTEMA.icns"
 
 # ✅ Pastas que devem ir junto (inclui imagens/fundos/fontes dentro de PAGINAS_DO_SISTEMA)
 ASSET_DIRS = [
-    "icons",
-    "BANCO_DE_DADOS",
-    "COMMIT",
-    "PAGINAS_DO_SISTEMA",
-    "INSTAL BANCO APP",
-    "RECIBOS_DE_PAGAMENTOS",
+    (ROOT / "icons", "icons"),
+    (DATA_DIR / "BANCO_DE_DADOS", "BANCO_DE_DADOS"),
+    (DATA_DIR / "COMMIT", "COMMIT"),
+    (PACKAGE_DIR, "PAGINAS_DO_SISTEMA"),
+    (DATA_DIR / "INSTAL_BANCO_APP", "INSTAL BANCO APP"),
+    (DATA_DIR / "RECIBOS_DE_PAGAMENTOS", "RECIBOS_DE_PAGAMENTOS"),
 ]
 
 
@@ -62,17 +65,26 @@ def build_pyinstaller(platform_name: str) -> None:
     sep = ";" if platform_name == "windows" else ":"
 
     cmd = [
-        sys.executable, "-m", "PyInstaller",  # ✅ sempre o python do venv atual
+        sys.executable,
+        "-m",
+        "PyInstaller",  # ✅ sempre o python do venv atual
         "--noconfirm",
         "--clean",
         "--windowed",
-        "--name", APP_NAME,
-        "--distpath", str(dist),
-        "--workpath", str(build),
+        "--name",
+        APP_NAME,
+        "--distpath",
+        str(dist),
+        "--workpath",
+        str(build),
+        "--paths",
+        str(SRC),
 
         # imports comuns em apps CTk
-        "--collect-submodules", "PAGINAS_DO_SISTEMA",
-        "--collect-submodules", "customtkinter",
+        "--collect-submodules",
+        "PAGINAS_DO_SISTEMA",
+        "--collect-submodules",
+        "customtkinter",
     ]
 
     # Ícone só no macOS
@@ -80,10 +92,9 @@ def build_pyinstaller(platform_name: str) -> None:
         cmd += ["--icon", str(ICON_PATH)]
 
     # Assets/pastas
-    for d in ASSET_DIRS:
-        src = ROOT / d
+    for src, dest in ASSET_DIRS:
         if src.exists():
-            cmd += ["--add-data", f"{src}{sep}{d}"]
+            cmd += ["--add-data", f"{src}{sep}{dest}"]
 
     # EntryPoint por último
     cmd.append(str(ENTRYPOINT))
