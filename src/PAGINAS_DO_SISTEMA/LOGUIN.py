@@ -42,8 +42,7 @@ def asset_path(nome_arquivo: str) -> str:
     if p2.exists():
         return str(p2)
     # tenta na pasta PAGINAS_DO_SISTEMA real do projeto (rodando fora do bundle)
-    p3 = Path(__file__).resolve().parent / "PAGINAS_DO_SISTEMA" / nome_arquivo
-    return str(p3)
+    return str(Path(__file__).resolve().parent / nome_arquivo)
 
 
 
