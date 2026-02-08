@@ -1,4 +1,6 @@
 import copy
+import importlib
+import importlib.util
 import json
 import math
 import re
@@ -7,7 +9,10 @@ from tkinter import Canvas
 import colorsys
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
-from PIL import Image, ImageTk, ImageGrab
+from PIL import Image, ImageTk
+
+_image_grab_spec = importlib.util.find_spec("PIL.ImageGrab")
+ImageGrab = importlib.import_module("PIL.ImageGrab") if _image_grab_spec else None
 
 # =================== PALETAS PADRÃO E CAMPOS ===================
 DEFAULT_PADROES = {
@@ -1194,6 +1199,8 @@ class ColorPickerWidget(ctk.CTkFrame):
             return image
 
         def grab_screen_hex(x, y):
+            if ImageGrab is None:
+                return None
             try:
                 pixel = ImageGrab.grab(bbox=(x, y, x + 1, y + 1)).getpixel((0, 0))
                 return rgb_to_hex(pixel)
@@ -1202,6 +1209,13 @@ class ColorPickerWidget(ctk.CTkFrame):
                 return None
 
         def start_eyedropper():
+            if ImageGrab is None:
+                CTkMessagebox(
+                    title="Conta-gotas indisponível",
+                    message="O recurso de captura de cor não está disponível neste ambiente.",
+                    icon="warning",
+                )
+                return
             overlay = tk.Toplevel(self._advanced_win)
             overlay.overrideredirect(True)
             overlay.attributes("-alpha", 0.02)
