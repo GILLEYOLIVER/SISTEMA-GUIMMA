@@ -1,4 +1,28 @@
-import hashlib
+# -*- coding: utf-8 -*-
+"""
+ATUALIZADOR DO SISTEMA (LOCAL OU GOOGLE DRIVE) - UI CLARA + LINKS AUTOMÁTICOS
+----------------------------------------------------------------------------
+✅ Interface clara: você escolhe LOCAL ou ONLINE (Drive) e fica evidente de onde vem.
+✅ Ao abrir a página: se houver atualização disponível (manifest com versão maior),
+   aparece: "Nova atualização disponível: X.X — Deseja atualizar agora? (Sim/Não)"
+
+✅ LOCAL:
+   - Atualiza TODOS os arquivos .py que estiverem na pasta escolhida.
+
+✅ ONLINE (Drive):
+   - Você pode colar NO manifest o link normal do Drive (view) e o programa converte
+     automaticamente para link de download.
+   - Ex.: https://drive.google.com/file/d/ID/view?usp=sharing  ->  uc?export=download&id=ID
+   - Recomendado: usar manifest.json com "files" e links do Drive (pode ser view mesmo).
+   - Opcional: update_all=true + link de pasta /folders/... (tentativa, pode falhar às vezes).
+
+Arquivos de estado:
+- update_state.json     -> guarda versão atual
+- update_settings.json  -> guarda modo + fonte local + fonte drive
+"""
+
+from __future__ import annotations
+
 import json
 import re
 import shutil
@@ -11,24 +35,40 @@ import customtkinter as ctk
 
 
 class AtualizarSistemaPage(ctk.CTkFrame):
-    VERSAO_ATUAL = "1.0"
-    DEFAULT_SOURCE = (
-        "https://drive.google.com/drive/folders/"
-        "1vmA4cBJqtQ8IFg43uBMWg79S1HiQD2nG?usp=drive_link"
-    )
+    VERSAO_PADRAO = "1.0"
 
     def __init__(self, master, sistema=None, app=None, parent=None, **kwargs):
         super().__init__(master, **kwargs)
+
         self.app = sistema or app or parent
+
+        # Estrutura típica: este arquivo dentro de /PAGINAS -> base_dir = pasta do projeto
         self.base_dir = Path(__file__).resolve().parent.parent
         self.package_dir = Path(__file__).resolve().parent
+
         self.backup_root = self.base_dir / "backup_versoes"
-        self.download_root = self.base_dir / "atualizacoes_baixadas"
-        self.history_path = self.base_dir / "update_history.json"
+        self.state_path = self.base_dir / "update_state.json"
         self.settings_path = self.base_dir / "update_settings.json"
-        self.source_var = ctk.StringVar(value=self._load_source())
-        self.status_var = ctk.StringVar(value="Pronto para buscar atualizações.")
+
+        self.versao_atual = self._load_current_version()
+
+        settings = self._load_settings()
+        self.modo_var = ctk.StringVar(value=settings.get("mode", "local"))  # "local" ou "drive"
+        self.local_source_var = ctk.StringVar(value=settings.get("local_source", ""))
+        self.drive_source_var = ctk.StringVar(value=settings.get("drive_source", ""))
+
+        self.version_var = ctk.StringVar(value=f"Versão atual: {self.versao_atual}")
+        self.source_title_var = ctk.StringVar(value="")
+        self.source_value_var = ctk.StringVar(value="")
+        self.status_var = ctk.StringVar(value="Pronto.")
+
         self._build_ui()
+        self._apply_mode_ui(initial=True)
+
+        # Checagem automática ao abrir a página
+        self.after(350, self._auto_check_updates_on_open)
+
+    # ---------------- UI ----------------
 
     def _build_ui(self):
         self.configure(fg_color="transparent")
@@ -44,47 +84,78 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             header,
-            text=f"Versão atual: {self.VERSAO_ATUAL}",
+            textvariable=self.version_var,
             font=("Segoe UI", 14),
         ).pack(anchor="w", padx=20, pady=(0, 12))
 
+        # Seletor de modo
+        modo_box = ctk.CTkFrame(self, corner_radius=12)
+        modo_box.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(
+            modo_box,
+            text="Origem da atualização:",
+            font=("Segoe UI", 13, "bold"),
+        ).pack(anchor="w", padx=20, pady=(12, 6))
+
+        row = ctk.CTkFrame(modo_box, corner_radius=12)
+        row.pack(fill="x", padx=20, pady=(0, 12))
+
+        ctk.CTkRadioButton(
+            row,
+            text="Local (pasta do computador)",
+            value="local",
+            variable=self.modo_var,
+            command=self._on_mode_changed,
+        ).pack(side="left", padx=(0, 20), pady=6)
+
+        ctk.CTkRadioButton(
+            row,
+            text="Online (Google Drive)",
+            value="drive",
+            variable=self.modo_var,
+            command=self._on_mode_changed,
+        ).pack(side="left", padx=(0, 20), pady=6)
+
+        # Fonte conforme modo
         info = ctk.CTkFrame(self, corner_radius=12)
         info.pack(fill="x", padx=20, pady=10)
 
         ctk.CTkLabel(
             info,
-            text="Fonte de atualização (online ou local):",
+            textvariable=self.source_title_var,
             font=("Segoe UI", 13, "bold"),
         ).pack(anchor="w", padx=20, pady=(12, 2))
 
         ctk.CTkLabel(
             info,
-            textvariable=self.source_var,
+            textvariable=self.source_value_var,
             font=("Segoe UI", 12),
-            wraplength=900,
+            wraplength=920,
             justify="left",
         ).pack(anchor="w", padx=20, pady=(0, 12))
 
-        source_actions = ctk.CTkFrame(info, corner_radius=12)
-        source_actions.pack(fill="x", padx=20, pady=(0, 12))
+        btn_row = ctk.CTkFrame(info, corner_radius=12)
+        btn_row.pack(fill="x", padx=20, pady=(0, 12))
+        self.btn_row = btn_row
 
-        ctk.CTkButton(
-            source_actions,
-            text="Alterar fonte (URL/Drive)",
-            command=self._alterar_fonte_url,
-            width=200,
-        ).pack(side="left", padx=(0, 12), pady=6)
-
-        ctk.CTkButton(
-            source_actions,
+        self.btn_local = ctk.CTkButton(
+            btn_row,
             text="Escolher pasta local",
             command=self._alterar_fonte_local,
-            width=200,
-        ).pack(side="left", padx=(0, 12), pady=6)
+            width=220,
+        )
+        self.btn_drive = ctk.CTkButton(
+            btn_row,
+            text="Colar link do Drive",
+            command=self._alterar_fonte_drive,
+            width=220,
+        )
 
+        self.dica_var = ctk.StringVar(value="")
         ctk.CTkLabel(
             info,
-            text="Tipo de atualização atual: arquivos .py",
+            textvariable=self.dica_var,
             font=("Segoe UI", 12),
         ).pack(anchor="w", padx=20, pady=(0, 12))
 
@@ -112,153 +183,369 @@ class AtualizarSistemaPage(ctk.CTkFrame):
             justify="left",
         ).pack(fill="x", padx=20, pady=(10, 0))
 
+    # ---------------- Modo UI ----------------
+
+    def _on_mode_changed(self):
+        self._apply_mode_ui()
+        self._save_settings()
+
+    def _apply_mode_ui(self, initial: bool = False):
+        mode = self.modo_var.get()
+
+        for w in self.btn_row.winfo_children():
+            w.pack_forget()
+
+        if mode == "local":
+            self.source_title_var.set("Fonte (LOCAL):")
+            self.source_value_var.set(self.local_source_var.get() or "Nenhuma pasta selecionada.")
+            self.dica_var.set("Atualiza todos os arquivos .py da pasta escolhida.")
+            self.btn_local.pack(side="left", padx=(0, 12), pady=6)
+        else:
+            self.source_title_var.set("Fonte (ONLINE - Google Drive):")
+            self.source_value_var.set(self.drive_source_var.get() or "Nenhum link informado.")
+            self.dica_var.set(
+                "Dica: você pode usar manifest.json com links normais do Drive (view) "
+                "que o sistema converte automaticamente."
+            )
+            self.btn_drive.pack(side="left", padx=(0, 12), pady=6)
+
+        if not initial:
+            self.status_var.set("Pronto.")
+
+    # ---------------- Checagem automática ao abrir ----------------
+
+    def _auto_check_updates_on_open(self):
+        try:
+            mode = self.modo_var.get()
+
+            if mode == "local":
+                src = (self.local_source_var.get() or "").strip()
+                if not src:
+                    return
+                p = Path(src)
+                if not (p.exists() and p.is_dir()):
+                    return
+                manifest = self._load_manifest_local(p) or {}
+            else:
+                src = (self.drive_source_var.get() or "").strip()
+                if not src:
+                    return
+                manifest = self._load_manifest_drive(src) or {}
+
+            nova_versao = self._extract_version(manifest)
+            if not nova_versao:
+                return
+
+            if self._is_newer_version(nova_versao, self.versao_atual):
+                deseja = messagebox.askyesno(
+                    "Atualização",
+                    f"Nova atualização disponível: {nova_versao}\n\nDeseja atualizar agora?",
+                )
+                if deseja:
+                    self._buscar_atualizacoes()
+                else:
+                    self.status_var.set("Atualização disponível. Você pode atualizar quando quiser.")
+        except Exception:
+            return
+
+    # ---------------- Ações principais ----------------
+
     def _buscar_atualizacoes(self):
-        source = self._get_source()
-        manifest = self._carregar_manifest_local(source)
-        if not manifest:
-            manifest = self._carregar_manifest_drive(source)
+        mode = self.modo_var.get()
+
+        if mode == "local":
+            source = (self.local_source_var.get() or "").strip()
+            if not source:
+                messagebox.showwarning("Atualização", "Selecione uma pasta local primeiro.")
+                return
+            source_path = Path(source)
+            if not (source_path.exists() and source_path.is_dir()):
+                messagebox.showwarning("Atualização", "A pasta selecionada não é válida.")
+                return
+
+            self.status_var.set("Verificando atualizações...")
+            manifest = self._load_manifest_local(source_path) or {}
+            nova_versao = self._extract_version(manifest)
+
+            if nova_versao and not self._is_newer_version(nova_versao, self.versao_atual):
+                messagebox.showinfo("Atualização", "Nenhuma atualização disponível no momento.")
+                self.status_var.set("Nenhuma atualização disponível.")
+                return
+
+            if nova_versao:
+                deseja = messagebox.askyesno(
+                    "Atualização",
+                    f"Nova versão disponível: {nova_versao}\n\nDeseja atualizar agora?",
+                )
+                if not deseja:
+                    self.status_var.set("Atualização cancelada.")
+                    return
+            else:
+                deseja = messagebox.askyesno(
+                    "Atualização",
+                    "Deseja atualizar agora usando os arquivos desta pasta?",
+                )
+                if not deseja:
+                    self.status_var.set("Atualização cancelada.")
+                    return
+
+            self._fazer_backup()
+
+            self.status_var.set("Atualizando arquivos...")
+            ok = self._aplicar_todos_py_da_pasta_local(source_path)
+
+            if not ok:
+                messagebox.showerror("Atualização", "Não encontrei arquivos .py nessa pasta para atualizar.")
+                self.status_var.set("Não foi possível concluir a atualização.")
+                return
+
+            if nova_versao:
+                self._set_versao_atual(nova_versao)
+
+            messagebox.showinfo("Atualização", "Atualização concluída com sucesso!")
+            self.status_var.set("Atualização concluída com sucesso.")
+            return
+
+        # Drive
+        source = (self.drive_source_var.get() or "").strip()
+        if not source:
+            messagebox.showwarning("Atualização", "Cole um link do Google Drive primeiro.")
+            return
+
+        self.status_var.set("Verificando atualizações...")
+        manifest = self._load_manifest_drive(source) or {}
         nova_versao = self._extract_version(manifest)
 
-        if not nova_versao:
-            self.status_var.set("Manifesto não encontrado para verificar atualizações.")
+        if nova_versao and not self._is_newer_version(nova_versao, self.versao_atual):
+            messagebox.showinfo("Atualização", "Nenhuma atualização disponível no momento.")
+            self.status_var.set("Nenhuma atualização disponível.")
             return
 
-        if not self._is_newer_version(nova_versao, self.VERSAO_ATUAL):
-            self.status_var.set("Seu sistema já está atualizado.")
-            return
-
-        deseja = messagebox.askyesno(
-            "Nova versão disponível",
-            f"Nova versão disponível: {nova_versao}.\nDeseja atualizar?",
-        )
-        if not deseja:
-            self.status_var.set("Atualização cancelada pelo usuário.")
-            return
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_dir = self._backup_current_version(timestamp)
-        download_dir = self.download_root / timestamp
-        download_dir.mkdir(parents=True, exist_ok=True)
-        origem_path = download_dir / "ORIGEM_ATUALIZACAO.txt"
-        origem_path.write_text(
-            f"Fonte: {source}\n"
-            f"Versão detectada: {nova_versao}\n"
-            "Baixe os arquivos .py e coloque nesta pasta para aplicar.\n",
-            encoding="utf-8",
-        )
-        self._append_history(
-            action="buscar_atualizacoes",
-            backup_dir=backup_dir,
-            download_dir=download_dir,
-            source_url=source,
-        )
-        baixado = self._baixar_arquivos_atualizacao(manifest, download_dir, source)
-        if not baixado:
-            self.status_var.set("Falha ao baixar arquivos de atualização.")
-            return
-        aplicado = self._aplicar_atualizacao(download_dir, manifest)
-        if aplicado:
-            self.status_var.set(
-                "Atualização aplicada com sucesso. "
-                f"Backup em: {backup_dir}"
+        if nova_versao:
+            deseja = messagebox.askyesno(
+                "Atualização",
+                f"Nova versão disponível: {nova_versao}\n\nDeseja atualizar agora?",
             )
+            if not deseja:
+                self.status_var.set("Atualização cancelada.")
+                return
         else:
-            self.status_var.set("Falha ao aplicar a atualização.")
+            deseja = messagebox.askyesno(
+                "Atualização",
+                "Deseja atualizar agora usando os arquivos desta fonte?",
+            )
+            if not deseja:
+                self.status_var.set("Atualização cancelada.")
+                return
+
+        self._fazer_backup()
+
+        self.status_var.set("Atualizando arquivos...")
+        ok = self._aplicar_todos_py_da_fonte_drive(source, manifest)
+
+        if not ok:
+            messagebox.showerror(
+                "Atualização",
+                "Não foi possível atualizar pelo Drive.\n\n"
+                "Verifique se:\n"
+                "- O manifest.json está público (Qualquer pessoa com link)\n"
+                "- Os arquivos do Drive estão públicos\n"
+                "- Os links no manifest podem ser o link normal (view) que o sistema converte sozinho",
+            )
+            self.status_var.set("Não foi possível concluir a atualização.")
+            return
+
+        if nova_versao:
+            self._set_versao_atual(nova_versao)
+
+        messagebox.showinfo("Atualização", "Atualização concluída com sucesso!")
+        self.status_var.set("Atualização concluída com sucesso.")
 
     def _restaurar_ultima_versao(self):
         if not self.backup_root.exists():
-            self.status_var.set("Nenhum backup encontrado para restaurar.")
+            messagebox.showinfo("Versões", "Nenhuma versão anterior encontrada.")
+            self.status_var.set("Nenhuma versão anterior encontrada.")
             return
 
-        backups = sorted(
-            [p for p in self.backup_root.iterdir() if p.is_dir()],
-            reverse=True,
-        )
+        backups = sorted([p for p in self.backup_root.iterdir() if p.is_dir()], reverse=True)
         if not backups:
-            self.status_var.set("Nenhum backup encontrado para restaurar.")
+            messagebox.showinfo("Versões", "Nenhuma versão anterior encontrada.")
+            self.status_var.set("Nenhuma versão anterior encontrada.")
             return
 
         backup_dir = backups[0]
-        restored = self._restore_backup(backup_dir)
-        if restored:
-            self._append_history(
-                action="rollback",
-                backup_dir=backup_dir,
-                download_dir=None,
-                source_url=self._get_source(),
-            )
-            self.status_var.set(f"Versão restaurada a partir de {backup_dir}.")
-        else:
-            self.status_var.set("Falha ao restaurar a versão anterior.")
+        versao_backup = self._read_backup_version(backup_dir) or "anterior"
 
-    def _backup_current_version(self, timestamp: str) -> Path:
+        deseja = messagebox.askyesno("Voltar versão", f"Deseja voltar para versão {versao_backup}?")
+        if not deseja:
+            self.status_var.set("Ação cancelada.")
+            return
+
+        self.status_var.set("Voltando para a versão anterior...")
+        restored = self._restore_backup(backup_dir)
+
+        if restored:
+            if versao_backup and versao_backup != "anterior":
+                self._set_versao_atual(versao_backup)
+
+            messagebox.showinfo("Voltar versão", f"Você voltou para a versão {versao_backup}.")
+            self.status_var.set(f"Você voltou para a versão {versao_backup}.")
+        else:
+            messagebox.showerror("Voltar versão", "Não foi possível voltar para a versão anterior.")
+            self.status_var.set("Não foi possível voltar para a versão anterior.")
+
+    # ---------------- Fonte (Local/Drive) ----------------
+
+    def _alterar_fonte_local(self):
+        pasta = filedialog.askdirectory(title="Selecione a pasta de atualizações (LOCAL)")
+        if pasta:
+            self.local_source_var.set(pasta)
+            self._save_settings()
+            self._apply_mode_ui()
+            self.status_var.set("Pasta local selecionada.")
+
+    def _alterar_fonte_drive(self):
+        link = simpledialog.askstring(
+            "Google Drive",
+            "Cole o link do Drive (manifest.json ou pasta /folders/...):",
+            initialvalue=self.drive_source_var.get(),
+        )
+        if link:
+            self.drive_source_var.set(link.strip())
+            self._save_settings()
+            self._apply_mode_ui()
+            self.status_var.set("Link do Drive definido.")
+
+    # ---------------- Backup helpers ----------------
+
+    def _fazer_backup(self):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._backup_current_version(timestamp, self.versao_atual)
+
+    def _backup_current_version(self, timestamp: str, versao_atual: str) -> Path:
         backup_dir = self.backup_root / timestamp
         backup_dir.mkdir(parents=True, exist_ok=True)
+
+        (backup_dir / "BACKUP_VERSION.txt").write_text(str(versao_atual), encoding="utf-8")
+
         backup_pkg = backup_dir / "PAGINAS_DO_SISTEMA"
         backup_pkg.mkdir(parents=True, exist_ok=True)
 
         for py_file in self.base_dir.glob("*.py"):
-            shutil.copy2(py_file, backup_dir / py_file.name)
+            try:
+                shutil.copy2(py_file, backup_dir / py_file.name)
+            except Exception:
+                pass
 
         for py_file in self.package_dir.glob("*.py"):
-            shutil.copy2(py_file, backup_pkg / py_file.name)
+            try:
+                shutil.copy2(py_file, backup_pkg / py_file.name)
+            except Exception:
+                pass
 
         return backup_dir
 
-    def _carregar_manifest_local(self, source: str) -> dict:
-        if source:
-            source_path = Path(source)
-            if source_path.exists() and source_path.is_file() and source_path.suffix == ".json":
-                try:
-                    return json.loads(source_path.read_text(encoding="utf-8"))
-                except Exception:
-                    return {}
-        candidates = [
-            self.base_dir / "manifest.json",
-            self.base_dir / "update_manifest.json",
-            self.download_root / "manifest.json",
-        ]
-        if source and Path(source).exists():
-            candidates.insert(0, Path(source) / "manifest.json")
-        for path in candidates:
-            if not path.exists():
-                continue
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except Exception:
-                continue
-        return {}
+    def _restore_backup(self, backup_dir: Path) -> bool:
+        try:
+            for py_file in backup_dir.glob("*.py"):
+                shutil.copy2(py_file, self.base_dir / py_file.name)
 
-    def _carregar_manifest_drive(self, source: str) -> dict:
-        if source and source.lower().endswith(".json"):
-            content = self._download_url(source)
-            if content:
-                try:
-                    return json.loads(content)
-                except Exception:
-                    return {}
+            backup_pkg = backup_dir / "PAGINAS_DO_SISTEMA"
+            if backup_pkg.exists():
+                for py_file in backup_pkg.glob("*.py"):
+                    shutil.copy2(py_file, self.package_dir / py_file.name)
+
+            return True
+        except Exception:
+            return False
+
+    def _read_backup_version(self, backup_dir: Path) -> str | None:
+        p = backup_dir / "BACKUP_VERSION.txt"
+        if p.exists():
+            try:
+                return p.read_text(encoding="utf-8").strip() or None
+            except Exception:
+                return None
+        return None
+
+    # ---------------- Versão atual (state) ----------------
+
+    def _set_versao_atual(self, versao: str):
+        self.versao_atual = str(versao).strip() or self.VERSAO_PADRAO
+        self._save_current_version(self.versao_atual)
+        self.version_var.set(f"Versão atual: {self.versao_atual}")
+
+    def _load_current_version(self) -> str:
+        if self.state_path.exists():
+            try:
+                data = json.loads(self.state_path.read_text(encoding="utf-8"))
+                v = str(data.get("current_version", "")).strip()
+                if v:
+                    return v
+            except Exception:
+                pass
+        return self.VERSAO_PADRAO
+
+    def _save_current_version(self, versao: str):
+        try:
+            self.state_path.write_text(
+                json.dumps({"current_version": str(versao)}, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+
+    # ---------------- Manifest (Local/Drive) ----------------
+
+    def _load_manifest_local(self, source_dir: Path) -> dict | None:
+        manifest_path = source_dir / "manifest.json"
+        if not manifest_path.exists():
+            return None
+        try:
+            return json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    def _load_manifest_drive(self, source: str) -> dict | None:
+        # Se o usuário colar o link normal do Drive do manifest.json, converte para download
+        source = self._normalize_drive_url(source)
+
+        # Link direto do manifest.json (ou qualquer url que retorne json)
+        if source.lower().endswith(".json") or "uc?export=download" in source or "/file/d/" in source:
+            txt = self._download_text(source)
+            if not txt:
+                return None
+            try:
+                return json.loads(txt)
+            except Exception:
+                return None
+
+        # Pasta do Drive (/folders/...) tentativa
         folder_id = self._extract_drive_folder_id(source)
         if not folder_id:
-            return {}
+            return None
+
         files = self._listar_arquivos_drive(folder_id)
-        manifest = next((f for f in files if f["name"] == "manifest.json"), None)
-        if not manifest:
-            return {}
-        content = self._download_drive_file(manifest["id"])
-        if not content:
-            return {}
+        mf = next((f for f in files if f.get("name") == "manifest.json" and f.get("id")), None)
+        if not mf:
+            return None
+
+        txt = self._download_drive_file(mf["id"])
+        if not txt:
+            return None
+
         try:
-            return json.loads(content)
+            return json.loads(txt)
         except Exception:
-            return {}
+            return None
 
     def _extract_version(self, manifest: dict) -> str | None:
-        if not manifest:
+        if not isinstance(manifest, dict):
             return None
         for key in ("version", "versao", "versão"):
-            value = manifest.get(key)
-            if value:
-                return str(value)
+            v = manifest.get(key)
+            if v:
+                return str(v).strip()
         return None
 
     def _is_newer_version(self, nova: str, atual: str) -> bool:
@@ -270,19 +557,165 @@ class AtualizarSistemaPage(ctk.CTkFrame):
                 except ValueError:
                     parts.append(0)
             return tuple(parts)
-
         return parse(nova) > parse(atual)
 
+    # ---------------- Aplicar Local ----------------
+
+    def _aplicar_todos_py_da_pasta_local(self, source_dir: Path) -> bool:
+        arquivos = list(source_dir.glob("*.py"))
+        if not arquivos:
+            return False
+
+        ok = False
+        for file_path in arquivos:
+            ok = self._apply_one_py(file_path) or ok
+        return ok
+
+    # ---------------- Aplicar Drive ----------------
+
+    def _aplicar_todos_py_da_fonte_drive(self, source_url: str, manifest: dict) -> bool:
+        ok = False
+
+        # 1) Por URLs no manifest (mais confiável)
+        files = None
+        if isinstance(manifest, dict):
+            files = manifest.get("files") or manifest.get("arquivos")
+
+        if isinstance(files, list) and files:
+            ok = self._apply_from_manifest_urls(files) or ok
+
+        # 2) Se update_all=true (ou se não conseguiu nada), tenta baixar tudo da pasta
+        update_all = False
+        if isinstance(manifest, dict):
+            update_all = bool(manifest.get("update_all", False))
+
+        if update_all or not ok:
+            folder_id = self._extract_drive_folder_id(source_url)
+            if folder_id:
+                ok = self._apply_all_py_from_drive_folder(folder_id) or ok
+
+        return ok
+
+    def _apply_from_manifest_urls(self, items: list) -> bool:
+        ok = False
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+
+            name = item.get("name") or item.get("destino_relativo")
+            url = item.get("url")
+            if not name or not url:
+                continue
+
+            # ✅ Aceita link normal do Drive e converte automaticamente
+            url = self._normalize_drive_url(url)
+
+            content = self._download_text(url)
+            if content is None:
+                continue
+
+            tmp = self._tmp_dir() / Path(name).name
+            tmp.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                tmp.write_text(content, encoding="utf-8")
+            except Exception:
+                continue
+
+            ok = self._apply_one_py(tmp) or ok
+        return ok
+
+    def _apply_all_py_from_drive_folder(self, folder_id: str) -> bool:
+        files = self._listar_arquivos_drive(folder_id)
+        py_files = [f for f in files if f.get("name", "").endswith(".py") and f.get("id")]
+        if not py_files:
+            return False
+
+        ok = False
+        for f in py_files:
+            content = self._download_drive_file(f["id"])
+            if content is None:
+                continue
+
+            tmp = self._tmp_dir() / f["name"]
+            tmp.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                tmp.write_text(content, encoding="utf-8")
+            except Exception:
+                continue
+
+            ok = self._apply_one_py(tmp) or ok
+
+        return ok
+
+    # ---------------- Aplicar 1 arquivo ----------------
+
+    def _apply_one_py(self, file_path: Path) -> bool:
+        if not file_path.exists() or file_path.suffix.lower() != ".py":
+            return False
+
+        target = self.package_dir / file_path.name
+        if not target.exists():
+            target = self.base_dir / file_path.name
+
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(file_path, target)
+            return True
+        except Exception:
+            return False
+
+    # ---------------- Drive helpers ----------------
+
+    def _normalize_drive_url(self, url: str) -> str:
+        """
+        Converte links comuns do Google Drive em link direto de download.
+        Você pode colar no manifest o link normal (view) que isso funciona.
+        """
+        u = (url or "").strip()
+        if not u:
+            return u
+
+        # Já é o formato direto
+        if "drive.google.com/uc?" in u and "id=" in u:
+            return u
+
+        # Formato: https://drive.google.com/file/d/<ID>/view?...
+        m = re.search(r"/file/d/([a-zA-Z0-9_-]+)", u)
+        if m:
+            file_id = m.group(1)
+            return f"https://drive.google.com/uc?export=download&id={file_id}"
+
+        # Formato: https://drive.google.com/open?id=<ID>
+        m = re.search(r"[?&]id=([a-zA-Z0-9_-]+)", u)
+        if m:
+            file_id = m.group(1)
+            return f"https://drive.google.com/uc?export=download&id={file_id}"
+
+        # Formato com /uc?id=<ID>&export=download (também funciona)
+        # Se tiver id=..., usa
+        m = re.search(r"[?&]id=([a-zA-Z0-9_-]+)", u)
+        if m and "drive.google.com" in u:
+            file_id = m.group(1)
+            return f"https://drive.google.com/uc?export=download&id={file_id}"
+
+        return u
+
     def _extract_drive_folder_id(self, source: str) -> str | None:
-        match = re.search(r"/folders/([a-zA-Z0-9_-]+)", source or "")
-        return match.group(1) if match else None
+        m = re.search(r"/folders/([a-zA-Z0-9_-]+)", source or "")
+        return m.group(1) if m else None
+
+    def _download_text(self, url: str) -> str | None:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req) as r:
+                return r.read().decode("utf-8", errors="ignore")
+        except Exception:
+            return None
 
     def _listar_arquivos_drive(self, folder_id: str) -> list[dict]:
         url = f"https://drive.google.com/drive/folders/{folder_id}"
-        try:
-            with urllib.request.urlopen(self._request(url)) as response:
-                html = response.read().decode("utf-8", errors="ignore")
-        except Exception:
+        html = self._download_text(url)
+        if not html:
             return []
 
         files = []
@@ -294,239 +727,45 @@ class AtualizarSistemaPage(ctk.CTkFrame):
 
     def _download_drive_file(self, file_id: str) -> str | None:
         url = f"https://drive.google.com/uc?export=download&id={file_id}"
-        try:
-            with urllib.request.urlopen(self._request(url)) as response:
-                return response.read().decode("utf-8", errors="ignore")
-        except Exception:
-            return None
+        return self._download_text(url)
 
-    def _baixar_arquivos_atualizacao(self, manifest: dict, download_dir: Path, source: str) -> bool:
-        if source and Path(source).exists():
-            return self._copiar_arquivos_locais(manifest, Path(source), download_dir)
+    def _tmp_dir(self) -> Path:
+        p = self.base_dir / "__tmp_update__"
+        p.mkdir(parents=True, exist_ok=True)
+        return p
 
-        folder_id = self._extract_drive_folder_id(source)
-        if not folder_id:
-            return False
+    # ---------------- Settings ----------------
 
-        files = []
-        manifest_files = None
-        if isinstance(manifest, dict):
-            manifest_files = manifest.get("files") or manifest.get("arquivos")
-        if isinstance(manifest_files, list):
-            for item in manifest_files:
-                if isinstance(item, dict):
-                    if item.get("name"):
-                        files.append({"name": item["name"], "id": item.get("id")})
-                    elif item.get("destino_relativo"):
-                        files.append({
-                            "destino_relativo": item.get("destino_relativo"),
-                            "url": item.get("url"),
-                            "sha256": item.get("sha256"),
-                        })
-                elif isinstance(item, str):
-                    files.append({"name": item, "id": None})
-
-        if not files:
-            files = [f for f in self._listar_arquivos_drive(folder_id) if f["name"].endswith(".py")]
-
-        if not files:
-            return False
-
-        ok = False
-        for file_info in files:
-            if file_info.get("destino_relativo") and file_info.get("url"):
-                destino_relativo = file_info.get("destino_relativo")
-                content = self._download_url(file_info["url"])
-                if content is None:
-                    continue
-                if file_info.get("sha256") and not self._validate_sha256(content, file_info["sha256"]):
-                    continue
-                target_path = download_dir / Path(destino_relativo).name
-                target_path.write_text(content, encoding="utf-8")
-                ok = True
-                continue
-
-            name = file_info.get("name")
-            file_id = file_info.get("id")
-            if not name or not name.endswith(".py"):
-                continue
-            if not file_id:
-                match = next(
-                    (f for f in self._listar_arquivos_drive(folder_id) if f["name"] == name),
-                    None,
-                )
-                if not match:
-                    continue
-                file_id = match["id"]
-            content = self._download_drive_file(file_id)
-            if content is None:
-                continue
-            (download_dir / name).write_text(content, encoding="utf-8")
-            ok = True
-        return ok
-
-    def _copiar_arquivos_locais(self, manifest: dict, source_dir: Path, download_dir: Path) -> bool:
-        files = []
-        manifest_files = None
-        if isinstance(manifest, dict):
-            manifest_files = manifest.get("files") or manifest.get("arquivos")
-        if isinstance(manifest_files, list):
-            for item in manifest_files:
-                if isinstance(item, dict):
-                    if item.get("name"):
-                        files.append(item["name"])
-                    elif item.get("destino_relativo"):
-                        files.append(item["destino_relativo"])
-                elif isinstance(item, str):
-                    files.append(item)
-
-        if not files:
-            files = [p.name for p in source_dir.glob("*.py")]
-
-        ok = False
-        for name in files:
-            file_name = Path(name).name
-            if not file_name.endswith(".py"):
-                continue
-            source_file = source_dir / file_name
-            if not source_file.exists():
-                continue
-            shutil.copy2(source_file, download_dir / file_name)
-            ok = True
-        return ok
-
-    def _aplicar_atualizacao(self, download_dir: Path, manifest: dict) -> bool:
-        try:
-            manifest_files = None
-            if isinstance(manifest, dict):
-                manifest_files = manifest.get("files") or manifest.get("arquivos")
-
-            if isinstance(manifest_files, list) and manifest_files:
-                for item in manifest_files:
-                    destino = None
-                    if isinstance(item, dict):
-                        destino = item.get("destino_relativo") or item.get("name")
-                    elif isinstance(item, str):
-                        destino = item
-                    if not destino:
-                        continue
-                    file_name = Path(destino).name
-                    source = download_dir / file_name
-                    if not source.exists():
-                        continue
-                    target = self.package_dir / destino
-                    if not target.exists():
-                        target = self.base_dir / destino
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(source, target)
-                return True
-
-            arquivos = list(download_dir.glob("*.py"))
-            if not arquivos:
-                return False
-            for file_path in arquivos:
-                target = self.package_dir / file_path.name
-                if not target.exists():
-                    target = self.base_dir / file_path.name
-                shutil.copy2(file_path, target)
-            return True
-        except Exception as exc:
-            print(f"Erro ao aplicar atualização: {exc}")
-            return False
-
-    def _download_url(self, url: str) -> str | None:
-        try:
-            with urllib.request.urlopen(self._request(url)) as response:
-                return response.read().decode("utf-8", errors="ignore")
-        except Exception:
-            return None
-
-    @staticmethod
-    def _request(url: str) -> urllib.request.Request:
-        return urllib.request.Request(
-            url,
-            headers={"User-Agent": "Mozilla/5.0"},
-        )
-
-    def _validate_sha256(self, content: str, expected: str) -> bool:
-        digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
-        return digest.lower() == expected.lower()
-
-    def _alterar_fonte_url(self):
-        fonte = simpledialog.askstring(
-            "Fonte de atualização",
-            "Informe a URL/pasta do Drive:",
-            initialvalue=self.source_var.get(),
-        )
-        if fonte:
-            self._set_source(fonte.strip())
-
-    def _alterar_fonte_local(self):
-        pasta = filedialog.askdirectory(title="Selecione a pasta de atualizações")
-        if pasta:
-            self._set_source(pasta)
-
-    def _load_source(self) -> str:
+    def _load_settings(self) -> dict:
         if self.settings_path.exists():
             try:
-                data = json.loads(self.settings_path.read_text(encoding="utf-8"))
-                return str(data.get("source", self.DEFAULT_SOURCE))
+                return json.loads(self.settings_path.read_text(encoding="utf-8"))
             except Exception:
-                return self.DEFAULT_SOURCE
-        return self.DEFAULT_SOURCE
+                return {}
+        return {}
 
-    def _get_source(self) -> str:
-        return self.source_var.get() or self.DEFAULT_SOURCE
-
-    def _set_source(self, value: str):
-        self.source_var.set(value)
+    def _save_settings(self):
+        data = {
+            "mode": self.modo_var.get(),
+            "local_source": self.local_source_var.get(),
+            "drive_source": self.drive_source_var.get(),
+        }
         try:
-            self.settings_path.write_text(
-                json.dumps({"source": value}, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            self.settings_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
 
-    def _restore_backup(self, backup_dir: Path) -> bool:
-        try:
-            for py_file in backup_dir.glob("*.py"):
-                shutil.copy2(py_file, self.base_dir / py_file.name)
 
-            backup_pkg = backup_dir / "PAGINAS_DO_SISTEMA"
-            if backup_pkg.exists():
-                for py_file in backup_pkg.glob("*.py"):
-                    shutil.copy2(py_file, self.package_dir / py_file.name)
-            return True
-        except Exception as exc:
-            print(f"Erro ao restaurar backup: {exc}")
-            return False
+# ---------------- IFNAME - TESTE ISOLADO ----------------
+if __name__ == "__main__":
+    ctk.set_appearance_mode("light")  # ou "dark"
+    ctk.set_default_color_theme("blue")
 
-    def _append_history(
-        self,
-        action: str,
-        backup_dir: Path | None,
-        download_dir: Path | None,
-        source_url: str,
-    ):
-        entry = {
-            "timestamp": datetime.now().isoformat(timespec="seconds"),
-            "action": action,
-            "version": self.VERSAO_ATUAL,
-            "backup_dir": str(backup_dir) if backup_dir else None,
-            "download_dir": str(download_dir) if download_dir else None,
-            "source_url": source_url,
-        }
+    root = ctk.CTk()
+    root.title("Teste - Atualizar Sistema")
+    root.geometry("1100x750")
 
-        history = []
-        if self.history_path.exists():
-            try:
-                history = json.loads(self.history_path.read_text(encoding="utf-8"))
-            except Exception:
-                history = []
+    page = AtualizarSistemaPage(root)
+    page.pack(fill="both", expand=True)
 
-        history.append(entry)
-        self.history_path.write_text(
-            json.dumps(history, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+    root.mainloop()
