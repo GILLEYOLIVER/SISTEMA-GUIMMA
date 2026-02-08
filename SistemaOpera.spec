@@ -20,7 +20,6 @@ a = Analysis(
     datas=[
         (str(ROOT / "icons"), "icons"),
         (str(DATA / "BANCO_DE_DADOS"), "BANCO_DE_DADOS"),
-        (str(DATA / "COMMIT"), "COMMIT"),
         (str(PACKAGE_DIR), "PAGINAS_DO_SISTEMA"),
         (str(DATA / "INSTAL_BANCO_APP"), "INSTAL BANCO APP"),
         (str(DATA / "RECIBOS_DE_PAGAMENTOS"), "RECIBOS_DE_PAGAMENTOS"),

@@ -10,11 +10,11 @@ SISTEMA-GUIMMA/
     PAGINAS_DO_SISTEMA/   # código e assets do app
   data/
     BANCO_DE_DADOS/
-    COMMIT/
     INSTAL_BANCO_APP/
     RECIBOS_DE_PAGAMENTOS/
   packaging/             # scripts de build/instalador
   icons/
+  COMMIT (não empacotado)
 ```
 
 ## Build (macOS / Windows)
