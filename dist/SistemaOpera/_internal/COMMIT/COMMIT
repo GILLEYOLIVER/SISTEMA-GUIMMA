@@ -1,0 +1,27 @@
+git status
+git add -A
+git status
+git commit -m "Sincroniza GitHub com estado local"
+git push origin main
+
+___________________________________________________________________________________
+
+empurrar forçado
+git status
+git add -A
+git fetch origin
+git push --force-with-lease origin main
+
+
+___________________________________________________________________________________
+baixar
+
+git fetch --all --prune
+git reset --hard origin/main
+git clean -fd
+
+#03/02/2025
+
+
+
+# 31/01/2026##

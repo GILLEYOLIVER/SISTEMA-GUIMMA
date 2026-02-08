@@ -1,106 +1,113 @@
 #!/usr/bin/env python3
-"""Build helper for SISTEMA OPERA installers."""
+# -*- coding: utf-8 -*-
+"""
+packaging/build.py — Build oficial do SISTEMA OPERA (macOS/Windows)
+
+✅ Agora dá pra apertar PLAY (sem argumentos): padrão = macos
+✅ EntryPoint: PAGINAS_DO_SISTEMA/MAIN.py
+✅ Inclui assets (inclui PAGINAS_DO_SISTEMA com imagens/fonts)
+✅ Usa o Python do venv atual (sys.executable)
+✅ Gera dist/SistemaOpera.app (macOS) ou dist/SistemaOpera/SistemaOpera.exe (Windows)
+"""
+
 from __future__ import annotations
 
 import argparse
-import os
-import platform
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
-ENTRYPOINT = ROOT / "MAIN.py"
-ICON_DIR = ROOT / "PAGINAS_DO_SISTEMA"
 
-ASSET_EXTENSIONS = {".json", ".jpg", ".png", ".icns", ".ttf"}
-ASSET_DIRS = ["icons", "BANCO_DE_DADOS", "COMMIT"]
+# ✅ EntryPoint real
+ENTRYPOINT = ROOT / "PAGINAS_DO_SISTEMA" / "MAIN.py"
 
+APP_NAME = "SistemaOpera"
 
-def detect_platform(requested: str | None) -> str:
-    if requested:
-        return requested
-    system = platform.system().lower()
-    if system.startswith("win"):
-        return "windows"
-    if system == "darwin":
-        return "macos"
-    return "linux"
+# ✅ Ícone do macOS
+ICON_PATH = ROOT / "PAGINAS_DO_SISTEMA" / "ICONE_SISTEMA.icns"
 
-
-def build_add_data(platform_name: str) -> list[str]:
-    separator = ";" if platform_name == "windows" else ":"
-    args: list[str] = []
-
-    for directory in ASSET_DIRS:
-        path = ROOT / directory
-        if path.exists():
-            args.extend(["--add-data", f"{path}{separator}{directory}"])
-
-    for item in ROOT.iterdir():
-        if item.is_file() and item.suffix.lower() in ASSET_EXTENSIONS:
-            args.extend(["--add-data", f"{item}{separator}."])
-
-    return args
+# ✅ Pastas que devem ir junto (inclui imagens/fundos/fontes dentro de PAGINAS_DO_SISTEMA)
+ASSET_DIRS = [
+    "icons",
+    "BANCO_DE_DADOS",
+    "COMMIT",
+    "PAGINAS_DO_SISTEMA",
+    "INSTAL BANCO APP",
+    "RECIBOS_DE_PAGAMENTOS",
+]
 
 
-def resolve_icon(platform_name: str) -> Path | None:
-    if platform_name == "macos":
-        for candidate in (ICON_DIR / "ICONE_SISTEMA.icns", ROOT / "ICONE_SISTEMA.icns"):
-            if candidate.exists():
-                return candidate
-    if platform_name == "windows":
-        for candidate in (
-            ICON_DIR / "ICONE_SISTEMA.ico",
-            ROOT / "ICONE_SISTEMA.ico",
-            ICON_DIR / "ICONE_SISTEMA.png",
-            ROOT / "ICONE_SISTEMA.png",
-        ):
-            if candidate.exists():
-                return candidate
-    for candidate in (ICON_DIR / "ICONE_SISTEMA.png", ROOT / "ICONE_SISTEMA.png"):
-        if candidate.exists():
-            return candidate
-    return None
+def _run(cmd: list[str], cwd: Path | None = None) -> None:
+    print("\n>>>", " ".join(map(str, cmd)))
+    subprocess.run(cmd, check=True, cwd=str(cwd) if cwd else None)
 
 
 def build_pyinstaller(platform_name: str) -> None:
-    icon = resolve_icon(platform_name)
+    if not ENTRYPOINT.exists():
+        raise FileNotFoundError(f"ENTRYPOINT não encontrado: {ENTRYPOINT}")
 
-    command = [
-        "python",
-        "-m",
-        "PyInstaller",
+    dist = ROOT / "dist"
+    build = ROOT / "build"
+
+    # Build limpo (evita lixo antigo)
+    if dist.exists():
+        shutil.rmtree(dist, ignore_errors=True)
+    if build.exists():
+        shutil.rmtree(build, ignore_errors=True)
+
+    # Windows usa ; / macOS usa :
+    sep = ";" if platform_name == "windows" else ":"
+
+    cmd = [
+        sys.executable, "-m", "PyInstaller",  # ✅ sempre o python do venv atual
         "--noconfirm",
         "--clean",
         "--windowed",
-        "--name",
-        "SistemaOpera",
-        "--collect-submodules",
-        "PAGINAS_DO_SISTEMA",
-        "--collect-submodules",
-        "customtkinter",
+        "--name", APP_NAME,
+        "--distpath", str(dist),
+        "--workpath", str(build),
+
+        # imports comuns em apps CTk
+        "--collect-submodules", "PAGINAS_DO_SISTEMA",
+        "--collect-submodules", "customtkinter",
     ]
 
-    if icon and icon.exists():
-        command.extend(["--icon", str(icon)])
+    # Ícone só no macOS
+    if platform_name == "macos" and ICON_PATH.exists():
+        cmd += ["--icon", str(ICON_PATH)]
 
-    command.extend(build_add_data(platform_name))
-    command.append(str(ENTRYPOINT))
+    # Assets/pastas
+    for d in ASSET_DIRS:
+        src = ROOT / d
+        if src.exists():
+            cmd += ["--add-data", f"{src}{sep}{d}"]
 
-    subprocess.run(command, check=True, cwd=ROOT)
+    # EntryPoint por último
+    cmd.append(str(ENTRYPOINT))
+
+    _run(cmd, cwd=ROOT)
+
+    # Checagem final
+    if platform_name == "macos":
+        app_path = dist / f"{APP_NAME}.app"
+        if not app_path.exists():
+            raise RuntimeError(f"Build falhou: não gerou {app_path}")
+        print(f"\n✅ App gerada: {app_path}")
+    else:
+        exe_path = dist / APP_NAME / f"{APP_NAME}.exe"
+        print(f"\n✅ Build concluído. Verifique: {exe_path}")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build SISTEMA OPERA binaries.")
-    parser.add_argument(
-        "--platform",
-        choices=["windows", "macos", "linux"],
-        help="Override detected platform.",
-    )
+    parser = argparse.ArgumentParser()
+    # ✅ agora não é mais obrigatório passar argumento -> Play funciona
+    parser.add_argument("--platform", choices=["macos", "windows"], default="macos")
     args = parser.parse_args()
 
-    platform_name = detect_platform(args.platform)
-    build_pyinstaller(platform_name)
+    build_pyinstaller(args.platform)
 
 
 if __name__ == "__main__":

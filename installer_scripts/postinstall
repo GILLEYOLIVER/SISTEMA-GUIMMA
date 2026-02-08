@@ -1,0 +1,38 @@
+#!/bin/bash
+set -e
+
+APP_SUPPORT="/Library/Application Support/SistemaOpera"
+CFG="$APP_SUPPORT/config.json"
+
+mkdir -p "$APP_SUPPORT"
+chmod 755 "$APP_SUPPORT"
+
+if [ ! -f "$CFG" ]; then
+  cat > "$CFG" <<'JSON'
+{
+  "OPERA_PG_DSN": "",
+  "OPERA_PG_SCHEMA": "opera",
+  "schema": "opera",
+  "dsn": "",
+  "defaults": { "dbname": "BANCO_OPERA", "user": "postgres", "password": "postgres" },
+  "hosts": ["localhost", "127.0.0.1"],
+  "ports": [5432, 5433],
+  "connect_timeout": 8
+}
+JSON
+fi
+
+chmod 644 "$CFG"
+
+CONSOLE_USER=$(stat -f%Su /dev/console || true)
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+  USER_SUPPORT="/Users/$CONSOLE_USER/Library/Application Support/SistemaOpera"
+  USER_CFG="$USER_SUPPORT/config.json"
+  mkdir -p "$USER_SUPPORT"
+  if [ ! -f "$USER_CFG" ]; then
+    cp "$CFG" "$USER_CFG"
+  fi
+  chown -R "$CONSOLE_USER:staff" "$USER_SUPPORT" || true
+fi
+
+exit 0

@@ -1,5 +1,6 @@
 # DEF.py - Módulo completo de Ordem de Corte
 import customtkinter as ctk
+import sys
 from tkinter import messagebox
 from datetime import datetime
 import os
@@ -10,6 +11,34 @@ from reportlab.lib.utils import ImageReader
 import json
 import logging
 import tkinter as tk
+from pathlib import Path
+
+# =============================================================================
+# PATHS (PyInstaller/macOS .app safe)
+# - Em apps empacotados, o bundle é SOMENTE LEITURA. Use uma pasta gravável.
+# =============================================================================
+def _opera_user_data_dir() -> Path:
+    """Diretório gravável do usuário para dados do SistemaOpera."""
+    try:
+        if sys.platform == "darwin":
+            base = Path.home() / "Library" / "Application Support" / "SistemaOpera"
+        elif os.name == "nt":
+            base = Path(os.getenv("APPDATA") or (Path.home() / "AppData" / "Roaming")) / "SistemaOpera"
+        else:
+            base = Path(os.getenv("XDG_DATA_HOME") or (Path.home() / ".local" / "share")) / "sistemaopera"
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+    except Exception:
+        base = Path.home() / "SistemaOpera"
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+
+def _ensure_dir_in_data(*parts: str) -> str:
+    p = _opera_user_data_dir().joinpath(*parts)
+    p.mkdir(parents=True, exist_ok=True)
+    return str(p)
+
+
 
 # ===================== Configuração de logger =====================
 logger = logging.getLogger(__name__)
@@ -47,11 +76,9 @@ except Exception as e:
     PASTA_ORDENS_CORTE = None
 
 if not PASTA_ORDENS_CORTE:
-    BASE_DB_DIR = os.path.join("../BANCO DE DADOS", "ORDENS_CORTE")
-    os.makedirs(BASE_DB_DIR, exist_ok=True)
+    # ✅ Pasta gravável (evita erro Read-only file system no .app)
+    BASE_DB_DIR = _ensure_dir_in_data("BANCO_DE_DADOS", "ORDENS_CORTE")
     PASTA_ORDENS_CORTE = BASE_DB_DIR
-
-
 # ===================== Helpers SQL =====================
 def _exec_all(query: str, params=()):
     conn = get_conn()

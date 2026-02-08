@@ -22,36 +22,73 @@ from PAGINAS_DO_SISTEMA.ui_after_guard import (
     reset_tk_default_root,
 )
 
+from pathlib import Path
+import sys
+
+def asset_path(nome_arquivo: str) -> str:
+    """
+    Resolve assets tanto no modo normal quanto no PyInstaller (.app).
+    Mantém compatibilidade com seu layout atual:
+      - imagens dentro de PAGINAS_DO_SISTEMA
+    """
+    # PyInstaller
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    # tenta dentro da pasta do pacote
+    p1 = base / "PAGINAS_DO_SISTEMA" / nome_arquivo
+    if p1.exists():
+        return str(p1)
+    # tenta ao lado do arquivo (caso rode solto)
+    p2 = Path(__file__).resolve().parent / nome_arquivo
+    if p2.exists():
+        return str(p2)
+    # tenta na pasta PAGINAS_DO_SISTEMA real do projeto (rodando fora do bundle)
+    p3 = Path(__file__).resolve().parent / "PAGINAS_DO_SISTEMA" / nome_arquivo
+    return str(p3)
+
+
 
 # ============================================================
 # Configuração: carrega config.json e exporta OPERA_PG_DSN/OPERA_PG_SCHEMA
 # ============================================================
 def _carregar_config_json_e_exportar_ambiente():
     candidatos = []
+
+    # 1) Local do app (Windows)
     appdata = os.getenv("APPDATA")
     if appdata:
+        candidatos.append(os.path.join(appdata, "SistemaOpera", "config.json"))
         candidatos.append(os.path.join(appdata, "Opera", "config.json"))
+
+    # 2) Local global (macOS / Linux)
+    candidatos.append("/Library/Application Support/SistemaOpera/config.json")
+    candidatos.append(os.path.expanduser("~/Library/Application Support/SistemaOpera/config.json"))
+
+    # 3) Local global Windows
+    candidatos.append(r"C:\ProgramData\Opera\config.json")
+    candidatos.append(r"C:\ProgramData\SistemaOpera\config.json")
+
+    # 4) Ao lado do arquivo e raiz do projeto
     aqui = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.dirname(aqui)
     candidatos.append(os.path.join(aqui, "config.json"))
     candidatos.append(os.path.join(base_dir, "config.json"))
-    candidatos.append(r"C:\ProgramData\Opera\config.json")
 
     for caminho in candidatos:
         try:
             if os.path.isfile(caminho):
                 with open(caminho, "r", encoding="utf-8") as arquivo:
                     configuracao = json.load(arquivo) or {}
-                dsn = configuracao.get("pg_dsn") or configuracao.get("OPERA_PG_DSN")
-                esquema = configuracao.get("pg_schema") or configuracao.get("OPERA_PG_SCHEMA")
+                dsn = configuracao.get("pg_dsn") or configuracao.get("OPERA_PG_DSN") or configuracao.get("OPERA_PG_DSN".lower())
+                esquema = configuracao.get("pg_schema") or configuracao.get("OPERA_PG_SCHEMA") or configuracao.get("OPERA_PG_SCHEMA".lower())
                 if dsn:
-                    os.environ["OPERA_PG_DSN"] = dsn
+                    os.environ["OPERA_PG_DSN"] = str(dsn)
                 if esquema:
-                    os.environ["OPERA_PG_SCHEMA"] = esquema
+                    os.environ["OPERA_PG_SCHEMA"] = str(esquema)
                 return caminho
         except Exception:
             pass
     return None
+
 
 
 _CONFIG_PATH_ENCONTRADO = _carregar_config_json_e_exportar_ambiente()
@@ -429,8 +466,9 @@ class SistemaLoginModerno:
         self.root.option_add('*Entry.insertWidth', 2)
         self.root.option_add('*Entry.insertBackground', '#2c3e50')
 
-        caminho_fundo = os.path.join(os.getcwd(), "FUNDO_LOGUIN.jpg")
-        caminho_icone = os.path.join(os.getcwd(), "ICONE_SISTEMA.png")
+        caminho_fundo = asset_path("FUNDO_LOGUIN.jpg")
+        caminho_icone = asset_path("ICONE_SISTEMA.png")
+
         largura_tela = self.root.winfo_screenwidth()
         altura_tela = self.root.winfo_screenheight()
 

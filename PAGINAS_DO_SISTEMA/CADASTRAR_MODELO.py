@@ -7,6 +7,7 @@ import subprocess
 import webbrowser
 import shutil
 from datetime import datetime
+from pathlib import Path
 
 # Silencia o aviso de conflito entre PyFPDF e fpdf2
 import warnings
@@ -42,6 +43,37 @@ except Exception:
 
 # =================== DB (PostgreSQL) ===================
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
+
+# =============================================================================
+# PATHS (PyInstaller/macOS .app safe)
+# - Em apps empacotados, o diretório do bundle pode ser SOMENTE LEITURA.
+# - Tudo que precisa ser CRIADO/ALTERADO (imagens, PDFs, cache) deve ir para um
+#   diretório gravável do usuário.
+# =============================================================================
+def _opera_user_data_dir() -> Path:
+    """Retorna diretório gravável do usuário para dados do SistemaOpera."""
+    try:
+        if sys.platform == "darwin":
+            base = Path.home() / "Library" / "Application Support" / "SistemaOpera"
+        elif os.name == "nt":
+            base = Path(os.getenv("APPDATA") or (Path.home() / "AppData" / "Roaming")) / "SistemaOpera"
+        else:
+            base = Path(os.getenv("XDG_DATA_HOME") or (Path.home() / ".local" / "share")) / "sistemaopera"
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+    except Exception:
+        # fallback ultra seguro
+        base = Path.home() / "SistemaOpera"
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+
+def _banco_dir() -> str:
+    """Pasta gravável onde o sistema salva BANCO_DE_DADOS (imagens/PDFs)."""
+    p = _opera_user_data_dir() / "BANCO_DE_DADOS"
+    p.mkdir(parents=True, exist_ok=True)
+    return str(p)
+
+
 
 # =================== SISTEMA DE LOG ===================
 try:
@@ -466,7 +498,7 @@ def gerar_pdf_cadastro_modelo(
 
         # ===================== SALVAR PDF =====================
         # pasta padrão do seu projeto
-        os.makedirs("BANCO_DE_DADOS/PDFs", exist_ok=True)
+        os.makedirs(_banco_dir() + "/PDFs", exist_ok=True)
 
         codigo_safe = str(dados.get("Codigo", "modelo")).strip()
         if not codigo_safe:
@@ -476,7 +508,7 @@ def gerar_pdf_cadastro_modelo(
         codigo_safe = codigo_safe.replace("/", "-").replace("\\", "-").replace(":", "-")
 
         filename = f"cadastro_modelo_{codigo_safe}.pdf"
-        path = os.path.join("BANCO_DE_DADOS", "PDFs", filename)
+        path = os.path.join(_banco_dir(), "PDFs", filename)
 
         # ✅ se já existir, cria versão incremental
         contador = 1

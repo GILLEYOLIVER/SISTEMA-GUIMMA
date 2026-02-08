@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# venv
+.venv/
+venv/
+
+# logs e backups
+../logs/
+OPERA_SYSTEM/logs/
+backup_banco/
+
+# arquivos temporários
+.DS_Store
+Thumbs.db
+
+# configs locais (se forem pessoais)
+settings.json
