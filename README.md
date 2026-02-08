@@ -23,6 +23,7 @@ SISTEMA-GUIMMA/
 
 - Python 3.x
 - PyInstaller instalado no venv
+- Consulte `packaging/BUILD_GUIDE.md` para fluxo completo (imports faltantes, requirements, hidden-imports).
 
 ### Build macOS
 

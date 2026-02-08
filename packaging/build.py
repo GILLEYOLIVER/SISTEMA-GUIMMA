@@ -47,7 +47,11 @@ def _run(cmd: list[str], cwd: Path | None = None) -> None:
     subprocess.run(cmd, check=True, cwd=str(cwd) if cwd else None)
 
 
-def build_pyinstaller(platform_name: str) -> None:
+def build_pyinstaller(
+    platform_name: str,
+    spec_file: Path | None,
+    extra_pyinstaller_args: list[str],
+) -> None:
     if not ENTRYPOINT.exists():
         raise FileNotFoundError(f"ENTRYPOINT não encontrado: {ENTRYPOINT}")
 
@@ -69,6 +73,17 @@ def build_pyinstaller(platform_name: str) -> None:
         "PyInstaller",  # ✅ sempre o python do venv atual
         "--noconfirm",
         "--clean",
+    ]
+
+    default_spec = ROOT / "SistemaOpera.spec"
+    resolved_spec = spec_file or (default_spec if default_spec.exists() else None)
+    if resolved_spec:
+        cmd += extra_pyinstaller_args
+        cmd.append(str(resolved_spec))
+        _run(cmd, cwd=ROOT)
+        return
+
+    cmd += [
         "--windowed",
         "--name",
         APP_NAME,
@@ -84,6 +99,8 @@ def build_pyinstaller(platform_name: str) -> None:
         "PAGINAS_DO_SISTEMA",
         "--collect-submodules",
         "customtkinter",
+        "--collect-submodules",
+        "fpdf",
     ]
 
     # Ícone só no macOS
@@ -94,6 +111,8 @@ def build_pyinstaller(platform_name: str) -> None:
     for src, dest in ASSET_DIRS:
         if src.exists():
             cmd += ["--add-data", f"{src}{sep}{dest}"]
+
+    cmd += extra_pyinstaller_args
 
     # EntryPoint por último
     cmd.append(str(ENTRYPOINT))
@@ -115,9 +134,21 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     # ✅ agora não é mais obrigatório passar argumento -> Play funciona
     parser.add_argument("--platform", choices=["macos", "windows"], default="macos")
+    parser.add_argument(
+        "--spec",
+        type=Path,
+        default=None,
+        help="Usa um arquivo .spec (ex: SistemaOpera.spec) no lugar dos args padrão.",
+    )
+    parser.add_argument(
+        "--pyinstaller-args",
+        nargs=argparse.REMAINDER,
+        default=[],
+        help="Args adicionais passadas para o PyInstaller (ex: --debug=imports).",
+    )
     args = parser.parse_args()
 
-    build_pyinstaller(args.platform)
+    build_pyinstaller(args.platform, args.spec, args.pyinstaller_args)
 
 
 if __name__ == "__main__":
