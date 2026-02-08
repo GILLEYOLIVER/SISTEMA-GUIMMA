@@ -13,6 +13,7 @@ packaging/build.py — Build oficial do SISTEMA OPERA (macOS/Windows)
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -42,9 +43,9 @@ ASSET_DIRS = [
 ]
 
 
-def _run(cmd: list[str], cwd: Path | None = None) -> None:
+def _run(cmd: list[str], cwd: Path | None = None, env: dict[str, str] | None = None) -> None:
     print("\n>>>", " ".join(map(str, cmd)))
-    subprocess.run(cmd, check=True, cwd=str(cwd) if cwd else None)
+    subprocess.run(cmd, check=True, cwd=str(cwd) if cwd else None, env=env)
 
 
 def build_pyinstaller(
@@ -80,7 +81,9 @@ def build_pyinstaller(
     if resolved_spec:
         cmd += extra_pyinstaller_args
         cmd.append(str(resolved_spec))
-        _run(cmd, cwd=ROOT)
+        env = os.environ.copy()
+        env["OPERA_SPEC_ROOT"] = str(ROOT)
+        _run(cmd, cwd=ROOT, env=env)
         return
 
     cmd += [
@@ -117,7 +120,9 @@ def build_pyinstaller(
     # EntryPoint por último
     cmd.append(str(ENTRYPOINT))
 
-    _run(cmd, cwd=ROOT)
+    env = os.environ.copy()
+    env["OPERA_SPEC_ROOT"] = str(ROOT)
+    _run(cmd, cwd=ROOT, env=env)
 
     # Checagem final
     if platform_name == "macos":

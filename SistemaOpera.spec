@@ -1,10 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+import os
 import sys
 
 from PyInstaller.utils.hooks import collect_submodules
 
-ROOT = Path(getattr(sys.modules[__name__], "__file__", Path.cwd())).resolve().parent
+ROOT = Path(
+    os.environ.get(
+        "OPERA_SPEC_ROOT",
+        getattr(sys.modules[__name__], "__file__", Path.cwd()),
+    )
+).resolve().parent
 SRC = ROOT / "src"
 DATA = ROOT / "data"
 PACKAGE_DIR = SRC / "PAGINAS_DO_SISTEMA"
