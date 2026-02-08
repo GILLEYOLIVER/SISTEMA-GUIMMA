@@ -328,54 +328,6 @@ python DEF.py
 
 ---
 
-## 📦 Instalador para Windows e macOS
-
-Foram adicionados scripts de build para gerar executáveis com **PyInstaller** e criar instaladores para Windows (Inno Setup) e macOS (DMG via dmgbuild).
-
-### ✅ Pré-requisitos
-
-- **Python 3.12+**
-- **PyInstaller** (`pip install pyinstaller`)
-- **Windows:** Inno Setup (instale o *ISCC.exe*)
-- **macOS:** dmgbuild (`pip install dmgbuild`)
-
-### 🪟 Windows (EXE + Instalador)
-
-1. Gere o executável:
-
-```powershell
-python packaging/build.py --platform windows
-```
-
-2. (Opcional) Converta o ícone para `.ico` e salve como `ICONE_SISTEMA.ico`.
-
-3. Gere o instalador:
-
-```powershell
-packaging/windows/build_installer.ps1
-```
-
-O instalador será salvo em `dist/Instalador_SISTEMA OPERA.exe`.
-
-### 🍎 macOS (APP + DMG)
-
-1. Gere o app:
-
-```bash
-python3 packaging/build.py --platform macos
-```
-
-2. Gere o DMG:
-
-```bash
-packaging/macos/build_installer.sh
-```
-
-O DMG será salvo em `dist/SISTEMA_OPERA.dmg`.
-
-> ⚠️ Caso o comando de DMG não exista, instale o `dmgbuild` com `pip install dmgbuild`.
-
----
 
 ## 🧪 Notas sobre Testes nas Mensagens
 
