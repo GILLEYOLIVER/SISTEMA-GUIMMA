@@ -54,9 +54,11 @@ var
   AutoDetectPortsCheck: TCheckBox;
   LocalDbCheck: TCheckBox;
   TestConnectionButton: TButton;
+  DetectPortButton: TButton;
 
 procedure LocalDbCheckClick(Sender: TObject);
 procedure TestConnectionClick(Sender: TObject);
+procedure DetectPortClick(Sender: TObject);
 
 function JsonEscape(const Value: string): string;
 begin
@@ -114,6 +116,15 @@ begin
   TestConnectionButton.Top := LocalDbCheck.Top + LocalDbCheck.Height + ScaleY(10);
   TestConnectionButton.Left := LocalDbCheck.Left;
   TestConnectionButton.OnClick := @TestConnectionClick;
+
+  DetectPortButton := TButton.Create(DbConfigPage.Surface);
+  DetectPortButton.Parent := DbConfigPage.Surface;
+  DetectPortButton.Caption := 'Buscar porta';
+  DetectPortButton.Top := TestConnectionButton.Top;
+  DetectPortButton.Left := TestConnectionButton.Left + TestConnectionButton.Width + ScaleX(12);
+  DetectPortButton.OnClick := @DetectPortClick;
+
+  LocalDbCheckClick(LocalDbCheck);
 end;
 
 procedure LocalDbCheckClick(Sender: TObject);
@@ -124,14 +135,65 @@ begin
     if Trim(DbConfigPage.Values[1]) = '' then
       DbConfigPage.Values[1] := '5432';
   end;
+
+  DbConfigPage.Edits[0].Enabled := not LocalDbCheck.Checked;
+end;
+
+function TestHostPort(const HostValue: string; const PortValue: string): Boolean;
+var
+  ResultCode: Integer;
+  Command: string;
+begin
+  Command :=
+    '-NoProfile -ExecutionPolicy Bypass -Command "if (Test-NetConnection -ComputerName ''' +
+    HostValue + ''' -Port ' + PortValue + ' -InformationLevel Quiet) { exit 0 } else { exit 1 }"';
+
+  if Exec('powershell.exe', Command, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Result := ResultCode = 0
+  else
+    Result := False;
+end;
+
+function PopNextToken(var ListValue: string): string;
+var
+  CommaPos: Integer;
+begin
+  CommaPos := Pos(',', ListValue);
+  if CommaPos = 0 then
+  begin
+    Result := ListValue;
+    ListValue := '';
+  end
+  else
+  begin
+    Result := Copy(ListValue, 1, CommaPos - 1);
+    ListValue := Copy(ListValue, CommaPos + 1, Length(ListValue) - CommaPos);
+  end;
+end;
+
+function DetectPortForHost(const HostValue: string): string;
+var
+  PortsToTry: string;
+  CurrentPort: string;
+begin
+  Result := '';
+  PortsToTry := '5432,5433,5434,5435,5436';
+
+  while PortsToTry <> '' do
+  begin
+    CurrentPort := PopNextToken(PortsToTry);
+    if TestHostPort(HostValue, CurrentPort) then
+    begin
+      Result := CurrentPort;
+      Exit;
+    end;
+  end;
 end;
 
 procedure TestConnectionClick(Sender: TObject);
 var
   HostValue: string;
   PortValue: string;
-  ResultCode: Integer;
-  Command: string;
 begin
   HostValue := Trim(DbConfigPage.Values[0]);
   PortValue := Trim(DbConfigPage.Values[1]);
@@ -142,19 +204,33 @@ begin
     Exit;
   end;
 
-  Command :=
-    '-NoProfile -ExecutionPolicy Bypass -Command "if (Test-NetConnection -ComputerName ''' +
-    HostValue + ''' -Port ' + PortValue + ' -InformationLevel Quiet) { exit 0 } else { exit 1 }"';
+  if TestHostPort(HostValue, PortValue) then
+    MsgBox('Conexão OK: o banco respondeu no host/porta informados.', mbInformation, MB_OK)
+  else
+    MsgBox('Não foi possível conectar ao banco nesse host/porta.', mbError, MB_OK);
+end;
 
-  if Exec('powershell.exe', Command, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+procedure DetectPortClick(Sender: TObject);
+var
+  HostValue: string;
+  DetectedPort: string;
+begin
+  HostValue := Trim(DbConfigPage.Values[0]);
+
+  if HostValue = '' then
   begin
-    if ResultCode = 0 then
-      MsgBox('Conexão OK: o banco respondeu no host/porta informados.', mbInformation, MB_OK)
-    else
-      MsgBox('Não foi possível conectar ao banco nesse host/porta.', mbError, MB_OK);
+    MsgBox('Informe o IP/Host do banco antes de buscar a porta.', mbError, MB_OK);
+    Exit;
+  end;
+
+  DetectedPort := DetectPortForHost(HostValue);
+  if DetectedPort <> '' then
+  begin
+    DbConfigPage.Values[1] := DetectedPort;
+    MsgBox('Porta detectada: ' + DetectedPort, mbInformation, MB_OK);
   end
   else
-    MsgBox('Falha ao executar o teste de conexão no PowerShell.', mbError, MB_OK);
+    MsgBox('Não foi possível detectar uma porta aberta para o banco.', mbError, MB_OK);
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -173,9 +249,22 @@ begin
 
     if Trim(DbConfigPage.Values[1]) = '' then
     begin
-      MsgBox('Informe a porta do banco.', mbError, MB_OK);
-      Result := False;
-      Exit;
+      if AutoDetectPortsCheck.Checked then
+      begin
+        DbConfigPage.Values[1] := DetectPortForHost(Trim(DbConfigPage.Values[0]));
+        if Trim(DbConfigPage.Values[1]) = '' then
+        begin
+          MsgBox('Não foi possível detectar a porta do banco. Informe manualmente.', mbError, MB_OK);
+          Result := False;
+          Exit;
+        end;
+      end
+      else
+      begin
+        MsgBox('Informe a porta do banco.', mbError, MB_OK);
+        Result := False;
+        Exit;
+      end;
     end;
 
     if not TryStrToInt(Trim(DbConfigPage.Values[1]), PortValue) then
