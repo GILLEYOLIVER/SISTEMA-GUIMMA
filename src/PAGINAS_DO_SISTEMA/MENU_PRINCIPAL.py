@@ -19,6 +19,12 @@ from PIL import Image, ImageTk
 from tkinter import messagebox, ttk
 from PIL import Image
 import customtkinter as ctk
+
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+SRC_DIR = os.path.abspath(os.path.join(APP_DIR, ".."))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
 from PAGINAS_DO_SISTEMA.TEMAS import (
     TemasPage,
     aplicar_estilo_treeview,
@@ -71,8 +77,8 @@ except Exception as e:
 # ===== CONFIGURAÇÕES GLOBAIS =====
 IS_MAC = platform.system() == "Darwin"
 IS_WIN = platform.system() == "Windows"
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(APP_DIR)
+ROOT_DIR = os.path.dirname(SRC_DIR)
 
 
 def _resolve_app_path(filename: str) -> str:
@@ -80,7 +86,10 @@ def _resolve_app_path(filename: str) -> str:
     local_path = os.path.join(APP_DIR, filename)
     if os.path.exists(local_path):
         return local_path
-    return os.path.join(BASE_DIR, filename)
+    base_path = os.path.join(BASE_DIR, filename)
+    if os.path.exists(base_path):
+        return base_path
+    return os.path.join(ROOT_DIR, filename)
 
 
 ROUTES_PATH = _resolve_app_path("route_map.json")
