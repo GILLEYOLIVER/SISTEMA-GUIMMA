@@ -65,7 +65,7 @@
  [],
  False,
  False,
- 1770593223,
+ 1770596575,
  [('runw',
    '/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-NOVO/.venv1/lib/python3.12/site-packages/PyInstaller/bootloader/Darwin-64bit/runw',
    'EXECUTABLE')],
