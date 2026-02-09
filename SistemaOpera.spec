@@ -1,9 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+import sys
 from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 
-ROOT = os.path.abspath(os.path.dirname(__file__))
+ROOT = os.path.abspath(os.path.dirname(__file__)) if "__file__" in globals() else os.path.abspath(os.getcwd())
 SRC_DIR = os.path.join(ROOT, "src")
 PAGES_DIR = os.path.join(SRC_DIR, "PAGINAS_DO_SISTEMA")
 DATA_DIR = os.path.join(ROOT, "data")
