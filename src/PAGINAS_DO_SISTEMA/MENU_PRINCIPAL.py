@@ -78,6 +78,7 @@ except Exception as e:
 IS_MAC = platform.system() == "Darwin"
 IS_WIN = platform.system() == "Windows"
 BASE_DIR = os.path.dirname(APP_DIR)
+ROOT_DIR = os.path.dirname(SRC_DIR)
 
 
 def _resolve_app_path(filename: str) -> str:
@@ -85,7 +86,10 @@ def _resolve_app_path(filename: str) -> str:
     local_path = os.path.join(APP_DIR, filename)
     if os.path.exists(local_path):
         return local_path
-    return os.path.join(BASE_DIR, filename)
+    base_path = os.path.join(BASE_DIR, filename)
+    if os.path.exists(base_path):
+        return base_path
+    return os.path.join(ROOT_DIR, filename)
 
 
 ROUTES_PATH = _resolve_app_path("route_map.json")
