@@ -50,7 +50,7 @@ except Exception as e:
     PASTA_ORDENS_CORTE = None
 
 if not PASTA_ORDENS_CORTE:
-    BASE_DB_DIR = os.path.join("..", "BANCO DE DADOS", "ORDENS_CORTE")
+    BASE_DB_DIR = os.path.join("../src", "BANCO DE DADOS", "ORDENS_CORTE")
     os.makedirs(BASE_DB_DIR, exist_ok=True)
     PASTA_ORDENS_CORTE = BASE_DB_DIR
 
