@@ -1,8 +1,16 @@
 #define AppName "SISTEMA OPERA"
+#ifndef AppVersion
 #define AppVersion "1.0.0"
+#endif
 #define AppPublisher "Opera Fashion"
 #define AppExeName "SistemaOpera.exe"
 #define IconPath "..\\..\\src\\PAGINAS_DO_SISTEMA\\ICONE_SISTEMA.ico"
+#ifndef OutputDir
+#define OutputDir "..\\.."
+#endif
+#ifndef OutputBaseFilename
+#define OutputBaseFilename "Instalador_{#AppName}"
+#endif
 
 [Setup]
 AppId={{E5D81A21-CC47-4A3A-9C0F-2D7A6C1D49AA}}
@@ -11,8 +19,8 @@ AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
 DefaultDirName={pf}\{#AppName}
 DefaultGroupName={#AppName}
-OutputBaseFilename=Instalador_{#AppName}
-OutputDir=..\..
+OutputBaseFilename={#OutputBaseFilename}
+OutputDir={#OutputDir}
 Compression=lzma
 SolidCompression=yes
 DisableDirPage=no
@@ -44,6 +52,11 @@ Filename: "{app}\{#AppExeName}"; Description: "Abrir {#AppName}"; Flags: nowait 
 var
   DbConfigPage: TInputQueryWizardPage;
   AutoDetectPortsCheck: TCheckBox;
+  LocalDbCheck: TCheckBox;
+  TestConnectionButton: TButton;
+
+procedure LocalDbCheckClick(Sender: TObject);
+procedure TestConnectionClick(Sender: TObject);
 
 function JsonEscape(const Value: string): string;
 begin
@@ -86,6 +99,62 @@ begin
   AutoDetectPortsCheck.Checked := True;
   AutoDetectPortsCheck.Top := DbConfigPage.Edits[5].Top + DbConfigPage.Edits[5].Height + ScaleY(10);
   AutoDetectPortsCheck.Left := DbConfigPage.Edits[5].Left;
+
+  LocalDbCheck := TCheckBox.Create(DbConfigPage.Surface);
+  LocalDbCheck.Parent := DbConfigPage.Surface;
+  LocalDbCheck.Caption := 'Banco local (localhost)';
+  LocalDbCheck.Checked := True;
+  LocalDbCheck.Top := AutoDetectPortsCheck.Top + AutoDetectPortsCheck.Height + ScaleY(6);
+  LocalDbCheck.Left := AutoDetectPortsCheck.Left;
+  LocalDbCheck.OnClick := @LocalDbCheckClick;
+
+  TestConnectionButton := TButton.Create(DbConfigPage.Surface);
+  TestConnectionButton.Parent := DbConfigPage.Surface;
+  TestConnectionButton.Caption := 'Testar conexão';
+  TestConnectionButton.Top := LocalDbCheck.Top + LocalDbCheck.Height + ScaleY(10);
+  TestConnectionButton.Left := LocalDbCheck.Left;
+  TestConnectionButton.OnClick := @TestConnectionClick;
+end;
+
+procedure LocalDbCheckClick(Sender: TObject);
+begin
+  if LocalDbCheck.Checked then
+  begin
+    DbConfigPage.Values[0] := 'localhost';
+    if Trim(DbConfigPage.Values[1]) = '' then
+      DbConfigPage.Values[1] := '5432';
+  end;
+end;
+
+procedure TestConnectionClick(Sender: TObject);
+var
+  HostValue: string;
+  PortValue: string;
+  ResultCode: Integer;
+  Command: string;
+begin
+  HostValue := Trim(DbConfigPage.Values[0]);
+  PortValue := Trim(DbConfigPage.Values[1]);
+
+  if (HostValue = '') or (PortValue = '') then
+  begin
+    MsgBox('Informe IP/Host e porta antes de testar.', mbError, MB_OK);
+    Exit;
+  end;
+
+  Command :=
+    '-NoProfile -ExecutionPolicy Bypass -Command "if (Test-NetConnection -ComputerName ''' +
+    HostValue + ''' -Port ' + PortValue + ' -InformationLevel Quiet) { exit 0 } else { exit 1 }"';
+
+  if Exec('powershell.exe', Command, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    if ResultCode = 0 then
+      MsgBox('Conexão OK: o banco respondeu no host/porta informados.', mbInformation, MB_OK)
+    else
+      MsgBox('Não foi possível conectar ao banco nesse host/porta.', mbError, MB_OK);
+  end
+  else
+    MsgBox('Falha ao executar o teste de conexão no PowerShell.', mbError, MB_OK);
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
