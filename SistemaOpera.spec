@@ -1,8 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+import sys
 from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/icons', 'icons'), ('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/data/BANCO_DE_DADOS', 'BANCO_DE_DADOS'), ('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src/PAGINAS_DO_SISTEMA', 'PAGINAS_DO_SISTEMA'), ('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/data/INSTAL_BANCO_APP', 'INSTAL BANCO APP'), ('/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/data/RECIBOS_DE_PAGAMENTOS', 'RECIBOS_DE_PAGAMENTOS')]
+ROOT = os.path.abspath(os.path.dirname(__file__)) if "__file__" in globals() else os.path.abspath(os.getcwd())
+SRC_DIR = os.path.join(ROOT, "src")
+PAGES_DIR = os.path.join(SRC_DIR, "PAGINAS_DO_SISTEMA")
+DATA_DIR = os.path.join(ROOT, "data")
+
+datas = [
+    (os.path.join(ROOT, "icons"), "icons"),
+    (os.path.join(DATA_DIR, "BANCO_DE_DADOS"), "BANCO_DE_DADOS"),
+    (PAGES_DIR, "PAGINAS_DO_SISTEMA"),
+    (os.path.join(DATA_DIR, "INSTAL_BANCO_APP"), "INSTAL BANCO APP"),
+    (os.path.join(DATA_DIR, "RECIBOS_DE_PAGAMENTOS"), "RECIBOS_DE_PAGAMENTOS"),
+]
 binaries = []
 hiddenimports = []
 hiddenimports += collect_submodules('PAGINAS_DO_SISTEMA')
@@ -65,8 +78,8 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src/PAGINAS_DO_SISTEMA/MAIN.py'],
-    pathex=['/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src'],
+    [os.path.join(PAGES_DIR, "MAIN.py")],
+    pathex=[SRC_DIR],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
@@ -95,7 +108,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src/PAGINAS_DO_SISTEMA/ICONE_SISTEMA.icns'],
+    icon=[os.path.join(PAGES_DIR, "ICONE_SISTEMA.icns")],
 )
 coll = COLLECT(
     exe,
@@ -109,6 +122,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='SistemaOpera.app',
-    icon='/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/src/PAGINAS_DO_SISTEMA/ICONE_SISTEMA.icns',
+    icon=os.path.join(PAGES_DIR, "ICONE_SISTEMA.icns"),
     bundle_identifier=None,
 )
