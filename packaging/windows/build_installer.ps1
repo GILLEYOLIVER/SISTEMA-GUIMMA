@@ -1,11 +1,12 @@
 param(
     [string]$Python = "python",
     [string]$IssPath = "packaging/windows/SISTEMA_OPERA.iss",
-    [string]$Version = $env:OPERA_VERSION
+    [string]$Version = $env:OPERA_VERSION,
+    [string]$InnoPath = ""
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $repoRoot
 
 $prepareIconPath = Join-Path $repoRoot "packaging/windows/prepare_icon.py"
@@ -24,9 +25,14 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 & $Python $buildScriptPath --platform windows --spec $specPath
 
 # Inno Setup (iscc.exe)
-$inno = Get-Command iscc.exe -ErrorAction SilentlyContinue
+$inno = $null
+if (-not [string]::IsNullOrWhiteSpace($InnoPath)) {
+    $inno = Get-Command $InnoPath -ErrorAction SilentlyContinue
+} else {
+    $inno = Get-Command iscc.exe -ErrorAction SilentlyContinue
+}
 if (-not $inno) {
-    Write-Warning "Inno Setup (iscc.exe) not found. Install Inno Setup and rerun to create the installer."
+    Write-Warning "Inno Setup (iscc.exe) not found. Install Inno Setup or pass -InnoPath 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'."
     exit 1
 }
 
