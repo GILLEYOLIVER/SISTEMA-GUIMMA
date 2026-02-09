@@ -19,6 +19,12 @@ from PIL import Image, ImageTk
 from tkinter import messagebox, ttk
 from PIL import Image
 import customtkinter as ctk
+
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+SRC_DIR = os.path.abspath(os.path.join(APP_DIR, ".."))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
 from PAGINAS_DO_SISTEMA.TEMAS import (
     TemasPage,
     aplicar_estilo_treeview,
@@ -71,7 +77,6 @@ except Exception as e:
 # ===== CONFIGURAÇÕES GLOBAIS =====
 IS_MAC = platform.system() == "Darwin"
 IS_WIN = platform.system() == "Windows"
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(APP_DIR)
 
 
