@@ -7,6 +7,7 @@ Menu principal com sistema de temas, permissões e cache otimizado.
 import json
 import platform
 import importlib
+import importlib.util
 import inspect
 import os
 import sys
@@ -710,6 +711,15 @@ class ThemeManager:
 
             if hasattr(app, 'botoes_menu'):
                 app.botoes_menu.clear()
+            if hasattr(app, "_page_cache"):
+                for cached_frame in list(app._page_cache.values()):
+                    try:
+                        cached_frame.destroy()
+                    except Exception:
+                        pass
+                app._page_cache.clear()
+                app._page_cache_order = []
+                app._current_frame = None
 
             # Reconstrói a interface
             app._build_interface()
@@ -1159,6 +1169,10 @@ class OperaMenuApp(ctk.CTk):
         self._submenu_close_jobs = {}
         self.icons_cache = {}
         self._active_submenu = None
+        self._page_cache = {}
+        self._page_cache_order = []
+        self._page_cache_size = 3
+        self._current_frame = None
 
         # Configuração da janela
         self._setup_window()
@@ -2499,6 +2513,38 @@ class OperaMenuApp(ctk.CTk):
         else:
             self._agendar_after(500, self._open_dashboard_automatico)
 
+    def _get_cached_page(self, page_name: str):
+        frame = self._page_cache.get(page_name)
+        if not frame:
+            return None
+        if not frame.winfo_exists() or frame.master != self.content:
+            try:
+                frame.destroy()
+            except Exception:
+                pass
+            self._page_cache.pop(page_name, None)
+            if page_name in self._page_cache_order:
+                self._page_cache_order.remove(page_name)
+            return None
+        if page_name in self._page_cache_order:
+            self._page_cache_order.remove(page_name)
+        self._page_cache_order.append(page_name)
+        return frame
+
+    def _cache_page(self, page_name: str, frame):
+        self._page_cache[page_name] = frame
+        if page_name in self._page_cache_order:
+            self._page_cache_order.remove(page_name)
+        self._page_cache_order.append(page_name)
+        while len(self._page_cache_order) > self._page_cache_size:
+            old_page = self._page_cache_order.pop(0)
+            old_frame = self._page_cache.pop(old_page, None)
+            if old_frame:
+                try:
+                    old_frame.destroy()
+                except Exception:
+                    pass
+
     def open_page(self, page_name: str, categoria: str | None = None):
         """Abre uma página no conteúdo principal com verificação de permissão."""
         # Não abre se estiver carregando outra página ou fechando o app
@@ -2590,15 +2636,17 @@ class OperaMenuApp(ctk.CTk):
         self._page_loading = True
 
         try:
-            # Limpar completamente o conteúdo anterior
-            for widget in self.content.winfo_children():
+            if self._current_frame and self._current_frame.winfo_exists():
                 try:
-                    widget.destroy()
+                    self._current_frame.pack_forget()
                 except Exception:
                     pass
 
-            # Carregar página diretamente via rotas (route_map.json)
-            frame = self._load_page_direct(page_name)
+            frame = self._get_cached_page(page_name)
+            if frame is None:
+                # Carregar página diretamente via rotas (route_map.json)
+                frame = self._load_page_direct(page_name)
+                self._cache_page(page_name, frame)
 
             if frame:
                 # Exibir no container principal
@@ -2650,6 +2698,8 @@ class OperaMenuApp(ctk.CTk):
                         frame.atualizar_tema()
                     elif hasattr(frame, "aplicar_tema"):
                         frame.aplicar_tema()
+                    elif hasattr(frame, "refresh"):
+                        frame.refresh()
 
                     if page_name == "Logs e Atividades" and hasattr(frame, "abrir_aba_logs"):
                         frame.abrir_aba_logs()
@@ -2659,6 +2709,7 @@ class OperaMenuApp(ctk.CTk):
 
                 # Atualizar controle de página atual
                 self.current_page = page_name
+                self._current_frame = frame
 
                 # Guardar última página nas configurações
                 try:
@@ -2801,7 +2852,7 @@ class OperaMenuApp(ctk.CTk):
 
         self.title_label.configure(text="Acesso Restrito")
 
-    def _load_page_direct(self, page_name: str):
+    def _load_page_direct(self, page_name: str, reload_module: bool = False):
         """Carrega página diretamente sem cache"""
         route = self.routes.get(page_name)
         if not route:
@@ -2809,19 +2860,31 @@ class OperaMenuApp(ctk.CTk):
 
         file_path = os.path.join(APP_DIR, route["file"])
         if not os.path.exists(file_path):
+            file_path = os.path.join(ROOT_DIR, route["file"])
+        if not os.path.exists(file_path):
             raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
 
         # Importa módulo
         module_name = os.path.splitext(os.path.basename(file_path))[0]
+        module_key = f"opera_page_{module_name}"
+
         if APP_DIR not in sys.path:
             sys.path.insert(0, APP_DIR)
+        if ROOT_DIR not in sys.path:
+            sys.path.insert(0, ROOT_DIR)
 
         try:
-            # SEMPRE recarregar o módulo
-            if module_name in sys.modules:
-                module = importlib.reload(sys.modules[module_name])
+            if module_key in sys.modules and reload_module:
+                module = importlib.reload(sys.modules[module_key])
+            elif module_key in sys.modules:
+                module = sys.modules[module_key]
             else:
-                module = importlib.import_module(module_name)
+                spec = importlib.util.spec_from_file_location(module_key, file_path)
+                if spec is None or spec.loader is None:
+                    raise ImportError(f"Spec inválido para {file_path}")
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_key] = module
+                spec.loader.exec_module(module)
         except Exception as e:
             raise ImportError(f"Erro ao importar {module_name}: {e}")
 
