@@ -2,6 +2,7 @@
 #define AppVersion "1.0.0"
 #define AppPublisher "Opera Fashion"
 #define AppExeName "SistemaOpera.exe"
+#define IconPath "..\\..\\src\\PAGINAS_DO_SISTEMA\\ICONE_SISTEMA.ico"
 
 [Setup]
 AppId={{E5D81A21-CC47-4A3A-9C0F-2D7A6C1D49AA}}
@@ -18,7 +19,9 @@ DisableDirPage=no
 WizardStyle=modern
 
 ; Opcional: se tiver um .ico, ajuste aqui.
-SetupIconFile=..\..\src\PAGINAS_DO_SISTEMA\ICONE_SISTEMA.ico
+#if FileExists(IconPath)
+SetupIconFile={#IconPath}
+#endif
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
