@@ -17,8 +17,11 @@ ________________________________________________________________________________
 baixar
 
 git fetch --all --prune
+git checkout main
 git reset --hard origin/main
-git clean -fd
+git clean -fdx
+git status
+
 
 #03/02/2025
 
