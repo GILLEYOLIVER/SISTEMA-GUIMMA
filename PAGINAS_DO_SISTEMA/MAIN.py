@@ -67,24 +67,42 @@ def main():
 
     holder = {"login": None}
 
-    def abrir_login():
+    def preparar_login_em_background():
+        """Monta a interface de login enquanto o splash ainda está visível."""
+        if holder["login"] is not None:
+            return
         try:
-            root.deiconify()
             holder["login"] = SistemaLoginModerno(root)
             root.protocol("WM_DELETE_WINDOW", holder["login"].ao_fechar)
         except Exception as e:
-            print(f"[BOOT] Erro ao abrir LOGIN: {e}")
+            print(f"[BOOT] Erro ao preparar LOGIN: {e}")
             try:
                 root.destroy()
             except Exception:
                 pass
 
-    # Splash -> Login
+    def exibir_login_pronto():
+        try:
+            if holder["login"] is None:
+                preparar_login_em_background()
+            root.update_idletasks()
+            root.deiconify()
+        except Exception as e:
+            print(f"[BOOT] Erro ao exibir LOGIN: {e}")
+            try:
+                root.destroy()
+            except Exception:
+                pass
+
+    # inicia a montagem do login enquanto o splash anima
+    root.after(120, preparar_login_em_background)
+
+    # Splash -> Login pronto
     SplashScreenModern(
         parent=root,
         usuario_nome="Usuário",
         tema_preferido="profissional",
-        on_complete=lambda: root.after(0, abrir_login),
+        on_complete=lambda: root.after(0, exibir_login_pronto),
         duration_ms=6000,
         allow_skip=False,
         block_close=True,
