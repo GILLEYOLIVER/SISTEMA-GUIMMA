@@ -16,7 +16,22 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 
 # 1) Build Windows installer (setup exe), unless user wants to reuse existing artifact
 if (-not $SkipWindowsInstallerBuild) {
-  & powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python $Python -Version $Version -InnoPath $InnoPath -SkipAppBuild:$SkipAppBuild
+  $installerArgs = @(
+    '-ExecutionPolicy', 'Bypass',
+    '-File', 'packaging/windows/build_installer.ps1',
+    '-Python', $Python,
+    '-Version', $Version
+  )
+
+  if (-not [string]::IsNullOrWhiteSpace($InnoPath)) {
+    $installerArgs += @('-InnoPath', $InnoPath)
+  }
+
+  if ($SkipAppBuild) {
+    $installerArgs += '-SkipAppBuild'
+  }
+
+  & powershell @installerArgs
 } else {
   Write-Host "Skipping Windows installer build (-SkipWindowsInstallerBuild)."
 }
