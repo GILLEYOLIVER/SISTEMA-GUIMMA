@@ -2,7 +2,8 @@ param(
     [string]$Python = "python",
     [string]$IssPath = "packaging/windows/SISTEMA_OPERA.iss",
     [string]$Version = $env:OPERA_VERSION,
-    [string]$InnoPath = ""
+    [string]$InnoPath = "",
+    [switch]$SkipAppBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,8 +22,10 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 # prepara ícone .ico (seu fluxo atual)
 & $Python $prepareIconPath
 
-# build PyInstaller Windows usando o spec
-& $Python $buildScriptPath --platform windows --spec $specPath
+if (-not $SkipAppBuild) {
+    # build PyInstaller Windows usando o spec
+    & $Python $buildScriptPath --platform windows --spec $specPath
+}
 
 # Inno Setup (iscc.exe)
 $inno = $null
