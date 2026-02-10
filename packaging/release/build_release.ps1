@@ -1,6 +1,8 @@
 param(
   [string]$Python = "python",
-  [string]$Version = $env:OPERA_VERSION
+  [string]$Version = $env:OPERA_VERSION,
+  [string]$InnoPath = "",
+  [switch]$SkipAppBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,7 +14,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 }
 
 # 1) Gera EXE Windows
-& powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python $Python -Version $Version
+& powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python $Python -Version $Version -InnoPath $InnoPath -SkipAppBuild:$SkipAppBuild
 
 # 2) Monta pasta release com os 2 (se o mac dmg já existir, ele entra também)
 $relDir = Join-Path $repoRoot "dist\release\SISTEMA_OPERA_$Version"
