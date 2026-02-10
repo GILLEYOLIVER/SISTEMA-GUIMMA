@@ -110,20 +110,18 @@ except ImportError:
 # Aplicação
 # ============================================================
 class SistemaLoginModerno:
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, iniciar_oculto: bool = False):
         self.root = root
         self.root.title("OPERA FASHION - Login")
-
+        self.iniciar_oculto = bool(iniciar_oculto)
 
         # Treeview: cabeçalho global (cinza + hover)
         try:
             instalar_cabecalho_treeview()
         except Exception:
             pass
-        try:
-            self.root.state("zoomed")
-        except Exception:
-            self.root.geometry("1024x700")
+        if not self.iniciar_oculto:
+            self.exibir_janela()
 
         initialize_after_guard(self, root_attr="root")
 
@@ -152,6 +150,13 @@ class SistemaLoginModerno:
 
         self._configurar_interface()
         self.root.bind("<Return>", lambda evento: self.entrar_no_sistema())
+
+
+    def exibir_janela(self):
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            self.root.geometry("1024x700")
 
     def _registrar_auditoria_login(self, usuario: str, sucesso: bool, detalhes: str = ""):
         """Registra tentativa de login no sistema de auditoria"""

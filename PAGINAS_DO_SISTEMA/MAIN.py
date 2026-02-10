@@ -72,7 +72,7 @@ def main():
         if holder["login"] is not None:
             return
         try:
-            holder["login"] = SistemaLoginModerno(root)
+            holder["login"] = SistemaLoginModerno(root, iniciar_oculto=True)
             root.protocol("WM_DELETE_WINDOW", holder["login"].ao_fechar)
             # Evita mostrar a janela raiz (fundo preto) antes do login
             # terminar de montar toda a interface.
@@ -89,6 +89,7 @@ def main():
         try:
             if holder["login"] is None:
                 preparar_login_em_background()
+            holder["login"].exibir_janela()
             root.update_idletasks()
             root.deiconify()
         except Exception as e:
