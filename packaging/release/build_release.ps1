@@ -1,18 +1,25 @@
 param(
   [string]$Python = "python",
-  [string]$Version = $env:OPERA_VERSION
+  [string]$Version = $env:OPERA_VERSION,
+  [string]$InnoPath = "",
+  [switch]$SkipAppBuild,
+  [switch]$SkipWindowsInstallerBuild
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 Set-Location $repoRoot
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
   $Version = "1.0.0"
 }
 
-# 1) Gera EXE Windows
-& powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python $Python -Version $Version
+# 1) Gera instalador Windows (EXE Setup), a menos que o usuário queira reaproveitar artefato já existente
+if (-not $SkipWindowsInstallerBuild) {
+  & powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python $Python -Version $Version -InnoPath $InnoPath -SkipAppBuild:$SkipAppBuild
+} else {
+  Write-Host "ℹ️ Pulando geração do instalador Windows (-SkipWindowsInstallerBuild)."
+}
 
 # 2) Monta pasta release com os 2 (se o mac dmg já existir, ele entra também)
 $relDir = Join-Path $repoRoot "dist\release\SISTEMA_OPERA_$Version"
@@ -24,7 +31,11 @@ New-Item -ItemType Directory -Force -Path $macDir | Out-Null
 New-Item -ItemType Directory -Force -Path $winDir | Out-Null
 
 # Copia EXE
-Copy-Item -Force (Join-Path $repoRoot "dist\installers\windows\*.exe") $winDir
+$winInstallerPattern = Join-Path $repoRoot "dist\installers\windows\*.exe"
+if (-not (Test-Path $winInstallerPattern)) {
+  throw "Instalador Windows não encontrado em '$winInstallerPattern'. Execute o build do instalador e confirme o output."
+}
+Copy-Item -Force $winInstallerPattern $winDir
 
 # Copia DMG se já existir (por exemplo, você rodou no Mac e trouxe o arquivo)
 $macDmg = Join-Path $repoRoot "dist\installers\macos\SISTEMA_OPERA_${Version}_macOS.dmg"
