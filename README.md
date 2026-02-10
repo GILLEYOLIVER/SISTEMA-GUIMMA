@@ -45,6 +45,28 @@ Saída: `dist/SistemaOpera/SistemaOpera.exe`
 
 Use o script em `packaging/windows/SISTEMA_OPERA.iss` após gerar o build.
 
+#### Instalador com configuração de banco (IP + porta)
+
+O script `SISTEMA_OPERA.iss` já possui uma etapa no assistente para configurar o banco durante a instalação:
+
+- Campo de **IP/Host** (localhost ou rede)
+- Campo de **Porta**
+- Botão **Buscar porta** (testa portas comuns do PostgreSQL)
+- Botão **Testar conexão**
+- Campos de banco, usuário, senha e schema
+
+Ao concluir a instalação, o instalador grava automaticamente o `config.json` em:
+
+- `%APPDATA%\SistemaOpera\config.json`
+- `{app}\INSTALAÇÃO\config.json` (pasta de instalação)
+
+Fluxo recomendado:
+
+1. Gere o executável com `python packaging/build.py --platform windows`.
+2. Abra `packaging/windows/SISTEMA_OPERA.iss` no Inno Setup Compiler.
+3. Compile o instalador.
+4. Durante a instalação, informe o IP e a porta do banco e use **Testar conexão** antes de avançar.
+
 ## Observações
 
 - Assets seguem empacotados via PyInstaller (pasta `PAGINAS_DO_SISTEMA`)
