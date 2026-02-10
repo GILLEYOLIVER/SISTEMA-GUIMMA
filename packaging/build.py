@@ -1,7 +1,7 @@
-# packaging/build.py
+# packaging/build.py (CORREÇÃO)
 # !/usr/bin/env python3
 """
-Script principal de build para Sistema Opera
+Script principal de build para Sistema Opera - VERSÃO CORRIGIDA
 Suporta Windows e macOS
 """
 import os
@@ -83,7 +83,7 @@ def prepare_resources(platform):
 
 
 def build_windows():
-    """Build para Windows"""
+    """Build para Windows - VERSÃO CORRIGIDA"""
     print_header("BUILD PARA WINDOWS")
 
     # Converter ícone primeiro
@@ -106,65 +106,73 @@ def build_windows():
         print(f"❌ Arquivo principal não encontrado: {main_script}")
         return False
 
-    # Construir comando PyInstaller
-    cmd = [
-        "pyinstaller",
-        "--clean",
-        "--onefile",
-        "--windowed",
-        "--noconsole",
-        f"--name=SistemaOpera",
-        "--distpath=dist/windows",
-        "--workpath=build/windows",
-        "--specpath=build"
-    ]
-
-    # Adicionar ícone se existir
-    if icon_path.exists():
-        cmd.append(f"--icon={icon_path}")
-        print(f"✅ Usando ícone: {icon_path}")
+    # Verificar se temos arquivo .spec
+    spec_file = Path("SistemaOpera.spec")
+    if spec_file.exists():
+        print(f"📄 Usando arquivo .spec existente: {spec_file}")
+        # Usar o .spec file
+        cmd = ["pyinstaller", "--clean", str(spec_file)]
     else:
-        print("⚠️  Ícone não encontrado, usando padrão")
+        print("📄 Criando build sem arquivo .spec")
+        # Construir comando PyInstaller sem --spec
+        cmd = [
+            "pyinstaller",
+            "--clean",
+            "--onefile",
+            "--windowed",
+            "--noconsole",
+            f"--name=SistemaOpera",
+            "--distpath=dist/windows",
+            "--workpath=build/windows",
+            "--specpath=build"
+        ]
 
-    # Adicionar dados
-    cmd.extend([
-        "--add-data", f"PAGINAS_DO_SISTEMA{os.pathsep}PAGINAS_DO_SISTEMA",
-        "--add-data", f"icons{os.pathsep}icons",
-        "--add-data", f"data{os.pathsep}data",
-    ])
+        # Adicionar ícone se existir
+        if icon_path.exists():
+            cmd.append(f"--icon={icon_path}")
+            print(f"✅ Usando ícone: {icon_path}")
+        else:
+            print("⚠️  Ícone não encontrado, usando padrão")
 
-    # Hidden imports
-    hidden_imports = [
-        "psycopg2",
-        "PIL",
-        "PIL._imaging",
-        "PIL.Image",
-        "PIL.ImageFile",
-        "PIL.ImageOps",
-        "PIL.ImageDraw",
-        "PIL.ImageFont",
-        "PIL.ImageTk",
-        "tkinter",
-        "tkinter.ttk",
-        "json",
-        "datetime",
-        "pathlib",
-        "sys",
-        "os",
-        "io",
-        "socket",
-        "platform",
-        "contextlib",
-        "typing",
-        "functools",
-        "inspect",
-    ]
+        # Adicionar dados
+        cmd.extend([
+            "--add-data", f"PAGINAS_DO_SISTEMA;PAGINAS_DO_SISTEMA",
+            "--add-data", f"icons;icons",
+            "--add-data", f"data;data",
+        ])
 
-    for imp in hidden_imports:
-        cmd.extend(["--hidden-import", imp])
+        # Hidden imports
+        hidden_imports = [
+            "psycopg2",
+            "PIL",
+            "PIL._imaging",
+            "PIL.Image",
+            "PIL.ImageFile",
+            "PIL.ImageOps",
+            "PIL.ImageDraw",
+            "PIL.ImageFont",
+            "PIL.ImageTk",
+            "tkinter",
+            "tkinter.ttk",
+            "json",
+            "datetime",
+            "pathlib",
+            "sys",
+            "os",
+            "io",
+            "socket",
+            "platform",
+            "contextlib",
+            "typing",
+            "functools",
+            "inspect",
+        ]
 
-    # Adicionar script principal
-    cmd.append(str(main_script))
+        for imp in hidden_imports:
+            cmd.extend(["--hidden-import", imp])
+
+        # Adicionar script principal
+        cmd.append(str(main_script))
 
     print(f"\n📋 Comando PyInstaller:")
     print(" ".join(cmd))
@@ -172,7 +180,7 @@ def build_windows():
     # Executar
     try:
         print("\n🚀 Executando PyInstaller...")
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, shell=True)
         print("✅ Build concluído com sucesso!")
 
         # Verificar se executável foi criado
@@ -184,17 +192,27 @@ def build_windows():
 
             # Copiar ícone para pasta do executável
             if icon_path.exists():
-                shutil.copy2(icon_path, Path("dist/windows/ICONE_SISTEMA.ico"))
+                target_dir = Path("dist/SistemaOpera")
+                target_dir.mkdir(exist_ok=True)
+                shutil.copy2(icon_path, target_dir / "ICONE_SISTEMA.ico")
                 print(f"✅ Ícone copiado para pasta do executável")
 
             return True
         else:
-            print(f"❌ Executável não foi criado em: {exe_path}")
+            # Tentar outro caminho
+            alt_path = Path("dist/SistemaOpera/SistemaOpera.exe")
+            if alt_path.exists():
+                size_mb = alt_path.stat().st_size / (1024 * 1024)
+                print(f"\n📦 Executável criado: {alt_path}")
+                print(f"📏 Tamanho: {size_mb:.2f} MB")
+                return True
+
+            print(f"❌ Executável não foi criado")
             return False
 
     except subprocess.CalledProcessError as e:
         print(f"❌ Erro no PyInstaller: {e}")
-        print(f"Stderr: {e.stderr}")
+        print(f"Stderr: {e.stderr[:500]}...")
         return False
 
 
@@ -245,9 +263,9 @@ def build_macos():
 
     # Adicionar dados
     cmd.extend([
-        "--add-data", f"PAGINAS_DO_SISTEMA{os.pathsep}PAGINAS_DO_SISTEMA",
-        "--add-data", f"icons{os.pathsep}icons",
-        "--add-data", f"data{os.pathsep}data",
+        "--add-data", f"PAGINAS_DO_SISTEMA:PAGINAS_DO_SISTEMA",
+        "--add-data", f"icons:icons",
+        "--add-data", f"data:data",
     ])
 
     # Hidden imports (mesmo do Windows)
@@ -284,12 +302,6 @@ def build_macos():
         app_path = Path("dist/macos/SistemaOpera.app")
         if app_path.exists():
             print(f"\n📦 Aplicativo criado: {app_path}")
-
-            # Criar DMG se solicitado
-            create_dmg = input("\n📀 Criar arquivo DMG? (s/n): ").lower().strip()
-            if create_dmg in ['s', 'sim', 'y', 'yes']:
-                create_dmg_installer()
-
             return True
         else:
             print(f"❌ Aplicativo não foi criado em: {app_path}")
@@ -297,28 +309,12 @@ def build_macos():
 
     except subprocess.CalledProcessError as e:
         print(f"❌ Erro no PyInstaller: {e}")
-        print(f"Stderr: {e.stderr}")
+        print(f"Stderr: {e.stderr[:500]}...")
         return False
 
 
-def create_dmg_installer():
-    """Cria instalador DMG para macOS"""
-    print_header("CRIANDO INSTALADOR DMG")
-
-    dmg_script = Path("packaging/macos/dmg_settings.py")
-    if dmg_script.exists():
-        print("📦 Criando DMG...")
-        try:
-            subprocess.run([sys.executable, str(dmg_script)], check=True)
-            print("✅ DMG criado com sucesso!")
-        except subprocess.CalledProcessError as e:
-            print(f"⚠️  Erro ao criar DMG: {e}")
-    else:
-        print("⚠️  Script de criação de DMG não encontrado")
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Build do Sistema Opera")
+    parser = argparse.ArgumentParser(description="Build do Sistema Opera - VERSÃO CORRIGIDA")
     parser.add_argument("--platform", choices=["windows", "macos", "all"],
                         default="windows", help="Plataforma de build")
     parser.add_argument("--skip-deps", action="store_true",
@@ -326,7 +322,7 @@ def main():
 
     args = parser.parse_args()
 
-    print_header("SISTEMA OPERA - BUILD SYSTEM")
+    print_header("SISTEMA OPERA - BUILD SYSTEM (CORRIGIDO)")
     print(f"📋 Plataforma: {args.platform}")
     print(f"📋 Python: {sys.version}")
     print(f"📋 Diretório: {os.getcwd()}")
