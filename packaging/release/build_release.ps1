@@ -2,7 +2,8 @@ param(
   [string]$Python = "python",
   [string]$Version = $env:OPERA_VERSION,
   [string]$InnoPath = "",
-  [switch]$SkipAppBuild
+  [switch]$SkipAppBuild,
+  [switch]$SkipWindowsInstallerBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,8 +14,12 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
   $Version = "1.0.0"
 }
 
-# 1) Gera EXE Windows
-& powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python $Python -Version $Version -InnoPath $InnoPath -SkipAppBuild:$SkipAppBuild
+# 1) Gera instalador Windows (EXE Setup), a menos que o usuário queira reaproveitar artefato já existente
+if (-not $SkipWindowsInstallerBuild) {
+  & powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python $Python -Version $Version -InnoPath $InnoPath -SkipAppBuild:$SkipAppBuild
+} else {
+  Write-Host "ℹ️ Pulando geração do instalador Windows (-SkipWindowsInstallerBuild)."
+}
 
 # 2) Monta pasta release com os 2 (se o mac dmg já existir, ele entra também)
 $relDir = Join-Path $repoRoot "dist\release\SISTEMA_OPERA_$Version"
