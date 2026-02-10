@@ -41,6 +41,9 @@ Name: "desktopicon"; Description: "Criar ícone na área de trabalho"; GroupDesc
 Source: "..\..\dist\SistemaOpera\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\dist\SistemaOpera\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[Dirs]
+Name: "{app}\INSTALAÇÃO"
+
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
@@ -71,17 +74,22 @@ begin
   Result := ExpandConstant('{userappdata}\SistemaOpera\config.json');
 end;
 
+function GetInstallDbConfigPath(): string;
+begin
+  Result := ExpandConstant('{app}\INSTALAÇÃO\config.json');
+end;
+
 procedure InitializeWizard;
 begin
   DbConfigPage :=
     CreateInputQueryPage(
       wpSelectDir,
-      'Configuração do Banco de Dados',
-      'Informe os dados para conectar o sistema ao banco.',
-      'Essas informações serão gravadas em ' + GetDbConfigPath() + ' e podem ser alteradas depois.'
+      'Configuração do Banco de Dados (Local ou Rede)',
+      'Informe os dados para conectar o sistema ao banco (local ou em rede).',
+      'Essas informações serão gravadas em ' + GetDbConfigPath() + ' e em ' + GetInstallDbConfigPath() + '.'
     );
 
-  DbConfigPage.Add('IP/Host do Banco:', False);
+  DbConfigPage.Add('IP/Host do Banco (local ou rede):', False);
   DbConfigPage.Add('Porta:', False);
   DbConfigPage.Add('Nome do Banco:', False);
   DbConfigPage.Add('Usuário:', False);
@@ -104,7 +112,7 @@ begin
 
   LocalDbCheck := TCheckBox.Create(DbConfigPage.Surface);
   LocalDbCheck.Parent := DbConfigPage.Surface;
-  LocalDbCheck.Caption := 'Banco local (localhost)';
+  LocalDbCheck.Caption := 'Banco local (localhost) - desmarque para usar IP de rede';
   LocalDbCheck.Checked := True;
   LocalDbCheck.Top := AutoDetectPortsCheck.Top + AutoDetectPortsCheck.Height + ScaleY(6);
   LocalDbCheck.Left := AutoDetectPortsCheck.Left;
@@ -294,6 +302,8 @@ procedure WriteDbConfigFile;
 var
   ConfigPath: string;
   ConfigDir: string;
+  InstallConfigPath: string;
+  InstallConfigDir: string;
   HostValue: string;
   PortValue: string;
   DbNameValue: string;
@@ -336,6 +346,11 @@ begin
     '}'#13#10;
 
   SaveStringToFile(ConfigPath, JsonContent, False);
+
+  InstallConfigPath := GetInstallDbConfigPath();
+  InstallConfigDir := ExtractFileDir(InstallConfigPath);
+  ForceDirectories(InstallConfigDir);
+  SaveStringToFile(InstallConfigPath, JsonContent, False);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
