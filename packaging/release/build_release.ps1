@@ -4,7 +4,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 Set-Location $repoRoot
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
@@ -24,7 +24,11 @@ New-Item -ItemType Directory -Force -Path $macDir | Out-Null
 New-Item -ItemType Directory -Force -Path $winDir | Out-Null
 
 # Copia EXE
-Copy-Item -Force (Join-Path $repoRoot "dist\installers\windows\*.exe") $winDir
+$winInstallerPattern = Join-Path $repoRoot "dist\installers\windows\*.exe"
+if (-not (Test-Path $winInstallerPattern)) {
+  throw "Instalador Windows não encontrado em '$winInstallerPattern'. Execute o build do instalador e confirme o output."
+}
+Copy-Item -Force $winInstallerPattern $winDir
 
 # Copia DMG se já existir (por exemplo, você rodou no Mac e trouxe o arquivo)
 $macDmg = Join-Path $repoRoot "dist\installers\macos\SISTEMA_OPERA_${Version}_macOS.dmg"
