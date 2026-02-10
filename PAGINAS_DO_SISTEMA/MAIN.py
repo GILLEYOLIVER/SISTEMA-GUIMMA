@@ -84,6 +84,10 @@ def main():
         try:
             holder["login"] = SistemaLoginModerno(root, iniciar_oculto=True)
             root.protocol("WM_DELETE_WINDOW", holder["login"].ao_fechar)
+            # Evita mostrar a janela raiz (fundo preto) antes do login
+            # terminar de montar toda a interface.
+            root.update_idletasks()
+            root.deiconify()
         except Exception as e:
             print(f"[BOOT] Erro ao preparar LOGIN: {e}")
             try:
