@@ -1,0 +1,326 @@
+# packaging/windows/build_installer.ps1
+<#
+.SYNOPSIS
+    Script para construir o instalador completo do Sistema Opera
+.DESCRIPTION
+    Este script:
+    1. Prepara o ícone do sistema
+    2. Constrói o executável com PyInstaller
+    3. Compila o instalador com Inno Setup
+    4. Cria o pacote final de instalação
+.PARAMETER SkipBuild
+    Pula a etapa de build do executável (usa um existente)
+.PARAMETER SkipIcon
+    Pula a conversão do ícone
+.PARAMETER SkipInstaller
+    Pula a criação do instalador Inno Setup
+.PARAMETER Clean
+    Limpa as pastas de build e dist antes de começar
+.EXAMPLE
+    .\build_installer.ps1
+    Cria o instalador completo do zero
+.EXAMPLE
+    .\build_installer.ps1 -Clean
+    Limpa tudo e cria novo instalador
+#>
+
+param(
+    [switch]$SkipBuild,
+    [switch]$SkipIcon,
+    [switch]$SkipInstaller,
+    [switch]$Clean
+)
+
+# Configuração
+$ErrorActionPreference = "Stop"
+
+# Função para imprimir cabeçalho
+function Write-Header {
+    param([string]$Title)
+    Write-Host "`n" + ("=" * 60) -ForegroundColor Cyan
+    Write-Host "  $Title" -ForegroundColor Cyan
+    Write-Host ("=" * 60) -ForegroundColor Cyan
+}
+
+# Função para imprimir sucesso
+function Write-Success {
+    param([string]$Message)
+    Write-Host "✅ $Message" -ForegroundColor Green
+}
+
+# Função para imprimir erro
+function Write-Error {
+    param([string]$Message)
+    Write-Host "❌ $Message" -ForegroundColor Red
+}
+
+# Função para imprimir aviso
+function Write-Warning {
+    param([string]$Message)
+    Write-Host "⚠️  $Message" -ForegroundColor Yellow
+}
+
+# Função para imprimir informação
+function Write-Info {
+    param([string]$Message)
+    Write-Host "📋 $Message" -ForegroundColor Blue
+}
+
+# Função para verificar se um comando existe
+function Test-Command {
+    param([string]$Command)
+    try {
+        Get-Command $Command -ErrorAction Stop | Out-Null
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+# Função para limpar pastas
+function Clean-Folders {
+    Write-Header "LIMPANDO PASTAS ANTERIORES"
+
+    $folders = @("dist", "build", "__pycache__")
+
+    foreach ($folder in $folders) {
+        if (Test-Path $folder) {
+            Write-Info "Removendo: $folder"
+            try {
+                Remove-Item $folder -Recurse -Force -ErrorAction Stop
+                Write-Success "Pasta removida: $folder"
+            } catch {
+                Write-Warning "Não foi possível remover $folder: $_"
+            }
+        }
+    }
+}
+
+# INÍCIO DO SCRIPT
+Write-Header "SISTEMA OPERA - CONSTRUÇÃO DE INSTALADOR"
+Write-Info "Data: $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')"
+Write-Info "Diretório: $PWD"
+
+# Limpar se solicitado
+if ($Clean) {
+    Clean-Folders
+}
+
+# PASSO 1: PREPARAR ÍCONE
+if (-not $SkipIcon) {
+    Write-Header "PASSO 1: PREPARANDO ÍCONE"
+
+    $iconScript = "packaging\windows\prepare_icon.py"
+
+    if (Test-Path $iconScript) {
+        Write-Info "Convertendo ícone PNG para ICO..."
+
+        try {
+            $python = (Get-Command python -ErrorAction SilentlyContinue).Source
+            if (-not $python) {
+                $python = (Get-Command python3 -ErrorAction SilentlyContinue).Source
+            }
+
+            if (-not $python) {
+                throw "Python não encontrado no PATH"
+            }
+
+            & $python $iconScript
+            Write-Success "Conversão do ícone concluída"
+
+            # Verificar se ícone foi criado
+            $iconPath = "icons\ICONE_SISTEMA.ico"
+            if (Test-Path $iconPath) {
+                $iconSize = (Get-Item $iconPath).Length / 1KB
+                Write-Success "Ícone criado: $iconPath ($([math]::Round($iconSize, 2)) KB)"
+            } else {
+                Write-Warning "Ícone ICO não foi criado"
+            }
+
+        } catch {
+            Write-Error "Falha ao converter ícone: $_"
+            if (-not $SkipBuild) {
+                $continue = Read-Host "Continuar sem ícone? (s/n)"
+                if ($continue -notmatch '^[sSyY]') {
+                    exit 1
+                }
+            }
+        }
+    } else {
+        Write-Error "Script de ícone não encontrado: $iconScript"
+        exit 1
+    }
+}
+
+# PASSO 2: CONSTRUIR EXECUTÁVEL
+if (-not $SkipBuild) {
+    Write-Header "PASSO 2: CONSTRUINDO EXECUTÁVEL"
+
+    $buildScript = "packaging\build.py"
+
+    if (Test-Path $buildScript) {
+        Write-Info "Executando build do PyInstaller..."
+
+        try {
+            $python = (Get-Command python -ErrorAction SilentlyContinue).Source
+            if (-not $python) {
+                $python = (Get-Command python3 -ErrorAction SilentlyContinue).Source
+            }
+
+            if (-not $python) {
+                throw "Python não encontrado"
+            }
+
+            # Executar build
+            & $python $buildScript --platform windows
+
+            # Verificar se executável foi criado
+            $exePath = "dist\windows\SistemaOpera.exe"
+            if (Test-Path $exePath) {
+                $exeSize = (Get-Item $exePath).Length / 1MB
+                Write-Success "Executável criado: $exePath ($([math]::Round($exeSize, 2)) MB)"
+
+                # Copiar para pasta principal dist
+                if (-not (Test-Path "dist\SistemaOpera")) {
+                    New-Item -ItemType Directory -Path "dist\SistemaOpera" -Force | Out-Null
+                }
+
+                Copy-Item $exePath -Destination "dist\SistemaOpera\" -Force
+                Write-Success "Executável copiado para dist\SistemaOpera\"
+
+                # Copiar ícone se existir
+                $iconPath = "icons\ICONE_SISTEMA.ico"
+                if (Test-Path $iconPath) {
+                    Copy-Item $iconPath -Destination "dist\SistemaOpera\" -Force
+                    Write-Success "Ícone copiado para dist\SistemaOpera\"
+                }
+
+            } else {
+                Write-Error "Executável não foi criado"
+                exit 1
+            }
+
+        } catch {
+            Write-Error "Falha no build: $_"
+            exit 1
+        }
+    } else {
+        Write-Error "Script de build não encontrado: $buildScript"
+        exit 1
+    }
+} else {
+    Write-Info "Pulando construção do executável"
+}
+
+# PASSO 3: VERIFICAR EXECUTÁVEL
+Write-Header "PASSO 3: VERIFICANDO ARQUIVOS"
+$requiredFiles = @(
+    "dist\SistemaOpera\SistemaOpera.exe",
+    "icons\ICONE_SISTEMA.ico",
+    "packaging\windows\SISTEMA_OPERA.iss"
+)
+
+$missingFiles = @()
+foreach ($file in $requiredFiles) {
+    if (Test-Path $file) {
+        $size = (Get-Item $file -ErrorAction SilentlyContinue).Length / 1KB
+        Write-Success "$file ($([math]::Round($size, 2)) KB)"
+    } else {
+        Write-Error "$file (NÃO ENCONTRADO)"
+        $missingFiles += $file
+    }
+}
+
+if ($missingFiles.Count -gt 0) {
+    Write-Error "Arquivos faltando: $($missingFiles -join ', ')"
+    exit 1
+}
+
+# PASSO 4: CRIAR INSTALADOR COM INNO SETUP
+if (-not $SkipInstaller) {
+    Write-Header "PASSO 4: CRIANDO INSTALADOR COM INNO SETUP"
+
+    # Encontrar Inno Setup
+    $innoPaths = @(
+        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+        "${env:ProgramFiles}\Inno Setup 6\ISCC.exe",
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+        "C:\Program Files\Inno Setup 6\ISCC.exe"
+    )
+
+    $innoExe = $null
+    foreach ($path in $innoPaths) {
+        if (Test-Path $path) {
+            $innoExe = $path
+            break
+        }
+    }
+
+    if (-not $innoExe) {
+        Write-Error "Inno Setup não encontrado!"
+        Write-Info ""
+        Write-Info "📥 Por favor, instale o Inno Setup:"
+        Write-Info "   https://jrsoftware.org/isdl.php"
+        Write-Info ""
+        Write-Info "Ou execute manualmente:"
+        Write-Info "   ISCC.exe packaging\windows\SISTEMA_OPERA.iss"
+        exit 1
+    }
+
+    Write-Info "Inno Setup encontrado: $innoExe"
+
+    # Compilar instalador
+    $issScript = "packaging\windows\SISTEMA_OPERA.iss"
+
+    Write-Info "Compilando instalador..."
+    try {
+        & $innoExe $issScript
+
+        # Verificar se instalador foi criado
+        $installerPath = "dist\SistemaOpera_Setup.exe"
+        if (Test-Path $installerPath) {
+            $installerSize = (Get-Item $installerPath).Length / 1MB
+            Write-Success "✅ INSTALADOR CRIADO COM SUCESSO!"
+            Write-Host ""
+            Write-Host "📦 Arquivo: $installerPath" -ForegroundColor Green
+            Write-Host "📏 Tamanho: $([math]::Round($installerSize, 2)) MB" -ForegroundColor Green
+            Write-Host ""
+
+            # Mostrar informações adicionais
+            Write-Header "📋 RESUMO DA INSTALAÇÃO"
+            Write-Info "O instalador inclui:"
+            Write-Host "   • Sistema Opera Fashion completo" -ForegroundColor Gray
+            Write-Host "   • Configuração de banco de dados PostgreSQL" -ForegroundColor Gray
+            Write-Host "   • Ícone personalizado em todos os atalhos" -ForegroundColor Gray
+            Write-Host "   • Configuração automática de conexão" -ForegroundColor Gray
+            Write-Host ""
+            Write-Info "Para testar o instalador:"
+            Write-Host "   .\$installerPath" -ForegroundColor Yellow
+
+        } else {
+            Write-Error "Instalador não foi criado"
+            exit 1
+        }
+
+    } catch {
+        Write-Error "Falha ao compilar instalador: $_"
+        exit 1
+    }
+}
+
+# FIM
+Write-Header "✅ PROCESSO CONCLUÍDO"
+Write-Info "Todas as etapas foram concluídas com sucesso!"
+Write-Host ""
+Write-Host "🎯 Próximos passos:" -ForegroundColor Cyan
+Write-Host "   1. Teste o instalador: dist\SistemaOpera_Setup.exe" -ForegroundColor Gray
+Write-Host "   2. Verifique se o ícone aparece nos atalhos" -ForegroundColor Gray
+Write-Host "   3. Teste a configuração do banco de dados" -ForegroundColor Gray
+Write-Host "   4. Verifique se o sistema conecta corretamente" -ForegroundColor Gray
+Write-Host ""
+
+# Solicitar para abrir pasta
+$openFolder = Read-Host "Abrir pasta do instalador? (s/n)"
+if ($openFolder -match '^[sSyY]') {
+    explorer "dist"
+}

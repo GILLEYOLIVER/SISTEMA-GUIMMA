@@ -44,6 +44,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             text="Controle de capacidade, carga de trabalho e cronograma.",
             font=ctk.CTkFont(size=12),
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+        # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 
     def _build_toolbar(self):
         toolbar = ctk.CTkFrame(self)

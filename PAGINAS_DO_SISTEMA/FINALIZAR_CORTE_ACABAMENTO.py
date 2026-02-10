@@ -69,7 +69,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
 
         # Atualiza cores baseado no tema atual - MESMO PADRÃO DO CADASTRO_DE_CORTE
         self.obter_cores_por_tema()
-
+        # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
         # Variáveis para campos editáveis
         self.entregues_vars = {t: tk.StringVar(value="") for t in self.tamanhos}
         self.copias_vars = {t: tk.StringVar(value="") for t in self.tamanhos}

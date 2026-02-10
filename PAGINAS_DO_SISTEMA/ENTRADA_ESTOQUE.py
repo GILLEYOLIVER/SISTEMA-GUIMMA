@@ -7,7 +7,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime, date
 from contextlib import contextmanager
 
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 # =============================================================================
 # MÓDULO DE ACESSO A DADOS PADRONIZADO
 # =============================================================================

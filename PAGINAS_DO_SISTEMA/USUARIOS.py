@@ -11,7 +11,7 @@ SISTEMA DE GESTÃO DE USUÁRIOS – Profissional 3.0
 - Integração total com sistema de temas do menu
 - Código limpo, organizado e altamente funcional
 """
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 from PAGINAS_DO_SISTEMA import TEMAS
 import os
 import sys

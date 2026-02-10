@@ -11,7 +11,7 @@ import customtkinter as ctk
 import psycopg2
 import psycopg2.extras
 
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 # ============== Classes originais (UI preservada) ==============
 
 class GerenciadorBancoDados:
@@ -48,7 +48,7 @@ class GerenciadorBancoDados:
         self.current_table = None
         self.result_tree = None
         self.modo_admin = True  # FORÇAR MODO ADMIN SEMPRE
-
+        # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
         # Aparência (se o sistema tiver atributos de tema)
         if self.sistema:
             try:
@@ -223,7 +223,7 @@ class GerenciadorBancoDados:
         if not self.conn:
             messagebox.showinfo("Status Admin", "Não conectado ao banco")
             return
-
+        # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
         try:
             # Verificar privilégios
             self.cursor.execute("""

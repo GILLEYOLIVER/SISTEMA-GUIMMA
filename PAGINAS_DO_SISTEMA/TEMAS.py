@@ -90,7 +90,7 @@ import tkinter.messagebox as messagebox
 _image_grab_spec = importlib.util.find_spec("PIL.ImageGrab")
 ImageGrab = importlib.import_module("PIL.ImageGrab") if _image_grab_spec else None
 # =================== UTILITÁRIOS DE CORREÇÃO GLOBAL ===================
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 
 
 def corrigir_bordas_labels(widget):

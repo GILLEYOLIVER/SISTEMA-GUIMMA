@@ -1,0 +1,24 @@
+# Execute no PowerShell:
+
+.\packaging\windows\build_installer.ps1
+
+# Ou passo a passo:
+
+python packaging/windows/prepare_icon.py          # 1. Converter ícone
+
+python packaging/build.py --platform windows      # 2. Build executável
+
+# 3. Abra 'packaging/windows/SISTEMA_OPERA.iss' no Inno Setup
+
+# 4. Clique em Compile (F9)
+
+
+
+
+# Execute no terminal macOS:
+chmod +x packaging/macos/build_installer.sh
+./packaging/macos/build_installer.sh
+
+# Ou manualmente:
+python packaging/build.py --platform macos
+./packaging/macos/build_installer.sh

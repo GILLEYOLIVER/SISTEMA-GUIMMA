@@ -6,7 +6,7 @@ Interface base para cadastro, consulta e relacionamento de clientes.
 from tkinter import messagebox, ttk
 
 import customtkinter as ctk
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 try:
     from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
 except Exception:

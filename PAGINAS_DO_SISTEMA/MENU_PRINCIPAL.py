@@ -81,7 +81,7 @@ IS_WIN = platform.system() == "Windows"
 BASE_DIR = os.path.dirname(APP_DIR)
 ROOT_DIR = os.path.dirname(SRC_DIR)
 
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 def _resolve_app_path(filename: str) -> str:
     """Resolve caminhos de arquivos compartilhados na raiz do projeto."""
     local_path = os.path.join(APP_DIR, filename)

@@ -1,229 +1,374 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# packaging/build.py
+# !/usr/bin/env python3
 """
-packaging/build.py — Build oficial do SISTEMA OPERA (macOS/Windows)
-
-✅ Build "blindado": inclui tudo do requirements.txt (via --collect-all)
-✅ NÃO usa .spec automaticamente (só se você passar --spec)
-✅ Detecta layout com/sem pasta src
-✅ Inclui assets (PAGINAS_DO_SISTEMA + icons + data/*)
-✅ Evita sobrescrever SistemaOpera.spec gerado automaticamente (usa --specpath build/specs)
-✅ Usa o Python do venv atual (sys.executable)
+Script principal de build para Sistema Opera
+Suporta Windows e macOS
 """
-
-from __future__ import annotations
-
-import argparse
 import os
-import re
-import shutil
-import subprocess
 import sys
+import argparse
+import subprocess
+import shutil
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-APP_NAME = "SistemaOpera"
-
-# Alguns pacotes do requirements têm nome diferente do módulo de import.
-REQ_TO_IMPORT: dict[str, str | None] = {
-    "charset-normalizer": "charset_normalizer",
-    "fpdf2": "fpdf",
-    "pillow": "PIL",
-    "python-dateutil": "dateutil",
-    "pymupdf": "fitz",
-    "fonttools": "fontTools",
-    "pyqt5-qt5": None,  # distribuição binária (não é importável)
-    "pyinstaller-hooks-contrib": None,  # ferramenta/hook (não precisa coletar no app)
-    "pyinstaller": None,  # ferramenta de build (não precisa coletar no app)
-    "dmgbuild": None,  # ferramenta de build (não precisa coletar no app)
-    "setuptools": None,  # ferramenta de build
-    "wheel": None,  # ferramenta de build
-}
-
-_OP_RE = re.compile(r"(?P<name>[A-Za-z0-9_.\-]+)(?:\[.*\])?\s*(?:==|>=|<=|~=|!=|>|<).*")
+def print_header(title):
+    """Imprime cabeçalho formatado"""
+    print("\n" + "=" * 60)
+    print(f"🔨 {title}")
+    print("=" * 60)
 
 
-def _detect_layout(root: Path) -> tuple[Path, Path]:
-    """
-    Retorna (SRC_BASE, PACKAGE_DIR).
-    SRC_BASE vai em --paths.
-    PACKAGE_DIR é onde fica PAGINAS_DO_SISTEMA.
-    """
-    a = root / "PAGINAS_DO_SISTEMA" / "MAIN.py"
-    if a.exists():
-        return root, root / "PAGINAS_DO_SISTEMA"
+def check_dependencies():
+    """Verifica dependências necessárias"""
+    print_header("VERIFICANDO DEPENDÊNCIAS")
 
-    b = root / "src" / "PAGINAS_DO_SISTEMA" / "MAIN.py"
-    if b.exists():
-        return root / "src", root / "src" / "PAGINAS_DO_SISTEMA"
+    required = ['psycopg2', 'pillow']
+    missing = []
 
-    raise FileNotFoundError(
-        "Não encontrei MAIN.py em:\n"
-        f"- {a}\n"
-        f"- {b}\n"
-        "Ajuste a estrutura ou atualize o build."
-    )
+    for dep in required:
+        try:
+            __import__(dep.replace('-', '_'))
+            print(f"✅ {dep}")
+        except ImportError:
+            missing.append(dep)
+            print(f"❌ {dep}")
 
+    if missing:
+        print(f"\n⚠️  Dependências faltando: {', '.join(missing)}")
+        print("Instalando...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
+            print("✅ Dependências instaladas com sucesso")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Falha ao instalar dependências: {e}")
+            return False
 
-def _run(cmd: list[str], cwd: Path | None = None, env: dict[str, str] | None = None) -> None:
-    print("\n>>>", " ".join(map(str, cmd)))
-    subprocess.run(cmd, check=True, cwd=str(cwd) if cwd else None, env=env)
-
-
-def _parse_requirements(req_path: Path) -> list[str]:
-    """Extrai nomes de pacotes do requirements.txt (sem versões)."""
-    if not req_path.exists():
-        return []
-    names: list[str] = []
-    for raw in req_path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        m = _OP_RE.match(line)
-        if m:
-            names.append(m.group("name"))
-        else:
-            # linha sem operador (ex: "customtkinter")
-            names.append(line)
-    return names
+    return True
 
 
-def _req_to_import_name(req_name: str) -> str | None:
-    key = req_name.strip()
-    low = key.lower()
-    if low in REQ_TO_IMPORT:
-        return REQ_TO_IMPORT[low]
-    # nomes com hífen geralmente viram underscore no import
-    return key.replace("-", "_")
+def prepare_resources(platform):
+    """Prepara recursos antes do build"""
+    print_header("PREPARANDO RECURSOS")
+
+    # Criar pasta dist se não existir
+    dist_dir = Path("dist")
+    dist_dir.mkdir(exist_ok=True)
+
+    # Verificar pasta PAGINAS_DO_SISTEMA
+    pages_dir = Path("PAGINAS_DO_SISTEMA")
+    if not pages_dir.exists():
+        print(f"❌ Pasta PAGINAS_DO_SISTEMA não encontrada")
+        return False
+
+    print(f"✅ PAGINAS_DO_SISTEMA: {pages_dir} ({len(list(pages_dir.glob('*.py')))} arquivos Python)")
+
+    # Verificar pasta icons
+    icons_dir = Path("icons")
+    if not icons_dir.exists():
+        print(f"⚠️  Pasta icons não encontrada. Criando...")
+        icons_dir.mkdir(exist_ok=True)
+
+    print(f"✅ Icons: {icons_dir}")
+
+    # Verificar pasta data
+    data_dir = Path("data")
+    if not data_dir.exists():
+        print(f"⚠️  Pasta data não encontrada. Criando...")
+        data_dir.mkdir(exist_ok=True)
+
+    print(f"✅ Data: {data_dir}")
+
+    return True
 
 
-def _collect_all_args_from_requirements(req_path: Path) -> tuple[list[str], list[str]]:
-    """
-    Retorna:
-      - args: lista de args '--collect-all' já prontos
-      - skipped: lista de pacotes ignorados por não serem importáveis/serem ferramenta
-    """
-    reqs = _parse_requirements(req_path)
-    args: list[str] = []
-    skipped: list[str] = []
-    seen: set[str] = set()
+def build_windows():
+    """Build para Windows"""
+    print_header("BUILD PARA WINDOWS")
 
-    for pkg in reqs:
-        mod = _req_to_import_name(pkg)
-        if not mod:
-            skipped.append(pkg)
-            continue
-        if mod in seen:
-            continue
-        seen.add(mod)
-        args += ["--collect-all", mod]
-    return args, skipped
+    # Converter ícone primeiro
+    icon_script = Path("packaging/windows/prepare_icon.py")
+    if icon_script.exists():
+        print("🎨 Convertendo ícone PNG para ICO...")
+        result = subprocess.run([sys.executable, str(icon_script)],
+                                capture_output=True, text=True)
+        print(result.stdout)
+        if result.returncode != 0:
+            print(f"⚠️  Aviso na conversão do ícone: {result.stderr}")
+    else:
+        print("⚠️  Script de conversão de ícone não encontrado")
 
+    # Caminhos
+    icon_path = Path("icons/ICONE_SISTEMA.ico")
+    main_script = Path("PAGINAS_DO_SISTEMA/MAIN.py")
 
-def build_pyinstaller(platform_name: str, spec_file: Path | None, extra_pyinstaller_args: list[str]) -> None:
-    src_base, package_dir = _detect_layout(ROOT)
-    entrypoint = package_dir / "MAIN.py"
+    if not main_script.exists():
+        print(f"❌ Arquivo principal não encontrado: {main_script}")
+        return False
 
-    # Ícone do macOS
-    icon_path = package_dir / "ICONE_SISTEMA.icns"
-
-    data_dir = ROOT / "data"
-    asset_dirs = [
-        (ROOT / "icons", "icons"),
-        (data_dir / "BANCO_DE_DADOS", "BANCO_DE_DADOS"),
-        (package_dir, "PAGINAS_DO_SISTEMA"),
-        (data_dir / "INSTAL_BANCO_APP", "INSTAL BANCO APP"),
-        (data_dir / "RECIBOS_DE_PAGAMENTOS", "RECIBOS_DE_PAGAMENTOS"),
+    # Construir comando PyInstaller
+    cmd = [
+        "pyinstaller",
+        "--clean",
+        "--onefile",
+        "--windowed",
+        "--noconsole",
+        f"--name=SistemaOpera",
+        "--distpath=dist/windows",
+        "--workpath=build/windows",
+        "--specpath=build"
     ]
 
-    dist = ROOT / "dist"
-    build = ROOT / "build"
-    specs_dir = build / "specs"  # ✅ evita sobrescrever o SistemaOpera.spec na raiz
+    # Adicionar ícone se existir
+    if icon_path.exists():
+        cmd.append(f"--icon={icon_path}")
+        print(f"✅ Usando ícone: {icon_path}")
+    else:
+        print("⚠️  Ícone não encontrado, usando padrão")
 
-    if dist.exists():
-        shutil.rmtree(dist, ignore_errors=True)
-    if build.exists():
-        shutil.rmtree(build, ignore_errors=True)
+    # Adicionar dados
+    cmd.extend([
+        "--add-data", f"PAGINAS_DO_SISTEMA{os.pathsep}PAGINAS_DO_SISTEMA",
+        "--add-data", f"icons{os.pathsep}icons",
+        "--add-data", f"data{os.pathsep}data",
+    ])
 
-    specs_dir.mkdir(parents=True, exist_ok=True)
+    # Hidden imports
+    hidden_imports = [
+        "psycopg2",
+        "PIL",
+        "PIL._imaging",
+        "PIL.Image",
+        "PIL.ImageFile",
+        "PIL.ImageOps",
+        "PIL.ImageDraw",
+        "PIL.ImageFont",
+        "PIL.ImageTk",
+        "tkinter",
+        "tkinter.ttk",
+        "json",
+        "datetime",
+        "pathlib",
+        "sys",
+        "os",
+        "io",
+        "socket",
+        "platform",
+        "contextlib",
+        "typing",
+        "functools",
+        "inspect",
+    ]
 
-    sep = ";" if platform_name == "windows" else ":"
+    for imp in hidden_imports:
+        cmd.extend(["--hidden-import", imp])
 
-    # ✅ Só usa spec se você passar --spec (não usa automaticamente)
-    if spec_file:
-        cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean"]
-        cmd += extra_pyinstaller_args
-        cmd.append(str(spec_file))
-        env = os.environ.copy()
-        env["OPERA_SPEC_ROOT"] = str(ROOT)
-        _run(cmd, cwd=ROOT, env=env)
-        return
+    # Adicionar script principal
+    cmd.append(str(main_script))
 
-    # ✅ "Compilar tudo" do requirements.txt
-    req_path = ROOT / "requirements.txt"
-    collect_all_args, skipped = _collect_all_args_from_requirements(req_path)
-    if skipped:
-        print("⚠️ Pacotes ignorados (não importáveis / ferramentas de build):", ", ".join(skipped))
+    print(f"\n📋 Comando PyInstaller:")
+    print(" ".join(cmd))
 
+    # Executar
+    try:
+        print("\n🚀 Executando PyInstaller...")
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print("✅ Build concluído com sucesso!")
+
+        # Verificar se executável foi criado
+        exe_path = Path("dist/windows/SistemaOpera.exe")
+        if exe_path.exists():
+            size_mb = exe_path.stat().st_size / (1024 * 1024)
+            print(f"\n📦 Executável criado: {exe_path}")
+            print(f"📏 Tamanho: {size_mb:.2f} MB")
+
+            # Copiar ícone para pasta do executável
+            if icon_path.exists():
+                shutil.copy2(icon_path, Path("dist/windows/ICONE_SISTEMA.ico"))
+                print(f"✅ Ícone copiado para pasta do executável")
+
+            return True
+        else:
+            print(f"❌ Executável não foi criado em: {exe_path}")
+            return False
+
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Erro no PyInstaller: {e}")
+        print(f"Stderr: {e.stderr}")
+        return False
+
+
+def build_macos():
+    """Build para macOS"""
+    print_header("BUILD PARA macOS")
+
+    # Caminhos
+    icon_path = Path("PAGINAS_DO_SISTEMA/ICONE_SISTEMA.icns")
+    main_script = Path("PAGINAS_DO_SISTEMA/MAIN.py")
+
+    if not main_script.exists():
+        print(f"❌ Arquivo principal não encontrado: {main_script}")
+        return False
+
+    # Construir comando PyInstaller
     cmd = [
-        sys.executable,
-        "-m",
-        "PyInstaller",
-        "--noconfirm",
+        "pyinstaller",
         "--clean",
         "--windowed",
-        "--name",
-        APP_NAME,
-        "--distpath",
-        str(dist),
-        "--workpath",
-        str(build),
-        "--specpath",
-        str(specs_dir),  # ✅ aqui evita sobrescrever o spec na raiz
-        "--paths",
-        str(src_base),
-
-        # ✅ páginas/imports dinâmicos
-        "--collect-submodules",
-        "PAGINAS_DO_SISTEMA",
+        "--noconsole",
+        f"--name=SistemaOpera",
+        "--distpath=dist/macos",
+        "--workpath=build/macos",
+        "--specpath=build"
     ]
 
-    # ✅ inclui tudo do requirements via collect-all
-    cmd += collect_all_args
-
-    if platform_name == "macos" and icon_path.exists():
-        cmd += ["--icon", str(icon_path)]
-
-    for src, dest in asset_dirs:
-        if src.exists():
-            cmd += ["--add-data", f"{src}{sep}{dest}"]
-
-    cmd += extra_pyinstaller_args
-    cmd.append(str(entrypoint))
-
-    env = os.environ.copy()
-    env["OPERA_SPEC_ROOT"] = str(ROOT)
-    _run(cmd, cwd=ROOT, env=env)
-
-    if platform_name == "macos":
-        app_path = dist / f"{APP_NAME}.app"
-        if not app_path.exists():
-            raise RuntimeError(f"Build falhou: não gerou {app_path}")
-        print(f"\n✅ App gerada: {app_path}")
+    # Adicionar ícone se existir
+    if icon_path.exists():
+        cmd.append(f"--icon={icon_path}")
+        print(f"✅ Usando ícone: {icon_path}")
     else:
-        exe_path = dist / APP_NAME / f"{APP_NAME}.exe"
-        print(f"\n✅ Build concluído. Verifique: {exe_path}")
+        # Verificar se tem PNG e converter
+        png_path = Path("icons/ICONE_SISTEMA.png")
+        if png_path.exists():
+            print("⚠️  Convertendo PNG para ICNS...")
+            # Em macOS, pode usar sips para conversão
+            icns_path = Path("icons/ICONE_SISTEMA.icns")
+            try:
+                subprocess.run(["sips", "-s", "format", "icns", str(png_path),
+                                "--out", str(icns_path)], check=True)
+                if icns_path.exists():
+                    cmd.append(f"--icon={icns_path}")
+            except:
+                print("⚠️  Não foi possível converter ícone, usando padrão")
+        else:
+            print("⚠️  Ícone não encontrado, usando padrão")
+
+    # Adicionar dados
+    cmd.extend([
+        "--add-data", f"PAGINAS_DO_SISTEMA{os.pathsep}PAGINAS_DO_SISTEMA",
+        "--add-data", f"icons{os.pathsep}icons",
+        "--add-data", f"data{os.pathsep}data",
+    ])
+
+    # Hidden imports (mesmo do Windows)
+    hidden_imports = [
+        "psycopg2",
+        "PIL",
+        "PIL._imaging",
+        "PIL.Image",
+        "PIL.ImageFile",
+        "PIL.ImageOps",
+        "PIL.ImageDraw",
+        "PIL.ImageFont",
+        "PIL.ImageTk",
+        "tkinter",
+        "tkinter.ttk",
+    ]
+
+    for imp in hidden_imports:
+        cmd.extend(["--hidden-import", imp])
+
+    # Adicionar script principal
+    cmd.append(str(main_script))
+
+    print(f"\n📋 Comando PyInstaller:")
+    print(" ".join(cmd))
+
+    # Executar
+    try:
+        print("\n🚀 Executando PyInstaller...")
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print("✅ Build concluído com sucesso!")
+
+        # Verificar se app foi criado
+        app_path = Path("dist/macos/SistemaOpera.app")
+        if app_path.exists():
+            print(f"\n📦 Aplicativo criado: {app_path}")
+
+            # Criar DMG se solicitado
+            create_dmg = input("\n📀 Criar arquivo DMG? (s/n): ").lower().strip()
+            if create_dmg in ['s', 'sim', 'y', 'yes']:
+                create_dmg_installer()
+
+            return True
+        else:
+            print(f"❌ Aplicativo não foi criado em: {app_path}")
+            return False
+
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Erro no PyInstaller: {e}")
+        print(f"Stderr: {e.stderr}")
+        return False
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--platform", choices=["macos", "windows"], default="macos")
-    parser.add_argument("--spec", type=Path, default=None, help="Usa um arquivo .spec (opcional).")
-    parser.add_argument("--pyinstaller-args", nargs=argparse.REMAINDER, default=[], help="Args extras pro PyInstaller.")
+def create_dmg_installer():
+    """Cria instalador DMG para macOS"""
+    print_header("CRIANDO INSTALADOR DMG")
+
+    dmg_script = Path("packaging/macos/dmg_settings.py")
+    if dmg_script.exists():
+        print("📦 Criando DMG...")
+        try:
+            subprocess.run([sys.executable, str(dmg_script)], check=True)
+            print("✅ DMG criado com sucesso!")
+        except subprocess.CalledProcessError as e:
+            print(f"⚠️  Erro ao criar DMG: {e}")
+    else:
+        print("⚠️  Script de criação de DMG não encontrado")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Build do Sistema Opera")
+    parser.add_argument("--platform", choices=["windows", "macos", "all"],
+                        default="windows", help="Plataforma de build")
+    parser.add_argument("--skip-deps", action="store_true",
+                        help="Pular verificação de dependências")
+
     args = parser.parse_args()
-    build_pyinstaller(args.platform, args.spec, args.pyinstaller_args)
+
+    print_header("SISTEMA OPERA - BUILD SYSTEM")
+    print(f"📋 Plataforma: {args.platform}")
+    print(f"📋 Python: {sys.version}")
+    print(f"📋 Diretório: {os.getcwd()}")
+
+    # Verificar dependências
+    if not args.skip_deps:
+        if not check_dependencies():
+            print("❌ Falha nas dependências")
+            return 1
+
+    # Preparar recursos
+    if not prepare_resources(args.platform):
+        print("❌ Falha na preparação de recursos")
+        return 1
+
+    # Executar build
+    success = True
+
+    if args.platform in ["windows", "all"]:
+        success = success and build_windows()
+
+    if args.platform in ["macos", "all"]:
+        success = success and build_macos()
+
+    if success:
+        print_header("✅ BUILD CONCLUÍDO COM SUCESSO!")
+        print("\n📁 Conteúdo criado:")
+        dist_dir = Path("dist")
+        for item in dist_dir.rglob("*"):
+            if item.is_file():
+                rel_path = item.relative_to(dist_dir)
+                size_mb = item.stat().st_size / (1024 * 1024)
+                print(f"  📄 {rel_path} ({size_mb:.1f} MB)")
+
+        print("\n🎯 Próximos passos:")
+        print("   1. Para Windows: Execute packaging/windows/build_installer.ps1")
+        print("   2. Para macOS: Execute packaging/macos/build_installer.sh")
+        return 0
+    else:
+        print_header("❌ BUILD FALHOU")
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
