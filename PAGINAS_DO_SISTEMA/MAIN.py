@@ -63,7 +63,17 @@ def main():
         pass
 
     root = ctk.CTk()
-    root.withdraw()  # esconde enquanto o splash roda
+    # Blindagem anti-flash: mantém a janela principal invisível e fora da tela
+    # até o splash terminar e o login estar pronto.
+    root.withdraw()
+    try:
+        root.attributes("-alpha", 0.0)
+    except Exception:
+        pass
+    try:
+        root.geometry("1x1+30000+30000")
+    except Exception:
+        pass
 
     holder = {"login": None}
 
@@ -91,7 +101,13 @@ def main():
                 preparar_login_em_background()
             holder["login"].exibir_janela()
             root.update_idletasks()
+            try:
+                root.attributes("-alpha", 1.0)
+            except Exception:
+                pass
             root.deiconify()
+            root.lift()
+            root.focus_force()
         except Exception as e:
             print(f"[BOOT] Erro ao exibir LOGIN: {e}")
             try:
