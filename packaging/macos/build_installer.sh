@@ -396,7 +396,6 @@ canvas.configure(bg=bg)
 bg_img = None
 icon_img = None
 icon_mark = None
-refs = []
 
 # Fundo com FUNDO_LOGUIN.jpg (preferência com PIL para redimensionar corretamente)
 try:
@@ -409,7 +408,6 @@ try:
             else:
                 bg_img = tk.PhotoImage(file=fundo)
             canvas.create_image(0, 0, image=bg_img, anchor="nw")
-            refs.append(bg_img)
 except Exception:
     pass
 
@@ -442,29 +440,36 @@ try:
                 ico_head = ico.resize((42, 42), Image.Resampling.LANCZOS)
                 icon_img = ImageTk.PhotoImage(ico_head)
 
-                wm = ico.resize((220, 220), Image.Resampling.LANCZOS)
-                alpha = wm.split()[-1].point(lambda a: int(a * 0.14))
+                wm = ico.resize((200, 200), Image.Resampling.LANCZOS)
+                alpha = wm.split()[-1].point(lambda a: int(a * 0.10))
                 wm.putalpha(alpha)
                 icon_mark = ImageTk.PhotoImage(wm)
             else:
+                # Sem PIL: usa somente ícone pequeno no cabeçalho para evitar sobreposição visual
                 icon_img = tk.PhotoImage(file=icon_path)
-                icon_mark = icon_img
+                try:
+                    icon_img = icon_img.subsample(max(1, icon_img.width() // 42), max(1, icon_img.height() // 42))
+                except Exception:
+                    pass
+                icon_mark = None
 
             tk.Label(header, image=icon_img, bg=panel).pack(side="left", padx=(8, 12))
-            refs.extend([icon_img, icon_mark])
 except Exception:
     pass
 
-# Marca d'água com ícone do sistema no cartão
+# Marca d'água com ícone do sistema no cartão (no canvas, atrás dos campos)
 if icon_mark is not None:
-    wm_label = tk.Label(content, image=icon_mark, bg=panel, bd=0, highlightthickness=0)
-    wm_label.place(relx=0.92, rely=0.72, anchor="center")
-    refs.append(wm_label)
+    canvas.create_image(panel_x2 - 120, panel_y2 - 120, image=icon_mark, anchor="center")
 
 text_hdr = tk.Frame(header, bg=panel)
 text_hdr.pack(side="left", fill="x", expand=True)
 
 
+
+# mantém referências de imagens para evitar garbage collection
+root._bg_img = bg_img
+root._icon_img = icon_img
+root._icon_mark = icon_mark
 tk.Label(text_hdr, text="Configuração do Banco de Dados", font=("Segoe UI", 16, "bold"), fg=fg, bg=panel).pack(anchor="w")
 tk.Label(text_hdr, text="Instalação do SistemaOpera • Configure local/rede, teste conexão e conclua.", font=("Segoe UI", 10), fg=muted, bg=panel).pack(anchor="w", pady=(2, 0))
 
