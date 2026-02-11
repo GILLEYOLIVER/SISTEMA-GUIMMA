@@ -78,6 +78,27 @@ check_dependencies() {
         pip3 install pillow
     fi
     log_info "Pillow: disponível"
+
+    # Verificar FPDF2
+    if ! python3 -c "import fpdf" &> /dev/null; then
+        log_warning "fpdf2 não instalado. Instalando..."
+        pip3 install fpdf2
+    fi
+    log_info "fpdf/fpdf2: disponível"
+
+    # Verificar ReportLab
+    if ! python3 -c "import reportlab" &> /dev/null; then
+        log_warning "reportlab não instalado. Instalando..."
+        pip3 install reportlab
+    fi
+    log_info "reportlab: disponível"
+
+    # Verificar Matplotlib
+    if ! python3 -c "import matplotlib" &> /dev/null; then
+        log_warning "matplotlib não instalado. Instalando..."
+        pip3 install matplotlib
+    fi
+    log_info "matplotlib: disponível"
 }
 
 # Preparar ícone para macOS
@@ -195,6 +216,20 @@ build_app() {
         --hidden-import PIL.ImageTk \
         --hidden-import tkinter \
         --hidden-import tkinter.ttk \
+        --hidden-import fpdf \
+        --hidden-import fpdf.enums \
+        --hidden-import reportlab \
+        --hidden-import reportlab.pdfgen \
+        --hidden-import reportlab.pdfbase \
+        --hidden-import reportlab.lib \
+        --hidden-import reportlab.graphics \
+        --hidden-import matplotlib \
+        --hidden-import matplotlib.pyplot \
+        --hidden-import matplotlib.backends.backend_tkagg \
+        --hidden-import numpy \
+        --collect-all fpdf \
+        --collect-all reportlab \
+        --collect-all matplotlib \
         $ICON_ARG \
         '$MAIN_SCRIPT'"
 
@@ -270,6 +305,48 @@ create_dmg() {
     fi
 }
 
+
+# Criar instalador PKG (duplo clique)
+create_pkg() {
+    print_header "CRIANDO INSTALADOR PKG"
+
+    APP_PATH="dist/SistemaOpera.app"
+    PKG_PATH="dist/SistemaOpera.pkg"
+    PKG_ROOT="dist/pkg_root"
+
+    if [ ! -d "$APP_PATH" ]; then
+        log_error "Aplicativo não encontrado: $APP_PATH"
+        return 1
+    fi
+
+    if ! command -v pkgbuild &> /dev/null; then
+        log_error "pkgbuild não encontrado (Xcode Command Line Tools necessário)"
+        return 1
+    fi
+
+    rm -rf "$PKG_ROOT"
+    mkdir -p "$PKG_ROOT/Applications"
+    cp -R "$APP_PATH" "$PKG_ROOT/Applications/"
+
+    log_info "Gerando PKG com instalação em /Applications..."
+    pkgbuild \
+      --root "$PKG_ROOT" \
+      --identifier "com.operafashion.sistemaopera" \
+      --version "1.0.0" \
+      --install-location "/" \
+      "$PKG_PATH"
+
+    rm -rf "$PKG_ROOT"
+
+    if [ -f "$PKG_PATH" ]; then
+        PKG_SIZE=$(du -sh "$PKG_PATH" | cut -f1)
+        log_success "PKG criado: $PKG_PATH ($PKG_SIZE)"
+    else
+        log_error "Falha ao criar PKG"
+        return 1
+    fi
+}
+
 # Função principal
 main() {
     print_header "SISTEMA OPERA - INSTALADOR macOS"
@@ -297,12 +374,25 @@ main() {
         log_info "Pulando criação do DMG"
     fi
 
+    # Perguntar se deve criar PKG (duplo clique)
+    echo ""
+    read -p "Deseja criar um instalador PKG (duplo clique)? (s/n): " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Ss]$ ]]; then
+        create_pkg
+    else
+        log_info "Pulando criação do PKG"
+    fi
+
     print_header "INSTALAÇÃO CONCLUÍDA"
     log_success "Processo finalizado com sucesso!"
     echo ""
     log_info "📦 Aplicativo criado em: dist/SistemaOpera.app"
     if [ -f "dist/SistemaOpera.dmg" ]; then
         log_info "📀 Instalador DMG em: dist/SistemaOpera.dmg"
+    fi
+    if [ -f "dist/SistemaOpera.pkg" ]; then
+        log_info "📦 Instalador PKG em: dist/SistemaOpera.pkg"
     fi
     echo ""
     log_info "Para testar o aplicativo:"

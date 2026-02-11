@@ -256,6 +256,18 @@ python packaging/build.py --platform macos
 
 Saída: `dist/SistemaOpera.app`
 
+Instalador macOS (duplo clique): `dist/SistemaOpera.pkg` (gerado pelo script `packaging/macos/build_installer.sh`).
+
+
+### Instalador macOS (duplo clique)
+
+```bash
+chmod +x packaging/macos/build_installer.sh
+./packaging/macos/build_installer.sh
+```
+
+No final, escolha gerar o **PKG** para ter instalador de dois cliques (`dist/SistemaOpera.pkg`), que instala o app em `/Applications`.
+
 ### Build Windows
 
 ```bash
