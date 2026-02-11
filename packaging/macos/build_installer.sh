@@ -338,66 +338,249 @@ if [[ -z "$CURRENT_USER" || "$CURRENT_USER" == "root" ]]; then
   CURRENT_USER=$(ls -l /dev/console | awk '{print $3}')
 fi
 
-run_as_user() {
-  local script="$1"
-  if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
-    su -l "$CURRENT_USER" -c "osascript -e '$script'"
-  else
-    osascript -e "$script"
-  fi
-}
-
-ask_value() {
-  local prompt="$1"
-  local default="$2"
-  run_as_user "text returned of (display dialog \"$prompt\" default answer \"$default\" with icon note buttons {\"Cancelar\",\"OK\"} default button \"OK\")"
-}
-
-HOST=$(ask_value "Informe o Host/IP do banco:" "localhost")
-[[ -z "$HOST" ]] && exit 1
-
-DETECT=$(run_as_user 'button returned of (display dialog "Deseja detectar a porta automaticamente?" buttons {"Não","Sim"} default button "Sim")')
-if [[ "$DETECT" == "Sim" ]]; then
-  PORT=""
-  for p in 5432 5433 5434 5435 5436; do
-    if nc -z -G 2 "$HOST" "$p" >/dev/null 2>&1; then
-      PORT="$p"
-      break
-    fi
-  done
-  if [[ -z "$PORT" ]]; then
-    PORT=$(ask_value "Não foi possível detectar a porta. Informe manualmente:" "5432")
-  fi
-else
-  PORT=$(ask_value "Informe a porta do banco:" "5432")
+USER_HOME=$(dscl . -read /Users/"$CURRENT_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}')
+if [[ -z "$USER_HOME" ]]; then
+  USER_HOME="/Users/$CURRENT_USER"
 fi
 
-[[ "$PORT" =~ ^[0-9]+$ ]] || exit 1
-DBNAME=$(ask_value "Informe o nome do banco:" "BANCO_OPERA")
-USER_DB=$(ask_value "Informe o usuário do banco:" "postgres")
-PASSWORD=$(ask_value "Informe a senha do banco:" "")
-SCHEMA=$(ask_value "Informe o schema:" "opera")
+RESULT_JSON="/tmp/sistemaopera_db_setup_result.json"
+GUI_SCRIPT="/tmp/sistemaopera_db_setup_gui.py"
+rm -f "$RESULT_JSON" "$GUI_SCRIPT"
 
-if nc -z -G 2 "$HOST" "$PORT" >/dev/null 2>&1; then
-  run_as_user 'display dialog "Conexão host/porta OK." buttons {"Continuar"} default button "Continuar" with icon note'
+cat > "$GUI_SCRIPT" <<'PYGUI'
+import json
+import os
+import socket
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+result_path = os.environ.get("RESULT_JSON", "/tmp/sistemaopera_db_setup_result.json")
+assets_base = os.environ.get("APP_ASSETS_DIR", "")
+
+
+def porta_aberta(host: str, porta: int, timeout: float = 1.2) -> bool:
+    try:
+        with socket.create_connection((host, int(porta)), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+root = tk.Tk()
+root.title("Configuração do Banco - SistemaOpera")
+root.geometry("880x560")
+root.resizable(False, False)
+
+bg = "#0E1624"
+panel = "#111827"
+fg = "#EAF2FF"
+muted = "#9FB3C8"
+root.configure(bg=bg)
+
+canvas = tk.Canvas(root, width=880, height=560, highlightthickness=0, bd=0)
+canvas.pack(fill="both", expand=True)
+canvas.configure(bg=bg)
+
+bg_img = None
+icon_img = None
+try:
+    if assets_base:
+        fundo = os.path.join(assets_base, "FUNDO_LOGUIN.jpg")
+        if os.path.exists(fundo):
+            bg_img = tk.PhotoImage(file=fundo)
+            canvas.create_image(0, 0, image=bg_img, anchor="nw")
+except Exception:
+    pass
+
+canvas.create_rectangle(30, 30, 850, 530, fill=panel, outline="#2B3950", width=2)
+
+content = tk.Frame(root, bg=panel)
+canvas.create_window(440, 280, window=content, width=790, height=460)
+
+header = tk.Frame(content, bg=panel)
+header.pack(fill="x", pady=(6, 8))
+
+try:
+    if assets_base:
+        icon_path = os.path.join(assets_base, "ICONE_SISTEMA.png")
+        if os.path.exists(icon_path):
+            icon_img = tk.PhotoImage(file=icon_path)
+            tk.Label(header, image=icon_img, bg=panel).pack(side="left", padx=(8, 12))
+except Exception:
+    pass
+
+text_hdr = tk.Frame(header, bg=panel)
+text_hdr.pack(side="left", fill="x", expand=True)
+
+
+tk.Label(text_hdr, text="Configuração do Banco de Dados", font=("Segoe UI", 16, "bold"), fg=fg, bg=panel).pack(anchor="w")
+tk.Label(text_hdr, text="Instalação do SistemaOpera • Informe os dados, teste conexão e conclua.", font=("Segoe UI", 10), fg=muted, bg=panel).pack(anchor="w", pady=(2, 0))
+
+form = tk.Frame(content, bg=panel)
+form.pack(fill="x", padx=12, pady=8)
+
+modo = tk.StringVar(value="local")
+host = tk.StringVar(value="localhost")
+porta = tk.StringVar(value="5432")
+dbname = tk.StringVar(value="BANCO_OPERA")
+usuario = tk.StringVar(value="postgres")
+senha = tk.StringVar(value="")
+schema = tk.StringVar(value="opera")
+status = tk.StringVar(value="Aguardando validação.")
+validado = {"ok": False}
+
+
+def invalida(*_):
+    validado["ok"] = False
+    status.set("Dados alterados. Clique em Testar conexão.")
+
+for v in (host, porta, dbname, usuario, senha, schema):
+    v.trace_add("write", invalida)
+
+
+def set_modo_local():
+    if modo.get() == "local":
+        host.set("localhost")
+
+linha_modo = tk.Frame(form, bg=panel)
+linha_modo.grid(row=0, column=0, columnspan=4, sticky="w", pady=(2, 10))
+
+tk.Label(linha_modo, text="Tipo de banco:", font=("Segoe UI", 10, "bold"), fg=fg, bg=panel).pack(side="left", padx=(0, 8))
+tk.Radiobutton(linha_modo, text="Local", variable=modo, value="local", command=set_modo_local, fg=fg, bg=panel, selectcolor=panel, activebackground=panel).pack(side="left")
+tk.Radiobutton(linha_modo, text="Rede", variable=modo, value="rede", fg=fg, bg=panel, selectcolor=panel, activebackground=panel).pack(side="left", padx=(12,0))
+
+
+def campo(r, c, titulo, var, show=""):
+    tk.Label(form, text=titulo, fg=fg, bg=panel, font=("Segoe UI", 10)).grid(row=r, column=c, sticky="w", padx=6, pady=(4,2))
+    e = tk.Entry(form, textvariable=var, show=show, bg="#1A2332", fg="#F5F8FF", insertbackground="#F5F8FF", relief="flat", font=("Segoe UI", 11))
+    e.grid(row=r+1, column=c, sticky="ew", padx=6, pady=(0,8), ipady=6)
+
+for col in range(4):
+    form.grid_columnconfigure(col, weight=1)
+
+campo(1, 0, "Host/IP", host)
+campo(1, 1, "Porta", porta)
+campo(1, 2, "Banco", dbname)
+campo(1, 3, "Schema", schema)
+campo(3, 0, "Usuário", usuario)
+campo(3, 1, "Senha", senha, show="•")
+
+
+def detectar_porta():
+    h = host.get().strip()
+    if not h:
+        messagebox.showerror("Erro", "Informe o Host/IP para detectar a porta.", parent=root)
+        return
+    for p in (5432, 5433, 5434, 5435, 5436):
+        if porta_aberta(h, p):
+            porta.set(str(p))
+            status.set(f"Porta detectada: {p}")
+            return
+    messagebox.showwarning("Atenção", "Não foi possível detectar porta automaticamente.", parent=root)
+
+
+def testar_conexao():
+    h = host.get().strip()
+    ptxt = porta.get().strip()
+    if not h or not ptxt:
+        messagebox.showerror("Erro", "Informe Host/IP e Porta.", parent=root)
+        return
+    try:
+        p = int(ptxt)
+    except ValueError:
+        messagebox.showerror("Erro", "Porta deve ser numérica.", parent=root)
+        return
+    if porta_aberta(h, p):
+        validado["ok"] = True
+        status.set("Conexão host/porta validada. Pode salvar.")
+        messagebox.showinfo("Conexão OK", "Host/porta responderam com sucesso.", parent=root)
+    else:
+        validado["ok"] = False
+        status.set("Falha na conexão host/porta.")
+        messagebox.showerror("Falha", "Não foi possível conectar no host/porta informados.", parent=root)
+
+
+def salvar():
+    h = host.get().strip()
+    ptxt = porta.get().strip()
+    db = dbname.get().strip()
+    u = usuario.get().strip()
+    pw = senha.get()
+    sc = schema.get().strip() or "opera"
+
+    if not h or not ptxt or not db or not u:
+        messagebox.showerror("Erro", "Preencha host, porta, banco e usuário.", parent=root)
+        return
+    try:
+        p = int(ptxt)
+    except ValueError:
+        messagebox.showerror("Erro", "Porta deve ser numérica.", parent=root)
+        return
+    if not validado["ok"]:
+        messagebox.showerror("Erro", "Clique em Testar conexão antes de salvar.", parent=root)
+        return
+
+    data = {
+        "host": h,
+        "port": p,
+        "dbname": db,
+        "user": u,
+        "password": pw,
+        "schema": sc,
+        "mode": modo.get(),
+    }
+    with open(result_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    root.destroy()
+
+
+barr = tk.Frame(content, bg=panel)
+barr.pack(fill="x", padx=12, pady=(8,0))
+
+tk.Label(barr, textvariable=status, fg="#B8CCE0", bg=panel, font=("Segoe UI", 10)).pack(side="left")
+
+btns = tk.Frame(content, bg=panel)
+btns.pack(fill="x", padx=12, pady=(12, 6))
+
+ttk.Style().configure("Opera.TButton", padding=8)
+
+ttk.Button(btns, text="Detectar porta", command=detectar_porta).pack(side="left")
+ttk.Button(btns, text="Testar conexão", command=testar_conexao).pack(side="left", padx=(10,0))
+ttk.Button(btns, text="Salvar e concluir instalação", command=salvar).pack(side="right")
+
+root.mainloop()
+PYGUI
+
+chmod +x "$GUI_SCRIPT"
+
+if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
+  su -l "$CURRENT_USER" -c "APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON='$RESULT_JSON' python3 '$GUI_SCRIPT'"
 else
-  BTN=$(run_as_user 'button returned of (display dialog "Não foi possível validar host/porta. Deseja continuar mesmo assim?" buttons {"Cancelar","Continuar"} default button "Continuar" with icon caution)')
-  [[ "$BTN" == "Continuar" ]] || exit 1
+  APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON="$RESULT_JSON" python3 "$GUI_SCRIPT"
 fi
 
-export HOST PORT DBNAME USER_DB PASSWORD SCHEMA CURRENT_USER
+if [[ ! -f "$RESULT_JSON" ]]; then
+  echo "Configuração cancelada pelo usuário" >&2
+  exit 1
+fi
+
+export CURRENT_USER USER_HOME
 python3 - <<'PYCFG'
 import json, os
-host=os.environ['HOST']
-port=int(os.environ['PORT'])
-db=os.environ['DBNAME']
-user=os.environ['USER_DB']
-pwd=os.environ['PASSWORD']
-schema=os.environ['SCHEMA'] or 'opera'
+result_path='/tmp/sistemaopera_db_setup_result.json'
+with open(result_path,'r',encoding='utf-8') as f:
+    data=json.load(f)
+host=(data.get('host') or '').strip()
+port=int(data.get('port') or 5432)
+db=(data.get('dbname') or 'BANCO_OPERA').strip()
+user=(data.get('user') or 'postgres').strip()
+pwd=data.get('password') or ''
+schema=(data.get('schema') or 'opera').strip() or 'opera'
+current_user=(os.environ.get('CURRENT_USER') or '').strip()
+user_home=(os.environ.get('USER_HOME') or '').strip()
 paths=['/Library/Application Support/SistemaOpera/config.json']
-cu=os.environ.get('CURRENT_USER','').strip()
-if cu and cu!='root':
-  paths.append(f'/Users/{cu}/Library/Application Support/SistemaOpera/config.json')
+if user_home:
+    paths.append(os.path.join(user_home,'Library','Application Support','SistemaOpera','config.json'))
 
 dsn=f'postgresql://{user}:{pwd}@{host}:{port}/{db}'
 obj={
@@ -413,16 +596,16 @@ obj={
   'fallback_to_postgres': True,
 }
 for p in paths:
-  os.makedirs(os.path.dirname(p), exist_ok=True)
-  with open(p,'w',encoding='utf-8') as f:
-    json.dump(obj,f,ensure_ascii=False,indent=2)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p,'w',encoding='utf-8') as f:
+        json.dump(obj,f,ensure_ascii=False,indent=2)
 PYCFG
 
 if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
-  chown "$CURRENT_USER":staff "/Users/$CURRENT_USER/Library/Application Support/SistemaOpera/config.json" 2>/dev/null || true
+  chown "$CURRENT_USER":staff "$USER_HOME/Library/Application Support/SistemaOpera/config.json" 2>/dev/null || true
 fi
 
-run_as_user 'display dialog "Configuração do banco salva. Instalação concluída." buttons {"OK"} default button "OK" with icon note'
+rm -f "$RESULT_JSON" "$GUI_SCRIPT"
 exit 0
 POSTINSTALL
     chmod +x "$PKG_SCRIPTS/postinstall"

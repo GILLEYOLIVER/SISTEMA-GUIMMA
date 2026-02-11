@@ -26,4 +26,4 @@ python packaging/build.py --platform macos
 ./packaging/macos/build_installer.sh   # escolha gerar PKG ao final
 # Saída: dist/SistemaOpera.pkg
 
-# O PKG abre assistente para configurar host/porta/banco/usuário/senha/schema no fim da instalação.
+# O PKG abre janela única para configurar local/rede, host/porta, banco, usuário, senha e schema (com teste de conexão).
