@@ -923,6 +923,10 @@ class UserManager:
         if not codigo:
             return True  # se a página não estiver mapeada, não bloquear
 
+        # Permissões obrigatórias para todos os usuários
+        if codigo in {"dashboard", "config_temas"}:
+            return True
+
         perm = permissoes.get(codigo)
         if not perm:
             return False
@@ -2390,8 +2394,11 @@ class OperaMenuApp(ctk.CTk):
     def _apply_permissions_to_menu(self):
         """Aplica as permissões carregadas ao menu lateral e submenus."""
         if not hasattr(self, "permissoes_usuario") or not self.permissoes_usuario:
-            print("⚠️ Nenhuma permissão carregada — exibindo apenas Dashboard.")
-            self.MENU_ESTRUTURA = {"Dashboard": ["Dashboard"]}
+            print("⚠️ Nenhuma permissão carregada — exibindo menu básico obrigatório.")
+            self.MENU_ESTRUTURA = {
+                "Dashboard": ["Dashboard"],
+                "CONFIGURAÇÕES": ["Temas"],
+            }
             self._build_menu_content()
             return
 
@@ -2419,10 +2426,22 @@ class OperaMenuApp(ctk.CTk):
                 estrutura_filtrada[categoria] = itens_visiveis
                 total_itens_visiveis += len(itens_visiveis)
 
+        # Garantir páginas obrigatórias para todos os usuários
+        estrutura_filtrada.setdefault("Dashboard", [])
+        if "Dashboard" not in estrutura_filtrada["Dashboard"]:
+            estrutura_filtrada["Dashboard"].insert(0, "Dashboard")
+
+        estrutura_filtrada.setdefault("CONFIGURAÇÕES", [])
+        if "Temas" not in estrutura_filtrada["CONFIGURAÇÕES"]:
+            estrutura_filtrada["CONFIGURAÇÕES"].append("Temas")
+
         # Aplicar a nova estrutura filtrada
         if total_itens_visiveis == 0:
-            print("🚫 Usuário sem nenhuma permissão de visualização — mostrando aviso.")
-            self.MENU_ESTRUTURA = {"Dashboard": ["Dashboard"]}
+            print("🚫 Usuário sem nenhuma permissão de visualização — mostrando menu básico obrigatório.")
+            self.MENU_ESTRUTURA = {
+                "Dashboard": ["Dashboard"],
+                "CONFIGURAÇÕES": ["Temas"],
+            }
         else:
             self.MENU_ESTRUTURA = estrutura_filtrada
 
