@@ -219,7 +219,7 @@ class BackupPage(ctk.CTkFrame):
         """
 
         try:
-            from BACKUP import BACKUP_AUTO
+            global BACKUP_AUTO
             pasta = BACKUP_AUTO.get("pasta")
 
             if not pasta:
