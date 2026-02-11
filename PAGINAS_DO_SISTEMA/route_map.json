@@ -95,7 +95,7 @@
   },
 
   "Finalizar Corte / Acabamento": {
-    "file": "FINALIZAR_CORTE_ACABAMENTO.PY",
+    "file": "FINALIZAR_CORTE_ACABAMENTO.py",
     "class": "FinalizacaoCortes"
   },
 
