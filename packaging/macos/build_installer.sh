@@ -354,6 +354,11 @@ import socket
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+try:
+    from PIL import Image, ImageTk
+except Exception:
+    Image = ImageTk = None
+
 result_path = os.environ.get("RESULT_JSON", "/tmp/sistemaopera_db_setup_result.json")
 assets_base = os.environ.get("APP_ASSETS_DIR", "")
 
@@ -368,34 +373,62 @@ def porta_aberta(host: str, porta: int, timeout: float = 1.2) -> bool:
 
 root = tk.Tk()
 root.title("Configuração do Banco - SistemaOpera")
-root.geometry("880x560")
 root.resizable(False, False)
 
-bg = "#0E1624"
-panel = "#111827"
+bg = "#0B1320"
+panel = "#0E1A2E"
 fg = "#EAF2FF"
 muted = "#9FB3C8"
 root.configure(bg=bg)
 
-canvas = tk.Canvas(root, width=880, height=560, highlightthickness=0, bd=0)
+screen_w = root.winfo_screenwidth()
+screen_h = root.winfo_screenheight()
+win_w = min(980, max(860, screen_w - 120))
+win_h = min(620, max(540, screen_h - 140))
+pos_x = max(0, (screen_w - win_w) // 2)
+pos_y = max(0, (screen_h - win_h) // 2)
+root.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
+
+canvas = tk.Canvas(root, width=win_w, height=win_h, highlightthickness=0, bd=0)
 canvas.pack(fill="both", expand=True)
 canvas.configure(bg=bg)
 
 bg_img = None
 icon_img = None
+icon_mark = None
+refs = []
+
+# Fundo com FUNDO_LOGUIN.jpg (preferência com PIL para redimensionar corretamente)
 try:
     if assets_base:
         fundo = os.path.join(assets_base, "FUNDO_LOGUIN.jpg")
         if os.path.exists(fundo):
-            bg_img = tk.PhotoImage(file=fundo)
+            if Image is not None:
+                im = Image.open(fundo).convert("RGB").resize((win_w, win_h), Image.Resampling.LANCZOS)
+                bg_img = ImageTk.PhotoImage(im)
+            else:
+                bg_img = tk.PhotoImage(file=fundo)
             canvas.create_image(0, 0, image=bg_img, anchor="nw")
+            refs.append(bg_img)
 except Exception:
     pass
 
-canvas.create_rectangle(30, 30, 850, 530, fill=panel, outline="#2B3950", width=2)
+# Borda colorida inspirada no FUNDO_LOGUIN (azul/laranja)
+margin = 18
+canvas.create_rectangle(margin, margin, win_w - margin, win_h - margin, outline="#1CC8FF", width=2)
+canvas.create_rectangle(margin + 6, margin + 6, win_w - margin - 6, win_h - margin - 6, outline="#FF7A18", width=1)
+canvas.create_line(margin + 10, margin + 10, win_w - margin - 10, margin + 10, fill="#34D4FF", width=2)
+canvas.create_line(margin + 10, win_h - margin - 10, win_w - margin - 10, win_h - margin - 10, fill="#FF8E2A", width=2)
+
+panel_m = 34
+panel_x1, panel_y1 = panel_m, panel_m
+panel_x2, panel_y2 = win_w - panel_m, win_h - panel_m
+canvas.create_rectangle(panel_x1, panel_y1, panel_x2, panel_y2, fill=panel, outline="#2B3950", width=2)
 
 content = tk.Frame(root, bg=panel)
-canvas.create_window(440, 280, window=content, width=790, height=460)
+content_w = panel_x2 - panel_x1 - 24
+content_h = panel_y2 - panel_y1 - 24
+canvas.create_window((panel_x1 + panel_x2)//2, (panel_y1 + panel_y2)//2, window=content, width=content_w, height=content_h)
 
 header = tk.Frame(content, bg=panel)
 header.pack(fill="x", pady=(6, 8))
@@ -404,17 +437,36 @@ try:
     if assets_base:
         icon_path = os.path.join(assets_base, "ICONE_SISTEMA.png")
         if os.path.exists(icon_path):
-            icon_img = tk.PhotoImage(file=icon_path)
+            if Image is not None:
+                ico = Image.open(icon_path).convert("RGBA")
+                ico_head = ico.resize((42, 42), Image.Resampling.LANCZOS)
+                icon_img = ImageTk.PhotoImage(ico_head)
+
+                wm = ico.resize((220, 220), Image.Resampling.LANCZOS)
+                alpha = wm.split()[-1].point(lambda a: int(a * 0.14))
+                wm.putalpha(alpha)
+                icon_mark = ImageTk.PhotoImage(wm)
+            else:
+                icon_img = tk.PhotoImage(file=icon_path)
+                icon_mark = icon_img
+
             tk.Label(header, image=icon_img, bg=panel).pack(side="left", padx=(8, 12))
+            refs.extend([icon_img, icon_mark])
 except Exception:
     pass
+
+# Marca d'água com ícone do sistema no cartão
+if icon_mark is not None:
+    wm_label = tk.Label(content, image=icon_mark, bg=panel, bd=0, highlightthickness=0)
+    wm_label.place(relx=0.92, rely=0.72, anchor="center")
+    refs.append(wm_label)
 
 text_hdr = tk.Frame(header, bg=panel)
 text_hdr.pack(side="left", fill="x", expand=True)
 
 
 tk.Label(text_hdr, text="Configuração do Banco de Dados", font=("Segoe UI", 16, "bold"), fg=fg, bg=panel).pack(anchor="w")
-tk.Label(text_hdr, text="Instalação do SistemaOpera • Informe os dados, teste conexão e conclua.", font=("Segoe UI", 10), fg=muted, bg=panel).pack(anchor="w", pady=(2, 0))
+tk.Label(text_hdr, text="Instalação do SistemaOpera • Configure local/rede, teste conexão e conclua.", font=("Segoe UI", 10), fg=muted, bg=panel).pack(anchor="w", pady=(2, 0))
 
 form = tk.Frame(content, bg=panel)
 form.pack(fill="x", padx=12, pady=8)
