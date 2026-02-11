@@ -25,3 +25,5 @@ python packaging/build.py --platform macos
 # Para instalador de dois cliques no macOS (PKG):
 ./packaging/macos/build_installer.sh   # escolha gerar PKG ao final
 # Saída: dist/SistemaOpera.pkg
+
+# O PKG abre assistente para configurar host/porta/banco/usuário/senha/schema no fim da instalação.
