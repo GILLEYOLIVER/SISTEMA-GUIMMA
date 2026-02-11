@@ -2448,7 +2448,7 @@ class OperaMenuApp(ctk.CTk):
         """
 
         try:
-            from BACKUP import BACKUP_AUTO
+            from PAGINAS_DO_SISTEMA.BACKUP import BACKUP_AUTO
         except Exception as e:
             print(f"⚠️ [MENU] Não foi possível importar BACKUP_AUTO: {e}")
             return
@@ -2463,7 +2463,7 @@ class OperaMenuApp(ctk.CTk):
         # Definir pasta base do sistema
         base_dir = getattr(self, "diretorio_base",
                            os.path.dirname(os.path.abspath(__file__)))
-        from BACKUP import BackupPage
+        from PAGINAS_DO_SISTEMA.BACKUP import BackupPage
         pasta_backups = BackupPage.criar_pasta_backups_externo(base_dir)
 
         # CONFIGURAR ESTADO GLOBAL
@@ -2475,8 +2475,8 @@ class OperaMenuApp(ctk.CTk):
         # Iniciar thread global
         def loop():
             import time
-            from BACKUP import BACKUP_AUTO
-            from BACKUP import BackupPage  # usar função estática abaixo
+            from PAGINAS_DO_SISTEMA.BACKUP import BACKUP_AUTO
+            from PAGINAS_DO_SISTEMA.BACKUP import BackupPage  # usar função estática abaixo
 
             print("🟢 [MENU] Thread de backup automático iniciada.")
 
