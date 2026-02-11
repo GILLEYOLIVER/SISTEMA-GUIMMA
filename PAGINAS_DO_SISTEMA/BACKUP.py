@@ -173,6 +173,7 @@ class BackupPage(ctk.CTkFrame):
                 self._backup_auto_running = True
                 self._backup_auto_interval = BACKUP_AUTO.get("interval", 3600)
                 self._backup_auto_pasta = BACKUP_AUTO.get("pasta") or self.pasta_backups
+                self._backup_auto_thread = BACKUP_AUTO.get("thread")
 
                 # Atualizar UI
                 self.interval_var.set(str(self._backup_auto_interval))
@@ -183,11 +184,11 @@ class BackupPage(ctk.CTkFrame):
                 self.entry_auto_pasta.configure(state="disabled")
 
                 self.lbl_status_auto.configure(
-                    text="Backup automático: ATIVO (iniciado pelo sistema)",
+                    text=f"Backup automático: ATIVO (próximo: {self._formatar_tempo(self._backup_auto_interval)})",
                     text_color="#4ade80"
                 )
 
-                self._log("🔧 Backup automático sincronizado - iniciado pelo sistema")
+                self._log("🔧 Backup automático sincronizado com o sistema")
 
             elif BACKUP_AUTO.get("running") and self._backup_auto_running:
                 # Já está sincronizado
@@ -825,6 +826,13 @@ class BackupPage(ctk.CTkFrame):
 
         self._backup_auto_running = True
 
+        # Sincronizar estado global (garante funcionamento mesmo iniciado pela tela)
+        global BACKUP_AUTO
+        BACKUP_AUTO["running"] = True
+        BACKUP_AUTO["interval"] = self._backup_auto_interval
+        BACKUP_AUTO["pasta"] = self._backup_auto_pasta
+        BACKUP_AUTO["proximo"] = time.time() + self._backup_auto_interval
+
         # Atualizar UI
         self.btn_iniciar_auto.configure(state="disabled")
         self.btn_parar_auto.configure(state="normal")
@@ -837,16 +845,26 @@ class BackupPage(ctk.CTkFrame):
         self._log(f"✅ Backup automático INICIADO - Intervalo: {self._formatar_tempo(self._backup_auto_interval)}")
         self._log(f"📁 Pasta: {self._backup_auto_pasta}")
 
-        # Iniciar thread do backup automático
-        self._backup_auto_thread = threading.Thread(
-            target=self._loop_backup_auto,
-            daemon=True
-        )
-        self._backup_auto_thread.start()
+        # Iniciar thread do backup automático (somente se necessário)
+        thread_global = BACKUP_AUTO.get("thread")
+        if not (thread_global and thread_global.is_alive()):
+            self._backup_auto_thread = threading.Thread(
+                target=self._loop_backup_auto,
+                daemon=True
+            )
+            BACKUP_AUTO["thread"] = self._backup_auto_thread
+            self._backup_auto_thread.start()
+        else:
+            self._backup_auto_thread = thread_global
 
     def _parar_backup_auto(self):
         """Para o backup automático"""
         self._backup_auto_running = False
+
+        # Parar também no estado global para encerrar o loop iniciado no login
+        global BACKUP_AUTO
+        BACKUP_AUTO["running"] = False
+        BACKUP_AUTO["proximo"] = None
 
         # Atualizar UI
         self.btn_iniciar_auto.configure(state="normal")
@@ -894,6 +912,7 @@ class BackupPage(ctk.CTkFrame):
 
                 # Calcular próximo backup
                 self._proximo_backup_auto = time.time() + self._backup_auto_interval
+                BACKUP_AUTO["proximo"] = self._proximo_backup_auto
 
                 # Atualizar UI com contagem regressiva (se a UI estiver ativa)
                 if hasattr(self, 'lbl_status_auto') and self.lbl_status_auto.winfo_exists():
@@ -920,6 +939,7 @@ class BackupPage(ctk.CTkFrame):
 
         # Atualizar estado quando sair do loop
         self._backup_auto_running = False
+        BACKUP_AUTO["proximo"] = None
 
     def _atualizar_contagem_regressiva(self):
         """Atualiza a contagem regressiva na UI"""
