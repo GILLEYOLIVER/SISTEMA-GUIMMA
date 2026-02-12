@@ -12,7 +12,7 @@ try:
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
-    print("⚠️  PIL/Pillow não instalado. Tentando instalar...")
+    print("WARNING: PIL/Pillow nao instalado. Tentando instalar...")
     try:
         import subprocess
 
@@ -20,16 +20,16 @@ except ImportError:
         from PIL import Image
 
         HAS_PIL = True
-        print("✅ PIL/Pillow instalado com sucesso")
+        print("OK: PIL/Pillow instalado com sucesso")
     except Exception as e:
-        print(f"❌ Falha ao instalar PIL: {e}")
+        print(f"ERROR: Falha ao instalar PIL: {e}")
         HAS_PIL = False
 
 
 def convert_png_to_ico(png_path: str, ico_path: str) -> bool:
     """Converte PNG para ICO com múltiplos tamanhos"""
     if not HAS_PIL:
-        print("❌ PIL não disponível. Não é possível converter ícone.")
+        print("ERROR: PIL nao disponivel. Nao e possivel converter icone.")
         return False
 
     try:
@@ -57,12 +57,12 @@ def convert_png_to_ico(png_path: str, ico_path: str) -> bool:
             img.resize(size, Image.Resampling.LANCZOS) for size in sizes
         ])
 
-        print(f"✅ Ícone convertido: {png_path} -> {ico_path}")
+        print(f"OK: Icone convertido: {png_path} -> {ico_path}")
         print(f"   Tamanhos incluídos: {', '.join(f'{w}x{h}' for w, h in sizes)}")
         return True
 
     except Exception as e:
-        print(f"❌ Erro ao converter ícone: {e}")
+        print(f"ERROR: Erro ao converter icone: {e}")
         return False
 
 
@@ -95,17 +95,17 @@ def create_default_ico(ico_path: str) -> bool:
         sizes = [(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)]
         img.save(ico_path, format='ICO', sizes=sizes)
 
-        print(f"✅ Ícone padrão criado: {ico_path}")
+        print(f"OK: Icone padrao criado: {ico_path}")
         return True
 
     except Exception as e:
-        print(f"❌ Falha ao criar ícone padrão: {e}")
+        print(f"ERROR: Falha ao criar icone padrao: {e}")
         return False
 
 
 def main():
     print("=" * 60)
-    print("🔄 PREPARANDO ÍCONE PARA WINDOWS")
+    print("PREPARANDO ICONE PARA WINDOWS")
     print("=" * 60)
 
     # Caminhos
@@ -119,24 +119,24 @@ def main():
     png_path = icons_dir / "ICONE_SISTEMA.png"
     ico_path = icons_dir / "ICONE_SISTEMA.ico"
 
-    print(f"📁 Pasta base: {base_dir}")
-    print(f"📁 Pasta de ícones: {icons_dir}")
-    print(f"🔍 Procurando: {png_path}")
+    print(f"INFO: Pasta base: {base_dir}")
+    print(f"INFO: Pasta de icones: {icons_dir}")
+    print(f"INFO: Procurando: {png_path}")
 
     # Verificar se o PNG existe
     if png_path.exists():
-        print(f"✅ PNG encontrado: {png_path}")
+        print(f"OK: PNG encontrado: {png_path}")
 
         # Converter PNG para ICO
         if convert_png_to_ico(str(png_path), str(ico_path)):
             # Verificar se o ICO foi criado
             if ico_path.exists():
-                print(f"✅ ICO criado com sucesso: {ico_path}")
+                print(f"OK: ICO criado com sucesso: {ico_path}")
                 print(f"   Tamanho: {ico_path.stat().st_size} bytes")
                 return True
     else:
-        print(f"⚠️  PNG não encontrado: {png_path}")
-        print("📋 Procurando em locais alternativos...")
+        print(f"WARNING: PNG nao encontrado: {png_path}")
+        print("INFO: Procurando em locais alternativos...")
 
         # Procurar em locais alternativos
         alt_paths = [
@@ -147,25 +147,25 @@ def main():
 
         for alt_path in alt_paths:
             if alt_path.exists():
-                print(f"✅ PNG encontrado em local alternativo: {alt_path}")
+                print(f"OK: PNG encontrado em local alternativo: {alt_path}")
                 if convert_png_to_ico(str(alt_path), str(ico_path)):
                     return True
                 break
 
     # Se chegou aqui, não conseguiu converter
-    print("⚠️  Criando ícone padrão...")
+    print("WARNING: Criando icone padrao...")
     if create_default_ico(str(ico_path)):
         return True
 
-    print("❌ Não foi possível criar o ícone ICO")
+    print("ERROR: Nao foi possivel criar o icone ICO")
     return False
 
 
 if __name__ == "__main__":
     success = main()
     if not success:
-        print("\n💡 DICA: Coloque o arquivo 'ICONE_SISTEMA.png' na pasta 'icons/'")
+        print("\nDICA: Coloque o arquivo 'ICONE_SISTEMA.png' na pasta 'icons/'")
         print("   Ou execute: python -m pip install pillow")
         sys.exit(1)
     else:
-        print("\n✅ Preparação do ícone concluída com sucesso!")
+        print("\nOK: Preparacao do icone concluida com sucesso!")
