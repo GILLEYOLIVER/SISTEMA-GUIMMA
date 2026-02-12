@@ -266,10 +266,18 @@ chmod +x packaging/macos/build_installer.sh
 ./packaging/macos/build_installer.sh
 ```
 
+> Agora o padrão do script é **gerar DMG e PKG automaticamente** (sem pular).
+
 Sem perguntas (automático):
 
 ```bash
 ./packaging/macos/build_installer.sh --with-dmg --with-pkg
+```
+
+Modo com perguntas (opcional):
+
+```bash
+./packaging/macos/build_installer.sh --interactive
 ```
 
 No final, escolha gerar o **PKG** para ter instalador de dois cliques (`dist/SistemaOpera.pkg`), que instala o app em `/Applications`.

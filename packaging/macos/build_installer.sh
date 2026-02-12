@@ -40,8 +40,9 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
     exit 1
 fi
 
-CREATE_DMG=""
-CREATE_PKG=""
+CREATE_DMG="yes"
+CREATE_PKG="yes"
+INTERACTIVE_MODE="no"
 
 print_usage() {
     cat <<'USAGE'
@@ -52,6 +53,7 @@ Opções:
   --no-dmg         Não gera DMG automaticamente (sem pergunta)
   --with-pkg       Gera PKG automaticamente (sem pergunta)
   --no-pkg         Não gera PKG automaticamente (sem pergunta)
+  --interactive    Pergunta no terminal se deve criar DMG/PKG
   --help           Exibe esta ajuda
 
 Exemplo (gerar tudo sem interação):
@@ -77,6 +79,11 @@ parse_args() {
             --help|-h)
                 print_usage
                 exit 0
+                ;;
+            --interactive)
+                INTERACTIVE_MODE="yes"
+                CREATE_DMG=""
+                CREATE_PKG=""
                 ;;
             *)
                 log_error "Opção inválida: $1"
@@ -910,8 +917,8 @@ main() {
     # Construir aplicativo
     build_app
 
-    # DMG: via argumento ou pergunta interativa
-    if [[ "$CREATE_DMG" == "" ]]; then
+    # DMG: padrão sempre gera; pergunta apenas se --interactive
+    if [[ "$INTERACTIVE_MODE" == "yes" && "$CREATE_DMG" == "" ]]; then
         echo ""
         read -p "Deseja criar um instalador DMG? (s/n): " -n 1 -r
         echo ""
@@ -924,8 +931,8 @@ main() {
         log_info "Pulando criação do DMG"
     fi
 
-    # PKG: via argumento ou pergunta interativa
-    if [[ "$CREATE_PKG" == "" ]]; then
+    # PKG: padrão sempre gera; pergunta apenas se --interactive
+    if [[ "$INTERACTIVE_MODE" == "yes" && "$CREATE_PKG" == "" ]]; then
         echo ""
         read -p "Deseja criar um instalador PKG (duplo clique)? (s/n): " -n 1 -r
         echo ""
