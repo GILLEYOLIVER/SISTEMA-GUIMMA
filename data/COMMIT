@@ -32,7 +32,8 @@ git status
 
 No Mac 
 
-chmod +x packaging/macos/build_installer.sh && printf 's\ns\n' | ./packaging/macos/build_installer.sh
+chmod +x packaging/macos/build_installer.sh && ./packaging/macos/build_installer.sh
+
 
 
 
