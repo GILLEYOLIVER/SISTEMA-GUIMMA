@@ -1,4 +1,4 @@
-# packaging/windows/build_installer.ps1 (VERSÃO CORRIGIDA)
+﻿# packaging/windows/build_installer.ps1 (VERSÃO CORRIGIDA)
 <#
 .SYNOPSIS
     Script para construir o instalador completo do Sistema Opera - VERSÃO CORRIGIDA
@@ -9,7 +9,10 @@ param(
     [switch]$SkipIcon,
     [switch]$SkipInstaller,
     [switch]$Clean,
-    [string]$InnoPath = ""
+    [string]$InnoPath = "",
+    [string]$Python = "python",
+    [string]$Version = "",
+    [Alias("SkipAppBuild")][switch]$SkipAppBuild
 )
 
 # Configuração
@@ -23,39 +26,49 @@ function Write-Header {
     Write-Host ("=" * 60) -ForegroundColor Cyan
 }
 
-function Write-Success { param([string]$Message) Write-Host "✅ $Message" -ForegroundColor Green }
-function Write-Error { param([string]$Message) Write-Host "❌ $Message" -ForegroundColor Red }
-function Write-Warning { param([string]$Message) Write-Host "⚠️  $Message" -ForegroundColor Yellow }
-function Write-Info { param([string]$Message) Write-Host "📋 $Message" -ForegroundColor Blue }
+function Write-Success { param([string]$Message) Write-Host "$Message" -ForegroundColor Green }
+function Write-Error { param([string]$Message) Write-Host "$Message" -ForegroundColor Red }
+function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" -ForegroundColor Yellow }
+function Write-Info { param([string]$Message) Write-Host "INFO: $Message" -ForegroundColor Blue }
+
+function Resolve-FullPath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    return [System.IO.Path]::GetFullPath((Join-Path $PWD $Path))
+}
 
 # INÍCIO DO SCRIPT
-Write-Header "SISTEMA OPERA - CONSTRUÇÃO DE INSTALADOR (CORRIGIDO)"
+Write-Header "SISTEMA OPERA - CONSTRUCAO DE INSTALADOR (CORRIGIDO)"
 Write-Info "Diretório: $PWD"
 
-# PASSO 1: PREPARAR ÍCONE
+if (-not [string]::IsNullOrWhiteSpace($Version)) {
+    Write-Info "Versao alvo: $Version"
+}
+
+# PASSO 1: PREPARAR ICONE
 if (-not $SkipIcon) {
-    Write-Header "PASSO 1: PREPARANDO ÍCONE"
+    Write-Header "PASSO 1: PREPARANDO ICONE"
     
     $iconScript = "packaging\windows\prepare_icon.py"
     
     if (Test-Path $iconScript) {
-        Write-Info "Convertendo ícone PNG para ICO..."
+        Write-Info "Convertendo icone PNG para ICO..."
         
         try {
-            & python $iconScript
-            Write-Success "Conversão do ícone concluída"
+            & $Python $iconScript
+            Write-Success "Conversão do icone concluída"
         } catch {
-            Write-Warning "Falha ao converter ícone: $_"
+            Write-Warning "Falha ao converter icone: $_"
         }
     } else {
-        Write-Error "Script de ícone não encontrado"
+        Write-Error "Script de icone não encontrado"
         exit 1
     }
 }
 
-# PASSO 2: CONSTRUIR EXECUTÁVEL
-if (-not $SkipBuild) {
-    Write-Header "PASSO 2: CONSTRUINDO EXECUTÁVEL"
+# PASSO 2: CONSTRUIR EXECUTAVEL
+if (-not ($SkipBuild -or $SkipAppBuild)) {
+    Write-Header "PASSO 2: CONSTRUINDO EXECUTAVEL"
     
     $buildScript = "packaging\build.py"
     
@@ -72,7 +85,7 @@ if (-not $SkipBuild) {
             }
             
             # Executar build
-            & python $buildScript --platform windows
+            & $Python $buildScript --platform windows
             
             # Verificar se executável foi criado
             $exePaths = @(
@@ -85,7 +98,7 @@ if (-not $SkipBuild) {
             foreach ($path in $exePaths) {
                 if (Test-Path $path) {
                     $exeSize = (Get-Item $path).Length / 1MB
-                    Write-Success "Executável encontrado: $path ($([math]::Round($exeSize, 2)) MB)"
+                    Write-Success ("Executavel encontrado: {0} ({1} MB)" -f $path, [math]::Round($exeSize, 2))
                     $exeFound = $true
                     
                     # Criar pasta para instalador
@@ -94,10 +107,18 @@ if (-not $SkipBuild) {
                         New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
                     }
                     
-                    # Copiar executável
-                    Copy-Item $path -Destination "$targetDir\SistemaOpera.exe" -Force
+                    # Copiar executável (evita copiar sobre ele mesmo)
+                    $destinationExe = Join-Path $targetDir "SistemaOpera.exe"
+                    $sourceFullPath = Resolve-FullPath $path
+                    $destinationFullPath = Resolve-FullPath $destinationExe
+
+                    if ($sourceFullPath -ne $destinationFullPath) {
+                        Copy-Item $path -Destination $destinationExe -Force
+                    } else {
+                        Write-Info "Executavel ja esta no destino esperado: $destinationExe"
+                    }
                     
-                    # Copiar ícone
+                    # Copiar icone
                     $iconPath = "icons\ICONE_SISTEMA.ico"
                     if (Test-Path $iconPath) {
                         Copy-Item $iconPath -Destination "$targetDir\ICONE_SISTEMA.ico" -Force
@@ -139,9 +160,9 @@ $missingFiles = @()
 foreach ($file in $requiredFiles) {
     if (Test-Path $file) {
         $size = (Get-Item $file).Length / 1KB
-        Write-Success "$file ($([math]::Round($size, 2)) KB)"
+        Write-Success ("{0} ({1} KB)" -f $file, [math]::Round($size, 2))
     } else {
-        Write-Error "$file (NÃO ENCONTRADO)"
+        Write-Error "$file (NAO ENCONTRADO)"
         $missingFiles += $file
     }
 }
@@ -180,7 +201,7 @@ if (-not $SkipInstaller) {
     if (-not $innoExe) {
         Write-Error "Inno Setup não encontrado!"
         Write-Info ""
-        Write-Info "📥 SOLUÇÕES:"
+        Write-Info "SOLUÇÕES:"
         Write-Info "   1. Instale o Inno Setup: https://jrsoftware.org/isdl.php"
         Write-Info "   2. Ou execute manualmente depois de instalar:"
         Write-Info "      ISCC.exe packaging\windows\SISTEMA_OPERA.iss"
@@ -189,7 +210,7 @@ if (-not $SkipInstaller) {
         
         $installChoice = Read-Host "Deseja instalar o Inno Setup agora? (s/n)"
         if ($installChoice -match '^[sSyY]') {
-            Write-Info "📥 Baixando Inno Setup..."
+            Write-Info "Baixando Inno Setup..."
             $url = "https://jrsoftware.org/download.php/is.exe"
             $setupPath = "$env:TEMP\InnoSetup.exe"
             
@@ -230,10 +251,10 @@ if (-not $SkipInstaller) {
         foreach ($path in $installerPaths) {
             if (Test-Path $path) {
                 $installerSize = (Get-Item $path).Length / 1MB
-                Write-Success "✅ INSTALADOR CRIADO COM SUCESSO!"
+                Write-Success "INSTALADOR CRIADO COM SUCESSO!"
                 Write-Host ""
-                Write-Host "📦 Arquivo: $path" -ForegroundColor Green
-                Write-Host "📏 Tamanho: $([math]::Round($installerSize, 2)) MB" -ForegroundColor Green
+                Write-Host "Arquivo: $path" -ForegroundColor Green
+                Write-Host ("Tamanho: {0} MB" -f [math]::Round($installerSize, 2)) -ForegroundColor Green
                 Write-Host ""
                 $installerCreated = $true
                 
@@ -261,17 +282,17 @@ if (-not $SkipInstaller) {
 }
 
 # FIM
-Write-Header "✅ PROCESSO CONCLUÍDO"
-Write-Success "Todas as etapas foram concluídas!"
+Write-Header "PROCESSO CONCLUIDO"
+Write-Success "Todas as etapas foram concluidas!"
 
 if (Test-Path "dist\SistemaOpera_Setup.exe") {
     Write-Host ""
-    Write-Host "🎉 INSTALADOR PRONTO: dist\SistemaOpera_Setup.exe" -ForegroundColor Green
+    Write-Host "INSTALADOR PRONTO: dist\SistemaOpera_Setup.exe" -ForegroundColor Green
     Write-Host ""
     Write-Host "Para testar:" -ForegroundColor Cyan
     Write-Host "   1. Execute: dist\SistemaOpera_Setup.exe" -ForegroundColor Gray
     Write-Host "   2. Configure o banco de dados no assistente" -ForegroundColor Gray
-    Write-Host "   3. Verifique se o ícone aparece" -ForegroundColor Gray
+    Write-Host "   3. Verifique se o icone aparece" -ForegroundColor Gray
     Write-Host ""
     
     # Abrir pasta
@@ -280,8 +301,8 @@ if (Test-Path "dist\SistemaOpera_Setup.exe") {
         explorer "dist"
     }
 } else {
-    Write-Info "📁 Conteúdo criado em: dist\"
+    Write-Info "Conteudo criado em: dist\"
     Get-ChildItem "dist\" -Recurse | ForEach-Object {
-        Write-Host "  📄 $($_.FullName.Replace($PWD + '\', ''))" -ForegroundColor Gray
+        Write-Host "  - $($_.FullName.Replace($PWD + '\', ''))" -ForegroundColor Gray
     }
 }
