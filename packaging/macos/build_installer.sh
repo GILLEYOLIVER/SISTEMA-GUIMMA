@@ -696,14 +696,24 @@ PYGUI
 chmod +x "$GUI_SCRIPT"
 
 if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
-  su -l "$CURRENT_USER" -c "APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON='$RESULT_JSON' python3 '$GUI_SCRIPT'"
+  su -l "$CURRENT_USER" -c "APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON='$RESULT_JSON' python3 '$GUI_SCRIPT'" || true
 else
-  APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON="$RESULT_JSON" python3 "$GUI_SCRIPT"
+  APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON="$RESULT_JSON" python3 "$GUI_SCRIPT" || true
 fi
 
 if [[ ! -f "$RESULT_JSON" ]]; then
-  echo "Configuração cancelada pelo usuário" >&2
-  exit 1
+  echo "Configuração não concluída. Usando configuração padrão local para não interromper a instalação." >&2
+  cat > "$RESULT_JSON" <<'JSON'
+{
+  "host": "localhost",
+  "port": 5432,
+  "dbname": "BANCO_OPERA",
+  "user": "postgres",
+  "password": "",
+  "schema": "opera",
+  "mode": "local"
+}
+JSON
 fi
 
 export CURRENT_USER USER_HOME
