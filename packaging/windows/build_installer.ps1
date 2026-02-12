@@ -37,6 +37,26 @@ function Resolve-FullPath {
     return [System.IO.Path]::GetFullPath((Join-Path $PWD $Path))
 }
 
+function Test-SameFilePath {
+    param(
+        [Parameter(Mandatory = $true)][string]$FirstPath,
+        [Parameter(Mandatory = $true)][string]$SecondPath
+    )
+
+    $firstFullPath = Resolve-FullPath $FirstPath
+    $secondFullPath = Resolve-FullPath $SecondPath
+
+    if (Test-Path $firstFullPath) {
+        $firstFullPath = (Get-Item $firstFullPath).FullName
+    }
+
+    if (Test-Path $secondFullPath) {
+        $secondFullPath = (Get-Item $secondFullPath).FullName
+    }
+
+    return $firstFullPath.TrimEnd('\').ToLowerInvariant() -eq $secondFullPath.TrimEnd('\').ToLowerInvariant()
+}
+
 # INÍCIO DO SCRIPT
 Write-Header "SISTEMA OPERA - CONSTRUCAO DE INSTALADOR (CORRIGIDO)"
 Write-Info "Diretório: $PWD"
@@ -109,10 +129,8 @@ if (-not ($SkipBuild -or $SkipAppBuild)) {
                     
                     # Copiar executável (evita copiar sobre ele mesmo)
                     $destinationExe = Join-Path $targetDir "SistemaOpera.exe"
-                    $sourceFullPath = Resolve-FullPath $path
-                    $destinationFullPath = Resolve-FullPath $destinationExe
 
-                    if ($sourceFullPath -ne $destinationFullPath) {
+                    if (-not (Test-SameFilePath -FirstPath $path -SecondPath $destinationExe)) {
                         Copy-Item $path -Destination $destinationExe -Force
                     } else {
                         Write-Info "Executavel ja esta no destino esperado: $destinationExe"
