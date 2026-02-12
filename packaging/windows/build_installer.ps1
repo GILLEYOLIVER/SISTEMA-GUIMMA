@@ -9,7 +9,10 @@ param(
     [switch]$SkipIcon,
     [switch]$SkipInstaller,
     [switch]$Clean,
-    [string]$InnoPath = ""
+    [string]$InnoPath = "",
+    [string]$Python = "python",
+    [string]$Version = "",
+    [Alias("SkipAppBuild")][switch]$SkipAppBuild
 )
 
 # Configuração
@@ -28,9 +31,39 @@ function Write-Error { param([string]$Message) Write-Host "$Message" -Foreground
 function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" -ForegroundColor Yellow }
 function Write-Info { param([string]$Message) Write-Host "INFO: $Message" -ForegroundColor Blue }
 
+function Resolve-FullPath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    return [System.IO.Path]::GetFullPath((Join-Path $PWD $Path))
+}
+
+function Test-SameFilePath {
+    param(
+        [Parameter(Mandatory = $true)][string]$FirstPath,
+        [Parameter(Mandatory = $true)][string]$SecondPath
+    )
+
+    $firstFullPath = Resolve-FullPath $FirstPath
+    $secondFullPath = Resolve-FullPath $SecondPath
+
+    if (Test-Path $firstFullPath) {
+        $firstFullPath = (Get-Item $firstFullPath).FullName
+    }
+
+    if (Test-Path $secondFullPath) {
+        $secondFullPath = (Get-Item $secondFullPath).FullName
+    }
+
+    return $firstFullPath.TrimEnd('\').ToLowerInvariant() -eq $secondFullPath.TrimEnd('\').ToLowerInvariant()
+}
+
 # INÍCIO DO SCRIPT
 Write-Header "SISTEMA OPERA - CONSTRUCAO DE INSTALADOR (CORRIGIDO)"
 Write-Info "Diretório: $PWD"
+
+if (-not [string]::IsNullOrWhiteSpace($Version)) {
+    Write-Info "Versao alvo: $Version"
+}
 
 # PASSO 1: PREPARAR ICONE
 if (-not $SkipIcon) {
@@ -42,7 +75,7 @@ if (-not $SkipIcon) {
         Write-Info "Convertendo icone PNG para ICO..."
         
         try {
-            & python $iconScript
+            & $Python $iconScript
             Write-Success "Conversão do icone concluída"
         } catch {
             Write-Warning "Falha ao converter icone: $_"
@@ -54,7 +87,7 @@ if (-not $SkipIcon) {
 }
 
 # PASSO 2: CONSTRUIR EXECUTAVEL
-if (-not $SkipBuild) {
+if (-not ($SkipBuild -or $SkipAppBuild)) {
     Write-Header "PASSO 2: CONSTRUINDO EXECUTAVEL"
     
     $buildScript = "packaging\build.py"
@@ -72,7 +105,7 @@ if (-not $SkipBuild) {
             }
             
             # Executar build
-            & python $buildScript --platform windows
+            & $Python $buildScript --platform windows
             
             # Verificar se executável foi criado
             $exePaths = @(
@@ -94,8 +127,14 @@ if (-not $SkipBuild) {
                         New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
                     }
                     
-                    # Copiar executável
-                    Copy-Item $path -Destination "$targetDir\SistemaOpera.exe" -Force
+                    # Copiar executável (evita copiar sobre ele mesmo)
+                    $destinationExe = Join-Path $targetDir "SistemaOpera.exe"
+
+                    if (-not (Test-SameFilePath -FirstPath $path -SecondPath $destinationExe)) {
+                        Copy-Item $path -Destination $destinationExe -Force
+                    } else {
+                        Write-Info "Executavel ja esta no destino esperado: $destinationExe"
+                    }
                     
                     # Copiar icone
                     $iconPath = "icons\ICONE_SISTEMA.ico"
