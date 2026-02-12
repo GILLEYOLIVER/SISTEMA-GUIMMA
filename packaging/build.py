@@ -166,10 +166,26 @@ def build_windows():
             "typing",
             "functools",
             "inspect",
+            "fpdf",
+            "fpdf.enums",
+            "reportlab",
+            "reportlab.pdfgen",
+            "reportlab.pdfbase",
+            "reportlab.lib",
+            "reportlab.graphics",
+            "matplotlib",
+            "matplotlib.pyplot",
+            "matplotlib.backends.backend_tkagg",
+            "numpy",
+            "fitz",
+            "pymupdf",
         ]
 
         for imp in hidden_imports:
             cmd.extend(["--hidden-import", imp])
+
+        for pkg in ["fpdf", "reportlab", "matplotlib", "pymupdf"]:
+            cmd.extend(["--collect-all", pkg])
 
         # Adicionar script principal
         cmd.append(str(main_script))
@@ -281,10 +297,26 @@ def build_macos():
         "PIL.ImageTk",
         "tkinter",
         "tkinter.ttk",
+        "fpdf",
+        "fpdf.enums",
+        "reportlab",
+        "reportlab.pdfgen",
+        "reportlab.pdfbase",
+        "reportlab.lib",
+        "reportlab.graphics",
+        "matplotlib",
+        "matplotlib.pyplot",
+        "matplotlib.backends.backend_tkagg",
+        "numpy",
+        "fitz",
+        "pymupdf",
     ]
 
     for imp in hidden_imports:
         cmd.extend(["--hidden-import", imp])
+
+    for pkg in ["fpdf", "reportlab", "matplotlib", "pymupdf"]:
+        cmd.extend(["--collect-all", pkg])
 
     # Adicionar script principal
     cmd.append(str(main_script))
