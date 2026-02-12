@@ -511,6 +511,7 @@ def campo(r, c, titulo, var, show=""):
     tk.Label(form, text=titulo, fg=fg, bg=panel, font=("Segoe UI", 10)).grid(row=r, column=c, sticky="w", padx=6, pady=(4,2))
     e = tk.Entry(form, textvariable=var, show=show, bg="#1A2332", fg="#F5F8FF", insertbackground="#F5F8FF", relief="flat", font=("Segoe UI", 11))
     e.grid(row=r+1, column=c, sticky="ew", padx=6, pady=(0,8), ipady=6)
+    return e
 
 for col in range(4):
     form.grid_columnconfigure(col, weight=1)
@@ -520,7 +521,24 @@ campo(1, 1, "Porta", porta)
 campo(1, 2, "Banco", dbname)
 campo(1, 3, "Schema", schema)
 campo(3, 0, "Usuário", usuario)
-campo(3, 1, "Senha", senha, show="•")
+entry_senha = campo(3, 1, "Senha", senha, show="•")
+
+mostrar_senha = tk.BooleanVar(value=False)
+
+def toggle_senha():
+    entry_senha.configure(show="" if mostrar_senha.get() else "•")
+
+chk_senha = tk.Checkbutton(
+    form,
+    text="Mostrar senha",
+    variable=mostrar_senha,
+    command=toggle_senha,
+    fg=muted,
+    bg=panel,
+    selectcolor=panel,
+    activebackground=panel,
+)
+chk_senha.grid(row=5, column=1, sticky="w", padx=6, pady=(0, 8))
 
 
 def detectar_porta():
