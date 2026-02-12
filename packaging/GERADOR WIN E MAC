@@ -26,9 +26,6 @@ chmod +x packaging/macos/build_installer.sh
 # Com perguntas (opcional):
 ./packaging/macos/build_installer.sh --interactive
 
-# Sem perguntas (gera DMG + PKG automaticamente):
-./packaging/macos/build_installer.sh --with-dmg --with-pkg
-
 # Ou manualmente:
 python packaging/build.py --platform macos
 ./packaging/macos/build_installer.sh

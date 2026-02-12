@@ -453,7 +453,7 @@ UNINSTALLER
 
 cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
 #!/bin/bash
-set -e
+set +e
 
 write_uninstaller() {
   local target_path="$1"
@@ -519,6 +519,10 @@ USER_HOME=$(dscl . -read /Users/"$CURRENT_USER" NFSHomeDirectory 2>/dev/null | a
 if [[ -z "$USER_HOME" ]]; then
   USER_HOME="/Users/$CURRENT_USER"
 fi
+
+TARGET_VOLUME="${3:-/}"
+SYSTEM_APP_PATH="$TARGET_VOLUME/Applications/SistemaOpera.app"
+USER_APP_PATH="$USER_HOME/Applications/SistemaOpera.app"
 
 write_uninstaller "/Applications/Desinstalar SistemaOpera.command"
 if [[ -n "$USER_HOME" && -d "$USER_HOME" ]]; then
@@ -874,6 +878,14 @@ if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
 fi
 
 rm -f "$RESULT_JSON" "$GUI_SCRIPT"
+
+# Garantia final: se o app não ficou em /Applications, tenta promover da pasta do usuário
+if [[ ! -d "$SYSTEM_APP_PATH" && -d "$USER_APP_PATH" ]]; then
+  mkdir -p "$TARGET_VOLUME/Applications"
+  ditto "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
+fi
+
+# Não abortar instalação por falhas tardias do postinstall
 exit 0
 POSTINSTALL
     chmod +x "$PKG_SCRIPTS/postinstall"
