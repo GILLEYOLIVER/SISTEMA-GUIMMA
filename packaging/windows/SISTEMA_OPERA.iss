@@ -242,6 +242,25 @@ begin
     MsgBox('Não foi possível detectar uma porta aberta para o banco.', mbError, MB_OK);
 end;
 
+
+function IsNumericText(const Value: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := Length(Value) > 0;
+  if not Result then
+    Exit;
+
+  for I := 1 to Length(Value) do
+  begin
+    if (Value[I] < '0') or (Value[I] > '9') then
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
+end;
+
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
   PortValue: Integer;
@@ -276,12 +295,14 @@ begin
       end;
     end;
 
-    if not TryStrToInt(Trim(DbConfigPage.Values[1]), PortValue) then
+    if not IsNumericText(Trim(DbConfigPage.Values[1])) then
     begin
       MsgBox('A porta precisa ser numérica.', mbError, MB_OK);
       Result := False;
       Exit;
     end;
+
+    PortValue := StrToInt(Trim(DbConfigPage.Values[1]));
 
     if Trim(DbConfigPage.Values[2]) = '' then
     begin
