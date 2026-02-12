@@ -40,6 +40,54 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
     exit 1
 fi
 
+CREATE_DMG=""
+CREATE_PKG=""
+
+print_usage() {
+    cat <<'USAGE'
+Uso: ./packaging/macos/build_installer.sh [opções]
+
+Opções:
+  --with-dmg       Gera DMG automaticamente (sem pergunta)
+  --no-dmg         Não gera DMG automaticamente (sem pergunta)
+  --with-pkg       Gera PKG automaticamente (sem pergunta)
+  --no-pkg         Não gera PKG automaticamente (sem pergunta)
+  --help           Exibe esta ajuda
+
+Exemplo (gerar tudo sem interação):
+  ./packaging/macos/build_installer.sh --with-dmg --with-pkg
+USAGE
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --with-dmg)
+                CREATE_DMG="yes"
+                ;;
+            --no-dmg)
+                CREATE_DMG="no"
+                ;;
+            --with-pkg)
+                CREATE_PKG="yes"
+                ;;
+            --no-pkg)
+                CREATE_PKG="no"
+                ;;
+            --help|-h)
+                print_usage
+                exit 0
+                ;;
+            *)
+                log_error "Opção inválida: $1"
+                print_usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
 # Verificar dependências
 check_dependencies() {
     print_header "VERIFICANDO DEPENDÊNCIAS"
@@ -845,6 +893,8 @@ POSTINSTALL
 
 # Função principal
 main() {
+    parse_args "$@"
+
     print_header "SISTEMA OPERA - INSTALADOR macOS"
     log_info "Data: $(date)"
     log_info "Diretório: $(pwd)"
@@ -860,21 +910,29 @@ main() {
     # Construir aplicativo
     build_app
 
-    # Perguntar se deve criar DMG
-    echo ""
-    read -p "Deseja criar um instalador DMG? (s/n): " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
+    # DMG: via argumento ou pergunta interativa
+    if [[ "$CREATE_DMG" == "" ]]; then
+        echo ""
+        read -p "Deseja criar um instalador DMG? (s/n): " -n 1 -r
+        echo ""
+        [[ $REPLY =~ ^[Ss]$ ]] && CREATE_DMG="yes" || CREATE_DMG="no"
+    fi
+
+    if [[ "$CREATE_DMG" == "yes" ]]; then
         create_dmg
     else
         log_info "Pulando criação do DMG"
     fi
 
-    # Perguntar se deve criar PKG (duplo clique)
-    echo ""
-    read -p "Deseja criar um instalador PKG (duplo clique)? (s/n): " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
+    # PKG: via argumento ou pergunta interativa
+    if [[ "$CREATE_PKG" == "" ]]; then
+        echo ""
+        read -p "Deseja criar um instalador PKG (duplo clique)? (s/n): " -n 1 -r
+        echo ""
+        [[ $REPLY =~ ^[Ss]$ ]] && CREATE_PKG="yes" || CREATE_PKG="no"
+    fi
+
+    if [[ "$CREATE_PKG" == "yes" ]]; then
         create_pkg
     else
         log_info "Pulando criação do PKG"

@@ -19,6 +19,9 @@ python packaging/build.py --platform windows      # 2. Build executável
 chmod +x packaging/macos/build_installer.sh
 ./packaging/macos/build_installer.sh
 
+# Sem perguntas (gera DMG + PKG automaticamente):
+./packaging/macos/build_installer.sh --with-dmg --with-pkg
+
 # Ou manualmente:
 python packaging/build.py --platform macos
 ./packaging/macos/build_installer.sh

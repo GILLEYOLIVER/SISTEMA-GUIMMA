@@ -266,6 +266,12 @@ chmod +x packaging/macos/build_installer.sh
 ./packaging/macos/build_installer.sh
 ```
 
+Sem perguntas (automático):
+
+```bash
+./packaging/macos/build_installer.sh --with-dmg --with-pkg
+```
+
 No final, escolha gerar o **PKG** para ter instalador de dois cliques (`dist/SistemaOpera.pkg`), que instala o app em `/Applications`.
 No PKG novo, ao final da instalação aparece **uma janela única** de configuração (visual) para definir **local/rede, host/IP, porta com detecção, banco, usuário, senha e schema**, com botão de **Testar conexão** antes de salvar; o instalador grava `config.json` em `/Library/Application Support/SistemaOpera/` e também no usuário logado.
 
