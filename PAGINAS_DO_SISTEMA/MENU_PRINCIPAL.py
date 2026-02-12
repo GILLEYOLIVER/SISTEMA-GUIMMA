@@ -923,6 +923,10 @@ class UserManager:
         if not codigo:
             return True  # se a página não estiver mapeada, não bloquear
 
+        # Permissões obrigatórias para todos os usuários
+        if codigo in {"dashboard", "config_temas"}:
+            return True
+
         perm = permissoes.get(codigo)
         if not perm:
             return False
@@ -2390,8 +2394,11 @@ class OperaMenuApp(ctk.CTk):
     def _apply_permissions_to_menu(self):
         """Aplica as permissões carregadas ao menu lateral e submenus."""
         if not hasattr(self, "permissoes_usuario") or not self.permissoes_usuario:
-            print("⚠️ Nenhuma permissão carregada — exibindo apenas Dashboard.")
-            self.MENU_ESTRUTURA = {"Dashboard": ["Dashboard"]}
+            print("⚠️ Nenhuma permissão carregada — exibindo menu básico obrigatório.")
+            self.MENU_ESTRUTURA = {
+                "Dashboard": ["Dashboard"],
+                "CONFIGURAÇÕES": ["Temas"],
+            }
             self._build_menu_content()
             return
 
@@ -2419,10 +2426,22 @@ class OperaMenuApp(ctk.CTk):
                 estrutura_filtrada[categoria] = itens_visiveis
                 total_itens_visiveis += len(itens_visiveis)
 
+        # Garantir páginas obrigatórias para todos os usuários
+        estrutura_filtrada.setdefault("Dashboard", [])
+        if "Dashboard" not in estrutura_filtrada["Dashboard"]:
+            estrutura_filtrada["Dashboard"].insert(0, "Dashboard")
+
+        estrutura_filtrada.setdefault("CONFIGURAÇÕES", [])
+        if "Temas" not in estrutura_filtrada["CONFIGURAÇÕES"]:
+            estrutura_filtrada["CONFIGURAÇÕES"].append("Temas")
+
         # Aplicar a nova estrutura filtrada
         if total_itens_visiveis == 0:
-            print("🚫 Usuário sem nenhuma permissão de visualização — mostrando aviso.")
-            self.MENU_ESTRUTURA = {"Dashboard": ["Dashboard"]}
+            print("🚫 Usuário sem nenhuma permissão de visualização — mostrando menu básico obrigatório.")
+            self.MENU_ESTRUTURA = {
+                "Dashboard": ["Dashboard"],
+                "CONFIGURAÇÕES": ["Temas"],
+            }
         else:
             self.MENU_ESTRUTURA = estrutura_filtrada
 
@@ -2445,12 +2464,34 @@ class OperaMenuApp(ctk.CTk):
         Ativa o backup automático assim que o MENU é carregado.
         NÃO cria interface (BackupPage), apenas manipula BACKUP_AUTO global.
         Compatível com Windows e macOS.
+
+        IMPORTANTE:
+        Usa o mesmo módulo da rota (opera_page_BACKUP) para evitar estado duplicado
+        entre imports diferentes do arquivo BACKUP.py.
         """
 
         try:
-            from BACKUP import BACKUP_AUTO
+            route = self.routes.get("Backup", {})
+            file_rel = route.get("file", "BACKUP.py")
+            file_path = os.path.join(APP_DIR, file_rel)
+            if not os.path.exists(file_path):
+                file_path = os.path.join(ROOT_DIR, file_rel)
+
+            module_key = "opera_page_BACKUP"
+            if module_key in sys.modules:
+                backup_module = sys.modules[module_key]
+            else:
+                spec = importlib.util.spec_from_file_location(module_key, file_path)
+                if spec is None or spec.loader is None:
+                    raise ImportError(f"Spec inválido para {file_path}")
+                backup_module = importlib.util.module_from_spec(spec)
+                sys.modules[module_key] = backup_module
+                spec.loader.exec_module(backup_module)
+
+            BACKUP_AUTO = backup_module.BACKUP_AUTO
+            BackupPage = backup_module.BackupPage
         except Exception as e:
-            print(f"⚠️ [MENU] Não foi possível importar BACKUP_AUTO: {e}")
+            print(f"⚠️ [MENU] Não foi possível carregar módulo de backup automático: {e}")
             return
 
         # Já está rodando? então não reinicia.
@@ -2463,7 +2504,6 @@ class OperaMenuApp(ctk.CTk):
         # Definir pasta base do sistema
         base_dir = getattr(self, "diretorio_base",
                            os.path.dirname(os.path.abspath(__file__)))
-        from BACKUP import BackupPage
         pasta_backups = BackupPage.criar_pasta_backups_externo(base_dir)
 
         # CONFIGURAR ESTADO GLOBAL
@@ -2475,8 +2515,6 @@ class OperaMenuApp(ctk.CTk):
         # Iniciar thread global
         def loop():
             import time
-            from BACKUP import BACKUP_AUTO
-            from BACKUP import BackupPage  # usar função estática abaixo
 
             print("🟢 [MENU] Thread de backup automático iniciada.")
 

@@ -34,13 +34,13 @@ class ClientesPage(ctk.CTkFrame):
 
     def _build(self):
         self.configure(fg_color="transparent")
-        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         self._build_header()
         self._build_toolbar()
-        self._build_filters()
         self._build_body()
+        self._build_search_footer()
 
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color="transparent")
@@ -58,6 +58,25 @@ class ClientesPage(ctk.CTkFrame):
             text="Gestão de contatos, endereços e vínculos para pedidos e relatórios.",
             font=ctk.CTkFont(size=12),
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+
+        form_header = ctk.CTkFrame(header)
+        form_header.grid(row=2, column=0, sticky="ew", pady=(14, 0))
+        form_header.grid_columnconfigure((0, 1, 2, 3), weight=1)
+
+        self._add_entry(form_header, "Razão Social / Nome", "nome", 0, column=0, required=True)
+        self._add_entry(form_header, "CPF / CNPJ", "documento", 0, column=1)
+        self._add_entry(form_header, "Telefone", "telefone", 0, column=2)
+        self._add_entry(form_header, "WhatsApp", "whatsapp", 0, column=3)
+        self._add_entry(form_header, "E-mail", "email", 1, column=0)
+        self._add_entry(form_header, "Inscrição Estadual", "inscricao", 1, column=1)
+        self._add_entry(form_header, "Cidade", "cidade", 1, column=2)
+        self._add_entry(form_header, "UF", "uf", 1, column=3)
+        self._add_entry(form_header, "CEP", "cep", 2, column=0)
+        self._add_entry(form_header, "Bairro", "bairro", 2, column=1)
+        self._add_entry(form_header, "Endereço", "endereco", 2, column=2, columnspan=2)
+        self._add_entry(form_header, "Segmento / Canal", "segmento", 3, column=0)
+        self._add_option(form_header, "Status", "status", ["Ativo", "Inativo"], 3, column=1)
+        self._add_entry(form_header, "Observações", "observacoes", 3, column=2, columnspan=2, height=70, multiline=True)
 
     def _build_toolbar(self):
         toolbar = ctk.CTkFrame(self)
@@ -77,59 +96,14 @@ class ClientesPage(ctk.CTkFrame):
             row=0, column=4
         )
 
-    def _build_filters(self):
-        filters = ctk.CTkFrame(self)
-        filters.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 12))
-        filters.grid_columnconfigure(4, weight=1)
-
-        ctk.CTkLabel(filters, text="Pesquisar").grid(row=0, column=0, padx=(12, 6), pady=10)
-        ctk.CTkLabel(filters, text="Status").grid(row=0, column=2, padx=(0, 6), pady=10)
-        self.filter_status = ctk.CTkOptionMenu(filters, values=["Ativo", "Inativo", "Todos"])
-        self.filter_status.grid(
-            row=0, column=3, padx=(0, 12), pady=10
-        )
-        self.filter_search = ctk.CTkEntry(filters, placeholder_text="Nome, documento, telefone ou e-mail")
-        self.filter_search.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=10)
-        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_clientes).grid(
-            row=0, column=5, padx=(0, 12), pady=10
-        )
-
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
-        body.grid(row=3, column=0, sticky="nsew", padx=24, pady=(0, 24))
+        body.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 10))
         body.grid_columnconfigure(0, weight=1)
-        body.grid_columnconfigure(1, weight=2)
         body.grid_rowconfigure(0, weight=1)
 
-        form_frame = ctk.CTkFrame(body)
-        form_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
-        form_frame.grid_columnconfigure(0, weight=1)
-
-        ctk.CTkLabel(
-            form_frame, text="Dados do Cliente", font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
-
-        form_fields = ctk.CTkFrame(form_frame, fg_color="transparent")
-        form_fields.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))
-        form_fields.grid_columnconfigure(0, weight=1)
-
-        self._add_entry(form_fields, "Razão Social / Nome", "nome", 0, required=True)
-        self._add_entry(form_fields, "CPF / CNPJ", "documento", 1)
-        self._add_entry(form_fields, "Inscrição Estadual", "inscricao", 2)
-        self._add_entry(form_fields, "E-mail", "email", 3)
-        self._add_entry(form_fields, "Telefone", "telefone", 4)
-        self._add_entry(form_fields, "WhatsApp", "whatsapp", 5)
-        self._add_entry(form_fields, "Endereço", "endereco", 6)
-        self._add_entry(form_fields, "Bairro", "bairro", 7)
-        self._add_entry(form_fields, "Cidade", "cidade", 8)
-        self._add_entry(form_fields, "UF", "uf", 9)
-        self._add_entry(form_fields, "CEP", "cep", 10)
-        self._add_entry(form_fields, "Segmento / Canal", "segmento", 11)
-        self._add_entry(form_fields, "Observações", "observacoes", 12, height=80, multiline=True)
-        self._add_option(form_fields, "Status", "status", ["Ativo", "Inativo"], 13)
-
         list_frame = ctk.CTkFrame(body)
-        list_frame.grid(row=0, column=1, sticky="nsew")
+        list_frame.grid(row=0, column=0, sticky="nsew")
         list_frame.grid_columnconfigure(0, weight=1)
         list_frame.grid_rowconfigure(1, weight=1)
 
@@ -173,21 +147,65 @@ class ClientesPage(ctk.CTkFrame):
         )
         self.summary_label.grid(row=0, column=0, sticky="w", padx=12, pady=8)
 
-    def _add_entry(self, parent, label, key, row, height=None, multiline=False, required=False):
+    def _build_search_footer(self):
+        footer = ctk.CTkFrame(self)
+        footer.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 24))
+        footer.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(footer, text="Pesquisar por nome").grid(row=0, column=0, padx=(12, 8), pady=10)
+        self.filter_search = ctk.CTkEntry(
+            footer,
+            placeholder_text="Digite uma letra ou parte do nome (ex: A)",
+        )
+        self.filter_search.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=10)
+        self.filter_search.bind("<KeyRelease>", self._filtrar_em_tempo_real)
+
+    def _add_entry(
+        self,
+        parent,
+        label,
+        key,
+        row,
+        column=0,
+        columnspan=1,
+        height=None,
+        multiline=False,
+        required=False,
+    ):
         label_text = f"{label} *" if required else label
-        ctk.CTkLabel(parent, text=label_text).grid(row=row * 2, column=0, sticky="w", pady=(0, 2))
+        ctk.CTkLabel(parent, text=label_text).grid(
+            row=row * 2,
+            column=column,
+            columnspan=columnspan,
+            sticky="w",
+            padx=12,
+            pady=(10 if row == 0 else 0, 2),
+        )
         if multiline:
             entry = ctk.CTkTextbox(parent, height=height or 80)
         else:
             entry = ctk.CTkEntry(parent)
-        entry.grid(row=row * 2 + 1, column=0, sticky="ew", pady=(0, 8))
+        entry.grid(
+            row=row * 2 + 1,
+            column=column,
+            columnspan=columnspan,
+            sticky="ew",
+            padx=12,
+            pady=(0, 8),
+        )
         self.entries[key] = entry
 
-    def _add_option(self, parent, label, key, values, row):
-        ctk.CTkLabel(parent, text=label).grid(row=row * 2, column=0, sticky="w", pady=(0, 2))
+    def _add_option(self, parent, label, key, values, row, column=0):
+        ctk.CTkLabel(parent, text=label).grid(
+            row=row * 2,
+            column=column,
+            sticky="w",
+            padx=12,
+            pady=(10 if row == 0 else 0, 2),
+        )
         option = ctk.CTkOptionMenu(parent, values=values)
         option.set(values[0])
-        option.grid(row=row * 2 + 1, column=0, sticky="w", pady=(0, 8))
+        option.grid(row=row * 2 + 1, column=column, sticky="w", padx=12, pady=(0, 8))
         self.entries[key] = option
 
     def _verificar_conexao(self):
@@ -203,7 +221,6 @@ class ClientesPage(ctk.CTkFrame):
             return
         self.tree.delete(*self.tree.get_children())
         termo = self.filter_search.get().strip() if hasattr(self, "filter_search") else ""
-        status = self.filter_status.get() if hasattr(self, "filter_status") else "Todos"
         try:
             conn = get_conn()
             with conn.cursor() as cursor:
@@ -211,14 +228,8 @@ class ClientesPage(ctk.CTkFrame):
                 params = []
                 where = []
                 if termo:
-                    where.append(
-                        "(nome ILIKE %s OR documento ILIKE %s OR telefone ILIKE %s OR email ILIKE %s)"
-                    )
-                    like = f"%{termo}%"
-                    params.extend([like, like, like, like])
-                if status and status != "Todos":
-                    where.append("status = %s")
-                    params.append(status)
+                    where.append("nome ILIKE %s")
+                    params.append(f"{termo}%")
                 where_clause = f"WHERE {' AND '.join(where)}" if where else ""
                 cursor.execute(
                     f"""
@@ -250,6 +261,9 @@ class ClientesPage(ctk.CTkFrame):
                 )
         except Exception as exc:
             messagebox.showerror("Clientes", f"Erro ao carregar clientes: {exc}")
+
+    def _filtrar_em_tempo_real(self, _event=None):
+        self._carregar_clientes()
 
     def _coletar_dados(self):
         data = {}
