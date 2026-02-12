@@ -177,12 +177,14 @@ def build_windows():
             "matplotlib.pyplot",
             "matplotlib.backends.backend_tkagg",
             "numpy",
+            "fitz",
+            "pymupdf",
         ]
 
         for imp in hidden_imports:
             cmd.extend(["--hidden-import", imp])
 
-        for pkg in ["fpdf", "reportlab", "matplotlib"]:
+        for pkg in ["fpdf", "reportlab", "matplotlib", "pymupdf"]:
             cmd.extend(["--collect-all", pkg])
 
         # Adicionar script principal
@@ -306,12 +308,14 @@ def build_macos():
         "matplotlib.pyplot",
         "matplotlib.backends.backend_tkagg",
         "numpy",
+        "fitz",
+        "pymupdf",
     ]
 
     for imp in hidden_imports:
         cmd.extend(["--hidden-import", imp])
 
-    for pkg in ["fpdf", "reportlab", "matplotlib"]:
+    for pkg in ["fpdf", "reportlab", "matplotlib", "pymupdf"]:
         cmd.extend(["--collect-all", pkg])
 
     # Adicionar script principal

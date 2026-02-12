@@ -99,6 +99,13 @@ check_dependencies() {
         pip3 install matplotlib
     fi
     log_info "matplotlib: disponível"
+
+    # Verificar PyMuPDF
+    if ! python3 -c "import pymupdf" &> /dev/null; then
+        log_warning "pymupdf não instalado. Instalando..."
+        pip3 install pymupdf
+    fi
+    log_info "pymupdf/fitz: disponível"
 }
 
 # Preparar ícone para macOS
@@ -227,9 +234,12 @@ build_app() {
         --hidden-import matplotlib.pyplot \
         --hidden-import matplotlib.backends.backend_tkagg \
         --hidden-import numpy \
+        --hidden-import fitz \
+        --hidden-import pymupdf \
         --collect-all fpdf \
         --collect-all reportlab \
         --collect-all matplotlib \
+        --collect-all pymupdf \
         $ICON_ARG \
         '$MAIN_SCRIPT'"
 
