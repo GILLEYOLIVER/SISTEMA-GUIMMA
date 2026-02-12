@@ -5,14 +5,13 @@
 #>
 
 param(
-    [switch]$SkipBuild,
+    [Alias("SkipAppBuild")][switch]$SkipBuild,
     [switch]$SkipIcon,
     [switch]$SkipInstaller,
     [switch]$Clean,
     [string]$InnoPath = "",
     [string]$Python = "python",
-    [string]$Version = "",
-    [Alias("SkipAppBuild")][switch]$SkipAppBuild
+    [string]$Version = ""
 )
 
 # Configuração
@@ -87,7 +86,7 @@ if (-not $SkipIcon) {
 }
 
 # PASSO 2: CONSTRUIR EXECUTAVEL
-if (-not ($SkipBuild -or $SkipAppBuild)) {
+if (-not $SkipBuild) {
     Write-Header "PASSO 2: CONSTRUINDO EXECUTAVEL"
     
     $buildScript = "packaging\build.py"
