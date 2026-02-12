@@ -40,6 +40,61 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
     exit 1
 fi
 
+CREATE_DMG="yes"
+CREATE_PKG="yes"
+INTERACTIVE_MODE="no"
+
+print_usage() {
+    cat <<'USAGE'
+Uso: ./packaging/macos/build_installer.sh [opções]
+
+Opções:
+  --with-dmg       Gera DMG automaticamente (sem pergunta)
+  --no-dmg         Não gera DMG automaticamente (sem pergunta)
+  --with-pkg       Gera PKG automaticamente (sem pergunta)
+  --no-pkg         Não gera PKG automaticamente (sem pergunta)
+  --interactive    Pergunta no terminal se deve criar DMG/PKG
+  --help           Exibe esta ajuda
+
+Exemplo (gerar tudo sem interação):
+  ./packaging/macos/build_installer.sh --with-dmg --with-pkg
+USAGE
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --with-dmg)
+                CREATE_DMG="yes"
+                ;;
+            --no-dmg)
+                CREATE_DMG="no"
+                ;;
+            --with-pkg)
+                CREATE_PKG="yes"
+                ;;
+            --no-pkg)
+                CREATE_PKG="no"
+                ;;
+            --help|-h)
+                print_usage
+                exit 0
+                ;;
+            --interactive)
+                INTERACTIVE_MODE="yes"
+                CREATE_DMG=""
+                CREATE_PKG=""
+                ;;
+            *)
+                log_error "Opção inválida: $1"
+                print_usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
 # Verificar dependências
 check_dependencies() {
     print_header "VERIFICANDO DEPENDÊNCIAS"
@@ -78,6 +133,34 @@ check_dependencies() {
         pip3 install pillow
     fi
     log_info "Pillow: disponível"
+
+    # Verificar FPDF2
+    if ! python3 -c "import fpdf" &> /dev/null; then
+        log_warning "fpdf2 não instalado. Instalando..."
+        pip3 install fpdf2
+    fi
+    log_info "fpdf/fpdf2: disponível"
+
+    # Verificar ReportLab
+    if ! python3 -c "import reportlab" &> /dev/null; then
+        log_warning "reportlab não instalado. Instalando..."
+        pip3 install reportlab
+    fi
+    log_info "reportlab: disponível"
+
+    # Verificar Matplotlib
+    if ! python3 -c "import matplotlib" &> /dev/null; then
+        log_warning "matplotlib não instalado. Instalando..."
+        pip3 install matplotlib
+    fi
+    log_info "matplotlib: disponível"
+
+    # Verificar PyMuPDF
+    if ! python3 -c "import pymupdf" &> /dev/null; then
+        log_warning "pymupdf não instalado. Instalando..."
+        pip3 install pymupdf
+    fi
+    log_info "pymupdf/fitz: disponível"
 }
 
 # Preparar ícone para macOS
@@ -195,6 +278,23 @@ build_app() {
         --hidden-import PIL.ImageTk \
         --hidden-import tkinter \
         --hidden-import tkinter.ttk \
+        --hidden-import fpdf \
+        --hidden-import fpdf.enums \
+        --hidden-import reportlab \
+        --hidden-import reportlab.pdfgen \
+        --hidden-import reportlab.pdfbase \
+        --hidden-import reportlab.lib \
+        --hidden-import reportlab.graphics \
+        --hidden-import matplotlib \
+        --hidden-import matplotlib.pyplot \
+        --hidden-import matplotlib.backends.backend_tkagg \
+        --hidden-import numpy \
+        --hidden-import fitz \
+        --hidden-import pymupdf \
+        --collect-all fpdf \
+        --collect-all reportlab \
+        --collect-all matplotlib \
+        --collect-all pymupdf \
         $ICON_ARG \
         '$MAIN_SCRIPT'"
 
@@ -270,8 +370,550 @@ create_dmg() {
     fi
 }
 
+
+# Criar instalador PKG (duplo clique)
+create_pkg() {
+    print_header "CRIANDO INSTALADOR PKG"
+
+    APP_PATH="dist/SistemaOpera.app"
+    PKG_PATH="dist/SistemaOpera.pkg"
+    PKG_ROOT="dist/pkg_root"
+    PKG_SCRIPTS="dist/pkg_scripts"
+
+    if [ ! -d "$APP_PATH" ]; then
+        log_error "Aplicativo não encontrado: $APP_PATH"
+        return 1
+    fi
+
+    if ! command -v pkgbuild &> /dev/null; then
+        log_error "pkgbuild não encontrado (Xcode Command Line Tools necessário)"
+        return 1
+    fi
+
+    rm -rf "$PKG_ROOT" "$PKG_SCRIPTS"
+    mkdir -p "$PKG_ROOT/Applications" "$PKG_SCRIPTS"
+    cp -R "$APP_PATH" "$PKG_ROOT/Applications/"
+
+    # Desinstalador completo (remove app + configs globais e de usuários)
+    cat > "$PKG_ROOT/Applications/Desinstalar SistemaOpera.command" <<'UNINSTALLER'
+#!/bin/bash
+set -e
+
+if [[ "$EUID" -ne 0 ]]; then
+  echo "Solicitando permissão de administrador para desinstalar o SistemaOpera..."
+  exec sudo "$0" "$@"
+fi
+
+echo "Iniciando desinstalação completa do SistemaOpera..."
+
+# Encerra processos do app
+pkill -f "SistemaOpera" 2>/dev/null || true
+
+# Remove aplicação principal
+rm -rf "/Applications/SistemaOpera.app"
+
+# Remove dados globais
+rm -rf "/Library/Application Support/SistemaOpera"
+rm -rf "/Library/Logs/SistemaOpera"
+rm -f "/Library/Preferences/com.operafashion.sistemaopera.plist"
+
+# Remove dados de todos os usuários locais
+for home in /Users/*; do
+  user_name=$(basename "$home")
+  if [[ "$user_name" == "Shared" ]]; then
+    continue
+  fi
+  if [[ -d "$home" ]]; then
+    rm -rf "$home/Library/Application Support/SistemaOpera"
+    rm -rf "$home/Library/Caches/SistemaOpera"
+    rm -rf "$home/Library/Logs/SistemaOpera"
+    rm -f "$home/Library/Preferences/com.operafashion.sistemaopera.plist"
+    rm -rf "$home/Library/Saved Application State/com.operafashion.sistemaopera.savedState"
+  fi
+done
+
+# Remove arquivos temporários conhecidos
+rm -f /tmp/sistemaopera_db_setup_result.json /tmp/sistemaopera_db_setup_gui.py 2>/dev/null || true
+
+# Esquece receipt do pacote
+pkgutil --forget com.operafashion.sistemaopera >/dev/null 2>&1 || true
+
+# Remove este próprio desinstalador (em background para não falhar arquivo em uso)
+SCRIPT_PATH="$0"
+(
+  sleep 1
+  rm -f "$SCRIPT_PATH"
+) >/dev/null 2>&1 &
+
+echo "Desinstalação concluída."
+osascript -e 'display dialog "SistemaOpera removido com sucesso (app + arquivos de configuração)." buttons {"OK"} default button "OK" with icon note' 2>/dev/null || true
+exit 0
+UNINSTALLER
+    chmod +x "$PKG_ROOT/Applications/Desinstalar SistemaOpera.command"
+
+cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
+#!/bin/bash
+set +e
+
+write_uninstaller() {
+  local target_path="$1"
+  mkdir -p "$(dirname "$target_path")"
+  cat > "$target_path" <<'UNINSTALLER'
+#!/bin/bash
+set -e
+
+if [[ "$EUID" -ne 0 ]]; then
+  echo "Solicitando permissão de administrador para desinstalar o SistemaOpera..."
+  exec sudo "$0" "$@"
+fi
+
+echo "Iniciando desinstalação completa do SistemaOpera..."
+
+pkill -f "SistemaOpera" 2>/dev/null || true
+
+rm -rf "/Applications/SistemaOpera.app"
+
+rm -rf "/Library/Application Support/SistemaOpera"
+rm -rf "/Library/Logs/SistemaOpera"
+rm -f "/Library/Preferences/com.operafashion.sistemaopera.plist"
+
+for home in /Users/*; do
+  user_name=$(basename "$home")
+  if [[ "$user_name" == "Shared" ]]; then
+    continue
+  fi
+  if [[ -d "$home" ]]; then
+    rm -rf "$home/Library/Application Support/SistemaOpera"
+    rm -rf "$home/Library/Caches/SistemaOpera"
+    rm -rf "$home/Library/Logs/SistemaOpera"
+    rm -f "$home/Library/Preferences/com.operafashion.sistemaopera.plist"
+    rm -rf "$home/Library/Saved Application State/com.operafashion.sistemaopera.savedState"
+    rm -rf "$home/Applications/SistemaOpera.app"
+  fi
+done
+
+rm -f /tmp/sistemaopera_db_setup_result.json /tmp/sistemaopera_db_setup_gui.py 2>/dev/null || true
+
+pkgutil --forget com.operafashion.sistemaopera >/dev/null 2>&1 || true
+
+SCRIPT_PATH="$0"
+(
+  sleep 1
+  rm -f "$SCRIPT_PATH"
+) >/dev/null 2>&1 &
+
+echo "Desinstalação concluída."
+osascript -e 'display dialog "SistemaOpera removido com sucesso (app + arquivos de configuração)." buttons {"OK"} default button "OK" with icon note' 2>/dev/null || true
+exit 0
+UNINSTALLER
+
+  chmod +x "$target_path"
+}
+
+CURRENT_USER=$(stat -f%Su /dev/console 2>/dev/null || echo "")
+if [[ -z "$CURRENT_USER" || "$CURRENT_USER" == "root" ]]; then
+  CURRENT_USER=$(ls -l /dev/console | awk '{print $3}')
+fi
+
+USER_HOME=$(dscl . -read /Users/"$CURRENT_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}')
+if [[ -z "$USER_HOME" ]]; then
+  USER_HOME="/Users/$CURRENT_USER"
+fi
+
+TARGET_VOLUME="${3:-/}"
+SYSTEM_APP_PATH="$TARGET_VOLUME/Applications/SistemaOpera.app"
+USER_APP_PATH="$USER_HOME/Applications/SistemaOpera.app"
+
+write_uninstaller "/Applications/Desinstalar SistemaOpera.command"
+if [[ -n "$USER_HOME" && -d "$USER_HOME" ]]; then
+  write_uninstaller "$USER_HOME/Applications/Desinstalar SistemaOpera.command"
+  chown "$CURRENT_USER":staff "$USER_HOME/Applications/Desinstalar SistemaOpera.command" 2>/dev/null || true
+fi
+
+RESULT_JSON="/tmp/sistemaopera_db_setup_result.json"
+GUI_SCRIPT="/tmp/sistemaopera_db_setup_gui.py"
+rm -f "$RESULT_JSON" "$GUI_SCRIPT"
+
+cat > "$GUI_SCRIPT" <<'PYGUI'
+import json
+import os
+import socket
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+try:
+    from PIL import Image, ImageTk
+except Exception:
+    Image = ImageTk = None
+
+result_path = os.environ.get("RESULT_JSON", "/tmp/sistemaopera_db_setup_result.json")
+assets_base = os.environ.get("APP_ASSETS_DIR", "")
+
+
+def porta_aberta(host: str, porta: int, timeout: float = 1.2) -> bool:
+    try:
+        with socket.create_connection((host, int(porta)), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+root = tk.Tk()
+root.title("Configuração do Banco - SistemaOpera")
+root.resizable(False, False)
+
+bg = "#0B1320"
+panel = "#0E1A2E"
+fg = "#EAF2FF"
+muted = "#9FB3C8"
+root.configure(bg=bg)
+
+screen_w = root.winfo_screenwidth()
+screen_h = root.winfo_screenheight()
+win_w = min(980, max(860, screen_w - 120))
+win_h = min(620, max(540, screen_h - 140))
+pos_x = max(0, (screen_w - win_w) // 2)
+pos_y = max(0, (screen_h - win_h) // 2)
+root.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
+
+canvas = tk.Canvas(root, width=win_w, height=win_h, highlightthickness=0, bd=0)
+canvas.pack(fill="both", expand=True)
+canvas.configure(bg=bg)
+
+bg_img = None
+icon_img = None
+icon_mark = None
+
+# Fundo com FUNDO_LOGUIN.jpg (preferência com PIL para redimensionar corretamente)
+try:
+    if assets_base:
+        fundo = os.path.join(assets_base, "FUNDO_LOGUIN.jpg")
+        if os.path.exists(fundo):
+            if Image is not None:
+                im = Image.open(fundo).convert("RGB").resize((win_w, win_h), Image.Resampling.LANCZOS)
+                bg_img = ImageTk.PhotoImage(im)
+            else:
+                bg_img = tk.PhotoImage(file=fundo)
+            canvas.create_image(0, 0, image=bg_img, anchor="nw")
+except Exception:
+    pass
+
+# Borda colorida inspirada no FUNDO_LOGUIN (azul/laranja)
+margin = 18
+canvas.create_rectangle(margin, margin, win_w - margin, win_h - margin, outline="#1CC8FF", width=2)
+canvas.create_rectangle(margin + 6, margin + 6, win_w - margin - 6, win_h - margin - 6, outline="#FF7A18", width=1)
+canvas.create_line(margin + 10, margin + 10, win_w - margin - 10, margin + 10, fill="#34D4FF", width=2)
+canvas.create_line(margin + 10, win_h - margin - 10, win_w - margin - 10, win_h - margin - 10, fill="#FF8E2A", width=2)
+
+panel_m = 34
+panel_x1, panel_y1 = panel_m, panel_m
+panel_x2, panel_y2 = win_w - panel_m, win_h - panel_m
+canvas.create_rectangle(panel_x1, panel_y1, panel_x2, panel_y2, fill=panel, outline="#2B3950", width=2)
+
+content = tk.Frame(root, bg=panel)
+content_w = panel_x2 - panel_x1 - 24
+content_h = panel_y2 - panel_y1 - 24
+canvas.create_window((panel_x1 + panel_x2)//2, (panel_y1 + panel_y2)//2, window=content, width=content_w, height=content_h)
+
+header = tk.Frame(content, bg=panel)
+header.pack(fill="x", pady=(6, 8))
+
+try:
+    if assets_base:
+        icon_path = os.path.join(assets_base, "ICONE_SISTEMA.png")
+        if os.path.exists(icon_path):
+            if Image is not None:
+                ico = Image.open(icon_path).convert("RGBA")
+                ico_head = ico.resize((42, 42), Image.Resampling.LANCZOS)
+                icon_img = ImageTk.PhotoImage(ico_head)
+
+                wm = ico.resize((200, 200), Image.Resampling.LANCZOS)
+                alpha = wm.split()[-1].point(lambda a: int(a * 0.10))
+                wm.putalpha(alpha)
+                icon_mark = ImageTk.PhotoImage(wm)
+            else:
+                # Sem PIL: usa somente ícone pequeno no cabeçalho para evitar sobreposição visual
+                icon_img = tk.PhotoImage(file=icon_path)
+                try:
+                    icon_img = icon_img.subsample(max(1, icon_img.width() // 42), max(1, icon_img.height() // 42))
+                except Exception:
+                    pass
+                icon_mark = None
+
+            tk.Label(header, image=icon_img, bg=panel).pack(side="left", padx=(8, 12))
+except Exception:
+    pass
+
+# Marca d'água com ícone do sistema no cartão (no canvas, atrás dos campos)
+if icon_mark is not None:
+    canvas.create_image(panel_x2 - 120, panel_y2 - 120, image=icon_mark, anchor="center")
+
+text_hdr = tk.Frame(header, bg=panel)
+text_hdr.pack(side="left", fill="x", expand=True)
+
+
+
+# mantém referências de imagens para evitar garbage collection
+root._bg_img = bg_img
+root._icon_img = icon_img
+root._icon_mark = icon_mark
+tk.Label(text_hdr, text="Configuração do Banco de Dados", font=("Segoe UI", 16, "bold"), fg=fg, bg=panel).pack(anchor="w")
+tk.Label(text_hdr, text="Instalação do SistemaOpera • Configure local/rede, teste conexão e conclua.", font=("Segoe UI", 10), fg=muted, bg=panel).pack(anchor="w", pady=(2, 0))
+
+form = tk.Frame(content, bg=panel)
+form.pack(fill="x", padx=12, pady=8)
+
+modo = tk.StringVar(value="local")
+host = tk.StringVar(value="localhost")
+porta = tk.StringVar(value="5432")
+dbname = tk.StringVar(value="BANCO_OPERA")
+usuario = tk.StringVar(value="postgres")
+senha = tk.StringVar(value="")
+schema = tk.StringVar(value="opera")
+status = tk.StringVar(value="Aguardando validação.")
+validado = {"ok": False}
+
+
+def invalida(*_):
+    validado["ok"] = False
+    status.set("Dados alterados. Clique em Testar conexão.")
+
+for v in (host, porta, dbname, usuario, senha, schema):
+    v.trace_add("write", invalida)
+
+
+def set_modo_local():
+    if modo.get() == "local":
+        host.set("localhost")
+
+linha_modo = tk.Frame(form, bg=panel)
+linha_modo.grid(row=0, column=0, columnspan=4, sticky="w", pady=(2, 10))
+
+tk.Label(linha_modo, text="Tipo de banco:", font=("Segoe UI", 10, "bold"), fg=fg, bg=panel).pack(side="left", padx=(0, 8))
+tk.Radiobutton(linha_modo, text="Local", variable=modo, value="local", command=set_modo_local, fg=fg, bg=panel, selectcolor=panel, activebackground=panel).pack(side="left")
+tk.Radiobutton(linha_modo, text="Rede", variable=modo, value="rede", fg=fg, bg=panel, selectcolor=panel, activebackground=panel).pack(side="left", padx=(12,0))
+
+
+def campo(r, c, titulo, var, show=""):
+    tk.Label(form, text=titulo, fg=fg, bg=panel, font=("Segoe UI", 10)).grid(row=r, column=c, sticky="w", padx=6, pady=(4,2))
+    e = tk.Entry(form, textvariable=var, show=show, bg="#1A2332", fg="#F5F8FF", insertbackground="#F5F8FF", relief="flat", font=("Segoe UI", 11))
+    e.grid(row=r+1, column=c, sticky="ew", padx=6, pady=(0,8), ipady=6)
+    return e
+
+for col in range(4):
+    form.grid_columnconfigure(col, weight=1)
+
+campo(1, 0, "Host/IP", host)
+campo(1, 1, "Porta", porta)
+campo(1, 2, "Banco", dbname)
+campo(1, 3, "Schema", schema)
+campo(3, 0, "Usuário", usuario)
+entry_senha = campo(3, 1, "Senha", senha, show="•")
+
+mostrar_senha = tk.BooleanVar(value=False)
+
+def toggle_senha():
+    entry_senha.configure(show="" if mostrar_senha.get() else "•")
+
+chk_senha = tk.Checkbutton(
+    form,
+    text="Mostrar senha",
+    variable=mostrar_senha,
+    command=toggle_senha,
+    fg=muted,
+    bg=panel,
+    selectcolor=panel,
+    activebackground=panel,
+)
+chk_senha.grid(row=5, column=1, sticky="w", padx=6, pady=(0, 8))
+
+
+def detectar_porta():
+    h = host.get().strip()
+    if not h:
+        messagebox.showerror("Erro", "Informe o Host/IP para detectar a porta.", parent=root)
+        return
+    for p in (5432, 5433, 5434, 5435, 5436):
+        if porta_aberta(h, p):
+            porta.set(str(p))
+            status.set(f"Porta detectada: {p}")
+            return
+    messagebox.showwarning("Atenção", "Não foi possível detectar porta automaticamente.", parent=root)
+
+
+def testar_conexao():
+    h = host.get().strip()
+    ptxt = porta.get().strip()
+    if not h or not ptxt:
+        messagebox.showerror("Erro", "Informe Host/IP e Porta.", parent=root)
+        return
+    try:
+        p = int(ptxt)
+    except ValueError:
+        messagebox.showerror("Erro", "Porta deve ser numérica.", parent=root)
+        return
+    if porta_aberta(h, p):
+        validado["ok"] = True
+        status.set("Conexão host/porta validada. Pode salvar.")
+        messagebox.showinfo("Conexão OK", "Host/porta responderam com sucesso.", parent=root)
+    else:
+        validado["ok"] = False
+        status.set("Falha na conexão host/porta.")
+        messagebox.showerror("Falha", "Não foi possível conectar no host/porta informados.", parent=root)
+
+
+def salvar():
+    h = host.get().strip()
+    ptxt = porta.get().strip()
+    db = dbname.get().strip()
+    u = usuario.get().strip()
+    pw = senha.get()
+    sc = schema.get().strip() or "opera"
+
+    if not h or not ptxt or not db or not u:
+        messagebox.showerror("Erro", "Preencha host, porta, banco e usuário.", parent=root)
+        return
+    try:
+        p = int(ptxt)
+    except ValueError:
+        messagebox.showerror("Erro", "Porta deve ser numérica.", parent=root)
+        return
+    if not validado["ok"]:
+        messagebox.showerror("Erro", "Clique em Testar conexão antes de salvar.", parent=root)
+        return
+
+    data = {
+        "host": h,
+        "port": p,
+        "dbname": db,
+        "user": u,
+        "password": pw,
+        "schema": sc,
+        "mode": modo.get(),
+    }
+    with open(result_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    root.destroy()
+
+
+barr = tk.Frame(content, bg=panel)
+barr.pack(fill="x", padx=12, pady=(8,0))
+
+tk.Label(barr, textvariable=status, fg="#B8CCE0", bg=panel, font=("Segoe UI", 10)).pack(side="left")
+
+btns = tk.Frame(content, bg=panel)
+btns.pack(fill="x", padx=12, pady=(12, 6))
+
+ttk.Style().configure("Opera.TButton", padding=8)
+
+ttk.Button(btns, text="Detectar porta", command=detectar_porta).pack(side="left")
+ttk.Button(btns, text="Testar conexão", command=testar_conexao).pack(side="left", padx=(10,0))
+ttk.Button(btns, text="Salvar e concluir instalação", command=salvar).pack(side="right")
+
+root.mainloop()
+PYGUI
+
+chmod +x "$GUI_SCRIPT"
+
+if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
+  su -l "$CURRENT_USER" -c "APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON='$RESULT_JSON' python3 '$GUI_SCRIPT'" || true
+else
+  APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON="$RESULT_JSON" python3 "$GUI_SCRIPT" || true
+fi
+
+if [[ ! -f "$RESULT_JSON" ]]; then
+  echo "Configuração não concluída. Usando configuração padrão local para não interromper a instalação." >&2
+  cat > "$RESULT_JSON" <<'JSON'
+{
+  "host": "localhost",
+  "port": 5432,
+  "dbname": "BANCO_OPERA",
+  "user": "postgres",
+  "password": "",
+  "schema": "opera",
+  "mode": "local"
+}
+JSON
+fi
+
+export CURRENT_USER USER_HOME
+python3 - <<'PYCFG'
+import json, os
+result_path='/tmp/sistemaopera_db_setup_result.json'
+with open(result_path,'r',encoding='utf-8') as f:
+    data=json.load(f)
+host=(data.get('host') or '').strip()
+port=int(data.get('port') or 5432)
+db=(data.get('dbname') or 'BANCO_OPERA').strip()
+user=(data.get('user') or 'postgres').strip()
+pwd=data.get('password') or ''
+schema=(data.get('schema') or 'opera').strip() or 'opera'
+current_user=(os.environ.get('CURRENT_USER') or '').strip()
+user_home=(os.environ.get('USER_HOME') or '').strip()
+paths=['/Library/Application Support/SistemaOpera/config.json']
+if user_home:
+    paths.append(os.path.join(user_home,'Library','Application Support','SistemaOpera','config.json'))
+
+dsn=f'postgresql://{user}:{pwd}@{host}:{port}/{db}'
+obj={
+  'schema': schema,
+  'pg_schema': schema,
+  'appname': 'OPERA_APP',
+  'pg_dsn': dsn,
+  'defaults': {'dbname': db, 'user': user, 'password': pwd},
+  'hosts': [host],
+  'ports': [port],
+  'connect_timeout': 10,
+  'auto_detect_ports': True,
+  'fallback_to_postgres': True,
+}
+for p in paths:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p,'w',encoding='utf-8') as f:
+        json.dump(obj,f,ensure_ascii=False,indent=2)
+PYCFG
+
+if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
+  chown "$CURRENT_USER":staff "$USER_HOME/Library/Application Support/SistemaOpera/config.json" 2>/dev/null || true
+fi
+
+rm -f "$RESULT_JSON" "$GUI_SCRIPT"
+
+# Garantia final: se o app não ficou em /Applications, tenta promover da pasta do usuário
+if [[ ! -d "$SYSTEM_APP_PATH" && -d "$USER_APP_PATH" ]]; then
+  mkdir -p "$TARGET_VOLUME/Applications"
+  ditto "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
+fi
+
+# Não abortar instalação por falhas tardias do postinstall
+exit 0
+POSTINSTALL
+    chmod +x "$PKG_SCRIPTS/postinstall"
+
+    log_info "Gerando PKG com instalação em /Applications + assistente de banco..."
+    pkgbuild \
+      --root "$PKG_ROOT" \
+      --scripts "$PKG_SCRIPTS" \
+      --identifier "com.operafashion.sistemaopera" \
+      --version "1.0.0" \
+      --install-location "/" \
+      "$PKG_PATH"
+
+    rm -rf "$PKG_ROOT" "$PKG_SCRIPTS"
+
+    if [ -f "$PKG_PATH" ]; then
+        PKG_SIZE=$(du -sh "$PKG_PATH" | cut -f1)
+        log_success "PKG criado: $PKG_PATH ($PKG_SIZE)"
+    else
+        log_error "Falha ao criar PKG"
+        return 1
+    fi
+}
+
 # Função principal
 main() {
+    parse_args "$@"
+
     print_header "SISTEMA OPERA - INSTALADOR macOS"
     log_info "Data: $(date)"
     log_info "Diretório: $(pwd)"
@@ -287,14 +929,32 @@ main() {
     # Construir aplicativo
     build_app
 
-    # Perguntar se deve criar DMG
-    echo ""
-    read -p "Deseja criar um instalador DMG? (s/n): " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
+    # DMG: padrão sempre gera; pergunta apenas se --interactive
+    if [[ "$INTERACTIVE_MODE" == "yes" && "$CREATE_DMG" == "" ]]; then
+        echo ""
+        read -p "Deseja criar um instalador DMG? (s/n): " -n 1 -r
+        echo ""
+        [[ $REPLY =~ ^[Ss]$ ]] && CREATE_DMG="yes" || CREATE_DMG="no"
+    fi
+
+    if [[ "$CREATE_DMG" == "yes" ]]; then
         create_dmg
     else
         log_info "Pulando criação do DMG"
+    fi
+
+    # PKG: padrão sempre gera; pergunta apenas se --interactive
+    if [[ "$INTERACTIVE_MODE" == "yes" && "$CREATE_PKG" == "" ]]; then
+        echo ""
+        read -p "Deseja criar um instalador PKG (duplo clique)? (s/n): " -n 1 -r
+        echo ""
+        [[ $REPLY =~ ^[Ss]$ ]] && CREATE_PKG="yes" || CREATE_PKG="no"
+    fi
+
+    if [[ "$CREATE_PKG" == "yes" ]]; then
+        create_pkg
+    else
+        log_info "Pulando criação do PKG"
     fi
 
     print_header "INSTALAÇÃO CONCLUÍDA"
@@ -303,6 +963,9 @@ main() {
     log_info "📦 Aplicativo criado em: dist/SistemaOpera.app"
     if [ -f "dist/SistemaOpera.dmg" ]; then
         log_info "📀 Instalador DMG em: dist/SistemaOpera.dmg"
+    fi
+    if [ -f "dist/SistemaOpera.pkg" ]; then
+        log_info "📦 Instalador PKG em: dist/SistemaOpera.pkg"
     fi
     echo ""
     log_info "Para testar o aplicativo:"

@@ -256,6 +256,35 @@ python packaging/build.py --platform macos
 
 Saída: `dist/SistemaOpera.app`
 
+Instalador macOS (duplo clique): `dist/SistemaOpera.pkg` (gerado pelo script `packaging/macos/build_installer.sh`).
+
+
+### Instalador macOS (duplo clique)
+
+```bash
+chmod +x packaging/macos/build_installer.sh
+./packaging/macos/build_installer.sh
+```
+
+> Agora o padrão do script é **gerar DMG e PKG automaticamente** (sem pular).
+
+Sem perguntas (automático):
+
+```bash
+./packaging/macos/build_installer.sh --with-dmg --with-pkg
+```
+
+Modo com perguntas (opcional):
+
+```bash
+./packaging/macos/build_installer.sh --interactive
+```
+
+No final, escolha gerar o **PKG** para ter instalador de dois cliques (`dist/SistemaOpera.pkg`), que instala o app em `/Applications`.
+No PKG novo, ao final da instalação aparece **uma janela única** de configuração (visual) para definir **local/rede, host/IP, porta com detecção, banco, usuário, senha e schema**, com botão de **Testar conexão** antes de salvar; o instalador grava `config.json` em `/Library/Application Support/SistemaOpera/` e também no usuário logado.
+
+Desinstalador: o PKG também instala `/Applications/Desinstalar SistemaOpera.command` para remoção completa (app + pastas de configuração).
+
 ### Build Windows
 
 ```bash

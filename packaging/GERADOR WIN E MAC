@@ -18,7 +18,21 @@ python packaging/build.py --platform windows      # 2. Build executável
 # Execute no terminal macOS:
 chmod +x packaging/macos/build_installer.sh
 ./packaging/macos/build_installer.sh
+# (padrão: gera DMG + PKG automaticamente)
+
+# Sem perguntas (gera DMG + PKG automaticamente):
+./packaging/macos/build_installer.sh --with-dmg --with-pkg
+
+# Com perguntas (opcional):
+./packaging/macos/build_installer.sh --interactive
 
 # Ou manualmente:
 python packaging/build.py --platform macos
 ./packaging/macos/build_installer.sh
+# Para instalador de dois cliques no macOS (PKG):
+./packaging/macos/build_installer.sh   # escolha gerar PKG ao final
+# Saída: dist/SistemaOpera.pkg
+
+# O PKG abre janela única para configurar local/rede, host/porta, banco, usuário, senha e schema (com teste de conexão).
+
+# O PKG instala também: /Applications/Desinstalar SistemaOpera.command (remove app + configs).
