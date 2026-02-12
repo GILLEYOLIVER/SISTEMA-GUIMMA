@@ -396,9 +396,64 @@ exit 0
 UNINSTALLER
     chmod +x "$PKG_ROOT/Applications/Desinstalar SistemaOpera.command"
 
-    cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
+cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
 #!/bin/bash
 set -e
+
+write_uninstaller() {
+  local target_path="$1"
+  mkdir -p "$(dirname "$target_path")"
+  cat > "$target_path" <<'UNINSTALLER'
+#!/bin/bash
+set -e
+
+if [[ "$EUID" -ne 0 ]]; then
+  echo "Solicitando permissão de administrador para desinstalar o SistemaOpera..."
+  exec sudo "$0" "$@"
+fi
+
+echo "Iniciando desinstalação completa do SistemaOpera..."
+
+pkill -f "SistemaOpera" 2>/dev/null || true
+
+rm -rf "/Applications/SistemaOpera.app"
+
+rm -rf "/Library/Application Support/SistemaOpera"
+rm -rf "/Library/Logs/SistemaOpera"
+rm -f "/Library/Preferences/com.operafashion.sistemaopera.plist"
+
+for home in /Users/*; do
+  user_name=$(basename "$home")
+  if [[ "$user_name" == "Shared" ]]; then
+    continue
+  fi
+  if [[ -d "$home" ]]; then
+    rm -rf "$home/Library/Application Support/SistemaOpera"
+    rm -rf "$home/Library/Caches/SistemaOpera"
+    rm -rf "$home/Library/Logs/SistemaOpera"
+    rm -f "$home/Library/Preferences/com.operafashion.sistemaopera.plist"
+    rm -rf "$home/Library/Saved Application State/com.operafashion.sistemaopera.savedState"
+    rm -rf "$home/Applications/SistemaOpera.app"
+  fi
+done
+
+rm -f /tmp/sistemaopera_db_setup_result.json /tmp/sistemaopera_db_setup_gui.py 2>/dev/null || true
+
+pkgutil --forget com.operafashion.sistemaopera >/dev/null 2>&1 || true
+
+SCRIPT_PATH="$0"
+(
+  sleep 1
+  rm -f "$SCRIPT_PATH"
+) >/dev/null 2>&1 &
+
+echo "Desinstalação concluída."
+osascript -e 'display dialog "SistemaOpera removido com sucesso (app + arquivos de configuração)." buttons {"OK"} default button "OK" with icon note' 2>/dev/null || true
+exit 0
+UNINSTALLER
+
+  chmod +x "$target_path"
+}
 
 CURRENT_USER=$(stat -f%Su /dev/console 2>/dev/null || echo "")
 if [[ -z "$CURRENT_USER" || "$CURRENT_USER" == "root" ]]; then
@@ -408,6 +463,12 @@ fi
 USER_HOME=$(dscl . -read /Users/"$CURRENT_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}')
 if [[ -z "$USER_HOME" ]]; then
   USER_HOME="/Users/$CURRENT_USER"
+fi
+
+write_uninstaller "/Applications/Desinstalar SistemaOpera.command"
+if [[ -n "$USER_HOME" && -d "$USER_HOME" ]]; then
+  write_uninstaller "$USER_HOME/Applications/Desinstalar SistemaOpera.command"
+  chown "$CURRENT_USER":staff "$USER_HOME/Applications/Desinstalar SistemaOpera.command" 2>/dev/null || true
 fi
 
 RESULT_JSON="/tmp/sistemaopera_db_setup_result.json"
