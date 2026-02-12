@@ -27,3 +27,5 @@ python packaging/build.py --platform macos
 # Saída: dist/SistemaOpera.pkg
 
 # O PKG abre janela única para configurar local/rede, host/porta, banco, usuário, senha e schema (com teste de conexão).
+
+# O PKG instala também: /Applications/Desinstalar SistemaOpera.command (remove app + configs).
