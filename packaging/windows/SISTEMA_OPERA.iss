@@ -65,8 +65,9 @@ procedure DetectPortClick(Sender: TObject); forward;
 
 function JsonEscape(const Value: string): string;
 begin
-  Result := StringReplace(Value, '\', '\\', [rfReplaceAll]);
-  Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
+  Result := Value;
+  StringChangeEx(Result, '\', '\\', True);
+  StringChangeEx(Result, '"', '\"', True);
 end;
 
 function GetDbConfigPath(): string;
