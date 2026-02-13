@@ -1,4 +1,3 @@
-#pragma charset utf-8
 #define AppName "SISTEMA OPERA"
 #ifndef AppVersion
 #define AppVersion "1.0.0"
@@ -7,7 +6,7 @@
 #define AppExeName "SistemaOpera.exe"
 
 ; =========================
-; Personalização (Windows)
+; Personalizacao (Windows)
 ; =========================
 #define SetupIco "..\\ICONE_SISTEMA.ico"
 #define WizBigBmp "..\\wizard_big.bmp"
@@ -21,7 +20,7 @@
 #endif
 
 ; =========================
-; Configurador do banco (CustomTkinter)
+; Configurador do banco (CustomTkinter) - DETECCAO NO BUILD
 ; =========================
 #define DbHelperExePath1 "..\\..\\dist\\SistemaOpera\\CONFIGURAR_BANCO.exe"
 #define DbHelperExePath2 "..\\..\\dist\\SistemaOpera\\SETUP_BANCO.exe"
@@ -71,14 +70,19 @@ WizardSmallImageFile={#WizSmallBmp}
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Criar ícone na área de trabalho"; GroupDescription: "Atalhos:"; Flags: unchecked
+Name: "desktopicon"; Description: "Criar icone na area de trabalho"; GroupDescription: "Atalhos:"; Flags: unchecked
 
 [Files]
+; App principal (toda a pasta dist\SistemaOpera)
 Source: "..\\..\\dist\\SistemaOpera\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\\..\\dist\\SistemaOpera\\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
+; Configurador do banco:
+; 1) instala no {app} para o usuario poder abrir depois
+; 2) extrai uma copia temporaria no {tmp} para rodar DURANTE a fase do instalador (antes da instalacao efetiva)
 #ifdef HAS_DB_HELPER
 Source: "{#DbHelperExePath}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#DbHelperExePath}"; DestName: "CONFIGURAR_BANCO_TMP.exe"; Flags: dontcopy
 #endif
 
 [Dirs]
@@ -89,7 +93,6 @@ Name: "{userappdata}\\SistemaOpera\\logs"
 [Icons]
 Name: "{group}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"
 Name: "{commondesktop}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; Tasks: desktopicon
-
 #ifdef HAS_DB_HELPER
 Name: "{group}\\Configurar Banco de Dados"; Filename: "{app}\\{#DbHelperExeName}"
 #endif
@@ -116,17 +119,14 @@ end;
 function HasDbHelper(): Boolean;
 begin
   Result := False;
-  #ifdef HAS_DB_HELPER
+  {$ifdef HAS_DB_HELPER}
     Result := True;
-  #endif
+  {$endif}
 end;
 
-function GetDbHelperExeOnDisk(): string;
+function GetDbHelperTempExe(): string;
 begin
-  Result := '';
-  #ifdef HAS_DB_HELPER
-    Result := ExpandConstant('{app}\{#DbHelperExeName}');
-  #endif
+  Result := ExpandConstant('{tmp}\CONFIGURAR_BANCO_TMP.exe');
 end;
 
 procedure LaunchDbHelperOrWarn();
@@ -136,41 +136,47 @@ var
 begin
   if not HasDbHelper() then
   begin
-    DbHelperOk := True;  ; // não bloqueia instalação se não tiver
+    DbHelperOk := True;
     DbInfoLabel.Caption :=
-      'O configurador do banco (tela do SETUP_BANCO.py) não foi incluído neste build.' + #13#10 +
-      'A instalação continuará normalmente. Depois, abra "Configurar Banco de Dados" no menu Iniciar.';
+      'O configurador do banco nao foi incluido neste build.' + #13#10 +
+      'A instalacao vai continuar. Depois, use "Configurar Banco de Dados" no menu Iniciar.';
     Exit;
   end;
 
-  exePath := GetDbHelperExeOnDisk();
-  if (exePath = '') or (not FileExists(exePath)) then
+  try
+    ExtractTemporaryFile('CONFIGURAR_BANCO_TMP.exe');
+  except
+    DbHelperOk := False;
+    DbInfoLabel.Caption := 'Nao foi possivel extrair o configurador do banco.';
+    Exit;
+  end;
+
+  exePath := GetDbHelperTempExe();
+  if not FileExists(exePath) then
   begin
-    DbHelperOk := True;  ; // não bloqueia (mas avisa)
-    DbInfoLabel.Caption :=
-      'O configurador do banco era esperado em:' + #13#10 + exePath + #13#10 +
-      'Mas não foi encontrado. A instalação continuará.';
+    DbHelperOk := False;
+    DbInfoLabel.Caption := 'O configurador do banco nao foi encontrado no temporario.';
     Exit;
   end;
 
-  ; Executa e espera fechar (fase da instalação)
+  DbInfoLabel.Caption := 'Abrindo configurador do banco...';
   if Exec(exePath, '', '', SW_SHOW, ewWaitUntilTerminated, rc) then
   begin
     if rc = 0 then
     begin
       DbHelperOk := True;
-      DbInfoLabel.Caption := '✅ Banco configurado com sucesso. Clique em Avançar para continuar.';
+      DbInfoLabel.Caption := 'OK! Banco configurado. Clique em Avancar para continuar.';
     end
     else
     begin
       DbHelperOk := False;
-      DbInfoLabel.Caption := '⚠️ Fechado sem concluir. O configurador será aberto novamente ao avançar.';
+      DbInfoLabel.Caption := 'Fechado sem concluir. Clique em Avancar para abrir novamente.';
     end;
   end
   else
   begin
     DbHelperOk := False;
-    DbInfoLabel.Caption := '⚠️ Não foi possível abrir o configurador. Tente novamente ao avançar.';
+    DbInfoLabel.Caption := 'Nao foi possivel abrir o configurador. Clique em Avancar para tentar novamente.';
   end;
 end;
 
@@ -180,8 +186,8 @@ begin
 
   DbPhasePage := CreateCustomPage(
     wpSelectDir,
-    'Configuração do Banco de Dados',
-    'Esta etapa faz parte da instalação do SISTEMA OPERA.'
+    'Configuracao do Banco de Dados',
+    'Esta etapa faz parte da instalacao do SISTEMA OPERA.'
   );
 
   DbInfoLabel := TNewStaticText.Create(WizardForm);
@@ -189,10 +195,10 @@ begin
   DbInfoLabel.Left := ScaleX(0);
   DbInfoLabel.Top := ScaleY(0);
   DbInfoLabel.Width := DbPhasePage.SurfaceWidth;
-  DbInfoLabel.Height := ScaleY(180);
+  DbInfoLabel.Height := ScaleY(220);
   DbInfoLabel.AutoSize := False;
   DbInfoLabel.WordWrap := True;
-  DbInfoLabel.Caption := 'Abrindo configurador do banco...';
+  DbInfoLabel.Caption := 'Preparando configurador do banco...';
 
   DbHelperOk := False;
   DbAutoLaunchedOnce := False;
@@ -215,8 +221,7 @@ begin
   begin
     if HasDbHelper() and (not DbHelperOk) then
     begin
-      ; sem botão, sem pergunta — força concluir
-      MsgBox('Finalize a configuração do banco para continuar.', mbInformation, MB_OK);
+      MsgBox('Finalize a configuracao do banco para continuar.', mbInformation, MB_OK);
       LaunchDbHelperOrWarn();
       Result := DbHelperOk;
     end;
