@@ -38,6 +38,8 @@ except Exception:
 # Paths (usa OPERA_PATHS se existir; senão fallback)
 # ============================================================
 CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent
+PAGINAS_DIR = PROJECT_ROOT / "PAGINAS_DO_SISTEMA"
 
 
 def _fallback_app_data_dir(app_name: str = "SistemaOpera") -> Path:
@@ -59,8 +61,8 @@ except Exception:
 APP_DATA_DIR = get_app_data_dir()
 CONFIG_FILE = APP_DATA_DIR / "config.json"
 
-DEV_CONFIG_FILE_HERE = CURRENT_DIR / "config.json"
-DEV_CONFIG_FILE_PARENT = CURRENT_DIR.parent / "config.json"
+DEV_CONFIG_FILE_PAGINAS = PAGINAS_DIR / "config.json"
+DEV_CONFIG_FILE_PARENT = PROJECT_ROOT / "config.json"
 
 
 # ============================================================
@@ -79,7 +81,7 @@ class DBConfig:
 
 def _config_candidates() -> List[Path]:
     # prioridade dev -> oficial
-    return [DEV_CONFIG_FILE_HERE, DEV_CONFIG_FILE_PARENT, CONFIG_FILE]
+    return [DEV_CONFIG_FILE_PAGINAS, DEV_CONFIG_FILE_PARENT, CONFIG_FILE]
 
 
 def load_existing_config() -> Optional[DBConfig]:
@@ -134,7 +136,7 @@ def save_config(cfg: DBConfig) -> Path:
 
     targets = [
         CONFIG_FILE,             # oficial (Mac/Windows)
-        DEV_CONFIG_FILE_HERE,    # PAGINAS_DO_SISTEMA/config.json
+        DEV_CONFIG_FILE_PAGINAS, # PAGINAS_DO_SISTEMA/config.json
         DEV_CONFIG_FILE_PARENT,  # raiz do projeto/config.json
     ]
 
