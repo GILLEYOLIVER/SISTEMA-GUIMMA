@@ -201,8 +201,10 @@ class SetupBancoWindow:
         else:
             self.root = ctk.CTk()
 
+        self._parent = parent
         self._saved_ok = False
         self._last_test_ok = False
+        self.exit_code = 1
 
         self.root.title("Configuração do Banco - SistemaOpera")
         self.root.minsize(980, 520)
@@ -326,11 +328,14 @@ class SetupBancoWindow:
     def _on_close(self):
         # Se não salvou com sucesso, consideramos cancelado
         if not self._saved_ok:
+            self.exit_code = 1
             try:
                 self.root.destroy()
             except Exception:
                 pass
-            raise SystemExit(1)
+            return
+
+        self.exit_code = 0
         try:
             self.root.destroy()
         except Exception:
@@ -403,6 +408,7 @@ class SetupBancoWindow:
         try:
             path = save_config(cfg)
             self._saved_ok = True
+            self.exit_code = 0
             messagebox.showinfo("Configuração salva", f"Configuração salva com sucesso em:\n{path}")
             self.root.destroy()
         except Exception as e:
@@ -413,8 +419,10 @@ class SetupBancoWindow:
 # Entrypoint
 # ============================================================
 def main():
-    SetupBancoWindow(parent=None).root.mainloop()
+    window = SetupBancoWindow(parent=None)
+    window.root.mainloop()
+    return window.exit_code
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
