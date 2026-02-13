@@ -3,11 +3,11 @@
 SETUP_BANCO.py — Configurador de Banco (Universal Mac/Windows)
 
 - Abre janela de configuração do Postgres
-- Detecta porta
-- Testa conexão
+- Deve ser chamada também quando a conexão com o banco cair (ou se o config.json sumir/corromper)
+- Detecta porta e testa conexão para reencontrar o banco
 - Só permite "Salvar e concluir" após conexão OK
 - Se fechar no X sem salvar: retorna exit code 1 (cancelado)
-- Salva config.json em 3 lugares (criando pastas automaticamente):
+- Salva config.json atualizado em 3 lugares (criando pastas automaticamente):
   1) Local correto do app (Mac: Application Support / Windows: AppData)
   2) Pasta atual do projeto (PAGINAS_DO_SISTEMA/config.json)
   3) Raiz do projeto (../config.json)
@@ -38,6 +38,8 @@ except Exception:
 # Paths (usa OPERA_PATHS se existir; senão fallback)
 # ============================================================
 CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent
+PAGINAS_DIR = PROJECT_ROOT / "PAGINAS_DO_SISTEMA"
 
 
 def _fallback_app_data_dir(app_name: str = "SistemaOpera") -> Path:
@@ -59,8 +61,8 @@ except Exception:
 APP_DATA_DIR = get_app_data_dir()
 CONFIG_FILE = APP_DATA_DIR / "config.json"
 
-DEV_CONFIG_FILE_HERE = CURRENT_DIR / "config.json"
-DEV_CONFIG_FILE_PARENT = CURRENT_DIR.parent / "config.json"
+DEV_CONFIG_FILE_PAGINAS = PAGINAS_DIR / "config.json"
+DEV_CONFIG_FILE_PARENT = PROJECT_ROOT / "config.json"
 
 
 # ============================================================
@@ -79,7 +81,7 @@ class DBConfig:
 
 def _config_candidates() -> List[Path]:
     # prioridade dev -> oficial
-    return [DEV_CONFIG_FILE_HERE, DEV_CONFIG_FILE_PARENT, CONFIG_FILE]
+    return [DEV_CONFIG_FILE_PAGINAS, DEV_CONFIG_FILE_PARENT, CONFIG_FILE]
 
 
 def load_existing_config() -> Optional[DBConfig]:
@@ -126,12 +128,15 @@ def load_existing_config() -> Optional[DBConfig]:
 def save_config(cfg: DBConfig) -> Path:
     """
     Salva config.json em 3 lugares e cria as pastas se não existirem.
+
+    Isso mantém o arquivo sempre atualizado para o módulo `banco_de_dados_pg`,
+    inclusive em fluxos de recuperação quando a conexão foi perdida.
     """
     payload = json.dumps(asdict(cfg), ensure_ascii=False, indent=2)
 
     targets = [
         CONFIG_FILE,             # oficial (Mac/Windows)
-        DEV_CONFIG_FILE_HERE,    # PAGINAS_DO_SISTEMA/config.json
+        DEV_CONFIG_FILE_PAGINAS, # PAGINAS_DO_SISTEMA/config.json
         DEV_CONFIG_FILE_PARENT,  # raiz do projeto/config.json
     ]
 
@@ -203,6 +208,7 @@ class SetupBancoWindow:
 
         self._saved_ok = False
         self._last_test_ok = False
+        self.exit_code = 1
 
         self.root.title("Configuração do Banco - SistemaOpera")
         self.root.minsize(980, 520)
@@ -229,7 +235,7 @@ class SetupBancoWindow:
 
         subtitle = ctk.CTkLabel(
             outer,
-            text="Instalação do SistemaOpera • Configure local/rede, teste conexão e conclua.",
+            text="Instalação/Recuperação • Use esta tela sempre que perder conexão com o banco.",
             font=ctk.CTkFont(size=12),
             text_color="#b7c6d8",
         )
@@ -280,7 +286,11 @@ class SetupBancoWindow:
             .place(x=420, y=y2 + 42)
 
         # ===== Status =====
-        self.lbl_status = ctk.CTkLabel(outer, text="Aguardando validação.", text_color="#b7c6d8")
+        self.lbl_status = ctk.CTkLabel(
+            outer,
+            text="Aguardando validação. Ao salvar, o config.json fica atualizado para o módulo banco_de_dados_pg.",
+            text_color="#b7c6d8",
+        )
         self.lbl_status.place(x=26, y=300)
 
         # ===== Botões =====
@@ -326,11 +336,14 @@ class SetupBancoWindow:
     def _on_close(self):
         # Se não salvou com sucesso, consideramos cancelado
         if not self._saved_ok:
+            self.exit_code = 1
             try:
                 self.root.destroy()
             except Exception:
                 pass
-            raise SystemExit(1)
+            return
+
+        self.exit_code = 0
         try:
             self.root.destroy()
         except Exception:
@@ -403,6 +416,7 @@ class SetupBancoWindow:
         try:
             path = save_config(cfg)
             self._saved_ok = True
+            self.exit_code = 0
             messagebox.showinfo("Configuração salva", f"Configuração salva com sucesso em:\n{path}")
             self.root.destroy()
         except Exception as e:
@@ -413,8 +427,10 @@ class SetupBancoWindow:
 # Entrypoint
 # ============================================================
 def main():
-    SetupBancoWindow(parent=None).root.mainloop()
+    window = SetupBancoWindow(parent=None)
+    window.root.mainloop()
+    return window.exit_code
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
