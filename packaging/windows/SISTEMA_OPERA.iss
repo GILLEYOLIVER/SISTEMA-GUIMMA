@@ -199,6 +199,16 @@ begin
   end;
 end;
 
+function TryParseInt(const S: string; var Value: Integer): Boolean;
+begin
+  Result := True;
+  try
+    Value := StrToInt(S);
+  except
+    Result := False;
+  end;
+end;
+
 procedure TestConnectionClick(Sender: TObject);
 var
   HostValue: string;
@@ -276,7 +286,7 @@ begin
       end;
     end;
 
-    if not TryStrToInt(Trim(DbConfigPage.Values[1]), PortValue) then
+    if not TryParseInt(Trim(DbConfigPage.Values[1]), PortValue) then
     begin
       MsgBox('A porta precisa ser numérica.', mbError, MB_OK);
       Result := False;
