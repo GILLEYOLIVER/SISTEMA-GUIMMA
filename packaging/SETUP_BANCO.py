@@ -3,11 +3,11 @@
 SETUP_BANCO.py — Configurador de Banco (Universal Mac/Windows)
 
 - Abre janela de configuração do Postgres
-- Detecta porta
-- Testa conexão
+- Deve ser chamada também quando a conexão com o banco cair (ou se o config.json sumir/corromper)
+- Detecta porta e testa conexão para reencontrar o banco
 - Só permite "Salvar e concluir" após conexão OK
 - Se fechar no X sem salvar: retorna exit code 1 (cancelado)
-- Salva config.json em 3 lugares (criando pastas automaticamente):
+- Salva config.json atualizado em 3 lugares (criando pastas automaticamente):
   1) Local correto do app (Mac: Application Support / Windows: AppData)
   2) Pasta atual do projeto (PAGINAS_DO_SISTEMA/config.json)
   3) Raiz do projeto (../config.json)
@@ -126,6 +126,9 @@ def load_existing_config() -> Optional[DBConfig]:
 def save_config(cfg: DBConfig) -> Path:
     """
     Salva config.json em 3 lugares e cria as pastas se não existirem.
+
+    Isso mantém o arquivo sempre atualizado para o módulo `banco_de_dados_pg`,
+    inclusive em fluxos de recuperação quando a conexão foi perdida.
     """
     payload = json.dumps(asdict(cfg), ensure_ascii=False, indent=2)
 
@@ -201,7 +204,6 @@ class SetupBancoWindow:
         else:
             self.root = ctk.CTk()
 
-        self._parent = parent
         self._saved_ok = False
         self._last_test_ok = False
         self.exit_code = 1
@@ -231,7 +233,7 @@ class SetupBancoWindow:
 
         subtitle = ctk.CTkLabel(
             outer,
-            text="Instalação do SistemaOpera • Configure local/rede, teste conexão e conclua.",
+            text="Instalação/Recuperação • Use esta tela sempre que perder conexão com o banco.",
             font=ctk.CTkFont(size=12),
             text_color="#b7c6d8",
         )
@@ -282,7 +284,11 @@ class SetupBancoWindow:
             .place(x=420, y=y2 + 42)
 
         # ===== Status =====
-        self.lbl_status = ctk.CTkLabel(outer, text="Aguardando validação.", text_color="#b7c6d8")
+        self.lbl_status = ctk.CTkLabel(
+            outer,
+            text="Aguardando validação. Ao salvar, o config.json fica atualizado para o módulo banco_de_dados_pg.",
+            text_color="#b7c6d8",
+        )
         self.lbl_status.place(x=26, y=300)
 
         # ===== Botões =====
