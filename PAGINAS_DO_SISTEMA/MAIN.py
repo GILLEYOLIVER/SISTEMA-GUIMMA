@@ -69,9 +69,9 @@ def _ensure_db_config_before_app() -> None:
     if any(_is_valid_config_file(cfg) for cfg in candidates):
         return
 
-    setup_script = project_root / "packaging" / "SETUP_BANCO.py"
+    setup_script = pages_dir / "SETUP_BANCO.py"
     if not setup_script.exists():
-        raise SystemExit("SETUP_BANCO.py não encontrado para configuração inicial do banco.")
+        raise SystemExit("PAGINAS_DO_SISTEMA/SETUP_BANCO.py não encontrado para configuração inicial do banco.")
 
     result = subprocess.run([sys.executable, str(setup_script)], check=False)
     if result.returncode != 0:
