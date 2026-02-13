@@ -59,14 +59,15 @@ var
   TestConnectionButton: TButton;
   DetectPortButton: TButton;
 
-procedure LocalDbCheckClick(Sender: TObject);
-procedure TestConnectionClick(Sender: TObject);
-procedure DetectPortClick(Sender: TObject);
+procedure LocalDbCheckClick(Sender: TObject); forward;
+procedure TestConnectionClick(Sender: TObject); forward;
+procedure DetectPortClick(Sender: TObject); forward;
 
 function JsonEscape(const Value: string): string;
 begin
-  Result := StringReplace(Value, '\', '\\', [rfReplaceAll]);
-  Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
+  Result := Value;
+  StringChangeEx(Result, '\', '\\', True);
+  StringChangeEx(Result, '"', '\"', True);
 end;
 
 function GetDbConfigPath(): string;
@@ -198,6 +199,16 @@ begin
   end;
 end;
 
+function TryParseInt(const S: string; var Value: Integer): Boolean;
+begin
+  Result := True;
+  try
+    Value := StrToInt(S);
+  except
+    Result := False;
+  end;
+end;
+
 procedure TestConnectionClick(Sender: TObject);
 var
   HostValue: string;
@@ -275,7 +286,7 @@ begin
       end;
     end;
 
-    if not TryStrToInt(Trim(DbConfigPage.Values[1]), PortValue) then
+    if not TryParseInt(Trim(DbConfigPage.Values[1]), PortValue) then
     begin
       MsgBox('A porta precisa ser numérica.', mbError, MB_OK);
       Result := False;
