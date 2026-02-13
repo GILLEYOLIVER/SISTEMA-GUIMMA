@@ -5,10 +5,13 @@
 #>
 
 param(
+    [Alias('SkipAppBuild')]
     [switch]$SkipBuild,
     [switch]$SkipIcon,
     [switch]$SkipInstaller,
     [switch]$Clean,
+    [string]$Python = "python",
+    [string]$Version = "1.0.0",
     [string]$InnoPath = ""
 )
 
@@ -42,7 +45,7 @@ if (-not $SkipIcon) {
         Write-Info "Convertendo icone PNG para ICO..."
         
         try {
-            & python $iconScript
+            & $Python $iconScript
             Write-Success "Conversao do icone concluida"
         } catch {
             Write-Warning "Falha ao converter icone: $_"
@@ -72,7 +75,7 @@ if (-not $SkipBuild) {
             }
             
             # Executar build
-            & python $buildScript --platform windows
+            & $Python $buildScript --platform windows
             
             # Verificar se executavel foi criado
             $exePaths = @(
@@ -94,8 +97,16 @@ if (-not $SkipBuild) {
                         New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
                     }
                     
-                    # Copiar executavel
-                    Copy-Item $path -Destination "$targetDir\SistemaOpera.exe" -Force
+                    # Copiar executavel (evita copiar arquivo nele mesmo)
+                    $destinationExe = Join-Path $targetDir "SistemaOpera.exe"
+                    $sourceExeFull = [System.IO.Path]::GetFullPath($path)
+                    $destinationExeFull = [System.IO.Path]::GetFullPath($destinationExe)
+
+                    if ($sourceExeFull -ne $destinationExeFull) {
+                        Copy-Item $path -Destination $destinationExe -Force
+                    } else {
+                        Write-Info "Executavel ja esta no destino final: $destinationExe"
+                    }
                     
                     # Copiar icone
                     $iconPath = "icons\ICONE_SISTEMA.ico"
@@ -242,6 +253,15 @@ if (-not $SkipInstaller) {
                     Move-Item $path -Destination "dist\SistemaOpera_Setup.exe" -Force
                     Write-Info "Instalador movido para: dist\SistemaOpera_Setup.exe"
                 }
+
+                # Salvar no caminho esperado pelo build_release.ps1
+                $windowsInstallerDir = "dist\installers\windows"
+                if (-not (Test-Path $windowsInstallerDir)) {
+                    New-Item -ItemType Directory -Path $windowsInstallerDir -Force | Out-Null
+                }
+                $releaseInstallerPath = Join-Path $windowsInstallerDir "SISTEMA_OPERA_${Version}_Windows.exe"
+                Copy-Item "dist\SistemaOpera_Setup.exe" -Destination $releaseInstallerPath -Force
+                Write-Info "Instalador de release preparado em: $releaseInstallerPath"
                 
                 break
             }
