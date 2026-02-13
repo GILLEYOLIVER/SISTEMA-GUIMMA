@@ -59,14 +59,15 @@ var
   TestConnectionButton: TButton;
   DetectPortButton: TButton;
 
-procedure LocalDbCheckClick(Sender: TObject);
-procedure TestConnectionClick(Sender: TObject);
-procedure DetectPortClick(Sender: TObject);
+procedure LocalDbCheckClick(Sender: TObject); forward;
+procedure TestConnectionClick(Sender: TObject); forward;
+procedure DetectPortClick(Sender: TObject); forward;
 
 function JsonEscape(const Value: string): string;
 begin
-  Result := StringReplace(Value, '\', '\\', [rfReplaceAll]);
-  Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
+  Result := Value;
+  StringChangeEx(Result, '\', '\\', True);
+  StringChangeEx(Result, '"', '\"', True);
 end;
 
 function GetDbConfigPath(): string;

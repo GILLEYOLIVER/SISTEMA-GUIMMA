@@ -1,0 +1,14 @@
+# Build/packaging artifacts (não versionar)
+build/
+dist/
+installer_root/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Installer binaries
+*.dmg
+*.exe
+*.msi
+*.zip
