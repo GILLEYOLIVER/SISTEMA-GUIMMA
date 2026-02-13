@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import json
 import os
+import subprocess
 import sys
+from pathlib import Path
 
 
 def _add_runtime_paths():
@@ -37,6 +40,46 @@ def _add_runtime_paths():
 
 _add_runtime_paths()
 
+
+def _is_valid_config_file(path: Path) -> bool:
+    try:
+        if not path.exists() or not path.is_file():
+            return False
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return isinstance(data, dict) and bool(data)
+    except Exception:
+        return False
+
+
+def _ensure_db_config_before_app() -> None:
+    """
+    Na primeira execução (sem config.json), abre o SETUP_BANCO para configurar
+    e salvar o arquivo, incluindo PAGINAS_DO_SISTEMA/config.json.
+    """
+    pages_dir = Path(__file__).resolve().parent
+    project_root = pages_dir.parent
+    app_cfg = get_app_data_dir() / "config.json"
+
+    candidates = [
+        pages_dir / "config.json",
+        project_root / "config.json",
+        app_cfg,
+    ]
+
+    if any(_is_valid_config_file(cfg) for cfg in candidates):
+        return
+
+    setup_script = pages_dir / "SETUP_BANCO.py"
+    if not setup_script.exists():
+        raise SystemExit("PAGINAS_DO_SISTEMA/SETUP_BANCO.py não encontrado para configuração inicial do banco.")
+
+    result = subprocess.run([sys.executable, str(setup_script)], check=False)
+    if result.returncode != 0:
+        raise SystemExit(result.returncode)
+
+    if not _is_valid_config_file(pages_dir / "config.json"):
+        raise SystemExit("Configuração inicial não gerou PAGINAS_DO_SISTEMA/config.json.")
+
 # ✅ Pastas graváveis (resolve "Read-only file system" no .app)
 from PAGINAS_DO_SISTEMA.OPERA_PATHS import ensure_default_tree, get_app_data_dir
 
@@ -44,6 +87,8 @@ os.environ.setdefault("OPERA_DATA_DIR", str(get_app_data_dir()))
 ensure_default_tree()
 if getattr(sys, "_MEIPASS", None):
     os.chdir(get_app_data_dir())
+
+_ensure_db_config_before_app()
 
 
 # ==============================================================================
