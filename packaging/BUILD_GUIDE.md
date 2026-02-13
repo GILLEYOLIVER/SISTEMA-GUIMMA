@@ -66,9 +66,30 @@ python packaging/build.py --platform windows --pyinstaller-args --hidden-import=
 
 > Se o app usa imports dinâmicos, prefira `collect_submodules` no spec.
 
+
+> Importante: artefatos binários (`dist/`, `build/`, `.dmg`, `.exe`, `.zip`) não devem ser versionados no Git; publique-os apenas como artefatos de release.
+
 ## Checklist rápido
 
 - [ ] Rodar build com `--debug=imports` e revisar `warn-*.txt`.
 - [ ] Atualizar `SistemaOpera.spec` com `collect_submodules`.
 - [ ] Manter `requirements.txt` travado.
 - [ ] Repetir o build limpo (`--clean`) até não haver warnings relevantes.
+
+
+## Pacote completo (macOS + Windows no mesmo ZIP)
+
+No macOS/Linux, use:
+
+```bash
+bash packaging/release/build_release.sh 1.0.0 --require-windows
+```
+
+Se o `.exe` do Windows foi gerado em outra máquina, informe o caminho:
+
+```bash
+OPERA_WINDOWS_EXE=/caminho/SISTEMA_OPERA_1.0.0_setup.exe \
+  bash packaging/release/build_release.sh 1.0.0 --require-windows
+```
+
+O script aborta com erro se `--require-windows` estiver ativo e nenhum `.exe` for encontrado.
