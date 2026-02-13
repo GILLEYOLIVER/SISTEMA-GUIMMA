@@ -13,9 +13,6 @@ classes, since whenever the number of tables changes or whenever
 a table's length changes you need to rewrite the whole file anyway.
 """
 
-from __future__ import annotations
-
-from collections.abc import KeysView
 from io import BytesIO
 from types import SimpleNamespace
 from fontTools.misc.textTools import Tag
@@ -87,7 +84,7 @@ class SFNTReader(object):
 
         if self.sfntVersion not in ("\x00\x01\x00\x00", "OTTO", "true"):
             raise TTLibError("Not a TrueType or OpenType font (bad sfntVersion)")
-        tables: dict[Tag, DirectoryEntry] = {}
+        tables = {}
         for i in range(self.numTables):
             entry = self.DirectoryEntry()
             entry.fromFile(self.file)
@@ -99,15 +96,15 @@ class SFNTReader(object):
         if self.flavor == "woff":
             self.flavorData = WOFFFlavorData(self)
 
-    def has_key(self, tag: str | bytes) -> bool:
+    def has_key(self, tag):
         return tag in self.tables
 
     __contains__ = has_key
 
-    def keys(self) -> KeysView[Tag]:
+    def keys(self):
         return self.tables.keys()
 
-    def __getitem__(self, tag: str | bytes) -> bytes:
+    def __getitem__(self, tag):
         """Fetch the raw table data."""
         entry = self.tables[Tag(tag)]
         data = entry.loadData(self.file)
@@ -125,10 +122,10 @@ class SFNTReader(object):
                 log.warning("bad checksum for '%s' table", tag)
         return data
 
-    def __delitem__(self, tag: str | bytes) -> None:
+    def __delitem__(self, tag):
         del self.tables[Tag(tag)]
 
-    def close(self) -> None:
+    def close(self):
         self.file.close()
 
     # We define custom __getstate__ and __setstate__ to make SFNTReader pickle-able

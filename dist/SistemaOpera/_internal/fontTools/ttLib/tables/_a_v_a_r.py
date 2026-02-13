@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-from typing import Mapping, TYPE_CHECKING
 from fontTools.misc import sstruct
 from fontTools.misc.fixedTools import (
     fixedToFloat as fi2fl,
@@ -22,9 +19,6 @@ import logging
 log = logging.getLogger(__name__)
 
 from .otBase import BaseTTXConverter
-
-if TYPE_CHECKING:
-    from ..ttFont import TTFont
 
 
 class table__a_v_a_r(BaseTTXConverter):
@@ -149,9 +143,8 @@ class table__a_v_a_r(BaseTTXConverter):
         else:
             super().fromXML(name, attrs, content, ttFont)
 
-    def renormalizeLocation(
-        self, location: Mapping[str, float], font: TTFont, dropZeroes: bool = True
-    ) -> dict[str, float]:
+    def renormalizeLocation(self, location, font, dropZeroes=True):
+
         majorVersion = getattr(self, "majorVersion", 1)
 
         if majorVersion not in (1, 2):

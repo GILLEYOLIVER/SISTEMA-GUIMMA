@@ -1,1 +1,0 @@
-../../Resources/PyQt5/pylupdate_main.py

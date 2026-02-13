@@ -28,23 +28,21 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
 
     Section {
-        caption: qsTr("Motion Blur")
+        caption: qsTr("Blur")
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Fade Amount")
                 tooltip: qsTr("Specifies how much the blur fades away each frame.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 1
@@ -52,18 +50,13 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.fadeAmount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Quality")
                 tooltip: qsTr("Blur quality.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 1
@@ -71,11 +64,8 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.blurQuality
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

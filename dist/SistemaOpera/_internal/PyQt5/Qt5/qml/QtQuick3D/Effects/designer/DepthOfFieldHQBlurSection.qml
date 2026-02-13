@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,58 +39,44 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Blur Amount")
                 tooltip: qsTr("Amount of blur.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 50
                     minimumValue: 0
                     decimals: 2
                     backendValue: backendValues.blurAmount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Focus Distance")
                 tooltip: qsTr("Focus distance of the blur.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 5000
                     minimumValue: 0
                     decimals: 0
                     backendValue: backendValues.focusDistance
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Focus Range")
                 tooltip: qsTr("Focus range of the blur.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 5000
                     minimumValue: 0
                     decimals: 0
                     backendValue: backendValues.focusRange
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

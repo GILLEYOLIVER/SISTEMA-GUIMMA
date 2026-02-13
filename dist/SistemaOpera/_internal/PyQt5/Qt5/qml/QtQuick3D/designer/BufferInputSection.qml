@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,37 +39,27 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Buffer")
                 tooltip: qsTr("Input buffer for a pass.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Buffer"
+                    Layout.fillWidth: true
                     backendValue: backendValues.buffer
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Parameter")
                 tooltip: qsTr("Buffer input buffer name in the shader.")
             }
-
             SecondColumnLayout {
                 LineEdit {
                     backendValue: backendValues.param
+                    Layout.fillWidth: true
                     showTranslateCheckBox: false
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
-                    width: implicitWidth
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

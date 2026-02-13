@@ -22,6 +22,8 @@ except Exception as e:
         return "public"
 
 
+    # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
+
     def require_ready(essentials=None):
         return False, "Módulo de banco de dados não disponível"
 

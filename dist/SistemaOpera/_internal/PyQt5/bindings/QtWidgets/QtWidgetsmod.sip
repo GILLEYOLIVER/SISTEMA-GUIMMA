@@ -168,5 +168,5 @@ WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 %Include qwidget.sip
 %Include qwidgetaction.sip
 %Include qwizard.sip
-%Include qpywidgets_qlist.sip
 %Include qmaccocoaviewcontainer.sip
+%Include qpywidgets_qlist.sip

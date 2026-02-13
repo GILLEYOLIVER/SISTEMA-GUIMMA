@@ -1,15 +1,41 @@
+#pragma charset utf-8
 #define AppName "SISTEMA OPERA"
 #ifndef AppVersion
 #define AppVersion "1.0.0"
 #endif
 #define AppPublisher "Opera Fashion"
 #define AppExeName "SistemaOpera.exe"
-#define IconPath "..\\..\\src\\PAGINAS_DO_SISTEMA\\ICONE_SISTEMA.ico"
+
+; =========================
+; Personalização (Windows)
+; =========================
+#define SetupIco "..\\ICONE_SISTEMA.ico"
+#define WizBigBmp "..\\wizard_big.bmp"
+#define WizSmallBmp "..\\wizard_small.bmp"
+
 #ifndef OutputDir
-#define OutputDir "..\\.."
+#define OutputDir "..\\..\\dist"
 #endif
 #ifndef OutputBaseFilename
-#define OutputBaseFilename "Instalador_{#AppName}"
+#define OutputBaseFilename "SistemaOpera_Setup"
+#endif
+
+; =========================
+; Configurador do banco (CustomTkinter)
+; =========================
+#define DbHelperExePath1 "..\\..\\dist\\SistemaOpera\\CONFIGURAR_BANCO.exe"
+#define DbHelperExePath2 "..\\..\\dist\\SistemaOpera\\SETUP_BANCO.exe"
+
+#if FileExists(DbHelperExePath1)
+  #define DbHelperExePath DbHelperExePath1
+  #define DbHelperExeName "CONFIGURAR_BANCO.exe"
+  #define HAS_DB_HELPER
+#elif FileExists(DbHelperExePath2)
+  #define DbHelperExePath DbHelperExePath2
+  #define DbHelperExeName "SETUP_BANCO.exe"
+  #define HAS_DB_HELPER
+#else
+  #define DbHelperExeName ""
 #endif
 
 [Setup]
@@ -19,16 +45,26 @@ AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
 DefaultDirName={pf}\{#AppName}
 DefaultGroupName={#AppName}
+
 OutputBaseFilename={#OutputBaseFilename}
 OutputDir={#OutputDir}
+
 Compression=lzma
 SolidCompression=yes
-DisableDirPage=no
 WizardStyle=modern
 
-; Opcional: se tiver um .ico, ajuste aqui.
-#if FileExists(IconPath)
-SetupIconFile={#IconPath}
+WizardResizable=yes
+WizardSizePercent=135,135
+
+#if FileExists(SetupIco)
+SetupIconFile={#SetupIco}
+#endif
+
+#if FileExists(WizBigBmp)
+WizardImageFile={#WizBigBmp}
+#endif
+#if FileExists(WizSmallBmp)
+WizardSmallImageFile={#WizSmallBmp}
 #endif
 
 [Languages]
@@ -38,336 +74,151 @@ Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortugue
 Name: "desktopicon"; Description: "Criar ícone na área de trabalho"; GroupDescription: "Atalhos:"; Flags: unchecked
 
 [Files]
-Source: "..\..\dist\SistemaOpera\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\dist\SistemaOpera\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\\..\\dist\\SistemaOpera\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\\..\\dist\\SistemaOpera\\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+
+#ifdef HAS_DB_HELPER
+Source: "{#DbHelperExePath}"; DestDir: "{app}"; Flags: ignoreversion
+#endif
 
 [Dirs]
-Name: "{app}\INSTALAÇÃO"
+Name: "{userappdata}\\SistemaOpera"
+Name: "{userappdata}\\SistemaOpera\\config"
+Name: "{userappdata}\\SistemaOpera\\logs"
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
-Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{group}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"
+Name: "{commondesktop}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; Tasks: desktopicon
+
+#ifdef HAS_DB_HELPER
+Name: "{group}\\Configurar Banco de Dados"; Filename: "{app}\\{#DbHelperExeName}"
+#endif
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "Abrir {#AppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\\{#AppExeName}"; Description: "Executar {#AppName}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 var
-  DbConfigPage: TInputQueryWizardPage;
-  AutoDetectPortsCheck: TCheckBox;
-  LocalDbCheck: TCheckBox;
-  TestConnectionButton: TButton;
-  DetectPortButton: TButton;
+  DbPhasePage: TWizardPage;
+  DbInfoLabel: TNewStaticText;
+  DbHelperOk: Boolean;
+  DbAutoLaunchedOnce: Boolean;
 
-procedure LocalDbCheckClick(Sender: TObject); forward;
-procedure TestConnectionClick(Sender: TObject); forward;
-procedure DetectPortClick(Sender: TObject); forward;
-
-function JsonEscape(const Value: string): string;
+procedure ResizeWizardBigger();
 begin
-  Result := Value;
-  StringChangeEx(Result, '\', '\\', True);
-  StringChangeEx(Result, '"', '\"', True);
+  try
+    WizardForm.ClientWidth := ScaleX(920);
+    WizardForm.ClientHeight := ScaleY(600);
+  except
+  end;
 end;
 
-function GetDbConfigPath(): string;
+function HasDbHelper(): Boolean;
 begin
-  Result := ExpandConstant('{userappdata}\SistemaOpera\config.json');
+  Result := False;
+  #ifdef HAS_DB_HELPER
+    Result := True;
+  #endif
 end;
 
-function GetInstallDbConfigPath(): string;
+function GetDbHelperExeOnDisk(): string;
 begin
-  Result := ExpandConstant('{app}\INSTALAÇÃO\config.json');
+  Result := '';
+  #ifdef HAS_DB_HELPER
+    Result := ExpandConstant('{app}\{#DbHelperExeName}');
+  #endif
+end;
+
+procedure LaunchDbHelperOrWarn();
+var
+  exePath: string;
+  rc: Integer;
+begin
+  if not HasDbHelper() then
+  begin
+    DbHelperOk := True;  ; // não bloqueia instalação se não tiver
+    DbInfoLabel.Caption :=
+      'O configurador do banco (tela do SETUP_BANCO.py) não foi incluído neste build.' + #13#10 +
+      'A instalação continuará normalmente. Depois, abra "Configurar Banco de Dados" no menu Iniciar.';
+    Exit;
+  end;
+
+  exePath := GetDbHelperExeOnDisk();
+  if (exePath = '') or (not FileExists(exePath)) then
+  begin
+    DbHelperOk := True;  ; // não bloqueia (mas avisa)
+    DbInfoLabel.Caption :=
+      'O configurador do banco era esperado em:' + #13#10 + exePath + #13#10 +
+      'Mas não foi encontrado. A instalação continuará.';
+    Exit;
+  end;
+
+  ; Executa e espera fechar (fase da instalação)
+  if Exec(exePath, '', '', SW_SHOW, ewWaitUntilTerminated, rc) then
+  begin
+    if rc = 0 then
+    begin
+      DbHelperOk := True;
+      DbInfoLabel.Caption := '✅ Banco configurado com sucesso. Clique em Avançar para continuar.';
+    end
+    else
+    begin
+      DbHelperOk := False;
+      DbInfoLabel.Caption := '⚠️ Fechado sem concluir. O configurador será aberto novamente ao avançar.';
+    end;
+  end
+  else
+  begin
+    DbHelperOk := False;
+    DbInfoLabel.Caption := '⚠️ Não foi possível abrir o configurador. Tente novamente ao avançar.';
+  end;
 end;
 
 procedure InitializeWizard;
 begin
-  DbConfigPage :=
-    CreateInputQueryPage(
-      wpSelectDir,
-      'Configuração do Banco de Dados (Local ou Rede)',
-      'Informe os dados para conectar o sistema ao banco (local ou em rede).',
-      'Essas informações serão gravadas em ' + GetDbConfigPath() + ' e em ' + GetInstallDbConfigPath() + '.'
-    );
+  ResizeWizardBigger();
 
-  DbConfigPage.Add('IP/Host do Banco (local ou rede):', False);
-  DbConfigPage.Add('Porta:', False);
-  DbConfigPage.Add('Nome do Banco:', False);
-  DbConfigPage.Add('Usuário:', False);
-  DbConfigPage.Add('Senha:', True);
-  DbConfigPage.Add('Schema:', False);
+  DbPhasePage := CreateCustomPage(
+    wpSelectDir,
+    'Configuração do Banco de Dados',
+    'Esta etapa faz parte da instalação do SISTEMA OPERA.'
+  );
 
-  DbConfigPage.Values[0] := 'localhost';
-  DbConfigPage.Values[1] := '5432';
-  DbConfigPage.Values[2] := 'BANCO_OPERA';
-  DbConfigPage.Values[3] := 'postgres';
-  DbConfigPage.Values[4] := '';
-  DbConfigPage.Values[5] := 'opera';
+  DbInfoLabel := TNewStaticText.Create(WizardForm);
+  DbInfoLabel.Parent := DbPhasePage.Surface;
+  DbInfoLabel.Left := ScaleX(0);
+  DbInfoLabel.Top := ScaleY(0);
+  DbInfoLabel.Width := DbPhasePage.SurfaceWidth;
+  DbInfoLabel.Height := ScaleY(180);
+  DbInfoLabel.AutoSize := False;
+  DbInfoLabel.WordWrap := True;
+  DbInfoLabel.Caption := 'Abrindo configurador do banco...';
 
-  AutoDetectPortsCheck := TCheckBox.Create(DbConfigPage.Surface);
-  AutoDetectPortsCheck.Parent := DbConfigPage.Surface;
-  AutoDetectPortsCheck.Caption := 'Detectar porta automaticamente (se disponível)';
-  AutoDetectPortsCheck.Checked := True;
-  AutoDetectPortsCheck.Top := DbConfigPage.Edits[5].Top + DbConfigPage.Edits[5].Height + ScaleY(10);
-  AutoDetectPortsCheck.Left := DbConfigPage.Edits[5].Left;
-
-  LocalDbCheck := TCheckBox.Create(DbConfigPage.Surface);
-  LocalDbCheck.Parent := DbConfigPage.Surface;
-  LocalDbCheck.Caption := 'Banco local (localhost) - desmarque para usar IP de rede';
-  LocalDbCheck.Checked := True;
-  LocalDbCheck.Top := AutoDetectPortsCheck.Top + AutoDetectPortsCheck.Height + ScaleY(6);
-  LocalDbCheck.Left := AutoDetectPortsCheck.Left;
-  LocalDbCheck.OnClick := @LocalDbCheckClick;
-
-  TestConnectionButton := TButton.Create(DbConfigPage.Surface);
-  TestConnectionButton.Parent := DbConfigPage.Surface;
-  TestConnectionButton.Caption := 'Testar conexão';
-  TestConnectionButton.Top := LocalDbCheck.Top + LocalDbCheck.Height + ScaleY(10);
-  TestConnectionButton.Left := LocalDbCheck.Left;
-  TestConnectionButton.OnClick := @TestConnectionClick;
-
-  DetectPortButton := TButton.Create(DbConfigPage.Surface);
-  DetectPortButton.Parent := DbConfigPage.Surface;
-  DetectPortButton.Caption := 'Buscar porta';
-  DetectPortButton.Top := TestConnectionButton.Top;
-  DetectPortButton.Left := TestConnectionButton.Left + TestConnectionButton.Width + ScaleX(12);
-  DetectPortButton.OnClick := @DetectPortClick;
-
-  LocalDbCheckClick(LocalDbCheck);
+  DbHelperOk := False;
+  DbAutoLaunchedOnce := False;
 end;
 
-procedure LocalDbCheckClick(Sender: TObject);
+procedure CurPageChanged(CurPageID: Integer);
 begin
-  if LocalDbCheck.Checked then
+  if (CurPageID = DbPhasePage.ID) and (not DbAutoLaunchedOnce) then
   begin
-    DbConfigPage.Values[0] := 'localhost';
-    if Trim(DbConfigPage.Values[1]) = '' then
-      DbConfigPage.Values[1] := '5432';
+    DbAutoLaunchedOnce := True;
+    LaunchDbHelperOrWarn();
   end;
-
-  DbConfigPage.Edits[0].Enabled := not LocalDbCheck.Checked;
-end;
-
-function TestHostPort(const HostValue: string; const PortValue: string): Boolean;
-var
-  ResultCode: Integer;
-  Command: string;
-begin
-  Command :=
-    '-NoProfile -ExecutionPolicy Bypass -Command "if (Test-NetConnection -ComputerName ''' +
-    HostValue + ''' -Port ' + PortValue + ' -InformationLevel Quiet) { exit 0 } else { exit 1 }"';
-
-  if Exec('powershell.exe', Command, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    Result := ResultCode = 0
-  else
-    Result := False;
-end;
-
-function PopNextToken(var ListValue: string): string;
-var
-  CommaPos: Integer;
-begin
-  CommaPos := Pos(',', ListValue);
-  if CommaPos = 0 then
-  begin
-    Result := ListValue;
-    ListValue := '';
-  end
-  else
-  begin
-    Result := Copy(ListValue, 1, CommaPos - 1);
-    ListValue := Copy(ListValue, CommaPos + 1, Length(ListValue) - CommaPos);
-  end;
-end;
-
-function DetectPortForHost(const HostValue: string): string;
-var
-  PortsToTry: string;
-  CurrentPort: string;
-begin
-  Result := '';
-  PortsToTry := '5432,5433,5434,5435,5436';
-
-  while PortsToTry <> '' do
-  begin
-    CurrentPort := PopNextToken(PortsToTry);
-    if TestHostPort(HostValue, CurrentPort) then
-    begin
-      Result := CurrentPort;
-      Exit;
-    end;
-  end;
-end;
-
-function TryParseInt(const S: string; var Value: Integer): Boolean;
-begin
-  Result := True;
-  try
-    Value := StrToInt(S);
-  except
-    Result := False;
-  end;
-end;
-
-procedure TestConnectionClick(Sender: TObject);
-var
-  HostValue: string;
-  PortValue: string;
-begin
-  HostValue := Trim(DbConfigPage.Values[0]);
-  PortValue := Trim(DbConfigPage.Values[1]);
-
-  if (HostValue = '') or (PortValue = '') then
-  begin
-    MsgBox('Informe IP/Host e porta antes de testar.', mbError, MB_OK);
-    Exit;
-  end;
-
-  if TestHostPort(HostValue, PortValue) then
-    MsgBox('Conexão OK: o banco respondeu no host/porta informados.', mbInformation, MB_OK)
-  else
-    MsgBox('Não foi possível conectar ao banco nesse host/porta.', mbError, MB_OK);
-end;
-
-procedure DetectPortClick(Sender: TObject);
-var
-  HostValue: string;
-  DetectedPort: string;
-begin
-  HostValue := Trim(DbConfigPage.Values[0]);
-
-  if HostValue = '' then
-  begin
-    MsgBox('Informe o IP/Host do banco antes de buscar a porta.', mbError, MB_OK);
-    Exit;
-  end;
-
-  DetectedPort := DetectPortForHost(HostValue);
-  if DetectedPort <> '' then
-  begin
-    DbConfigPage.Values[1] := DetectedPort;
-    MsgBox('Porta detectada: ' + DetectedPort, mbInformation, MB_OK);
-  end
-  else
-    MsgBox('Não foi possível detectar uma porta aberta para o banco.', mbError, MB_OK);
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
-var
-  PortValue: Integer;
 begin
   Result := True;
-  if CurPageID = DbConfigPage.ID then
+
+  if CurPageID = DbPhasePage.ID then
   begin
-    if Trim(DbConfigPage.Values[0]) = '' then
+    if HasDbHelper() and (not DbHelperOk) then
     begin
-      MsgBox('Informe o IP/Host do banco.', mbError, MB_OK);
-      Result := False;
-      Exit;
+      ; sem botão, sem pergunta — força concluir
+      MsgBox('Finalize a configuração do banco para continuar.', mbInformation, MB_OK);
+      LaunchDbHelperOrWarn();
+      Result := DbHelperOk;
     end;
-
-    if Trim(DbConfigPage.Values[1]) = '' then
-    begin
-      if AutoDetectPortsCheck.Checked then
-      begin
-        DbConfigPage.Values[1] := DetectPortForHost(Trim(DbConfigPage.Values[0]));
-        if Trim(DbConfigPage.Values[1]) = '' then
-        begin
-          MsgBox('Não foi possível detectar a porta do banco. Informe manualmente.', mbError, MB_OK);
-          Result := False;
-          Exit;
-        end;
-      end
-      else
-      begin
-        MsgBox('Informe a porta do banco.', mbError, MB_OK);
-        Result := False;
-        Exit;
-      end;
-    end;
-
-    if not TryParseInt(Trim(DbConfigPage.Values[1]), PortValue) then
-    begin
-      MsgBox('A porta precisa ser numérica.', mbError, MB_OK);
-      Result := False;
-      Exit;
-    end;
-
-    if Trim(DbConfigPage.Values[2]) = '' then
-    begin
-      MsgBox('Informe o nome do banco.', mbError, MB_OK);
-      Result := False;
-      Exit;
-    end;
-
-    if Trim(DbConfigPage.Values[3]) = '' then
-    begin
-      MsgBox('Informe o usuário do banco.', mbError, MB_OK);
-      Result := False;
-      Exit;
-    end;
-  end;
-end;
-
-procedure WriteDbConfigFile;
-var
-  ConfigPath: string;
-  ConfigDir: string;
-  InstallConfigPath: string;
-  InstallConfigDir: string;
-  HostValue: string;
-  PortValue: string;
-  DbNameValue: string;
-  UserValue: string;
-  PasswordValue: string;
-  SchemaValue: string;
-  AutoDetectValue: string;
-  JsonContent: string;
-begin
-  ConfigPath := GetDbConfigPath();
-  ConfigDir := ExtractFileDir(ConfigPath);
-  ForceDirectories(ConfigDir);
-
-  HostValue := Trim(DbConfigPage.Values[0]);
-  PortValue := Trim(DbConfigPage.Values[1]);
-  DbNameValue := Trim(DbConfigPage.Values[2]);
-  UserValue := Trim(DbConfigPage.Values[3]);
-  PasswordValue := DbConfigPage.Values[4];
-  SchemaValue := Trim(DbConfigPage.Values[5]);
-
-  if AutoDetectPortsCheck.Checked then
-    AutoDetectValue := 'true'
-  else
-    AutoDetectValue := 'false';
-
-  JsonContent :=
-    '{'#13#10 +
-    '  "schema": "' + JsonEscape(SchemaValue) + '",'#13#10 +
-    '  "appname": "OPERA_APP",'#13#10 +
-    '  "defaults": {'#13#10 +
-    '    "dbname": "' + JsonEscape(DbNameValue) + '",'#13#10 +
-    '    "user": "' + JsonEscape(UserValue) + '",'#13#10 +
-    '    "password": "' + JsonEscape(PasswordValue) + '"'#13#10 +
-    '  },'#13#10 +
-    '  "hosts": ["' + JsonEscape(HostValue) + '"],'#13#10 +
-    '  "ports": [' + PortValue + '],'#13#10 +
-    '  "connect_timeout": 10,'#13#10 +
-    '  "auto_detect_ports": ' + AutoDetectValue + ','#13#10 +
-    '  "fallback_to_postgres": true'#13#10 +
-    '}'#13#10;
-
-  SaveStringToFile(ConfigPath, JsonContent, False);
-
-  InstallConfigPath := GetInstallDbConfigPath();
-  InstallConfigDir := ExtractFileDir(InstallConfigPath);
-  ForceDirectories(InstallConfigDir);
-  SaveStringToFile(InstallConfigPath, JsonContent, False);
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-begin
-  if CurStep = ssPostInstall then
-  begin
-    WriteDbConfigFile;
   end;
 end;

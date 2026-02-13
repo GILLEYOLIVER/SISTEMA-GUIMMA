@@ -151,7 +151,7 @@ class CTkMessagebox(customtkinter.CTkToplevel):
 
         if sys.platform.startswith("win"):
             if self.bg_color==self.transparent_color or self.fg_color==self.transparent_color:
-                self.configure(fg_color="#000001")
+                self.configure(fg_color=getattr(self.sistema, 'cor_selecao', '#000001'))
                 self.transparent_color = "#000001"
                 self.attributes("-transparentcolor", self.transparent_color)
 

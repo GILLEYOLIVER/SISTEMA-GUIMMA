@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,38 +39,26 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("State")
                 tooltip: qsTr("Render state to set for a pass.")
             }
-
-            SecondColumnLayout {
-                ComboBox {
-                    scope: "RenderState"
-                    model: ["Unknown", "Blend", "CullFace", "DepthTest", "StencilTest",
-                            "ScissorTest", "DepthWrite", "Multisample"]
-                    backendValue: backendValues.renderState
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
-                }
-
-                ExpandingSpacer {}
+            ComboBox {
+                scope: "RenderState"
+                model: ["Unknown", "Blend", "CullFace", "DepthTest", "StencilTest", "ScissorTest", "DepthWrite", "Multisample"]
+                backendValue: backendValues.renderState
+                Layout.fillWidth: true
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Enabled")
                 tooltip: qsTr("Render state enable state.")
             }
-
             SecondColumnLayout {
                 CheckBox {
                     text: backendValues.enabled.valueToString
                     backendValue: backendValues.enabled
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

@@ -1,1 +1,0 @@
-../../Resources/psycopg2/extensions.py

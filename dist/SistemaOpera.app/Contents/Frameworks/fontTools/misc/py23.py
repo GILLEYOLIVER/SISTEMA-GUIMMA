@@ -1,1 +1,0 @@
-../../../Resources/fontTools/misc/py23.py

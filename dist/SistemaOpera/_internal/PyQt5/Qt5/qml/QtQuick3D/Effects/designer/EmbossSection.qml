@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,11 +39,10 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Amount")
                 tooltip: qsTr("Strength of the emboss.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 0.01
@@ -52,11 +50,8 @@ Column {
                     decimals: 4
                     stepSize: 0.001
                     backendValue: backendValues.amount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

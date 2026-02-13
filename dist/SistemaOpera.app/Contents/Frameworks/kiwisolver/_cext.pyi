@@ -1,1 +1,0 @@
-../../Resources/kiwisolver/_cext.pyi

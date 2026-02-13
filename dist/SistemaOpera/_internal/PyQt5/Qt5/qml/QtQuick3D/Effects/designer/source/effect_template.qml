@@ -42,6 +42,6 @@ Effect {
     Shader {
         id: fragShader
         stage: Shader.Fragment
-        shader: "effect_default_shader.frag"
+        shader: "/* Set to a fragment shader file */"
     }
 }

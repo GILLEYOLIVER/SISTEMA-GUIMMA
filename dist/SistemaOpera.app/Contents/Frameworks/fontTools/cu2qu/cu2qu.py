@@ -1,1 +1,0 @@
-../../../Resources/fontTools/cu2qu/cu2qu.py

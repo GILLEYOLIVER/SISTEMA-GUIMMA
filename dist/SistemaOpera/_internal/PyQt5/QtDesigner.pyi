@@ -475,7 +475,7 @@ class QPyDesignerCustomWidgetPlugin(QtCore.QObject, QDesignerCustomWidgetInterfa
     def __init__(self, parent: typing.Optional[QtCore.QObject] = ...) -> None: ...
 
 
-class QPyDesignerTaskMenuExtension(QtCore.QObject, QDesignerTaskMenuExtension):
+class QPyDesignerMemberSheetExtension(QtCore.QObject, QDesignerMemberSheetExtension):
 
     def __init__(self, parent: typing.Optional[QtCore.QObject]) -> None: ...
 
@@ -485,6 +485,6 @@ class QPyDesignerPropertySheetExtension(QtCore.QObject, QDesignerPropertySheetEx
     def __init__(self, parent: typing.Optional[QtCore.QObject]) -> None: ...
 
 
-class QPyDesignerMemberSheetExtension(QtCore.QObject, QDesignerMemberSheetExtension):
+class QPyDesignerTaskMenuExtension(QtCore.QObject, QDesignerTaskMenuExtension):
 
     def __init__(self, parent: typing.Optional[QtCore.QObject]) -> None: ...

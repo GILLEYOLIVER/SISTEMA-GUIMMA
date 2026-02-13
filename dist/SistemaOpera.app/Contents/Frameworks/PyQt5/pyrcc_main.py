@@ -1,1 +1,0 @@
-../../Resources/PyQt5/pyrcc_main.py

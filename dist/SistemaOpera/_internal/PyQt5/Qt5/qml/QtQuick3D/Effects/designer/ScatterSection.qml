@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,21 +39,17 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Noise Sample Texture")
                 tooltip: qsTr("Defines a texture for noise samples.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.noiseSample_texture
                     defaultItem: qsTr("Default")
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -64,56 +59,42 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Amount")
                 tooltip: qsTr("Amount of scatter.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 127
                     minimumValue: 0
                     decimals: 2
                     backendValue: backendValues.amount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Direction")
                 tooltip: qsTr("Direction of scatter. 0 = both, 1 = horizontal, 2 = vertical.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 2
                     minimumValue: 0
                     decimals: 0
                     backendValue: backendValues.direction
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Randomize")
                 tooltip: qsTr("Specifies if the scatter is random.")
             }
-
             SecondColumnLayout {
                 CheckBox {
                     text: backendValues.randomize.valueToString
                     backendValue: backendValues.randomize
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

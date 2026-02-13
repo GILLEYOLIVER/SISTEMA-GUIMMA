@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Section {
     caption: qsTr("Model")
@@ -38,18 +37,15 @@ Section {
     SectionLayout {
         id: tessellationSection
 
-        PropertyLabel {
+        Label {
             text: qsTr("Source")
             tooltip: qsTr("Defines the location of the mesh file containing the geometry of this model.")
         }
-
         SecondColumnLayout {
             UrlChooser {
                 backendValue: backendValues.source
                 filter: "*.mesh"
             }
-
-            ExpandingSpacer {}
         }
 
         function hasTessellationMode(mode) {
@@ -64,130 +60,100 @@ Section {
             return true
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Tessellation Mode")
             tooltip: qsTr("Defines what method to use to dynamically generate additional geometry for the model.")
         }
-
         SecondColumnLayout {
             ComboBox {
                 id: tessellationModeComboBox
                 scope: "Model"
                 model: ["NoTessellation", "Linear", "Phong", "NPatch"]
                 backendValue: backendValues.tessellationMode
-                implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Edge Tessellation")
             tooltip: qsTr("Defines the edge multiplier to the tessellation generator.")
         }
-
         SecondColumnLayout {
             SpinBox {
                 maximumValue: 64.0
                 minimumValue: 0.0
                 decimals: 0
                 backendValue: backendValues.edgeTessellation
+                Layout.fillWidth: true
                 enabled: !tessellationSection.hasTessellationMode("NoTessellation")
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
             }
-
-            ExpandingSpacer {}
         }
-
-        PropertyLabel {
+        Label {
             text: qsTr("Inner Tessellation")
             tooltip: qsTr("Defines the inner multiplier to the tessellation generator.")
         }
-
         SecondColumnLayout {
             SpinBox {
                 maximumValue: 64.0
                 minimumValue: 0.0
                 decimals: 0
                 backendValue: backendValues.innerTessellation
+                Layout.fillWidth: true
                 enabled: !tessellationSection.hasTessellationMode("NoTessellation")
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
             }
-
-            ExpandingSpacer {}
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Enable Wireframe Mode")
             tooltip: qsTr("Enables the wireframe mode if tesselation is enabled.")
         }
-
         SecondColumnLayout {
             CheckBox {
                 text: backendValues.isWireframeMode.valueToString
                 backendValue: backendValues.isWireframeMode
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Casts Shadows")
             tooltip: qsTr("Enables the geometry of this model to be rendered to the shadow maps.")
         }
-
         SecondColumnLayout {
             CheckBox {
                 text: backendValues.castsShadows.valueToString
                 backendValue: backendValues.castsShadows
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Receives Shadows")
             tooltip: qsTr("Enables the geometry of this model to receive shadows.")
         }
-
         SecondColumnLayout {
             CheckBox {
                 text: backendValues.receivesShadows.valueToString
                 backendValue: backendValues.receivesShadows
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Pickable")
             tooltip: qsTr("Controls whether the model is pickable or not.")
         }
-
         SecondColumnLayout {
             CheckBox {
                 text: backendValues.pickable.valueToString
                 backendValue: backendValues.pickable
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Materials")
         }
-
         SecondColumnLayout {
             EditableListView {
                 backendValue: backendValues.materials
@@ -198,8 +164,6 @@ Section {
                 onRemove: function(idx) { backendValues.materials.idListRemove(idx) }
                 onReplace: function (idx, value) { backendValues.materials.idListReplace(idx, value) }
             }
-
-            ExpandingSpacer {}
         }
     }
 }

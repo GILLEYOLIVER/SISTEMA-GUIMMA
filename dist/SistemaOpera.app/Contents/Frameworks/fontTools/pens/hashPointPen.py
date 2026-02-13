@@ -1,1 +1,0 @@
-../../../Resources/fontTools/pens/hashPointPen.py

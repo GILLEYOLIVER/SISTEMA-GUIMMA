@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any, Literal as L, type_check_only
+from typing import Any
+from typing import Literal as L
 
 from numpy import ufunc
 
@@ -13,15 +14,11 @@ __all__ = ["NDArrayOperatorsMixin"]
 # As such, only little type safety can be provided here.
 
 class NDArrayOperatorsMixin(ABC):
-    __slots__ = ()
-
-    @type_check_only
     @abstractmethod
     def __array_ufunc__(
         self,
         ufunc: ufunc,
         method: L["__call__", "reduce", "reduceat", "accumulate", "outer", "at"],
-        /,
         *inputs: Any,
         **kwargs: Any,
     ) -> Any: ...

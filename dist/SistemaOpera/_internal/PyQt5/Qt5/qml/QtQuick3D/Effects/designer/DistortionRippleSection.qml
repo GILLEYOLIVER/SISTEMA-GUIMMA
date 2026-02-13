@@ -28,129 +28,122 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
 
     Section {
-        caption: qsTr("Distortion Ripple")
+        caption: qsTr("Distortion")
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Radius")
                 tooltip: qsTr("Radius of the effect.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 100
                     minimumValue: 0
                     decimals: 2
                     backendValue: backendValues.radius
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Width")
                 tooltip: qsTr("Width of the distortion.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 100
                     minimumValue: 2
                     decimals: 2
                     backendValue: backendValues.distortionWidth
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Height")
                 tooltip: qsTr("Height of the distortion.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 100
                     minimumValue: 0
                     decimals: 2
                     backendValue: backendValues.distortionHeight
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Phase")
                 tooltip: qsTr("Phase of the distortion.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 360
                     minimumValue: 0
                     decimals: 0
                     backendValue: backendValues.distortionPhase
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
+        }
+    }
 
-            PropertyLabel {
+    Section {
+        id: centerSection
+        width: parent.width
+        caption: qsTr("Position")
+
+        property int labelWidth: 10
+        property int labelSpinBoxSpacing: 0
+        property int spinBoxMinimumWidth: 120
+
+        ColumnLayout {
+            width: parent.width - 16
+
+            Label {
+                width: 100
                 text: qsTr("Center")
                 tooltip: qsTr("Center of the distortion.")
             }
+            RowLayout {
+                spacing: centerSection.labelSpinBoxSpacing
 
-            SecondColumnLayout {
+                Label {
+                    text: qsTr("X")
+                    width: centerSection.labelWidth
+                }
                 SpinBox {
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                + StudioTheme.Values.actionIndicatorWidth
                     maximumValue: 1
                     minimumValue: 0
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.center_x
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: centerSection.spinBoxMinimumWidth
                 }
+            }
+            RowLayout {
+                spacing: centerSection.labelSpinBoxSpacing
 
-                Spacer { implicitWidth: StudioTheme.Values.controlLabelGap }
-
-                ControlLabel { text: "X" }
-
-                Spacer { implicitWidth: StudioTheme.Values.controlGap }
-
+                Label {
+                    text: qsTr("Y")
+                    width: centerSection.labelWidth
+                }
                 SpinBox {
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                + StudioTheme.Values.actionIndicatorWidth
                     maximumValue: 1
                     minimumValue: 0
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.center_y
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: centerSection.spinBoxMinimumWidth
                 }
-
-                Spacer { implicitWidth: StudioTheme.Values.controlLabelGap }
-
-                ControlLabel { text: "Y" }
-
-                Spacer { implicitWidth: StudioTheme.Values.controlGap }
-
-                ExpandingSpacer {}
             }
         }
     }

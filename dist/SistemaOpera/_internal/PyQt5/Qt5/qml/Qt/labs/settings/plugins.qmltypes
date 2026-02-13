@@ -10,6 +10,7 @@ Module {
     Component {
         file: "qqmlsettings_p.h"
         name: "QQmlSettings"
+        prototype: "QObject"
         exports: ["Qt.labs.settings/Settings 1.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "category"; type: "string" }

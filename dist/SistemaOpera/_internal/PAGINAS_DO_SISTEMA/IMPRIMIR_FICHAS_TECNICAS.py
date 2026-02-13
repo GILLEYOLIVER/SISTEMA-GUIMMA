@@ -16,7 +16,7 @@ import platform
 import subprocess
 from datetime import datetime
 from typing import Tuple, Optional
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 try:
     import tkinter as tk  # type: ignore
     from tkinter import ttk, messagebox, filedialog  # type: ignore
@@ -47,7 +47,7 @@ if messagebox is None:
         def showinfo(title: str, message: str):
             print(f"INFO: {title}: {message}")
     messagebox = _DummyMB()  # type: ignore
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 if filedialog is None:
     class _DummyFD:
         @staticmethod

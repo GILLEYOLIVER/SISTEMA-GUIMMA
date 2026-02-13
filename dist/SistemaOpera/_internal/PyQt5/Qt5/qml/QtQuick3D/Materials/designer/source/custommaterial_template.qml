@@ -49,12 +49,12 @@ CustomMaterial {
     Shader {
         id: vertShader
         stage: Shader.Vertex
-        shader: "custom_material_default_shader.vert"
+        shader: "/* Set to a vertex shader file */"
     }
 
     Shader {
         id: fragShader
         stage: Shader.Fragment
-        shader: "custom_material_default_shader.frag"
+        shader: "/* Set to a fragment shader file */"
     }
 }

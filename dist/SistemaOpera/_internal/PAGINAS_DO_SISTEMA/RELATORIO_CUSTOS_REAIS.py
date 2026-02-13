@@ -31,6 +31,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         self._build_filters()
         self._build_body()
 
+    # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=24, pady=(20, 10))

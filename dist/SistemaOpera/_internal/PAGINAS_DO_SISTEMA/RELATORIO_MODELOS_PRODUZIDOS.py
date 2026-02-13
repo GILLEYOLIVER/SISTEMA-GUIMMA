@@ -28,7 +28,7 @@ def _first_day_of_month(d: date) -> date:
 def _last_day_of_month(d: date) -> date:
     prox = (d.replace(day=28) + timedelta(days=4)).replace(day=1)
     return prox - timedelta(days=1)
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 
 # ---------------------- Página ----------------------
 class RelatorioModelosProduzidosPage(ctk.CTkFrame):

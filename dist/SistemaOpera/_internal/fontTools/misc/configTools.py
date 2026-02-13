@@ -224,9 +224,7 @@ class AbstractConfig(MutableMapping):
 
     def __init__(
         self,
-        values: Union[
-            AbstractConfig, Dict[Union[Option, str], Any], Mapping[str, Any]
-        ] = {},
+        values: Union[AbstractConfig, Dict[Union[Option, str], Any]] = {},
         parse_values: bool = False,
         skip_unknown: bool = False,
     ):

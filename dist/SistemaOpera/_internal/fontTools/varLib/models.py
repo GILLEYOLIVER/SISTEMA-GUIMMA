@@ -1,7 +1,5 @@
 """Variation fonts interpolation models."""
 
-from __future__ import annotations
-
 __all__ = [
     "normalizeValue",
     "normalizeLocation",
@@ -10,13 +8,8 @@ __all__ = [
     "VariationModel",
 ]
 
-from typing import TYPE_CHECKING
 from fontTools.misc.roundTools import noRound
 from .errors import VariationModelError
-
-
-if TYPE_CHECKING:
-    from typing import Mapping, Sequence
 
 
 def nonNone(lst):
@@ -51,9 +44,7 @@ def subList(truth, lst):
     return [l for l, t in zip(lst, truth) if t]
 
 
-def normalizeValue(
-    v: float, triple: Sequence[float], extrapolate: bool = False
-) -> float:
+def normalizeValue(v, triple, extrapolate=False):
     """Normalizes value based on a min/default/max triple.
 
     >>> normalizeValue(400, (100, 400, 900))
@@ -84,13 +75,7 @@ def normalizeValue(
         return (v - default) / (upper - default)
 
 
-def normalizeLocation(
-    location: Mapping[str, float],
-    axes: Mapping[str, tuple[float, float, float]],
-    extrapolate: bool = False,
-    *,
-    validate: bool = False,
-) -> dict[str, float]:
+def normalizeLocation(location, axes, extrapolate=False, *, validate=False):
     """Normalizes location based on axis min/default/max values from axes.
 
     >>> axes = {"wght": (100, 400, 900)}

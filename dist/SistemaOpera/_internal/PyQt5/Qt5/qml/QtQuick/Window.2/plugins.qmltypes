@@ -24,6 +24,7 @@ Module {
     Component {
         file: "plugin.h"
         name: "QQuickScreen"
+        prototype: "QObject"
         exports: [
             "QtQuick.Window/Screen 2.0",
             "QtQuick.Window/Screen 2.10",
@@ -52,6 +53,7 @@ Module {
     Component {
         file: "plugin.h"
         name: "QQuickScreenInfo"
+        prototype: "QObject"
         exports: [
             "QtQuick.Window/ScreenInfo 2.10",
             "QtQuick.Window/ScreenInfo 2.3"
@@ -84,6 +86,7 @@ Module {
         file: "plugin.h"
         name: "QQuickWindow"
         defaultProperty: "data"
+        prototype: "QWindow"
         exports: ["QtQuick.Window/Window 2.0"]
         exportMetaObjectRevisions: [0]
         Enum {
@@ -174,6 +177,7 @@ Module {
     Component {
         file: "plugin.h"
         name: "QQuickWindowAttached"
+        prototype: "QObject"
         Property { name: "visibility"; type: "QWindow::Visibility"; isReadonly: true }
         Property { name: "active"; type: "bool"; isReadonly: true }
         Property { name: "activeFocusItem"; type: "QQuickItem"; isReadonly: true; isPointer: true }
@@ -193,11 +197,12 @@ Module {
         prototype: "QQuickWindow"
         exports: [
             "QtQuick.Window/Window 2.1",
+            "QtQuick.Window/Window 2.13",
             "QtQuick.Window/Window 2.14",
             "QtQuick.Window/Window 2.2",
             "QtQuick.Window/Window 2.3"
         ]
-        exportMetaObjectRevisions: [1, 14, 2, 3]
+        exportMetaObjectRevisions: [1, 13, 14, 2, 3]
         attachedType: "QQuickWindowAttached"
         Property { name: "visible"; type: "bool" }
         Property { name: "visibility"; type: "Visibility" }
@@ -213,5 +218,192 @@ Module {
         Signal { name: "screenChanged"; revision: 3 }
         Method { name: "setWindowVisibility" }
     }
-    Component { file: "plugin.h"; name: "QWindowForeign" }
+    Component {
+        file: "plugin.h"
+        name: "QWindow"
+        prototype: "QObject"
+        Enum {
+            name: "Visibility"
+            values: [
+                "Hidden",
+                "AutomaticVisibility",
+                "Windowed",
+                "Minimized",
+                "Maximized",
+                "FullScreen"
+            ]
+        }
+        Enum {
+            name: "AncestorMode"
+            values: ["ExcludeTransients", "IncludeTransients"]
+        }
+        Property { name: "title"; type: "string" }
+        Property { name: "modality"; type: "Qt::WindowModality" }
+        Property { name: "flags"; type: "Qt::WindowFlags" }
+        Property { name: "x"; type: "int" }
+        Property { name: "y"; type: "int" }
+        Property { name: "width"; type: "int" }
+        Property { name: "height"; type: "int" }
+        Property { name: "minimumWidth"; type: "int" }
+        Property { name: "minimumHeight"; type: "int" }
+        Property { name: "maximumWidth"; type: "int" }
+        Property { name: "maximumHeight"; type: "int" }
+        Property { name: "visible"; type: "bool" }
+        Property { name: "active"; revision: 1; type: "bool"; isReadonly: true }
+        Property { name: "visibility"; revision: 1; type: "Visibility" }
+        Property { name: "contentOrientation"; type: "Qt::ScreenOrientation" }
+        Property { name: "opacity"; revision: 1; type: "double" }
+        Property { name: "transientParent"; revision: 13; type: "QWindow"; isPointer: true }
+        Signal {
+            name: "screenChanged"
+            Parameter { name: "screen"; type: "QScreen"; isPointer: true }
+        }
+        Signal {
+            name: "modalityChanged"
+            Parameter { name: "modality"; type: "Qt::WindowModality" }
+        }
+        Signal {
+            name: "windowStateChanged"
+            Parameter { name: "windowState"; type: "Qt::WindowState" }
+        }
+        Signal {
+            name: "windowTitleChanged"
+            revision: 2
+            Parameter { name: "title"; type: "string" }
+        }
+        Signal {
+            name: "xChanged"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Signal {
+            name: "yChanged"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Signal {
+            name: "widthChanged"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Signal {
+            name: "heightChanged"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Signal {
+            name: "minimumWidthChanged"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Signal {
+            name: "minimumHeightChanged"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Signal {
+            name: "maximumWidthChanged"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Signal {
+            name: "maximumHeightChanged"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Signal {
+            name: "visibleChanged"
+            Parameter { name: "arg"; type: "bool" }
+        }
+        Signal {
+            name: "visibilityChanged"
+            revision: 1
+            Parameter { name: "visibility"; type: "QWindow::Visibility" }
+        }
+        Signal { name: "activeChanged"; revision: 1 }
+        Signal {
+            name: "contentOrientationChanged"
+            Parameter { name: "orientation"; type: "Qt::ScreenOrientation" }
+        }
+        Signal {
+            name: "focusObjectChanged"
+            Parameter { name: "object"; type: "QObject"; isPointer: true }
+        }
+        Signal {
+            name: "opacityChanged"
+            revision: 1
+            Parameter { name: "opacity"; type: "double" }
+        }
+        Signal {
+            name: "transientParentChanged"
+            revision: 13
+            Parameter { name: "transientParent"; type: "QWindow"; isPointer: true }
+        }
+        Method { name: "requestActivate"; revision: 1 }
+        Method {
+            name: "setVisible"
+            Parameter { name: "visible"; type: "bool" }
+        }
+        Method { name: "show" }
+        Method { name: "hide" }
+        Method { name: "showMinimized" }
+        Method { name: "showMaximized" }
+        Method { name: "showFullScreen" }
+        Method { name: "showNormal" }
+        Method { name: "close"; type: "bool" }
+        Method { name: "raise" }
+        Method { name: "lower" }
+        Method {
+            name: "startSystemResize"
+            type: "bool"
+            Parameter { name: "edges"; type: "Qt::Edges" }
+        }
+        Method { name: "startSystemMove"; type: "bool" }
+        Method {
+            name: "setTitle"
+            Parameter { type: "string" }
+        }
+        Method {
+            name: "setX"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Method {
+            name: "setY"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Method {
+            name: "setWidth"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Method {
+            name: "setHeight"
+            Parameter { name: "arg"; type: "int" }
+        }
+        Method {
+            name: "setGeometry"
+            Parameter { name: "posx"; type: "int" }
+            Parameter { name: "posy"; type: "int" }
+            Parameter { name: "w"; type: "int" }
+            Parameter { name: "h"; type: "int" }
+        }
+        Method {
+            name: "setGeometry"
+            Parameter { name: "rect"; type: "QRect" }
+        }
+        Method {
+            name: "setMinimumWidth"
+            Parameter { name: "w"; type: "int" }
+        }
+        Method {
+            name: "setMinimumHeight"
+            Parameter { name: "h"; type: "int" }
+        }
+        Method {
+            name: "setMaximumWidth"
+            Parameter { name: "w"; type: "int" }
+        }
+        Method {
+            name: "setMaximumHeight"
+            Parameter { name: "h"; type: "int" }
+        }
+        Method {
+            name: "alert"
+            revision: 1
+            Parameter { name: "msec"; type: "int" }
+        }
+        Method { name: "requestUpdate"; revision: 3 }
+        Method { name: "_q_clearAlert" }
+    }
 }

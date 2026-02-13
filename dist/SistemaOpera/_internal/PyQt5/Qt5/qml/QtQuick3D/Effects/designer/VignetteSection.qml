@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,29 +39,23 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Strength")
                 tooltip: qsTr("Set the vignette strength.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 15
                     minimumValue: 0
                     decimals: 2
                     backendValue: backendValues.vignetteStrength
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Radius")
                 tooltip: qsTr("Set the vignette radius.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 5
@@ -70,20 +63,21 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.vignetteRadius
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
+        }
+    }
 
-            PropertyLabel { text: qsTr("Vignette Color") }
-
-            ColorEditor {
-                backendValue: backendValues.vignetteColor
-                supportGradient: false
-                isVector3D: true
-            }
+    Section {
+        caption: qsTr("Color")
+        width: parent.width
+        ColorEditor {
+            caption: qsTr("Vignette Color")
+            backendValue: backendValues.vignetteColor
+            supportGradient: false
+            isVector3D: true
+            Layout.fillWidth: true
         }
     }
 }

@@ -10,6 +10,7 @@ Module {
     Component {
         file: "qquicklocalstorage_p.h"
         name: "QQuickLocalStorage"
+        prototype: "QObject"
         exports: ["QtQuick.LocalStorage/LocalStorage 2.0"]
         isCreatable: false
         isSingleton: true

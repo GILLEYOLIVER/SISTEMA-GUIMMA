@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,21 +39,15 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Mode")
                 tooltip: qsTr("Cull mode for a pass.")
             }
-
-            SecondColumnLayout {
-                ComboBox {
-                    scope: "Material"
-                    model: ["BackFaceCulling", "FrontFaceCulling", "NoCulling"]
-                    backendValue: backendValues.cullMode
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
-                }
-
-                ExpandingSpacer {}
+            ComboBox {
+                scope: "Material"
+                model: ["BackFaceCulling", "FrontFaceCulling", "NoCulling"]
+                backendValue: backendValues.cullMode
+                Layout.fillWidth: true
             }
         }
     }

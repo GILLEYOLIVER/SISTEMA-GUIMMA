@@ -10,6 +10,7 @@ Module {
     Component {
         file: "private/quicktest_p.h"
         name: "QTestRootObject"
+        prototype: "QObject"
         exports: ["Qt.test.qtestroot/QTestRootObject 1.0"]
         isCreatable: false
         isSingleton: true

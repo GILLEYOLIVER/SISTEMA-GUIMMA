@@ -53,6 +53,7 @@ T.GroupBox {
     leftPadding: background ? background.leftPadding : 0
     rightPadding: background ? background.rightPadding : 0
     bottomPadding: background ? background.bottomPadding : 0
+    padding: 12
 
     label: Label {
         width: control.width
@@ -87,7 +88,7 @@ T.GroupBox {
         x: -leftInset
         y: control.topPadding - control.bottomPadding - topInset
         width: control.width + leftInset + rightInset
-        height: control.height + topInset + bottomInset - control.topPadding + control.bottomPadding
+        height: control.height + topInset + bottomInset - control.topPadding + control.padding
 
         source: Imagine.url + "groupbox-background"
         NinePatchImageSelector on source {

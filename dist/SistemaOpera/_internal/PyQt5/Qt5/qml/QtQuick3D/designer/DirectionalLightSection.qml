@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,27 +39,21 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Scope")
                 tooltip: qsTr("Sets the scope of the light. Only the node and its children are affected by this light.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Node"
+                    Layout.fillWidth: true
                     backendValue: backendValues.scope
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Brightness")
                 tooltip: qsTr("Sets the strength of the light.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 9999999
@@ -68,26 +61,32 @@ Column {
                     realDragRange: 5000
                     decimals: 0
                     backendValue: backendValues.brightness
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
+        }
+    }
 
-            PropertyLabel { text: qsTr("Color") }
+    Section {
+        caption: qsTr("Color")
+        width: parent.width
 
-            ColorEditor {
-                backendValue: backendValues.color
-                supportGradient: false
-            }
+        ColorEditor {
+            caption: qsTr("Color")
+            backendValue: backendValues.color
+            supportGradient: false
+            Layout.fillWidth: true
+        }
+    }
 
-            PropertyLabel { text: qsTr("Ambient Color") }
-
-            ColorEditor {
-                backendValue: backendValues.ambientColor
-                supportGradient: false
-            }
+    Section {
+        caption: qsTr("Ambient Color")
+        width: parent.width
+        ColorEditor {
+            caption: qsTr("Ambient Color")
+            backendValue: backendValues.ambientColor
+            supportGradient: false
+            Layout.fillWidth: true
         }
     }
 

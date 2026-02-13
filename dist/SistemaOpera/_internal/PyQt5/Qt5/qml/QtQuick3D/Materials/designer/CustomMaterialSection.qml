@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,77 +39,54 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Transparency")
                 tooltip: qsTr("Specifies if the material has transparency.")
             }
-
             SecondColumnLayout {
                 CheckBox {
                     text: backendValues.hasTransparency.valueToString
                     backendValue: backendValues.hasTransparency
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Refraction")
                 tooltip: qsTr("Specifies if the material has refraction.")
             }
-
             SecondColumnLayout {
                 CheckBox {
                     text: backendValues.hasRefraction.valueToString
                     backendValue: backendValues.hasRefraction
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Always Dirty")
                 tooltip: qsTr("Specifies if the material needs to be refreshed every time it is used.")
             }
-
             SecondColumnLayout {
                 CheckBox {
                     text: backendValues.alwaysDirty.valueToString
                     backendValue: backendValues.alwaysDirty
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Shader Info")
                 tooltip: qsTr("Shader info for the material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.ShaderInfo"
+                    Layout.fillWidth: true
                     backendValue: backendValues.shaderInfo
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Passes")
                 tooltip: qsTr("Render passes of the material.")
-                Layout.alignment: Qt.AlignTop
-                Layout.topMargin: 5
             }
-
             SecondColumnLayout {
                 EditableListView {
                     backendValue: backendValues.passes
@@ -122,8 +98,6 @@ Column {
                     onRemove: function(idx) { backendValues.passes.idListRemove(idx) }
                     onReplace: function (idx, value) { backendValues.passes.idListReplace(idx, value) }
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -134,72 +108,53 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Light Probe")
                 tooltip: qsTr("Defines a texture for overriding or setting an image based lighting texture for use with this material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.lightProbe
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Displacement Map")
                 tooltip: qsTr("Defines a grayscale image used to offset the vertices of geometry across the surface of the material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.displacementMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Displacement Amount")
                 tooltip: qsTr("Controls the offset amount for the displacement map.")
             }
-
             SecondColumnLayout {
                 SpinBox {
-                    minimumValue: -9999999
                     maximumValue: 9999999
+                    minimumValue: -9999999
+                    realDragRange: 5000
                     decimals: 0
                     backendValue: backendValues.displacementAmount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Culling Mode")
                 tooltip: qsTr("Defines whether culling is enabled and which mode is actually enabled.")
             }
-
-            SecondColumnLayout {
-                ComboBox {
-                    scope: "Material"
-                    model: ["BackFaceCulling", "FrontFaceCulling", "NoCulling"]
-                    backendValue: backendValues.cullMode
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
-                }
-
-                ExpandingSpacer {}
+            ComboBox {
+                scope: "Material"
+                model: ["BackFaceCulling", "FrontFaceCulling", "NoCulling"]
+                backendValue: backendValues.cullMode
+                Layout.fillWidth: true
             }
         }
     }
 }
+

@@ -44,7 +44,7 @@ def safe_int(v, default=0):
         return int(float(s.replace(".", "").replace(",", ".")))
     except Exception:
         return default
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 
 def parse_valor(s):
     """Converte uma string de valor monetário (brasileiro ou internacional) em float.

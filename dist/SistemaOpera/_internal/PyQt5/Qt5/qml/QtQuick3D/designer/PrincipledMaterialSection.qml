@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,28 +39,23 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Alpha Mode")
                 tooltip: qsTr("Sets the mode for how the alpha channel of material color is used.")
             }
-
             SecondColumnLayout {
                 ComboBox {
                     scope: "PrincipledMaterial"
                     model: ["Opaque", "Mask", "Blend"]
                     backendValue: backendValues.alphaMode
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Alpha Cutoff")
                 tooltip: qsTr("Specifies the cutoff value when using the Mask alphaMode.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     minimumValue: 0
@@ -69,35 +63,27 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.alphaCutoff
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Blend Mode")
                 tooltip: qsTr("Determines how the colors of the model rendered blend with those behind it.")
             }
-
             SecondColumnLayout {
                 ComboBox {
                     scope: "PrincipledMaterial"
                     model: ["SourceOver", "Screen", "Multiply", "Overlay", "ColorBurn", "ColorDodge"]
                     backendValue: backendValues.blendMode
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Index Of Refraction")
                 tooltip: qsTr("Controls how fast light travels through the material.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     minimumValue: 1
@@ -105,28 +91,21 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.indexOfRefraction
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Lighting")
                 tooltip: qsTr("Defines which lighting method is used when generating this material.")
             }
-
             SecondColumnLayout {
                 ComboBox {
                     scope: "PrincipledMaterial"
                     model: ["NoLighting", "FragmentLighting"]
                     backendValue: backendValues.lighting
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -134,13 +113,11 @@ Column {
     Section {
         caption: qsTr("Metalness")
         width: parent.width
-
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Metalness")
                 tooltip: qsTr("Defines the metalness of the the material.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     minimumValue: 0
@@ -148,44 +125,33 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.metalness
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Metalness Map")
                 tooltip: qsTr("Sets a texture to be used to set the metalness amount for the different parts of the material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.metalnessMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Metalness Channel")
                 tooltip: qsTr("Defines the texture channel used to read the metalness value from metalnessMap.")
             }
-
             SecondColumnLayout {
                 ComboBox {
                     scope: "Material"
                     model: ["R", "G", "B", "A"]
                     backendValue: backendValues.metalnessChannel
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -193,29 +159,23 @@ Column {
     Section {
         caption: qsTr("Normal")
         width: parent.width
-
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Normal Map")
                 tooltip: qsTr("Defines an RGB image used to simulate fine geometry displacement across the surface of the material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.normalMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Normal Strength")
                 tooltip: qsTr("Controls the amount of simulated displacement for the normalMap.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     minimumValue: 0
@@ -223,11 +183,8 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.normalStrength
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -235,13 +192,11 @@ Column {
     Section {
         caption: qsTr("Occlusion")
         width: parent.width
-
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Occlusion Amount")
                 tooltip: qsTr("Contains the factor used to modify the values from the occlusionMap texture.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     minimumValue: 0
@@ -249,44 +204,33 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.occlusionAmount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Occlusion Map")
                 tooltip: qsTr("Defines a texture used to determine how much indirect light the different areas of the material should receive.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.occlusionMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Occlusion Channel")
                 tooltip: qsTr("Defines the texture channel used to read the occlusion value from occlusionMap.")
             }
-
             SecondColumnLayout {
                 ComboBox {
                     scope: "Material"
                     model: ["R", "G", "B", "A"]
                     backendValue: backendValues.occlusionChannel
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -294,13 +238,11 @@ Column {
     Section {
         caption: qsTr("Opacity")
         width: parent.width
-
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Opacity")
                 tooltip: qsTr("Drops the opacity of just this material, separate from the model.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 1
@@ -308,44 +250,33 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.opacity
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Opacity Map")
                 tooltip: qsTr("Defines a texture used to control the opacity differently for different parts of the material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.opacityMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Opacity Channel")
                 tooltip: qsTr("Defines the texture channel used to read the opacity value from opacityMap.")
             }
-
             SecondColumnLayout {
                 ComboBox {
                     scope: "Material"
                     model: ["R", "G", "B", "A"]
                     backendValue: backendValues.opacityChannel
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -353,13 +284,11 @@ Column {
     Section {
         caption: qsTr("Roughness")
         width: parent.width
-
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Roughness")
                 tooltip: qsTr("Controls the size of the specular highlight generated from lights, and the clarity of reflections in general.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     minimumValue: 0
@@ -367,44 +296,33 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.roughness
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Roughness Map")
                 tooltip: qsTr("Defines a texture to control the specular roughness of the material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.roughnessMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Roughness Channel")
                 tooltip: qsTr("Defines the texture channel used to read the roughness value from roughnessMap.")
             }
-
             SecondColumnLayout {
                 ComboBox {
                     scope: "Material"
                     model: ["R", "G", "B", "A"]
                     backendValue: backendValues.roughnessChannel
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -412,13 +330,11 @@ Column {
     Section {
         caption: qsTr("Specular")
         width: parent.width
-
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Specular Amount")
                 tooltip: qsTr("Controls the strength of specularity (highlights and reflections).")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     minimumValue: 0
@@ -426,50 +342,38 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.specularAmount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Specular Map")
                 tooltip: qsTr("Defines a RGB Texture to modulate the amount and the color of specularity across the surface of the material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.specularMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Specular Reflection Map")
                 tooltip: qsTr("Sets a texture used for specular highlights on the material.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.specularReflectionMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
 
-            PropertyLabel {
+            Label {
                 text: qsTr("Specular Tint")
                 tooltip: qsTr("Defines how much of the base color contributes to the specular reflections.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     minimumValue: 0
@@ -477,11 +381,8 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.specularTint
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -490,59 +391,56 @@ Column {
         caption: qsTr("Base Color")
         width: parent.width
 
-        SectionLayout {
-            PropertyLabel { text: qsTr("Base Color") }
+        Column {
+            width: parent.width
 
             ColorEditor {
+                caption: qsTr("Base Color")
                 backendValue: backendValues.baseColor
                 supportGradient: false
+                Layout.fillWidth: true
             }
-
-            PropertyLabel {
-                text: qsTr("Base Color Map")
-                tooltip: qsTr("Defines a texture used to set the base color of the material.")
-            }
-
-            SecondColumnLayout {
-                IdComboBox {
-                    typeFilter: "QtQuick3D.Texture"
-                    backendValue: backendValues.baseColorMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+            SectionLayout {
+                Label {
+                    text: qsTr("Base Color Map")
+                    tooltip: qsTr("Defines a texture used to set the base color of the material.")
                 }
-
-                ExpandingSpacer {}
+                SecondColumnLayout {
+                    IdComboBox {
+                        typeFilter: "QtQuick3D.Texture"
+                        Layout.fillWidth: true
+                        backendValue: backendValues.baseColorMap
+                    }
+                }
             }
         }
     }
 
     Section {
-        caption: qsTr("Emissive")
+        caption: qsTr("Emissive Color")
         width: parent.width
 
-        SectionLayout {
-            PropertyLabel { text: qsTr("Emissive Color") }
+        Column {
+            width: parent.width
 
             ColorEditor {
+                caption: qsTr("Emissive Color")
                 backendValue: backendValues.emissiveColor
                 supportGradient: false
+                Layout.fillWidth: true
             }
-
-            PropertyLabel {
-                text: qsTr("Emissive Map")
-                tooltip: qsTr("Sets a texture to be used to set the emissive factor for different parts of the material.")
-            }
-
-            SecondColumnLayout {
-                IdComboBox {
-                    typeFilter: "QtQuick3D.Texture"
-                    Layout.fillWidth: true
-                    backendValue: backendValues.emissiveMap
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+            SectionLayout {
+                Label {
+                    text: qsTr("Emissive Map")
+                    tooltip: qsTr("Sets a texture to be used to set the emissive factor for different parts of the material.")
                 }
-
-                ExpandingSpacer {}
+                SecondColumnLayout {
+                    IdComboBox {
+                        typeFilter: "QtQuick3D.Texture"
+                        Layout.fillWidth: true
+                        backendValue: backendValues.emissiveMap
+                    }
+                }
             }
         }
     }

@@ -1604,6 +1604,8 @@ QtCore.QAbstractEventDispatcher.closingDown?4()
 QtCore.QAbstractEventDispatcher.remainingTime?4(int) -> int
 QtCore.QAbstractEventDispatcher.installNativeEventFilter?4(QAbstractNativeEventFilter)
 QtCore.QAbstractEventDispatcher.removeNativeEventFilter?4(QAbstractNativeEventFilter)
+QtCore.QAbstractEventDispatcher.registerEventNotifier?4(QWinEventNotifier) -> bool
+QtCore.QAbstractEventDispatcher.unregisterEventNotifier?4(QWinEventNotifier)
 QtCore.QAbstractEventDispatcher.filterNativeEvent?4(QByteArray, PyQt5.sip.voidptr) -> (bool, int)
 QtCore.QAbstractEventDispatcher.aboutToBlock?4()
 QtCore.QAbstractEventDispatcher.awake?4()
@@ -5256,7 +5258,7 @@ QtCore.QProcess.workingDirectory?4() -> QString
 QtCore.QProcess.setWorkingDirectory?4(QString)
 QtCore.QProcess.error?4() -> QProcess.ProcessError
 QtCore.QProcess.state?4() -> QProcess.ProcessState
-QtCore.QProcess.pid?4() -> int
+QtCore.QProcess.pid?4() -> PyQt5.sip.voidptr
 QtCore.QProcess.waitForStarted?4(int msecs=30000) -> bool
 QtCore.QProcess.waitForReadyRead?4(int msecs=30000) -> bool
 QtCore.QProcess.waitForBytesWritten?4(int msecs=30000) -> bool
@@ -7036,75 +7038,48 @@ QtCore.QXmlStreamWriter.writeStartElement?4(QString)
 QtCore.QXmlStreamWriter.writeStartElement?4(QString, QString)
 QtCore.QXmlStreamWriter.writeCurrentToken?4(QXmlStreamReader)
 QtCore.QXmlStreamWriter.hasError?4() -> bool
-QtCore.QSysInfo.MacVersion?10
-QtCore.QSysInfo.MacVersion.MV_Unknown?10
-QtCore.QSysInfo.MacVersion.MV_9?10
-QtCore.QSysInfo.MacVersion.MV_10_0?10
-QtCore.QSysInfo.MacVersion.MV_10_1?10
-QtCore.QSysInfo.MacVersion.MV_10_2?10
-QtCore.QSysInfo.MacVersion.MV_10_3?10
-QtCore.QSysInfo.MacVersion.MV_10_4?10
-QtCore.QSysInfo.MacVersion.MV_10_5?10
-QtCore.QSysInfo.MacVersion.MV_10_6?10
-QtCore.QSysInfo.MacVersion.MV_10_7?10
-QtCore.QSysInfo.MacVersion.MV_10_8?10
-QtCore.QSysInfo.MacVersion.MV_10_9?10
-QtCore.QSysInfo.MacVersion.MV_10_10?10
-QtCore.QSysInfo.MacVersion.MV_10_11?10
-QtCore.QSysInfo.MacVersion.MV_10_12?10
-QtCore.QSysInfo.MacVersion.MV_CHEETAH?10
-QtCore.QSysInfo.MacVersion.MV_PUMA?10
-QtCore.QSysInfo.MacVersion.MV_JAGUAR?10
-QtCore.QSysInfo.MacVersion.MV_PANTHER?10
-QtCore.QSysInfo.MacVersion.MV_TIGER?10
-QtCore.QSysInfo.MacVersion.MV_LEOPARD?10
-QtCore.QSysInfo.MacVersion.MV_SNOWLEOPARD?10
-QtCore.QSysInfo.MacVersion.MV_LION?10
-QtCore.QSysInfo.MacVersion.MV_MOUNTAINLION?10
-QtCore.QSysInfo.MacVersion.MV_MAVERICKS?10
-QtCore.QSysInfo.MacVersion.MV_YOSEMITE?10
-QtCore.QSysInfo.MacVersion.MV_ELCAPITAN?10
-QtCore.QSysInfo.MacVersion.MV_SIERRA?10
-QtCore.QSysInfo.MacVersion.MV_IOS?10
-QtCore.QSysInfo.MacVersion.MV_IOS_4_3?10
-QtCore.QSysInfo.MacVersion.MV_IOS_5_0?10
-QtCore.QSysInfo.MacVersion.MV_IOS_5_1?10
-QtCore.QSysInfo.MacVersion.MV_IOS_6_0?10
-QtCore.QSysInfo.MacVersion.MV_IOS_6_1?10
-QtCore.QSysInfo.MacVersion.MV_IOS_7_0?10
-QtCore.QSysInfo.MacVersion.MV_IOS_7_1?10
-QtCore.QSysInfo.MacVersion.MV_IOS_8_0?10
-QtCore.QSysInfo.MacVersion.MV_IOS_8_1?10
-QtCore.QSysInfo.MacVersion.MV_IOS_8_2?10
-QtCore.QSysInfo.MacVersion.MV_IOS_8_3?10
-QtCore.QSysInfo.MacVersion.MV_IOS_8_4?10
-QtCore.QSysInfo.MacVersion.MV_IOS_9_0?10
-QtCore.QSysInfo.MacVersion.MV_IOS_9_1?10
-QtCore.QSysInfo.MacVersion.MV_IOS_9_2?10
-QtCore.QSysInfo.MacVersion.MV_IOS_9_3?10
-QtCore.QSysInfo.MacVersion.MV_IOS_10_0?10
-QtCore.QSysInfo.MacVersion.MV_TVOS?10
-QtCore.QSysInfo.MacVersion.MV_TVOS_9_0?10
-QtCore.QSysInfo.MacVersion.MV_TVOS_9_1?10
-QtCore.QSysInfo.MacVersion.MV_TVOS_9_2?10
-QtCore.QSysInfo.MacVersion.MV_TVOS_10_0?10
-QtCore.QSysInfo.MacVersion.MV_WATCHOS?10
-QtCore.QSysInfo.MacVersion.MV_WATCHOS_2_0?10
-QtCore.QSysInfo.MacVersion.MV_WATCHOS_2_1?10
-QtCore.QSysInfo.MacVersion.MV_WATCHOS_2_2?10
-QtCore.QSysInfo.MacVersion.MV_WATCHOS_3_0?10
+QtCore.QSysInfo.WinVersion?10
+QtCore.QSysInfo.WinVersion.WV_32s?10
+QtCore.QSysInfo.WinVersion.WV_95?10
+QtCore.QSysInfo.WinVersion.WV_98?10
+QtCore.QSysInfo.WinVersion.WV_Me?10
+QtCore.QSysInfo.WinVersion.WV_DOS_based?10
+QtCore.QSysInfo.WinVersion.WV_NT?10
+QtCore.QSysInfo.WinVersion.WV_2000?10
+QtCore.QSysInfo.WinVersion.WV_XP?10
+QtCore.QSysInfo.WinVersion.WV_2003?10
+QtCore.QSysInfo.WinVersion.WV_VISTA?10
+QtCore.QSysInfo.WinVersion.WV_WINDOWS7?10
+QtCore.QSysInfo.WinVersion.WV_WINDOWS8?10
+QtCore.QSysInfo.WinVersion.WV_WINDOWS8_1?10
+QtCore.QSysInfo.WinVersion.WV_WINDOWS10?10
+QtCore.QSysInfo.WinVersion.WV_NT_based?10
+QtCore.QSysInfo.WinVersion.WV_4_0?10
+QtCore.QSysInfo.WinVersion.WV_5_0?10
+QtCore.QSysInfo.WinVersion.WV_5_1?10
+QtCore.QSysInfo.WinVersion.WV_5_2?10
+QtCore.QSysInfo.WinVersion.WV_6_0?10
+QtCore.QSysInfo.WinVersion.WV_6_1?10
+QtCore.QSysInfo.WinVersion.WV_6_2?10
+QtCore.QSysInfo.WinVersion.WV_6_3?10
+QtCore.QSysInfo.WinVersion.WV_10_0?10
+QtCore.QSysInfo.WinVersion.WV_CE?10
+QtCore.QSysInfo.WinVersion.WV_CENET?10
+QtCore.QSysInfo.WinVersion.WV_CE_5?10
+QtCore.QSysInfo.WinVersion.WV_CE_6?10
+QtCore.QSysInfo.WinVersion.WV_CE_based?10
 QtCore.QSysInfo.Endian?10
 QtCore.QSysInfo.Endian.BigEndian?10
 QtCore.QSysInfo.Endian.LittleEndian?10
 QtCore.QSysInfo.Endian.ByteOrder?10
 QtCore.QSysInfo.Sizes?10
 QtCore.QSysInfo.Sizes.WordSize?10
-QtCore.QSysInfo.MacintoshVersion?7
+QtCore.QSysInfo.WindowsVersion?7
 QtCore.QSysInfo?1()
 QtCore.QSysInfo.__init__?1(self)
 QtCore.QSysInfo?1(QSysInfo)
 QtCore.QSysInfo.__init__?1(self, QSysInfo)
-QtCore.QSysInfo.macVersion?4() -> QSysInfo.MacVersion
+QtCore.QSysInfo.windowsVersion?4() -> QSysInfo.WinVersion
 QtCore.QSysInfo.buildAbi?4() -> QString
 QtCore.QSysInfo.buildCpuArchitecture?4() -> QString
 QtCore.QSysInfo.currentCpuArchitecture?4() -> QString
@@ -7114,6 +7089,16 @@ QtCore.QSysInfo.prettyProductName?4() -> QString
 QtCore.QSysInfo.productType?4() -> QString
 QtCore.QSysInfo.productVersion?4() -> QString
 QtCore.QSysInfo.machineHostName?4() -> QString
+QtCore.QWinEventNotifier?1(QObject parent=None)
+QtCore.QWinEventNotifier.__init__?1(self, QObject parent=None)
+QtCore.QWinEventNotifier?1(PyQt5.sip.voidptr, QObject parent=None)
+QtCore.QWinEventNotifier.__init__?1(self, PyQt5.sip.voidptr, QObject parent=None)
+QtCore.QWinEventNotifier.handle?4() -> PyQt5.sip.voidptr
+QtCore.QWinEventNotifier.isEnabled?4() -> bool
+QtCore.QWinEventNotifier.setHandle?4(PyQt5.sip.voidptr)
+QtCore.QWinEventNotifier.setEnabled?4(bool)
+QtCore.QWinEventNotifier.activated?4(PyQt5.sip.voidptr)
+QtCore.QWinEventNotifier.event?4(QEvent) -> bool
 QtNetwork.QOcspRevocationReason?10
 QtNetwork.QOcspRevocationReason.None_?10
 QtNetwork.QOcspRevocationReason.Unspecified?10
@@ -9568,6 +9553,7 @@ QtGui.QDrag.targetChanged?4(QObject)
 QtGui.QDrag.dragCursor?4(Qt.DropAction) -> QPixmap
 QtGui.QDrag.supportedActions?4() -> Qt.DropActions
 QtGui.QDrag.defaultAction?4() -> Qt.DropAction
+QtGui.QDrag.cancel?4()
 QtGui.QInputEvent.modifiers?4() -> Qt.KeyboardModifiers
 QtGui.QInputEvent.timestamp?4() -> int
 QtGui.QInputEvent.setTimestamp?4(int)
@@ -20390,7 +20376,6 @@ QtWidgets.QMenu.insertSection?4(QAction, QString) -> QAction
 QtWidgets.QMenu.insertSection?4(QAction, QIcon, QString) -> QAction
 QtWidgets.QMenu.toolTipsVisible?4() -> bool
 QtWidgets.QMenu.setToolTipsVisible?4(bool)
-QtWidgets.QMenu.setAsDockMenu?4()
 QtWidgets.QMenu.showTearOffMenu?4()
 QtWidgets.QMenu.showTearOffMenu?4(QPoint)
 QtWidgets.QMenuBar?1(QWidget parent=None)
@@ -23090,10 +23075,6 @@ QtWidgets.QWizardPage.setField?4(QString, QVariant)
 QtWidgets.QWizardPage.field?4(QString) -> QVariant
 QtWidgets.QWizardPage.registerField?4(QString, QWidget, str property=None, Any changedSignal=None)
 QtWidgets.QWizardPage.wizard?4() -> QWizard
-QtWidgets.QMacCocoaViewContainer?1(PyQt5.sip.voidptr, QWidget parent=None)
-QtWidgets.QMacCocoaViewContainer.__init__?1(self, PyQt5.sip.voidptr, QWidget parent=None)
-QtWidgets.QMacCocoaViewContainer.setCocoaView?4(PyQt5.sip.voidptr)
-QtWidgets.QMacCocoaViewContainer.cocoaView?4() -> PyQt5.sip.voidptr
 QtQml.qmlClearTypeRegistrations?4()
 QtQml.qmlTypeId?4(str, int, int, str) -> int
 QtQml.qjsEngine?4(QObject) -> QJSEngine
@@ -23539,6 +23520,52 @@ QtQml.QQmlScriptString.isNullLiteral?4() -> bool
 QtQml.QQmlScriptString.stringLiteral?4() -> QString
 QtQml.QQmlScriptString.numberLiteral?4() -> (float, bool)
 QtQml.QQmlScriptString.booleanLiteral?4() -> (bool, bool)
+QAxContainer.QAxBase?1()
+QAxContainer.QAxBase.__init__?1(self)
+QAxContainer.QAxBase?1(QAxBase)
+QAxContainer.QAxBase.__init__?1(self, QAxBase)
+QAxContainer.QAxBase.control?4() -> QString
+QAxContainer.QAxBase.dynamicCall?4(str, unknown-type) -> QVariant
+QAxContainer.QAxBase.dynamicCall?4(str, QVariant value1=None, QVariant value2=None, QVariant value3=None, QVariant value4=None, QVariant value5=None, QVariant value6=None, QVariant value7=None, QVariant value8=None) -> QVariant
+QAxContainer.QAxBase.querySubObject?4(str, unknown-type) -> QAxObject
+QAxContainer.QAxBase.querySubObject?4(str, QVariant value1=None, QVariant value2=None, QVariant value3=None, QVariant value4=None, QVariant value5=None, QVariant value6=None, QVariant value7=None, QVariant value8=None) -> QAxObject
+QAxContainer.QAxBase.propertyBag?4() -> QVariantMap
+QAxContainer.QAxBase.setPropertyBag?4(QVariantMap)
+QAxContainer.QAxBase.generateDocumentation?4() -> QString
+QAxContainer.QAxBase.propertyWritable?4(str) -> bool
+QAxContainer.QAxBase.setPropertyWritable?4(str, bool)
+QAxContainer.QAxBase.isNull?4() -> bool
+QAxContainer.QAxBase.verbs?4() -> QStringList
+QAxContainer.QAxBase.asVariant?4() -> QVariant
+QAxContainer.QAxBase.signal?4(QString, int, PyQt5.sip.voidptr)
+QAxContainer.QAxBase.propertyChanged?4(QString)
+QAxContainer.QAxBase.exception?4(int, QString, QString, QString)
+QAxContainer.QAxBase.clear?4()
+QAxContainer.QAxBase.setControl?4(QString) -> bool
+QAxContainer.QAxBase.disableMetaObject?4()
+QAxContainer.QAxBase.disableClassInfo?4()
+QAxContainer.QAxBase.disableEventSink?4()
+QAxContainer.QAxBase.classContext?4() -> int
+QAxContainer.QAxBase.setClassContext?4(int)
+QAxContainer.QAxObject?1(QObject parent=None)
+QAxContainer.QAxObject.__init__?1(self, QObject parent=None)
+QAxContainer.QAxObject?1(QString, QObject parent=None)
+QAxContainer.QAxObject.__init__?1(self, QString, QObject parent=None)
+QAxContainer.QAxObject.doVerb?4(QString) -> bool
+QAxContainer.QAxObject.connectNotify?4(QMetaMethod)
+QAxContainer.QAxWidget?1(QWidget parent=None, Qt.WindowFlags flags=0)
+QAxContainer.QAxWidget.__init__?1(self, QWidget parent=None, Qt.WindowFlags flags=0)
+QAxContainer.QAxWidget?1(QString, QWidget parent=None, Qt.WindowFlags flags=0)
+QAxContainer.QAxWidget.__init__?1(self, QString, QWidget parent=None, Qt.WindowFlags flags=0)
+QAxContainer.QAxWidget.clear?4()
+QAxContainer.QAxWidget.doVerb?4(QString) -> bool
+QAxContainer.QAxWidget.sizeHint?4() -> QSize
+QAxContainer.QAxWidget.minimumSizeHint?4() -> QSize
+QAxContainer.QAxWidget.createHostWindow?4(bool) -> bool
+QAxContainer.QAxWidget.changeEvent?4(QEvent)
+QAxContainer.QAxWidget.resizeEvent?4(QResizeEvent)
+QAxContainer.QAxWidget.translateKeyEvent?4(int, int) -> bool
+QAxContainer.QAxWidget.connectNotify?4(QMetaMethod)
 QtBluetooth.QBluetooth.AttAccessConstraint?10
 QtBluetooth.QBluetooth.AttAccessConstraint.AttAuthorizationRequired?10
 QtBluetooth.QBluetooth.AttAccessConstraint.AttAuthenticationRequired?10
@@ -24897,17 +24924,6 @@ QtDBus.QDBusUnixFileDescriptor.fileDescriptor?4() -> int
 QtDBus.QDBusUnixFileDescriptor.setFileDescriptor?4(int)
 QtDBus.QDBusUnixFileDescriptor.isSupported?4() -> bool
 QtDBus.QDBusUnixFileDescriptor.swap?4(QDBusUnixFileDescriptor)
-QtDBus.QDBusReply?1(QDBusMessage)
-QtDBus.QDBusReply.__init__?1(self, QDBusMessage)
-QtDBus.QDBusReply?1(QDBusPendingCall)
-QtDBus.QDBusReply.__init__?1(self, QDBusPendingCall)
-QtDBus.QDBusReply?1(QDBusError)
-QtDBus.QDBusReply.__init__?1(self, QDBusError)
-QtDBus.QDBusReply?1(QDBusReply)
-QtDBus.QDBusReply.__init__?1(self, QDBusReply)
-QtDBus.QDBusReply.error?4() -> QDBusError
-QtDBus.QDBusReply.isValid?4() -> bool
-QtDBus.QDBusReply.value?4(Any type=None) -> Any
 QtDBus.QDBusPendingReply?1()
 QtDBus.QDBusPendingReply.__init__?1(self)
 QtDBus.QDBusPendingReply?1(QDBusPendingReply)
@@ -24924,6 +24940,17 @@ QtDBus.QDBusPendingReply.isValid?4() -> bool
 QtDBus.QDBusPendingReply.reply?4() -> QDBusMessage
 QtDBus.QDBusPendingReply.waitForFinished?4()
 QtDBus.QDBusPendingReply.value?4(Any type=None) -> Any
+QtDBus.QDBusReply?1(QDBusMessage)
+QtDBus.QDBusReply.__init__?1(self, QDBusMessage)
+QtDBus.QDBusReply?1(QDBusPendingCall)
+QtDBus.QDBusReply.__init__?1(self, QDBusPendingCall)
+QtDBus.QDBusReply?1(QDBusError)
+QtDBus.QDBusReply.__init__?1(self, QDBusError)
+QtDBus.QDBusReply?1(QDBusReply)
+QtDBus.QDBusReply.__init__?1(self, QDBusReply)
+QtDBus.QDBusReply.error?4() -> QDBusError
+QtDBus.QDBusReply.isValid?4() -> bool
+QtDBus.QDBusReply.value?4(Any type=None) -> Any
 QtDesigner.QDesignerActionEditorInterface?1(QWidget, Qt.WindowFlags flags=0)
 QtDesigner.QDesignerActionEditorInterface.__init__?1(self, QWidget, Qt.WindowFlags flags=0)
 QtDesigner.QDesignerActionEditorInterface.core?4() -> QDesignerFormEditorInterface
@@ -25230,12 +25257,12 @@ QtDesigner.QPyDesignerCustomWidgetCollectionPlugin?1(QObject parent=None)
 QtDesigner.QPyDesignerCustomWidgetCollectionPlugin.__init__?1(self, QObject parent=None)
 QtDesigner.QPyDesignerCustomWidgetPlugin?1(QObject parent=None)
 QtDesigner.QPyDesignerCustomWidgetPlugin.__init__?1(self, QObject parent=None)
-QtDesigner.QPyDesignerTaskMenuExtension?1(QObject)
-QtDesigner.QPyDesignerTaskMenuExtension.__init__?1(self, QObject)
-QtDesigner.QPyDesignerPropertySheetExtension?1(QObject)
-QtDesigner.QPyDesignerPropertySheetExtension.__init__?1(self, QObject)
 QtDesigner.QPyDesignerMemberSheetExtension?1(QObject)
 QtDesigner.QPyDesignerMemberSheetExtension.__init__?1(self, QObject)
+QtDesigner.QPyDesignerPropertySheetExtension?1(QObject)
+QtDesigner.QPyDesignerPropertySheetExtension.__init__?1(self, QObject)
+QtDesigner.QPyDesignerTaskMenuExtension?1(QObject)
+QtDesigner.QPyDesignerTaskMenuExtension.__init__?1(self, QObject)
 QtHelp.QCompressedHelpInfo?1()
 QtHelp.QCompressedHelpInfo.__init__?1(self)
 QtHelp.QCompressedHelpInfo?1(QCompressedHelpInfo)
@@ -25418,57 +25445,6 @@ QtHelp.QHelpSearchQueryWidget.searchInput?4() -> QString
 QtHelp.QHelpSearchQueryWidget.setSearchInput?4(QString)
 QtHelp.QHelpSearchResultWidget.linkAt?4(QPoint) -> QUrl
 QtHelp.QHelpSearchResultWidget.requestShowLink?4(QUrl)
-QtMacExtras.qRegisterDraggedTypes?4(QStringList)
-QtMacExtras.QMacPasteboardMime.QMacPasteboardMimeType?10
-QtMacExtras.QMacPasteboardMime.QMacPasteboardMimeType.MIME_DND?10
-QtMacExtras.QMacPasteboardMime.QMacPasteboardMimeType.MIME_CLIP?10
-QtMacExtras.QMacPasteboardMime.QMacPasteboardMimeType.MIME_QT_CONVERTOR?10
-QtMacExtras.QMacPasteboardMime.QMacPasteboardMimeType.MIME_QT3_CONVERTOR?10
-QtMacExtras.QMacPasteboardMime.QMacPasteboardMimeType.MIME_ALL?10
-QtMacExtras.QMacPasteboardMime?1(int)
-QtMacExtras.QMacPasteboardMime.__init__?1(self, int)
-QtMacExtras.QMacPasteboardMime?1(QMacPasteboardMime)
-QtMacExtras.QMacPasteboardMime.__init__?1(self, QMacPasteboardMime)
-QtMacExtras.QMacPasteboardMime.convertorName?4() -> QString
-QtMacExtras.QMacPasteboardMime.canConvert?4(QString, QString) -> bool
-QtMacExtras.QMacPasteboardMime.mimeFor?4(QString) -> QString
-QtMacExtras.QMacPasteboardMime.flavorFor?4(QString) -> QString
-QtMacExtras.QMacPasteboardMime.convertToMime?4(QString, unknown-type, QString) -> QVariant
-QtMacExtras.QMacPasteboardMime.convertFromMime?4(QString, QVariant, QString) -> unknown-type
-QtMacExtras.QMacPasteboardMime.count?4(QMimeData) -> int
-QtMacExtras.QMacToolBar?1(QObject parent=None)
-QtMacExtras.QMacToolBar.__init__?1(self, QObject parent=None)
-QtMacExtras.QMacToolBar?1(QString, QObject parent=None)
-QtMacExtras.QMacToolBar.__init__?1(self, QString, QObject parent=None)
-QtMacExtras.QMacToolBar.addItem?4(QIcon, QString) -> QMacToolBarItem
-QtMacExtras.QMacToolBar.addAllowedItem?4(QIcon, QString) -> QMacToolBarItem
-QtMacExtras.QMacToolBar.addSeparator?4()
-QtMacExtras.QMacToolBar.setItems?4(unknown-type)
-QtMacExtras.QMacToolBar.items?4() -> unknown-type
-QtMacExtras.QMacToolBar.setAllowedItems?4(unknown-type)
-QtMacExtras.QMacToolBar.allowedItems?4() -> unknown-type
-QtMacExtras.QMacToolBar.attachToWindow?4(QWindow)
-QtMacExtras.QMacToolBar.detachFromWindow?4()
-QtMacExtras.QMacToolBar.nativeToolbar?4() -> NSToolbar
-QtMacExtras.QMacToolBarItem.StandardItem?10
-QtMacExtras.QMacToolBarItem.StandardItem.NoStandardItem?10
-QtMacExtras.QMacToolBarItem.StandardItem.Space?10
-QtMacExtras.QMacToolBarItem.StandardItem.FlexibleSpace?10
-QtMacExtras.QMacToolBarItem?1(QObject parent=None)
-QtMacExtras.QMacToolBarItem.__init__?1(self, QObject parent=None)
-QtMacExtras.QMacToolBarItem.selectable?4() -> bool
-QtMacExtras.QMacToolBarItem.setSelectable?4(bool)
-QtMacExtras.QMacToolBarItem.standardItem?4() -> QMacToolBarItem.StandardItem
-QtMacExtras.QMacToolBarItem.setStandardItem?4(QMacToolBarItem.StandardItem)
-QtMacExtras.QMacToolBarItem.text?4() -> QString
-QtMacExtras.QMacToolBarItem.setText?4(QString)
-QtMacExtras.QMacToolBarItem.icon?4() -> QIcon
-QtMacExtras.QMacToolBarItem.setIcon?4(QIcon)
-QtMacExtras.QMacToolBarItem.nativeToolBarItem?4() -> NSToolbarItem
-QtMacExtras.QMacToolBarItem.activated?4()
-QtMacExtras.QtMac.setBadgeLabelText?4(QString)
-QtMacExtras.QtMac.badgeLabelText?4() -> QString
-QtMacExtras.QtMac.isMainWindow?4(QWindow) -> bool
 QtMultimedia.QAbstractVideoBuffer.MapMode?10
 QtMultimedia.QAbstractVideoBuffer.MapMode.NotMapped?10
 QtMultimedia.QAbstractVideoBuffer.MapMode.ReadOnly?10
@@ -29360,8 +29336,6 @@ QtPrintSupport.QPrinter.paperRect?4() -> QRect
 QtPrintSupport.QPrinter.pageRect?4() -> QRect
 QtPrintSupport.QPrinter.paperRect?4(QPrinter.Unit) -> QRectF
 QtPrintSupport.QPrinter.pageRect?4(QPrinter.Unit) -> QRectF
-QtPrintSupport.QPrinter.printerSelectionOption?4() -> QString
-QtPrintSupport.QPrinter.setPrinterSelectionOption?4(QString)
 QtPrintSupport.QPrinter.newPage?4() -> bool
 QtPrintSupport.QPrinter.abort?4() -> bool
 QtPrintSupport.QPrinter.printerState?4() -> QPrinter.PrinterState
@@ -31243,7 +31217,7 @@ QtSerialPort.QSerialPort.settingsRestoredOnCloseChanged?4(bool)
 QtSerialPort.QSerialPort.readData?4(int) -> Any
 QtSerialPort.QSerialPort.readLineData?4(int) -> Any
 QtSerialPort.QSerialPort.writeData?4(bytes) -> int
-QtSerialPort.QSerialPort.handle?4() -> int
+QtSerialPort.QSerialPort.handle?4() -> PyQt5.sip.voidptr
 QtSerialPort.QSerialPort.isBreakEnabled?4() -> bool
 QtSerialPort.QSerialPort.breakEnabledChanged?4(bool)
 QtSerialPort.QSerialPort.errorOccurred?4(QSerialPort.SerialPortError)
@@ -32111,6 +32085,187 @@ QtWebSockets.QWebSocketServer.setNativeDescriptor?4(qintptr) -> bool
 QtWebSockets.QWebSocketServer.nativeDescriptor?4() -> qintptr
 QtWebSockets.QWebSocketServer.setHandshakeTimeout?4(int)
 QtWebSockets.QWebSocketServer.handshakeTimeoutMS?4() -> int
+QtWinExtras.QtWin.WindowFlip3DPolicy?10
+QtWinExtras.QtWin.WindowFlip3DPolicy.FlipDefault?10
+QtWinExtras.QtWin.WindowFlip3DPolicy.FlipExcludeBelow?10
+QtWinExtras.QtWin.WindowFlip3DPolicy.FlipExcludeAbove?10
+QtWinExtras.QtWin.HBitmapFormat?10
+QtWinExtras.QtWin.HBitmapFormat.HBitmapNoAlpha?10
+QtWinExtras.QtWin.HBitmapFormat.HBitmapPremultipliedAlpha?10
+QtWinExtras.QtWin.HBitmapFormat.HBitmapAlpha?10
+QtWinExtras.QtWin.createMask?4(QBitmap) -> PyQt5.sip.voidptr
+QtWinExtras.QtWin.toHBITMAP?4(QPixmap, QtWin.HBitmapFormat format=QtWin.HBitmapNoAlpha) -> PyQt5.sip.voidptr
+QtWinExtras.QtWin.fromHBITMAP?4(PyQt5.sip.voidptr, QtWin.HBitmapFormat format=QtWin.HBitmapNoAlpha) -> QPixmap
+QtWinExtras.QtWin.toHICON?4(QPixmap) -> PyQt5.sip.voidptr
+QtWinExtras.QtWin.imageFromHBITMAP?4(PyQt5.sip.voidptr, PyQt5.sip.voidptr, int, int) -> QImage
+QtWinExtras.QtWin.fromHICON?4(PyQt5.sip.voidptr) -> QPixmap
+QtWinExtras.QtWin.toHRGN?4(QRegion) -> PyQt5.sip.voidptr
+QtWinExtras.QtWin.fromHRGN?4(PyQt5.sip.voidptr) -> QRegion
+QtWinExtras.QtWin.stringFromHresult?4(int) -> QString
+QtWinExtras.QtWin.errorStringFromHresult?4(int) -> QString
+QtWinExtras.QtWin.colorizationColor?4() -> (QColor, bool)
+QtWinExtras.QtWin.realColorizationColor?4() -> QColor
+QtWinExtras.QtWin.setWindowExcludedFromPeek?4(QWindow, bool)
+QtWinExtras.QtWin.isWindowExcludedFromPeek?4(QWindow) -> bool
+QtWinExtras.QtWin.setWindowDisallowPeek?4(QWindow, bool)
+QtWinExtras.QtWin.isWindowPeekDisallowed?4(QWindow) -> bool
+QtWinExtras.QtWin.setWindowFlip3DPolicy?4(QWindow, QtWin.WindowFlip3DPolicy)
+QtWinExtras.QtWin.windowFlip3DPolicy?4(QWindow) -> QtWin.WindowFlip3DPolicy
+QtWinExtras.QtWin.extendFrameIntoClientArea?4(QWindow, int, int, int, int)
+QtWinExtras.QtWin.extendFrameIntoClientArea?4(QWindow, QMargins)
+QtWinExtras.QtWin.resetExtendedFrame?4(QWindow)
+QtWinExtras.QtWin.enableBlurBehindWindow?4(QWindow, QRegion)
+QtWinExtras.QtWin.enableBlurBehindWindow?4(QWindow)
+QtWinExtras.QtWin.disableBlurBehindWindow?4(QWindow)
+QtWinExtras.QtWin.isCompositionEnabled?4() -> bool
+QtWinExtras.QtWin.setCompositionEnabled?4(bool)
+QtWinExtras.QtWin.isCompositionOpaque?4() -> bool
+QtWinExtras.QtWin.setCurrentProcessExplicitAppUserModelID?4(QString)
+QtWinExtras.QtWin.markFullscreenWindow?4(QWindow, bool fullscreen=True)
+QtWinExtras.QtWin.taskbarActivateTab?4(QWindow)
+QtWinExtras.QtWin.taskbarActivateTabAlt?4(QWindow)
+QtWinExtras.QtWin.taskbarAddTab?4(QWindow)
+QtWinExtras.QtWin.taskbarDeleteTab?4(QWindow)
+QtWinExtras.QtWin.setWindowExcludedFromPeek?4(QWidget, bool)
+QtWinExtras.QtWin.isWindowExcludedFromPeek?4(QWidget) -> bool
+QtWinExtras.QtWin.setWindowDisallowPeek?4(QWidget, bool)
+QtWinExtras.QtWin.isWindowPeekDisallowed?4(QWidget) -> bool
+QtWinExtras.QtWin.setWindowFlip3DPolicy?4(QWidget, QtWin.WindowFlip3DPolicy)
+QtWinExtras.QtWin.windowFlip3DPolicy?4(QWidget) -> QtWin.WindowFlip3DPolicy
+QtWinExtras.QtWin.extendFrameIntoClientArea?4(QWidget, QMargins)
+QtWinExtras.QtWin.extendFrameIntoClientArea?4(QWidget, int, int, int, int)
+QtWinExtras.QtWin.resetExtendedFrame?4(QWidget)
+QtWinExtras.QtWin.enableBlurBehindWindow?4(QWidget, QRegion)
+QtWinExtras.QtWin.enableBlurBehindWindow?4(QWidget)
+QtWinExtras.QtWin.disableBlurBehindWindow?4(QWidget)
+QtWinExtras.QtWin.markFullscreenWindow?4(QWidget, bool fullscreen=True)
+QtWinExtras.QtWin.taskbarActivateTab?4(QWidget)
+QtWinExtras.QtWin.taskbarActivateTabAlt?4(QWidget)
+QtWinExtras.QtWin.taskbarAddTab?4(QWidget)
+QtWinExtras.QtWin.taskbarDeleteTab?4(QWidget)
+QtWinExtras.QWinJumpList?1(QObject parent=None)
+QtWinExtras.QWinJumpList.__init__?1(self, QObject parent=None)
+QtWinExtras.QWinJumpList.identifier?4() -> QString
+QtWinExtras.QWinJumpList.setIdentifier?4(QString)
+QtWinExtras.QWinJumpList.recent?4() -> QWinJumpListCategory
+QtWinExtras.QWinJumpList.frequent?4() -> QWinJumpListCategory
+QtWinExtras.QWinJumpList.tasks?4() -> QWinJumpListCategory
+QtWinExtras.QWinJumpList.categories?4() -> unknown-type
+QtWinExtras.QWinJumpList.addCategory?4(QWinJumpListCategory)
+QtWinExtras.QWinJumpList.addCategory?4(QString, unknown-type items=[]) -> QWinJumpListCategory
+QtWinExtras.QWinJumpList.clear?4()
+QtWinExtras.QWinJumpListCategory.Type?10
+QtWinExtras.QWinJumpListCategory.Type.Custom?10
+QtWinExtras.QWinJumpListCategory.Type.Recent?10
+QtWinExtras.QWinJumpListCategory.Type.Frequent?10
+QtWinExtras.QWinJumpListCategory.Type.Tasks?10
+QtWinExtras.QWinJumpListCategory?1(QString title='')
+QtWinExtras.QWinJumpListCategory.__init__?1(self, QString title='')
+QtWinExtras.QWinJumpListCategory.type?4() -> QWinJumpListCategory.Type
+QtWinExtras.QWinJumpListCategory.isVisible?4() -> bool
+QtWinExtras.QWinJumpListCategory.setVisible?4(bool)
+QtWinExtras.QWinJumpListCategory.title?4() -> QString
+QtWinExtras.QWinJumpListCategory.setTitle?4(QString)
+QtWinExtras.QWinJumpListCategory.count?4() -> int
+QtWinExtras.QWinJumpListCategory.isEmpty?4() -> bool
+QtWinExtras.QWinJumpListCategory.items?4() -> unknown-type
+QtWinExtras.QWinJumpListCategory.addItem?4(QWinJumpListItem)
+QtWinExtras.QWinJumpListCategory.addDestination?4(QString) -> QWinJumpListItem
+QtWinExtras.QWinJumpListCategory.addLink?4(QString, QString, QStringList arguments=[]) -> QWinJumpListItem
+QtWinExtras.QWinJumpListCategory.addLink?4(QIcon, QString, QString, QStringList arguments=[]) -> QWinJumpListItem
+QtWinExtras.QWinJumpListCategory.addSeparator?4() -> QWinJumpListItem
+QtWinExtras.QWinJumpListCategory.clear?4()
+QtWinExtras.QWinJumpListItem.Type?10
+QtWinExtras.QWinJumpListItem.Type.Destination?10
+QtWinExtras.QWinJumpListItem.Type.Link?10
+QtWinExtras.QWinJumpListItem.Type.Separator?10
+QtWinExtras.QWinJumpListItem?1(QWinJumpListItem.Type)
+QtWinExtras.QWinJumpListItem.__init__?1(self, QWinJumpListItem.Type)
+QtWinExtras.QWinJumpListItem.setType?4(QWinJumpListItem.Type)
+QtWinExtras.QWinJumpListItem.type?4() -> QWinJumpListItem.Type
+QtWinExtras.QWinJumpListItem.setFilePath?4(QString)
+QtWinExtras.QWinJumpListItem.filePath?4() -> QString
+QtWinExtras.QWinJumpListItem.setWorkingDirectory?4(QString)
+QtWinExtras.QWinJumpListItem.workingDirectory?4() -> QString
+QtWinExtras.QWinJumpListItem.setIcon?4(QIcon)
+QtWinExtras.QWinJumpListItem.icon?4() -> QIcon
+QtWinExtras.QWinJumpListItem.setTitle?4(QString)
+QtWinExtras.QWinJumpListItem.title?4() -> QString
+QtWinExtras.QWinJumpListItem.setDescription?4(QString)
+QtWinExtras.QWinJumpListItem.description?4() -> QString
+QtWinExtras.QWinJumpListItem.setArguments?4(QStringList)
+QtWinExtras.QWinJumpListItem.arguments?4() -> QStringList
+QtWinExtras.QWinTaskbarButton?1(QObject parent=None)
+QtWinExtras.QWinTaskbarButton.__init__?1(self, QObject parent=None)
+QtWinExtras.QWinTaskbarButton.setWindow?4(QWindow)
+QtWinExtras.QWinTaskbarButton.window?4() -> QWindow
+QtWinExtras.QWinTaskbarButton.overlayIcon?4() -> QIcon
+QtWinExtras.QWinTaskbarButton.overlayAccessibleDescription?4() -> QString
+QtWinExtras.QWinTaskbarButton.progress?4() -> QWinTaskbarProgress
+QtWinExtras.QWinTaskbarButton.eventFilter?4(QObject, QEvent) -> bool
+QtWinExtras.QWinTaskbarButton.setOverlayIcon?4(QIcon)
+QtWinExtras.QWinTaskbarButton.setOverlayAccessibleDescription?4(QString)
+QtWinExtras.QWinTaskbarButton.clearOverlayIcon?4()
+QtWinExtras.QWinTaskbarProgress?1(QObject parent=None)
+QtWinExtras.QWinTaskbarProgress.__init__?1(self, QObject parent=None)
+QtWinExtras.QWinTaskbarProgress.value?4() -> int
+QtWinExtras.QWinTaskbarProgress.minimum?4() -> int
+QtWinExtras.QWinTaskbarProgress.maximum?4() -> int
+QtWinExtras.QWinTaskbarProgress.isVisible?4() -> bool
+QtWinExtras.QWinTaskbarProgress.isPaused?4() -> bool
+QtWinExtras.QWinTaskbarProgress.isStopped?4() -> bool
+QtWinExtras.QWinTaskbarProgress.setValue?4(int)
+QtWinExtras.QWinTaskbarProgress.setMinimum?4(int)
+QtWinExtras.QWinTaskbarProgress.setMaximum?4(int)
+QtWinExtras.QWinTaskbarProgress.setRange?4(int, int)
+QtWinExtras.QWinTaskbarProgress.reset?4()
+QtWinExtras.QWinTaskbarProgress.show?4()
+QtWinExtras.QWinTaskbarProgress.hide?4()
+QtWinExtras.QWinTaskbarProgress.setVisible?4(bool)
+QtWinExtras.QWinTaskbarProgress.pause?4()
+QtWinExtras.QWinTaskbarProgress.resume?4()
+QtWinExtras.QWinTaskbarProgress.setPaused?4(bool)
+QtWinExtras.QWinTaskbarProgress.stop?4()
+QtWinExtras.QWinTaskbarProgress.valueChanged?4(int)
+QtWinExtras.QWinTaskbarProgress.minimumChanged?4(int)
+QtWinExtras.QWinTaskbarProgress.maximumChanged?4(int)
+QtWinExtras.QWinTaskbarProgress.visibilityChanged?4(bool)
+QtWinExtras.QWinThumbnailToolBar?1(QObject parent=None)
+QtWinExtras.QWinThumbnailToolBar.__init__?1(self, QObject parent=None)
+QtWinExtras.QWinThumbnailToolBar.setWindow?4(QWindow)
+QtWinExtras.QWinThumbnailToolBar.window?4() -> QWindow
+QtWinExtras.QWinThumbnailToolBar.addButton?4(QWinThumbnailToolButton)
+QtWinExtras.QWinThumbnailToolBar.removeButton?4(QWinThumbnailToolButton)
+QtWinExtras.QWinThumbnailToolBar.setButtons?4(unknown-type)
+QtWinExtras.QWinThumbnailToolBar.buttons?4() -> unknown-type
+QtWinExtras.QWinThumbnailToolBar.count?4() -> int
+QtWinExtras.QWinThumbnailToolBar.iconicPixmapNotificationsEnabled?4() -> bool
+QtWinExtras.QWinThumbnailToolBar.setIconicPixmapNotificationsEnabled?4(bool)
+QtWinExtras.QWinThumbnailToolBar.iconicThumbnailPixmap?4() -> QPixmap
+QtWinExtras.QWinThumbnailToolBar.iconicLivePreviewPixmap?4() -> QPixmap
+QtWinExtras.QWinThumbnailToolBar.clear?4()
+QtWinExtras.QWinThumbnailToolBar.setIconicThumbnailPixmap?4(QPixmap)
+QtWinExtras.QWinThumbnailToolBar.setIconicLivePreviewPixmap?4(QPixmap)
+QtWinExtras.QWinThumbnailToolBar.iconicThumbnailPixmapRequested?4()
+QtWinExtras.QWinThumbnailToolBar.iconicLivePreviewPixmapRequested?4()
+QtWinExtras.QWinThumbnailToolButton?1(QObject parent=None)
+QtWinExtras.QWinThumbnailToolButton.__init__?1(self, QObject parent=None)
+QtWinExtras.QWinThumbnailToolButton.setToolTip?4(QString)
+QtWinExtras.QWinThumbnailToolButton.toolTip?4() -> QString
+QtWinExtras.QWinThumbnailToolButton.setIcon?4(QIcon)
+QtWinExtras.QWinThumbnailToolButton.icon?4() -> QIcon
+QtWinExtras.QWinThumbnailToolButton.setEnabled?4(bool)
+QtWinExtras.QWinThumbnailToolButton.isEnabled?4() -> bool
+QtWinExtras.QWinThumbnailToolButton.setInteractive?4(bool)
+QtWinExtras.QWinThumbnailToolButton.isInteractive?4() -> bool
+QtWinExtras.QWinThumbnailToolButton.setVisible?4(bool)
+QtWinExtras.QWinThumbnailToolButton.isVisible?4() -> bool
+QtWinExtras.QWinThumbnailToolButton.setDismissOnClick?4(bool)
+QtWinExtras.QWinThumbnailToolButton.dismissOnClick?4() -> bool
+QtWinExtras.QWinThumbnailToolButton.setFlat?4(bool)
+QtWinExtras.QWinThumbnailToolButton.isFlat?4() -> bool
+QtWinExtras.QWinThumbnailToolButton.click?4()
+QtWinExtras.QWinThumbnailToolButton.clicked?4()
 QtXml.QDomImplementation.InvalidDataPolicy?10
 QtXml.QDomImplementation.InvalidDataPolicy.AcceptInvalidChars?10
 QtXml.QDomImplementation.InvalidDataPolicy.DropInvalidChars?10

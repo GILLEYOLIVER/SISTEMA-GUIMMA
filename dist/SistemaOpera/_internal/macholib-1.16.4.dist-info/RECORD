@@ -1,10 +1,11 @@
-../../../bin/macho_dump,sha256=Mc4gMP2pRt8C2PMPxm6Mc34K92SUY9eKRlFFSKEZGVs,254
-../../../bin/macho_find,sha256=WDJ1-xJvN7w2UUN6YEdWsv-tOWWLbf3V86z2zHugS1M,254
-../../../bin/macho_standalone,sha256=Bdt4q0-6OZePkKnevOAE-Kvuli6yb9k2wfW0GqRIbfQ,260
+../../Scripts/macho_dump.exe,sha256=HQdkiYx_uCVlgoI_ksHvgfeDxM8eCJobfgP5eFbiVQk,108369
+../../Scripts/macho_find.exe,sha256=JcSLx7en0hL1LiuoV1mbLRuVYAfB4pb-mxqZ0_9FLoA,108369
+../../Scripts/macho_standalone.exe,sha256=H_AXXUnHrl8h1y_SlaEWEFM9UB5JJvSEejuJJLDG8Qg,108375
 macholib-1.16.4.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
 macholib-1.16.4.dist-info/LICENSE,sha256=RwgqsrwBhBI-yfEP34DHByPuaPB9RDguF2FcKmunCwk,1113
 macholib-1.16.4.dist-info/METADATA,sha256=Mh7hs4gxpmt5omtbBBt_gMCwiSmtOr8uoj34d0VRJq8,12161
 macholib-1.16.4.dist-info/RECORD,,
+macholib-1.16.4.dist-info/REQUESTED,sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU,0
 macholib-1.16.4.dist-info/WHEEL,sha256=iYlv5fX357PQyRT2o6tw1bN-YcKFFHKqB_LwHO5wP-g,110
 macholib-1.16.4.dist-info/entry_points.txt,sha256=THiuq8jkp1kN_BzSPx22Eu6YpeH1WnrPN87e4FgsJbE,144
 macholib-1.16.4.dist-info/top_level.txt,sha256=40hJ8pWfXo-R8zt8z9jF7KS9kiLzEmuLnfFVgh0UUkw,9

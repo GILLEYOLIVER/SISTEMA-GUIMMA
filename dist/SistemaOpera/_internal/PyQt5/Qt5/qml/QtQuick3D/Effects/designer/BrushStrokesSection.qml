@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,21 +39,17 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Noise Sample Texture")
                 tooltip: qsTr("Defines a texture for noise samples.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.noiseSample_texture
                     defaultItem: qsTr("Default")
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -64,11 +59,10 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Length")
                 tooltip: qsTr("Length of the brush.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 3
@@ -76,47 +70,34 @@ Column {
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.brushLength
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Size")
                 tooltip: qsTr("Size of the brush.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 200
                     minimumValue: 10
                     decimals: 0
                     backendValue: backendValues.brushSize
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Angle")
                 tooltip: qsTr("Angle of the brush")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 360
                     minimumValue: 0
                     decimals: 0
                     backendValue: backendValues.brushAngle
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

@@ -415,7 +415,6 @@ MetaInfo {
             version: "1.15"
             requiredImport: "QtQuick3D.Effects"
             QmlSource { source: "./source/effect_template.qml" }
-            ExtraFile { source: "./source/effect_default_shader.frag" }
         }
     }
 }

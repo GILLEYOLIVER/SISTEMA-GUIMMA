@@ -1,1 +1,0 @@
-../../../Resources/fontTools/qu2cu/cli.py

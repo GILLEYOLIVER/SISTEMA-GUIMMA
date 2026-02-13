@@ -28,99 +28,150 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
+    id: materialRoot
     width: parent.width
+
+    property int labelWidth: 10
+    property int labelSpinBoxSpacing: 0
+    property int spinBoxMinimumWidth: 120
+
+    Section {
+        caption: qsTr("Environment Map")
+        width: parent.width
+
+        SectionLayout {
+            Label {
+                text: qsTr("Enabled")
+                tooltip: qsTr("Specifies if the environment map is enabled.")
+            }
+            SecondColumnLayout {
+                CheckBox {
+                    text: backendValues.uEnvironmentMappingEnabled.valueToString
+                    backendValue: backendValues.uEnvironmentMappingEnabled
+                    Layout.fillWidth: true
+                }
+            }
+            Label {
+                text: qsTr("Texture")
+                tooltip: qsTr("Defines a texture for environment map.")
+            }
+            SecondColumnLayout {
+                IdComboBox {
+                    typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
+                    backendValue: backendValues.uEnvironmentTexture_texture
+                    defaultItem: qsTr("Default")
+                }
+            }
+        }
+    }
+
+    Section {
+        caption: qsTr("Shadow Map")
+        width: parent.width
+
+        SectionLayout {
+            Label {
+                text: qsTr("Enabled")
+                tooltip: qsTr("Specifies if the shadow map is enabled.")
+            }
+            SecondColumnLayout {
+                CheckBox {
+                    text: backendValues.uShadowMappingEnabled.valueToString
+                    backendValue: backendValues.uShadowMappingEnabled
+                    Layout.fillWidth: true
+                }
+            }
+            Label {
+                text: qsTr("Texture")
+                tooltip: qsTr("Defines a texture for shadow map.")
+            }
+            SecondColumnLayout {
+                IdComboBox {
+                    typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
+                    backendValue: backendValues.uBakedShadowTexture_texture
+                    defaultItem: qsTr("Default")
+                }
+            }
+        }
+    }
+
+
+    Section {
+        caption: qsTr("Glass Color")
+        width: parent.width
+        ColorEditor {
+            caption: qsTr("Glass Color")
+            backendValue: backendValues.glass_color
+            supportGradient: false
+            isVector3D: true
+            Layout.fillWidth: true
+        }
+    }
 
     Section {
         caption: qsTr("General")
         width: parent.width
-
         SectionLayout {
-            PropertyLabel { text: qsTr("Glass Color") }
-
-            ColorEditor {
-                backendValue: backendValues.glass_color
-                supportGradient: false
-                isVector3D: true
-            }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Fresnel Power")
                 tooltip: qsTr("Set the fresnel power of the material.")
             }
-
             SecondColumnLayout {
                 SpinBox {
-                    minimumValue: 0
                     maximumValue: 100
+                    minimumValue: 0
                     decimals: 2
                     backendValue: backendValues.uFresnelPower
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Roughness")
                 tooltip: qsTr("Set the roughness of the material.")
             }
-
             SecondColumnLayout {
                 SpinBox {
-                    minimumValue: 0
                     maximumValue: 1
+                    minimumValue: 0
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.roughness
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Reflectivity")
                 tooltip: qsTr("Set the reflectivity of the material.")
             }
-
             SecondColumnLayout {
                 SpinBox {
-                    minimumValue: 0
                     maximumValue: 1
+                    minimumValue: 0
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.reflectivity_amount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Index of Refraction")
                 tooltip: qsTr("Set the index of refraction for the material.")
             }
-
             SecondColumnLayout {
                 SpinBox {
-                    minimumValue: 1.4
                     maximumValue: 2.1
+                    minimumValue: 1.4
                     decimals: 2
                     stepSize: 0.1
                     backendValue: backendValues.glass_ior
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

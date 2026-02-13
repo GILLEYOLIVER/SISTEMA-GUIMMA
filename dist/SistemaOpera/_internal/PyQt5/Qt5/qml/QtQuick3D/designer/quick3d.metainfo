@@ -140,7 +140,7 @@ MetaInfo {
     }
     Type {
         name: "QtQuick3D.DirectionalLight"
-        icon: "images/lightdirectional16.png"
+        icon: "images/light16.png"
 
         Hints {
             visibleInNavigator: true
@@ -152,14 +152,14 @@ MetaInfo {
         ItemLibraryEntry {
             name: "Light Directional"
             category: "Qt Quick 3D"
-            libraryIcon: "images/lightdirectional.png"
+            libraryIcon: "images/light.png"
             version: "1.0"
             requiredImport: "QtQuick3D"
         }
     }
     Type {
         name: "QtQuick3D.PointLight"
-        icon: "images/lightpoint16.png"
+        icon: "images/light16.png"
 
         Hints {
             visibleInNavigator: true
@@ -171,14 +171,14 @@ MetaInfo {
         ItemLibraryEntry {
             name: "Light Point"
             category: "Qt Quick 3D"
-            libraryIcon: "images/lightpoint.png"
+            libraryIcon: "images/light.png"
             version: "1.0"
             requiredImport: "QtQuick3D"
         }
     }
     Type {
         name: "QtQuick3D.AreaLight"
-        icon: "images/lightarea16.png"
+        icon: "images/light16.png"
 
         Hints {
             visibleInNavigator: true
@@ -190,14 +190,14 @@ MetaInfo {
         ItemLibraryEntry {
             name: "Light Area"
             category: "Qt Quick 3D"
-            libraryIcon: "images/lightarea.png"
+            libraryIcon: "images/light.png"
             version: "1.0"
             requiredImport: "QtQuick3D"
         }
     }
     Type {
         name: "QtQuick3D.SpotLight"
-        icon: "images/lightspot16.png"
+        icon: "images/light16.png"
 
         Hints {
             visibleInNavigator: true
@@ -209,7 +209,7 @@ MetaInfo {
         ItemLibraryEntry {
             name: "Light Spot"
             category: "Qt Quick 3D"
-            libraryIcon: "images/lightspot.png"
+            libraryIcon: "images/light.png"
             version: "1.0"
             requiredImport: "QtQuick3D"
         }

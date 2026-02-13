@@ -68,5 +68,5 @@ WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 %Include qqmlpropertyvaluesource.sip
 %Include qqmlscriptstring.sip
 %Include qmlattachedpropertiesobject.sip
-%Include qpyqmllistproperty.sip
 %Include qmlregistertype.sip
+%Include qpyqmllistproperty.sip

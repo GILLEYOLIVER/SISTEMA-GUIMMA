@@ -1,1 +1,0 @@
-../../../Resources/fontTools/varLib/cff.py

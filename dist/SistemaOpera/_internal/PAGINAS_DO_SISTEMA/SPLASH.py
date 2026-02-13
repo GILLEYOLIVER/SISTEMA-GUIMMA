@@ -16,7 +16,7 @@ except Exception:
     def cancel_all_afters(_):  # fallback
         pass
 
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 # ===================== ESQUEMAS DE CORES =====================
 
 COLOR_SCHEMES = {

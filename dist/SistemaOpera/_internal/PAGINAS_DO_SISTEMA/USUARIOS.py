@@ -11,7 +11,7 @@ SISTEMA DE GESTÃO DE USUÁRIOS – Profissional 3.0
 - Integração total com sistema de temas do menu
 - Código limpo, organizado e altamente funcional
 """
-
+# JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 from PAGINAS_DO_SISTEMA import TEMAS
 import os
 import sys
@@ -2820,6 +2820,8 @@ class UsuariosPage(ctk.CTkFrame):
                             (usuario_id, tema_nome) VALUES (%s, %s)""",
                         (new_id, tema_preferido)
                     )
+                    # Garantir permissões mínimas para todos os usuários novos
+                    self._garantir_permissoes_basicas(new_id)
 
                 self._recarregar_lista_usuarios(selecionar_id=new_id)
                 self._update_stats()
@@ -2851,6 +2853,31 @@ class UsuariosPage(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Usuários", f"Falha ao salvar: {e}")
             print(f"❌ [SALVAR] Erro detalhado: {e}")
+
+    def _garantir_permissoes_basicas(self, usuario_id: int):
+        """Garante permissões básicas obrigatórias para qualquer usuário."""
+        try:
+            if not usuario_id or not POSTGRES_AVAILABLE:
+                return
+
+            schema = get_schema()
+            codigos_obrigatorios = ["dashboard", "config_temas"]
+
+            for codigo in codigos_obrigatorios:
+                self._exec_sql(
+                    f"DELETE FROM {schema}.usuario_permissoes WHERE usuario_id = %s AND codigo = %s",
+                    (usuario_id, codigo),
+                )
+                self._exec_sql(
+                    f"""
+                    INSERT INTO {schema}.usuario_permissoes
+                    (usuario_id, codigo, pode_ver, pode_editar, pode_imprimir, pode_excluir, pode_administrar)
+                    VALUES (%s, %s, TRUE, FALSE, FALSE, FALSE, FALSE)
+                    """,
+                    (usuario_id, codigo),
+                )
+        except Exception as e:
+            print(f"⚠️ [PERMISSOES] Não foi possível garantir permissões básicas: {e}")
 
     def _excluir_usuario(self):
         """Exclui um usuário do banco de dados"""

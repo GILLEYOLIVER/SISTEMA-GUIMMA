@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,56 +39,37 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Version")
                 tooltip: qsTr("Shader code version to use.")
             }
-
             SecondColumnLayout {
                 LineEdit {
                     backendValue: backendValues.version
+                    Layout.fillWidth: true
                     showTranslateCheckBox: false
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
-                    width: implicitWidth
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Type")
                 tooltip: qsTr("Shader type.")
             }
-
             SecondColumnLayout {
                 LineEdit {
                     backendValue: backendValues.type
+                    Layout.fillWidth: true
                     showTranslateCheckBox: false
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
-                    width: implicitWidth
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Key")
                 tooltip: qsTr("Shader key.")
             }
-
-            SecondColumnLayout {
-                ComboBox {
-                    scope: "ShaderInfo"
-                    model: ["Diffuse", "Specular", "Cutout", "Refraction", "Transparent", "Displace",
-                            "Transmissive", "Glossy"]
-                    backendValue: backendValues.shaderKey
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
-                }
-
-                ExpandingSpacer {}
+            ComboBox {
+                scope: "ShaderInfo"
+                model: ["Diffuse", "Specular", "Cutout", "Refraction", "Transparent", "Displace", "Transmissive", "Glossy"]
+                backendValue: backendValues.shaderKey
+                Layout.fillWidth: true
             }
         }
     }

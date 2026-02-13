@@ -1,1 +1,0 @@
-../../../Resources/fontTools/varLib/multiVarStore.py

@@ -10,6 +10,7 @@ Module {
     Component {
         file: "qquickboundaryrule_p.h"
         name: "QQuickBoundaryRule"
+        prototype: "QObject"
         exports: ["Qt.labs.animation/BoundaryRule 1.0"]
         exportMetaObjectRevisions: [0]
         Enum {

@@ -1,4 +1,4 @@
-"""Simplify TrueType glyphs by merging overlapping contours/components.
+""" Simplify TrueType glyphs by merging overlapping contours/components.
 
 Requires https://github.com/fonttools/skia-pathops
 """
@@ -250,10 +250,9 @@ def _remove_cff_overlaps(
     glyphSet: _TTGlyphMapping,
     removeHinting: bool,
     ignoreErrors: bool,
-    table_tag: str,
     removeUnusedSubroutines: bool = True,
 ) -> None:
-    cffFontSet = font[table_tag].cff
+    cffFontSet = font["CFF "].cff
     modified = set()
     for glyphName in glyphNames:
         try:
@@ -312,9 +311,9 @@ def removeOverlaps(
             any glyphs are modified.
     """
 
-    if "glyf" not in font and "CFF " not in font and "CFF2" not in font:
+    if "glyf" not in font and "CFF " not in font:
         raise NotImplementedError(
-            "No outline data found in the font: missing 'glyf', 'CFF ', or 'CFF2' table"
+            "No outline data found in the font: missing 'glyf' or 'CFF ' table"
         )
 
     if glyphNames is None:
@@ -332,14 +331,13 @@ def removeOverlaps(
             ignoreErrors=ignoreErrors,
         )
 
-    if "CFF " in font or "CFF2" in font:
+    if "CFF " in font:
         _remove_cff_overlaps(
             font=font,
             glyphNames=glyphNames,
             glyphSet=glyphSet,
             removeHinting=removeHinting,
             ignoreErrors=ignoreErrors,
-            table_tag="CFF " if "CFF " in font else "CFF2",
             removeUnusedSubroutines=removeUnusedSubroutines,
         )
 

@@ -57,5 +57,5 @@ WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 %Include qdbuspendingcall.sip
 %Include qdbusservicewatcher.sip
 %Include qdbusunixfiledescriptor.sip
-%Include qpydbusreply.sip
 %Include qpydbuspendingreply.sip
+%Include qpydbusreply.sip

@@ -82,6 +82,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         ctk.CTkLabel(search_frame, text="Tipo:", text_color=self.C("cor_texto")
                      ).pack(side="left", padx=(0, 6))
 
+        # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
         self.tipo_busca_var = ctk.StringVar(value="Todos")
         self.combo_tipo_busca = ctk.CTkComboBox(
             search_frame,

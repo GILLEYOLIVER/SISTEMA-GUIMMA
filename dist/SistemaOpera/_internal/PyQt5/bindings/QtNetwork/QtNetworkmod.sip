@@ -84,5 +84,5 @@ WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 %Include qtcpserver.sip
 %Include qtcpsocket.sip
 %Include qudpsocket.sip
-%Include qpynetwork_qmap.sip
 %Include qpynetwork_qhash.sip
+%Include qpynetwork_qmap.sip

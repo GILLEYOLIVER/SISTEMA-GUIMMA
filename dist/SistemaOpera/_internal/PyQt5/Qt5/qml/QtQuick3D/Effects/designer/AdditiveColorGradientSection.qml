@@ -28,32 +28,33 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
 
     Section {
-        caption: qsTr("Additive Color Gradient")
+        caption: qsTr("Top Color")
         width: parent.width
+        ColorEditor {
+            caption: qsTr("Top Color")
+            backendValue: backendValues.topColor
+            supportGradient: false
+            isVector3D: true
+            Layout.fillWidth: true
+        }
+    }
 
-        SectionLayout {
-            PropertyLabel { text: qsTr("Top Color") }
-
-            ColorEditor {
-                backendValue: backendValues.topColor
-                supportGradient: false
-                isVector3D: true
-            }
-
-            PropertyLabel { text: qsTr("Bottom Color") }
-
-            ColorEditor {
-                backendValue: backendValues.ambientColor
-                supportGradient: false
-                isVector3D: true
-            }
+    Section {
+        caption: qsTr("Bottom Color")
+        width: parent.width
+        ColorEditor {
+            caption: qsTr("Bottom Color")
+            backendValue: backendValues.bottomColor
+            supportGradient: false
+            isVector3D: true
+            Layout.fillWidth: true
         }
     }
 }

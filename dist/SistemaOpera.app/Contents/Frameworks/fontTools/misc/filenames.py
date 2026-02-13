@@ -1,1 +1,0 @@
-../../../Resources/fontTools/misc/filenames.py

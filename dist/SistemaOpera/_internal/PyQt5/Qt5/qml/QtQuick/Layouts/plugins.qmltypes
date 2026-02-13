@@ -69,6 +69,7 @@ Module {
     }
     Component {
         name: "QQuickLayoutAttached"
+        prototype: "QObject"
         Property { name: "minimumWidth"; type: "double" }
         Property { name: "minimumHeight"; type: "double" }
         Property { name: "preferredWidth"; type: "double" }

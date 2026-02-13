@@ -67,5 +67,5 @@ WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 %Include qlowenergydescriptordata.sip
 %Include qlowenergyservice.sip
 %Include qlowenergyservicedata.sip
-%Include qpybluetooth_quint128.sip
 %Include qpybluetooth_qlist.sip
+%Include qpybluetooth_quint128.sip

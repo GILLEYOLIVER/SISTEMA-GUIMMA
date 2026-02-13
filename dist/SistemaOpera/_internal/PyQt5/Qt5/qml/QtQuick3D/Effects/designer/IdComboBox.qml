@@ -28,9 +28,9 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import HelperWidgets 2.0
+import HelperWidgets 2.0 as HelperWidgets
 
-ComboBox {
+HelperWidgets.ComboBox {
     id: comboBox
 
     property alias typeFilter: itemFilterModel.typeFilter
@@ -41,7 +41,7 @@ ComboBox {
 
     textInput.validator: RegExpValidator { regExp: /(^$|^[a-z_]\w*)/ }
 
-    ItemFilterModel {
+    HelperWidgets.ItemFilterModel {
         id: itemFilterModel
         modelNodeBackendProperty: modelNodeBackend
     }
@@ -59,7 +59,7 @@ ComboBox {
         comboBox.setCurrentText(comboBox.textValue)
     }
     onModelChanged: comboBox.setCurrentText(comboBox.textValue)
-    onCompressedActivated: function(index, reason) { comboBox.handleActivate(index) }
+    onCompressedActivated: comboBox.handleActivate(index)
     Component.onCompleted: comboBox.setCurrentText(comboBox.textValue)
 
     onEditTextChanged: {

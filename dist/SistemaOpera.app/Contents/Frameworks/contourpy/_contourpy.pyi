@@ -1,1 +1,0 @@
-../../Resources/contourpy/_contourpy.pyi

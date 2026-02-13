@@ -10,6 +10,7 @@ Module {
     Component {
         file: "quicktestevent_p.h"
         name: "QQuickTouchEventSequence"
+        prototype: "QObject"
         Method {
             name: "press"
             type: "QObject*"
@@ -44,6 +45,7 @@ Module {
     Component {
         file: "quicktestevent_p.h"
         name: "QuickTestEvent"
+        prototype: "QObject"
         exports: ["QtTest/TestEvent 1.0", "QtTest/TestEvent 1.2"]
         exportMetaObjectRevisions: [0, 2]
         Property { name: "defaultMouseDelay"; type: "int"; isReadonly: true }
@@ -176,6 +178,7 @@ Module {
     Component {
         file: "quicktestresultforeign_p.h"
         name: "QuickTestResult"
+        prototype: "QObject"
         exports: [
             "QtTest/TestResult 1.0",
             "QtTest/TestResult 1.1",
@@ -333,6 +336,7 @@ Module {
     Component {
         file: "quicktestutil_p.h"
         name: "QuickTestUtil"
+        prototype: "QObject"
         exports: ["QtTest/TestUtil 1.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "printAvailableFunctions"; type: "bool"; isReadonly: true }

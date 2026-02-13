@@ -28,9 +28,8 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Column {
     width: parent.width
@@ -40,21 +39,17 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Mask Texture")
                 tooltip: qsTr("Defines a texture for mask.")
             }
-
             SecondColumnLayout {
                 IdComboBox {
                     typeFilter: "QtQuick3D.Texture"
+                    Layout.fillWidth: true
                     backendValue: backendValues.maskTexture_texture
                     defaultItem: qsTr("Default")
-                    implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
                 }
-
-                ExpandingSpacer {}
             }
         }
     }
@@ -64,29 +59,23 @@ Column {
         width: parent.width
 
         SectionLayout {
-            PropertyLabel {
+            Label {
                 text: qsTr("Amount")
                 tooltip: qsTr("Amount of aberration.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 1000
                     minimumValue: -1000
                     decimals: 0
                     backendValue: backendValues.aberrationAmount
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
-
-            PropertyLabel {
+            Label {
                 text: qsTr("Focus Depth")
                 tooltip: qsTr("Focus depth of the aberration.")
             }
-
             SecondColumnLayout {
                 SpinBox {
                     maximumValue: 10000
@@ -94,11 +83,8 @@ Column {
                     realDragRange: 5000
                     decimals: 0
                     backendValue: backendValues.focusDepth
-                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                                   + StudioTheme.Values.actionIndicatorWidth
+                    Layout.fillWidth: true
                 }
-
-                ExpandingSpacer {}
             }
         }
     }

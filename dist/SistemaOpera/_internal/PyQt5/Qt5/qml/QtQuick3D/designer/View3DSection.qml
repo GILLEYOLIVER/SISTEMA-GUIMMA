@@ -28,61 +28,48 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Section {
-    width: parent.width
     caption: qsTr("View3D")
+    width: parent.width
 
     SectionLayout {
-        PropertyLabel {
+        Label {
             text: qsTr("Camera")
             tooltip: qsTr("Specifies which camera is used to render the scene.")
         }
-
         SecondColumnLayout {
             IdComboBox {
                 typeFilter: "QtQuick3D.Camera"
+                Layout.fillWidth: true
                 backendValue: backendValues.camera
-                implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
             }
-
-            ExpandingSpacer {}
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Environment")
             tooltip: qsTr("Specifies the scene environment used to render the scene.")
         }
-
         SecondColumnLayout {
             IdComboBox {
                 typeFilter: "QtQuick3D.SceneEnvironment"
+                Layout.fillWidth: true
                 backendValue: backendValues.environment
-                implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
             }
-
-            ExpandingSpacer {}
         }
 
-        PropertyLabel {
+        Label {
             text: qsTr("Import Scene")
             tooltip: qsTr("Defines the reference node of the scene to render to the viewport.")
         }
-
         SecondColumnLayout {
             IdComboBox {
                 typeFilter: "QtQuick3D.Node"
+                Layout.fillWidth: true
                 backendValue: backendValues.importScene
-                implicitWidth: StudioTheme.Values.singleControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
             }
-
-            ExpandingSpacer {}
         }
     }
 }

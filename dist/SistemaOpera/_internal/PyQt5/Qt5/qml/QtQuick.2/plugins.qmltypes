@@ -8,28 +8,178 @@ import QtQuick.tooling 1.2
 Module {
     dependencies: []
     Component {
+        name: "QDoubleValidator"
+        prototype: "QValidator"
+        Enum {
+            name: "Notation"
+            values: ["StandardNotation", "ScientificNotation"]
+        }
+        Property { name: "bottom"; type: "double" }
+        Property { name: "top"; type: "double" }
+        Property { name: "decimals"; type: "int" }
+        Property { name: "notation"; type: "Notation" }
+        Signal {
+            name: "bottomChanged"
+            Parameter { name: "bottom"; type: "double" }
+        }
+        Signal {
+            name: "topChanged"
+            Parameter { name: "top"; type: "double" }
+        }
+        Signal {
+            name: "decimalsChanged"
+            Parameter { name: "decimals"; type: "int" }
+        }
+        Signal {
+            name: "notationChanged"
+            Parameter { name: "notation"; type: "QDoubleValidator::Notation" }
+        }
+    }
+    Component {
         file: "private/qquickforeignutils_p.h"
-        name: "QInputMethodForeign"
+        name: "QInputMethod"
+        prototype: "QObject"
         exports: ["QtQuick/InputMethod 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
+        Enum {
+            name: "Action"
+            values: ["Click", "ContextMenu"]
+        }
+        Property { name: "cursorRectangle"; type: "QRectF"; isReadonly: true }
+        Property { name: "anchorRectangle"; type: "QRectF"; isReadonly: true }
+        Property { name: "keyboardRectangle"; type: "QRectF"; isReadonly: true }
+        Property { name: "inputItemClipRectangle"; type: "QRectF"; isReadonly: true }
+        Property { name: "visible"; type: "bool"; isReadonly: true }
+        Property { name: "animating"; type: "bool"; isReadonly: true }
+        Property { name: "locale"; type: "QLocale"; isReadonly: true }
+        Property { name: "inputDirection"; type: "Qt::LayoutDirection"; isReadonly: true }
+        Signal {
+            name: "inputDirectionChanged"
+            Parameter { name: "newDirection"; type: "Qt::LayoutDirection" }
+        }
+        Method { name: "show" }
+        Method { name: "hide" }
+        Method {
+            name: "update"
+            Parameter { name: "queries"; type: "Qt::InputMethodQueries" }
+        }
+        Method { name: "reset" }
+        Method { name: "commit" }
+        Method {
+            name: "invokeAction"
+            Parameter { name: "a"; type: "Action" }
+            Parameter { name: "cursorPosition"; type: "int" }
+        }
+    }
+    Component {
+        name: "QIntValidator"
+        prototype: "QValidator"
+        Property { name: "bottom"; type: "int" }
+        Property { name: "top"; type: "int" }
+        Signal {
+            name: "bottomChanged"
+            Parameter { name: "bottom"; type: "int" }
+        }
+        Signal {
+            name: "topChanged"
+            Parameter { name: "top"; type: "int" }
+        }
     }
     Component {
         file: "private/qquickforeignutils_p.h"
-        name: "QKeySequenceForeign"
+        name: "QKeySequence"
         exports: ["QtQuick/StandardKey 2.2"]
         isCreatable: false
         exportMetaObjectRevisions: [2]
+        Enum {
+            name: "StandardKey"
+            values: [
+                "UnknownKey",
+                "HelpContents",
+                "WhatsThis",
+                "Open",
+                "Close",
+                "Save",
+                "New",
+                "Delete",
+                "Cut",
+                "Copy",
+                "Paste",
+                "Undo",
+                "Redo",
+                "Back",
+                "Forward",
+                "Refresh",
+                "ZoomIn",
+                "ZoomOut",
+                "Print",
+                "AddTab",
+                "NextChild",
+                "PreviousChild",
+                "Find",
+                "FindNext",
+                "FindPrevious",
+                "Replace",
+                "SelectAll",
+                "Bold",
+                "Italic",
+                "Underline",
+                "MoveToNextChar",
+                "MoveToPreviousChar",
+                "MoveToNextWord",
+                "MoveToPreviousWord",
+                "MoveToNextLine",
+                "MoveToPreviousLine",
+                "MoveToNextPage",
+                "MoveToPreviousPage",
+                "MoveToStartOfLine",
+                "MoveToEndOfLine",
+                "MoveToStartOfBlock",
+                "MoveToEndOfBlock",
+                "MoveToStartOfDocument",
+                "MoveToEndOfDocument",
+                "SelectNextChar",
+                "SelectPreviousChar",
+                "SelectNextWord",
+                "SelectPreviousWord",
+                "SelectNextLine",
+                "SelectPreviousLine",
+                "SelectNextPage",
+                "SelectPreviousPage",
+                "SelectStartOfLine",
+                "SelectEndOfLine",
+                "SelectStartOfBlock",
+                "SelectEndOfBlock",
+                "SelectStartOfDocument",
+                "SelectEndOfDocument",
+                "DeleteStartOfWord",
+                "DeleteEndOfWord",
+                "DeleteEndOfLine",
+                "InsertParagraphSeparator",
+                "InsertLineSeparator",
+                "SaveAs",
+                "Preferences",
+                "Quit",
+                "FullScreen",
+                "Deselect",
+                "DeleteCompleteLine",
+                "Backspace",
+                "Cancel"
+            ]
+        }
     }
     Component {
         file: "private/qquickitemsmodule_p.h"
-        name: "QPointingDeviceUniqueIdForeign"
+        name: "QPointingDeviceUniqueId"
         exports: ["QtQuick/PointingDeviceUniqueId 2.9"]
         isCreatable: false
         exportMetaObjectRevisions: [9]
+        Property { name: "numericId"; type: "qlonglong"; isReadonly: true }
     }
     Component {
         name: "QQmlApplication"
+        prototype: "QObject"
         Property { name: "arguments"; type: "QStringList"; isReadonly: true }
         Property { name: "name"; type: "string" }
         Property { name: "version"; type: "string" }
@@ -56,6 +206,7 @@ Module {
     Component {
         file: "private/qquickanimation_p.h"
         name: "QQuickAbstractAnimation"
+        prototype: "QObject"
         exports: ["QtQuick/Animation 2.0", "QtQuick/Animation 2.12"]
         isCreatable: false
         exportMetaObjectRevisions: [0, 12]
@@ -97,6 +248,7 @@ Module {
     Component {
         file: "private/qquickaccessibleattached_p.h"
         name: "QQuickAccessibleAttached"
+        prototype: "QObject"
         exports: ["QtQuick/Accessible 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -230,6 +382,7 @@ Module {
     Component {
         file: "private/qquickstateoperations_p.h"
         name: "QQuickAnchorSet"
+        prototype: "QObject"
         Property { name: "left"; type: "QQmlScriptString" }
         Property { name: "right"; type: "QQmlScriptString" }
         Property { name: "horizontalCenter"; type: "QQmlScriptString" }
@@ -241,6 +394,7 @@ Module {
     Component {
         file: "private/qquickanchors_p.h"
         name: "QQuickAnchors"
+        prototype: "QObject"
         Enum {
             name: "Anchors"
             alias: "Anchor"
@@ -492,6 +646,7 @@ Module {
         file: "private/qquickanimationcontroller_p.h"
         name: "QQuickAnimationController"
         defaultProperty: "animation"
+        prototype: "QObject"
         exports: ["QtQuick/AnimationController 2.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "progress"; type: "double" }
@@ -600,6 +755,7 @@ Module {
         file: "private/qquickbehavior_p.h"
         name: "QQuickBehavior"
         defaultProperty: "animation"
+        prototype: "QObject"
         exports: [
             "QtQuick/Behavior 2.0",
             "QtQuick/Behavior 2.13",
@@ -749,6 +905,7 @@ Module {
     Component {
         file: "private/qquickevents_p_p.h"
         name: "QQuickCloseEvent"
+        prototype: "QObject"
         Property { name: "accepted"; type: "bool" }
     }
     Component {
@@ -817,6 +974,7 @@ Module {
     Component {
         file: "private/qquickvalidator_p.h"
         name: "QQuickDoubleValidator"
+        prototype: "QDoubleValidator"
         exports: ["QtQuick/DoubleValidator 2.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "locale"; type: "string" }
@@ -825,6 +983,7 @@ Module {
     Component {
         file: "private/qquickdrag_p.h"
         name: "QQuickDrag"
+        prototype: "QObject"
         exports: ["QtQuick/Drag 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -851,6 +1010,7 @@ Module {
     Component {
         file: "private/qquickdrag_p.h"
         name: "QQuickDragAttached"
+        prototype: "QObject"
         Property { name: "active"; type: "bool" }
         Property { name: "source"; type: "QObject"; isPointer: true }
         Property { name: "target"; type: "QObject"; isReadonly: true; isPointer: true }
@@ -880,6 +1040,7 @@ Module {
     Component {
         file: "private/qquickdragaxis_p.h"
         name: "QQuickDragAxis"
+        prototype: "QObject"
         exports: ["QtQuick/DragAxis 2.12"]
         isCreatable: false
         exportMetaObjectRevisions: [12]
@@ -946,6 +1107,7 @@ Module {
     Component {
         file: "private/qquickdroparea_p.h"
         name: "QQuickDropAreaDrag"
+        prototype: "QObject"
         Property { name: "x"; type: "double"; isReadonly: true }
         Property { name: "y"; type: "double"; isReadonly: true }
         Property { name: "source"; type: "QObject"; isReadonly: true; isPointer: true }
@@ -954,6 +1116,7 @@ Module {
     Component {
         file: "private/qquickdroparea_p.h"
         name: "QQuickDropEvent"
+        prototype: "QObject"
         Property { name: "x"; type: "double"; isReadonly: true }
         Property { name: "y"; type: "double"; isReadonly: true }
         Property { name: "source"; type: "QObject"; isReadonly: true; isPointer: true }
@@ -991,6 +1154,7 @@ Module {
     Component {
         file: "private/qquickitem_p.h"
         name: "QQuickEnterKeyAttached"
+        prototype: "QObject"
         exports: ["QtQuick/EnterKey 2.6"]
         isCreatable: false
         exportMetaObjectRevisions: [6]
@@ -1000,6 +1164,7 @@ Module {
     Component {
         file: "private/qquickevents_p_p.h"
         name: "QQuickEventPoint"
+        prototype: "QObject"
         exports: ["QtQuick/EventPoint 2.12"]
         isCreatable: false
         exportMetaObjectRevisions: [12]
@@ -1181,6 +1346,7 @@ Module {
     Component {
         file: "private/qquickflickable_p_p.h"
         name: "QQuickFlickableVisibleArea"
+        prototype: "QObject"
         Property { name: "xPosition"; type: "double"; isReadonly: true }
         Property { name: "yPosition"; type: "double"; isReadonly: true }
         Property { name: "widthRatio"; type: "double"; isReadonly: true }
@@ -1263,6 +1429,7 @@ Module {
     Component {
         file: "private/qquickfontloader_p.h"
         name: "QQuickFontLoader"
+        prototype: "QObject"
         exports: ["QtQuick/FontLoader 2.0"]
         exportMetaObjectRevisions: [0]
         Enum {
@@ -1281,6 +1448,7 @@ Module {
     Component {
         file: "private/qquickfontmetrics_p.h"
         name: "QQuickFontMetrics"
+        prototype: "QObject"
         exports: ["QtQuick/FontMetrics 2.4"]
         exportMetaObjectRevisions: [4]
         Property { name: "font"; type: "QFont" }
@@ -1393,6 +1561,7 @@ Module {
     Component {
         file: "private/qquickmultipointtoucharea_p.h"
         name: "QQuickGrabGestureEvent"
+        prototype: "QObject"
         exports: ["QtQuick/GestureEvent 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -1404,6 +1573,7 @@ Module {
         file: "private/qquickrectangle_p.h"
         name: "QQuickGradient"
         defaultProperty: "stops"
+        prototype: "QObject"
         exports: ["QtQuick/Gradient 2.0", "QtQuick/Gradient 2.12"]
         exportMetaObjectRevisions: [0, 12]
         Enum {
@@ -1417,6 +1587,7 @@ Module {
     Component {
         file: "private/qquickrectangle_p.h"
         name: "QQuickGradientStop"
+        prototype: "QObject"
         exports: ["QtQuick/GradientStop 2.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "position"; type: "double" }
@@ -1425,6 +1596,7 @@ Module {
     Component {
         file: "private/qquickgraphicsinfo_p.h"
         name: "QQuickGraphicsInfo"
+        prototype: "QObject"
         exports: ["QtQuick/GraphicsInfo 2.8"]
         isCreatable: false
         exportMetaObjectRevisions: [8]
@@ -1724,6 +1896,7 @@ Module {
     Component {
         file: "private/qquickvalidator_p.h"
         name: "QQuickIntValidator"
+        prototype: "QIntValidator"
         exports: ["QtQuick/IntValidator 2.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "locale"; type: "string" }
@@ -1733,6 +1906,7 @@ Module {
         file: "qquickitem.h"
         name: "QQuickItem"
         defaultProperty: "data"
+        prototype: "QObject"
         exports: [
             "QtQuick/Item 2.0",
             "QtQuick/Item 2.1",
@@ -1927,6 +2101,7 @@ Module {
     Component {
         file: "qquickitemgrabresult.h"
         name: "QQuickItemGrabResult"
+        prototype: "QObject"
         Property { name: "image"; type: "QImage"; isReadonly: true }
         Property { name: "url"; type: "QUrl"; isReadonly: true }
         Signal { name: "ready" }
@@ -1946,6 +2121,7 @@ Module {
     Component {
         file: "private/qquickitem_p.h"
         name: "QQuickItemLayer"
+        prototype: "QObject"
         Property { name: "enabled"; type: "bool" }
         Property { name: "textureSize"; type: "QSize" }
         Property { name: "sourceRect"; type: "QRectF" }
@@ -2155,6 +2331,7 @@ Module {
     }
     Component {
         name: "QQuickItemViewAttached"
+        prototype: "QObject"
         Property { name: "view"; type: "QQuickItemView"; isReadonly: true; isPointer: true }
         Property { name: "isCurrentItem"; type: "bool"; isReadonly: true }
         Property { name: "delayRemove"; type: "bool" }
@@ -2171,6 +2348,7 @@ Module {
     Component {
         file: "private/qquickevents_p_p.h"
         name: "QQuickKeyEvent"
+        prototype: "QObject"
         Property { name: "key"; type: "int"; isReadonly: true }
         Property { name: "text"; type: "string"; isReadonly: true }
         Property { name: "modifiers"; type: "int"; isReadonly: true }
@@ -2188,6 +2366,7 @@ Module {
     Component {
         file: "private/qquickitem_p.h"
         name: "QQuickKeyNavigationAttached"
+        prototype: "QObject"
         exports: ["QtQuick/KeyNavigation 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -2207,6 +2386,7 @@ Module {
     Component {
         file: "private/qquickitem_p.h"
         name: "QQuickKeysAttached"
+        prototype: "QObject"
         exports: ["QtQuick/Keys 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -2386,6 +2566,7 @@ Module {
     Component {
         file: "private/qquickitem_p.h"
         name: "QQuickLayoutMirroringAttached"
+        prototype: "QObject"
         exports: ["QtQuick/LayoutMirroring 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -2561,6 +2742,7 @@ Module {
     Component {
         file: "private/qquickevents_p_p.h"
         name: "QQuickMouseEvent"
+        prototype: "QObject"
         Property { name: "x"; type: "double"; isReadonly: true }
         Property { name: "y"; type: "double"; isReadonly: true }
         Property { name: "button"; type: "int"; isReadonly: true }
@@ -2647,6 +2829,7 @@ Module {
     Component {
         file: "private/qquickopenglinfo_p.h"
         name: "QQuickOpenGLInfo"
+        prototype: "QObject"
         exports: ["QtQuick/OpenGLInfo 2.4"]
         isCreatable: false
         exportMetaObjectRevisions: [4]
@@ -2748,6 +2931,7 @@ Module {
         file: "private/qquickpath_p.h"
         name: "QQuickPath"
         defaultProperty: "pathElements"
+        prototype: "QObject"
         exports: ["QtQuick/Path 2.0", "QtQuick/Path 2.14"]
         exportMetaObjectRevisions: [0, 14]
         Property { name: "pathElements"; type: "QQuickPathElement"; isList: true; isReadonly: true }
@@ -2884,11 +3068,13 @@ Module {
     Component {
         file: "private/qquickpath_p.h"
         name: "QQuickPathElement"
+        prototype: "QObject"
         Signal { name: "changed" }
     }
     Component {
         file: "private/qquickpathinterpolator_p.h"
         name: "QQuickPathInterpolator"
+        prototype: "QObject"
         exports: ["QtQuick/PathInterpolator 2.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "path"; type: "QQuickPath"; isPointer: true }
@@ -3085,6 +3271,7 @@ Module {
     }
     Component {
         name: "QQuickPathViewAttached"
+        prototype: "QObject"
         Property { name: "view"; type: "QQuickPathView"; isReadonly: true; isPointer: true }
         Property { name: "isCurrentItem"; type: "bool"; isReadonly: true }
         Property { name: "onPath"; type: "bool"; isReadonly: true }
@@ -3106,6 +3293,7 @@ Module {
     Component {
         file: "private/qquickrectangle_p.h"
         name: "QQuickPen"
+        prototype: "QObject"
         Property { name: "width"; type: "double" }
         Property { name: "color"; type: "QColor" }
         Property { name: "pixelAligned"; type: "bool" }
@@ -3114,6 +3302,7 @@ Module {
     Component {
         file: "private/qquickpincharea_p.h"
         name: "QQuickPinch"
+        prototype: "QObject"
         exports: ["QtQuick/Pinch 2.0"]
         exportMetaObjectRevisions: [0]
         Enum {
@@ -3169,6 +3358,7 @@ Module {
     Component {
         file: "private/qquickpincharea_p.h"
         name: "QQuickPinchEvent"
+        prototype: "QObject"
         Property { name: "center"; type: "QPointF"; isReadonly: true }
         Property { name: "startCenter"; type: "QPointF"; isReadonly: true }
         Property { name: "previousCenter"; type: "QPointF"; isReadonly: true }
@@ -3217,6 +3407,7 @@ Module {
     Component {
         file: "private/qquickevents_p_p.h"
         name: "QQuickPointerDevice"
+        prototype: "QObject"
         exports: ["QtQuick/PointerDevice 2.12"]
         isCreatable: false
         exportMetaObjectRevisions: [12]
@@ -3301,6 +3492,7 @@ Module {
     Component {
         file: "private/qquickevents_p_p.h"
         name: "QQuickPointerEvent"
+        prototype: "QObject"
         exports: ["QtQuick/PointerEvent 2.12"]
         isCreatable: false
         exportMetaObjectRevisions: [12]
@@ -3312,6 +3504,7 @@ Module {
     Component {
         file: "private/qquickpointerhandler_p.h"
         name: "QQuickPointerHandler"
+        prototype: "QObject"
         exports: [
             "QtQuick/PointerHandler 2.12",
             "QtQuick/PointerHandler 2.15"
@@ -3387,6 +3580,7 @@ Module {
     }
     Component {
         name: "QQuickPositionerAttached"
+        prototype: "QObject"
         Property { name: "index"; type: "int"; isReadonly: true }
         Property { name: "isFirstItem"; type: "bool"; isReadonly: true }
         Property { name: "isLastItem"; type: "bool"; isReadonly: true }
@@ -3604,6 +3798,7 @@ Module {
     Component {
         file: "private/qquickscalegrid_p_p.h"
         name: "QQuickScaleGrid"
+        prototype: "QObject"
         Property { name: "left"; type: "int" }
         Property { name: "top"; type: "int" }
         Property { name: "right"; type: "int" }
@@ -3667,6 +3862,7 @@ Module {
     Component {
         file: "private/qquickshadereffectmesh_p.h"
         name: "QQuickShaderEffectMesh"
+        prototype: "QObject"
         exports: ["QtQuick/ShaderEffectMesh 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -3721,11 +3917,16 @@ Module {
             Parameter { name: "item"; type: "QObject"; isPointer: true }
         }
         Method { name: "invalidateSceneGraph" }
+        Method {
+            name: "sourceItemParentChanged"
+            Parameter { name: "parent"; type: "QQuickItem"; isPointer: true }
+        }
         Method { name: "scheduleUpdate" }
     }
     Component {
         file: "private/qquickshortcut_p.h"
         name: "QQuickShortcut"
+        prototype: "QObject"
         exports: [
             "QtQuick/Shortcut 2.5",
             "QtQuick/Shortcut 2.6",
@@ -3965,6 +4166,7 @@ Module {
         file: "private/qquickstate_p.h"
         name: "QQuickState"
         defaultProperty: "changes"
+        prototype: "QObject"
         exports: ["QtQuick/State 2.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "name"; type: "string" }
@@ -3985,6 +4187,7 @@ Module {
     Component {
         file: "private/qquickstategroup_p.h"
         name: "QQuickStateGroup"
+        prototype: "QObject"
         exports: ["QtQuick/StateGroup 2.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "state"; type: "string" }
@@ -3995,9 +4198,10 @@ Module {
             Parameter { type: "string" }
         }
     }
-    Component { file: "private/qquickstate_p.h"; name: "QQuickStateOperation" }
+    Component { file: "private/qquickstate_p.h"; name: "QQuickStateOperation"; prototype: "QObject" }
     Component {
         name: "QQuickStochasticState"
+        prototype: "QObject"
         Property { name: "duration"; type: "int" }
         Property { name: "durationVariation"; type: "int" }
         Property { name: "randomStart"; type: "bool" }
@@ -4048,6 +4252,7 @@ Module {
     Component {
         file: "private/qquicksystempalette_p.h"
         name: "QQuickSystemPalette"
+        prototype: "QObject"
         exports: ["QtQuick/SystemPalette 2.0"]
         exportMetaObjectRevisions: [0]
         Enum {
@@ -4099,6 +4304,7 @@ Module {
     }
     Component {
         name: "QQuickTableViewAttached"
+        prototype: "QObject"
         Property { name: "view"; type: "QQuickTableView"; isReadonly: true; isPointer: true }
         Signal { name: "pooled" }
         Signal { name: "reused" }
@@ -4313,7 +4519,7 @@ Module {
             Parameter { name: "y"; type: "double" }
         }
     }
-    Component { file: "qquicktextdocument.h"; name: "QQuickTextDocument" }
+    Component { file: "qquicktextdocument.h"; name: "QQuickTextDocument"; prototype: "QObject" }
     Component {
         file: "private/qquicktextedit_p.h"
         name: "QQuickTextEdit"
@@ -4858,6 +5064,7 @@ Module {
     Component {
         file: "private/qquicktext_p.h"
         name: "QQuickTextLine"
+        prototype: "QObject"
         Property { name: "number"; type: "int"; isReadonly: true }
         Property { name: "width"; type: "double" }
         Property { name: "height"; type: "double" }
@@ -4869,6 +5076,7 @@ Module {
     Component {
         file: "private/qquicktextmetrics_p.h"
         name: "QQuickTextMetrics"
+        prototype: "QObject"
         exports: ["QtQuick/TextMetrics 2.4"]
         exportMetaObjectRevisions: [4]
         Property { name: "font"; type: "QFont" }
@@ -4886,6 +5094,7 @@ Module {
     Component {
         file: "private/qquickmultipointtoucharea_p.h"
         name: "QQuickTouchPoint"
+        prototype: "QObject"
         exports: ["QtQuick/TouchPoint 2.0", "QtQuick/TouchPoint 2.9"]
         exportMetaObjectRevisions: [0, 9]
         Property { name: "pointId"; type: "int"; isReadonly: true }
@@ -4911,12 +5120,14 @@ Module {
     Component {
         file: "qquickitem.h"
         name: "QQuickTransform"
+        prototype: "QObject"
         Method { name: "update" }
     }
     Component {
         file: "private/qquicktransition_p.h"
         name: "QQuickTransition"
         defaultProperty: "animations"
+        prototype: "QObject"
         exports: ["QtQuick/Transition 2.0"]
         exportMetaObjectRevisions: [0]
         Property { name: "from"; type: "string" }
@@ -4965,6 +5176,7 @@ Module {
     Component {
         file: "private/qquicklistview_p.h"
         name: "QQuickViewSection"
+        prototype: "QObject"
         exports: ["QtQuick/ViewSection 2.0"]
         exportMetaObjectRevisions: [0]
         Enum {
@@ -4984,6 +5196,7 @@ Module {
     Component {
         file: "private/qquickitemviewtransition_p.h"
         name: "QQuickViewTransitionAttached"
+        prototype: "QObject"
         exports: ["QtQuick/ViewTransition 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -4997,6 +5210,7 @@ Module {
     Component {
         file: "private/qquickevents_p_p.h"
         name: "QQuickWheelEvent"
+        prototype: "QObject"
         Property { name: "x"; type: "double"; isReadonly: true }
         Property { name: "y"; type: "double"; isReadonly: true }
         Property { name: "angleDelta"; type: "QPoint"; isReadonly: true }
@@ -5041,17 +5255,40 @@ Module {
     }
     Component {
         file: "private/qquickforeignutils_p.h"
-        name: "QRegExpValidatorForeign"
+        name: "QRegExpValidator"
+        prototype: "QValidator"
         exports: ["QtQuick/RegExpValidator 2.0"]
-        isCreatable: false
         exportMetaObjectRevisions: [0]
+        Property { name: "regExp"; type: "QRegExp" }
+        Signal {
+            name: "regExpChanged"
+            Parameter { name: "regExp"; type: "QRegExp" }
+        }
     }
     Component {
         file: "private/qquickforeignutils_p.h"
-        name: "QRegularExpressionValidatorForeign"
+        name: "QRegularExpressionValidator"
+        prototype: "QValidator"
         exports: ["QtQuick/RegularExpressionValidator 2.14"]
-        isCreatable: false
         exportMetaObjectRevisions: [14]
+        Property { name: "regularExpression"; type: "QRegularExpression" }
+        Signal {
+            name: "regularExpressionChanged"
+            Parameter { name: "re"; type: "QRegularExpression" }
+        }
+        Method {
+            name: "setRegularExpression"
+            Parameter { name: "re"; type: "QRegularExpression" }
+        }
     }
-    Component { file: "private/qquickforeignutils_p.h"; name: "QValidatorForeign" }
+    Component {
+        file: "private/qquickforeignutils_p.h"
+        name: "QValidator"
+        prototype: "QObject"
+        Enum {
+            name: "State"
+            values: ["Invalid", "Intermediate", "Acceptable"]
+        }
+        Signal { name: "changed" }
+    }
 }

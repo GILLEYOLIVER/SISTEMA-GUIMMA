@@ -15,8 +15,8 @@ def build_config() -> dict[str, str]:
     return dict(
         # Python settings
         python_version="3.12",
-        python_install_dir=r"/usr/local/lib/python3.12/site-packages/",
-        python_path=r"/private/var/folders/vk/nx37ffx50hv5djclhltc26vw0000gn/T/build-env-s03o6r7c/bin/python",
+        python_install_dir=r"c:/Lib/site-packages/",
+        python_path=r"C:/Users/runneradmin/AppData/Local/Temp/build-env-u5bybl2l/Scripts/python.exe",
 
         # Package versions
         contourpy_version="1.3.3",
@@ -26,35 +26,35 @@ def build_config() -> dict[str, str]:
 
         # Misc meson settings
         meson_backend="ninja",
-        build_dir=r"/Users/runner/work/contourpy/contourpy/.mesonpy-p7xy5i_5/lib/contourpy/util",
-        source_dir=r"/Users/runner/work/contourpy/contourpy/lib/contourpy/util",
+        build_dir=r"D:/a/contourpy/contourpy/.mesonpy-esbcvpny/lib/contourpy/util",
+        source_dir=r"D:/a/contourpy/contourpy/lib/contourpy/util",
         cross_build="False",
 
         # Build options
-        build_options=r"-Dbuildtype=release -Db_ndebug=if-release -Db_vscrt=md -Dvsenv=True --native-file=/Users/runner/work/contourpy/contourpy/.mesonpy-p7xy5i_5/meson-python-native-file.ini",
+        build_options=r"-Dbuildtype=release -Db_ndebug=if-release -Db_vscrt=mt '-Dcpp_link_args=['ucrt.lib','vcruntime.lib','/nodefaultlib:libucrt.lib','/nodefaultlib:libvcruntime.lib']' -Dvsenv=True '--native-file=D:/a/contourpy/contourpy/.mesonpy-esbcvpny/meson-python-native-file.ini'",
         buildtype="release",
         cpp_std="c++17",
         debug="False",
         optimization="3",
         vsenv="True",
         b_ndebug="if-release",
-        b_vscrt="from_buildtype",
+        b_vscrt="mt",
 
         # C++ compiler
-        compiler_name="clang",
-        compiler_version="15.0.0",
-        linker_id="ld64",
-        compile_command="c++",
+        compiler_name="msvc",
+        compiler_version="19.44.35213",
+        linker_id="link",
+        compile_command="cl",
 
         # Host machine
         host_cpu="x86_64",
         host_cpu_family="x86_64",
         host_cpu_endian="little",
-        host_cpu_system="darwin",
+        host_cpu_system="windows",
 
         # Build machine, same as host machine if not a cross_build
         build_cpu="x86_64",
         build_cpu_family="x86_64",
         build_cpu_endian="little",
-        build_cpu_system="darwin",
+        build_cpu_system="windows",
     )

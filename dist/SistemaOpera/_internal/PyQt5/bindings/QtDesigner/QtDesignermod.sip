@@ -67,6 +67,6 @@ WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 %Include qpydesignercontainerextension.sip
 %Include qpydesignercustomwidgetcollectionplugin.sip
 %Include qpydesignercustomwidgetplugin.sip
-%Include qpydesignertaskmenuextension.sip
-%Include qpydesignerpropertysheetextension.sip
 %Include qpydesignermembersheetextension.sip
+%Include qpydesignerpropertysheetextension.sip
+%Include qpydesignertaskmenuextension.sip

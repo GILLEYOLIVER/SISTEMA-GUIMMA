@@ -28,19 +28,17 @@
 ****************************************************************************/
 
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import HelperWidgets 2.0
-import StudioTheme 1.0 as StudioTheme
+import QtQuick.Layouts 1.12
 
 Section {
     caption: qsTr("Frustum Camera")
 
     SectionLayout {
-        PropertyLabel {
+        Label {
             text: qsTr("Top")
             tooltip: qsTr("Sets the top plane of the camera view frustum.")
         }
-
         SecondColumnLayout {
             SpinBox {
                 maximumValue: 9999999
@@ -48,18 +46,13 @@ Section {
                 realDragRange: 5000
                 decimals: 0
                 backendValue: backendValues.top
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
-
-        PropertyLabel {
+        Label {
             text: qsTr("Bottom")
             tooltip: qsTr("Sets the bottom plane of the camera view frustum.")
         }
-
         SecondColumnLayout {
             SpinBox {
                 maximumValue: 9999999
@@ -67,18 +60,13 @@ Section {
                 realDragRange: 5000
                 decimals: 0
                 backendValue: backendValues.bottom
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
-
-        PropertyLabel {
+        Label {
             text: qsTr("Right")
             tooltip: qsTr("Sets the right plane of the camera view frustum.")
         }
-
         SecondColumnLayout {
             SpinBox {
                 maximumValue: 9999999
@@ -86,18 +74,13 @@ Section {
                 realDragRange: 5000
                 decimals: 0
                 backendValue: backendValues.right
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
-
-        PropertyLabel {
+        Label {
             text: qsTr("Left")
             tooltip: qsTr("Sets the left plane of the camera view frustum.")
         }
-
         SecondColumnLayout {
             SpinBox {
                 maximumValue: 9999999
@@ -105,11 +88,8 @@ Section {
                 realDragRange: 5000
                 decimals: 0
                 backendValue: backendValues.left
-                implicitWidth: StudioTheme.Values.twoControlColumnWidth
-                               + StudioTheme.Values.actionIndicatorWidth
+                Layout.fillWidth: true
             }
-
-            ExpandingSpacer {}
         }
     }
 }

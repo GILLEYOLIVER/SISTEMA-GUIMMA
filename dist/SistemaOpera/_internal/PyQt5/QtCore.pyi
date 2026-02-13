@@ -2042,6 +2042,8 @@ class QAbstractEventDispatcher(QObject):
     awake: typing.ClassVar[pyqtSignal]
     aboutToBlock: typing.ClassVar[pyqtSignal]
     def filterNativeEvent(self, eventType: typing.Union['QByteArray', bytes, bytearray], message: typing.Optional[PyQt5.sip.voidptr]) -> typing.Tuple[bool, typing.Optional[int]]: ...
+    def unregisterEventNotifier(self, notifier: typing.Optional['QWinEventNotifier']) -> None: ...
+    def registerEventNotifier(self, notifier: typing.Optional['QWinEventNotifier']) -> bool: ...
     def removeNativeEventFilter(self, filterObj: typing.Optional['QAbstractNativeEventFilter']) -> None: ...
     def installNativeEventFilter(self, filterObj: typing.Optional['QAbstractNativeEventFilter']) -> None: ...
     def remainingTime(self, timerId: int) -> int: ...
@@ -7301,7 +7303,7 @@ class QProcess(QIODevice):
     def waitForBytesWritten(self, msecs: int = ...) -> bool: ...
     def waitForReadyRead(self, msecs: int = ...) -> bool: ...
     def waitForStarted(self, msecs: int = ...) -> bool: ...
-    def pid(self) -> int: ...
+    def pid(self) -> typing.Optional[PyQt5.sip.voidptr]: ...
     def state(self) -> 'QProcess.ProcessState': ...
     error: typing.ClassVar[pyqtSignal]
     def setWorkingDirectory(self, dir: typing.Optional[str]) -> None: ...
@@ -9901,63 +9903,36 @@ class QXmlStreamWriter(PyQt5.sipsimplewrapper):
 
 class QSysInfo(PyQt5.sipsimplewrapper):
 
-    class MacVersion(int):
-        MV_Unknown = ... # type: QSysInfo.MacVersion
-        MV_9 = ... # type: QSysInfo.MacVersion
-        MV_10_0 = ... # type: QSysInfo.MacVersion
-        MV_10_1 = ... # type: QSysInfo.MacVersion
-        MV_10_2 = ... # type: QSysInfo.MacVersion
-        MV_10_3 = ... # type: QSysInfo.MacVersion
-        MV_10_4 = ... # type: QSysInfo.MacVersion
-        MV_10_5 = ... # type: QSysInfo.MacVersion
-        MV_10_6 = ... # type: QSysInfo.MacVersion
-        MV_10_7 = ... # type: QSysInfo.MacVersion
-        MV_10_8 = ... # type: QSysInfo.MacVersion
-        MV_10_9 = ... # type: QSysInfo.MacVersion
-        MV_10_10 = ... # type: QSysInfo.MacVersion
-        MV_10_11 = ... # type: QSysInfo.MacVersion
-        MV_10_12 = ... # type: QSysInfo.MacVersion
-        MV_CHEETAH = ... # type: QSysInfo.MacVersion
-        MV_PUMA = ... # type: QSysInfo.MacVersion
-        MV_JAGUAR = ... # type: QSysInfo.MacVersion
-        MV_PANTHER = ... # type: QSysInfo.MacVersion
-        MV_TIGER = ... # type: QSysInfo.MacVersion
-        MV_LEOPARD = ... # type: QSysInfo.MacVersion
-        MV_SNOWLEOPARD = ... # type: QSysInfo.MacVersion
-        MV_LION = ... # type: QSysInfo.MacVersion
-        MV_MOUNTAINLION = ... # type: QSysInfo.MacVersion
-        MV_MAVERICKS = ... # type: QSysInfo.MacVersion
-        MV_YOSEMITE = ... # type: QSysInfo.MacVersion
-        MV_ELCAPITAN = ... # type: QSysInfo.MacVersion
-        MV_SIERRA = ... # type: QSysInfo.MacVersion
-        MV_IOS = ... # type: QSysInfo.MacVersion
-        MV_IOS_4_3 = ... # type: QSysInfo.MacVersion
-        MV_IOS_5_0 = ... # type: QSysInfo.MacVersion
-        MV_IOS_5_1 = ... # type: QSysInfo.MacVersion
-        MV_IOS_6_0 = ... # type: QSysInfo.MacVersion
-        MV_IOS_6_1 = ... # type: QSysInfo.MacVersion
-        MV_IOS_7_0 = ... # type: QSysInfo.MacVersion
-        MV_IOS_7_1 = ... # type: QSysInfo.MacVersion
-        MV_IOS_8_0 = ... # type: QSysInfo.MacVersion
-        MV_IOS_8_1 = ... # type: QSysInfo.MacVersion
-        MV_IOS_8_2 = ... # type: QSysInfo.MacVersion
-        MV_IOS_8_3 = ... # type: QSysInfo.MacVersion
-        MV_IOS_8_4 = ... # type: QSysInfo.MacVersion
-        MV_IOS_9_0 = ... # type: QSysInfo.MacVersion
-        MV_IOS_9_1 = ... # type: QSysInfo.MacVersion
-        MV_IOS_9_2 = ... # type: QSysInfo.MacVersion
-        MV_IOS_9_3 = ... # type: QSysInfo.MacVersion
-        MV_IOS_10_0 = ... # type: QSysInfo.MacVersion
-        MV_TVOS = ... # type: QSysInfo.MacVersion
-        MV_TVOS_9_0 = ... # type: QSysInfo.MacVersion
-        MV_TVOS_9_1 = ... # type: QSysInfo.MacVersion
-        MV_TVOS_9_2 = ... # type: QSysInfo.MacVersion
-        MV_TVOS_10_0 = ... # type: QSysInfo.MacVersion
-        MV_WATCHOS = ... # type: QSysInfo.MacVersion
-        MV_WATCHOS_2_0 = ... # type: QSysInfo.MacVersion
-        MV_WATCHOS_2_1 = ... # type: QSysInfo.MacVersion
-        MV_WATCHOS_2_2 = ... # type: QSysInfo.MacVersion
-        MV_WATCHOS_3_0 = ... # type: QSysInfo.MacVersion
+    class WinVersion(int):
+        WV_32s = ... # type: QSysInfo.WinVersion
+        WV_95 = ... # type: QSysInfo.WinVersion
+        WV_98 = ... # type: QSysInfo.WinVersion
+        WV_Me = ... # type: QSysInfo.WinVersion
+        WV_DOS_based = ... # type: QSysInfo.WinVersion
+        WV_NT = ... # type: QSysInfo.WinVersion
+        WV_2000 = ... # type: QSysInfo.WinVersion
+        WV_XP = ... # type: QSysInfo.WinVersion
+        WV_2003 = ... # type: QSysInfo.WinVersion
+        WV_VISTA = ... # type: QSysInfo.WinVersion
+        WV_WINDOWS7 = ... # type: QSysInfo.WinVersion
+        WV_WINDOWS8 = ... # type: QSysInfo.WinVersion
+        WV_WINDOWS8_1 = ... # type: QSysInfo.WinVersion
+        WV_WINDOWS10 = ... # type: QSysInfo.WinVersion
+        WV_NT_based = ... # type: QSysInfo.WinVersion
+        WV_4_0 = ... # type: QSysInfo.WinVersion
+        WV_5_0 = ... # type: QSysInfo.WinVersion
+        WV_5_1 = ... # type: QSysInfo.WinVersion
+        WV_5_2 = ... # type: QSysInfo.WinVersion
+        WV_6_0 = ... # type: QSysInfo.WinVersion
+        WV_6_1 = ... # type: QSysInfo.WinVersion
+        WV_6_2 = ... # type: QSysInfo.WinVersion
+        WV_6_3 = ... # type: QSysInfo.WinVersion
+        WV_10_0 = ... # type: QSysInfo.WinVersion
+        WV_CE = ... # type: QSysInfo.WinVersion
+        WV_CENET = ... # type: QSysInfo.WinVersion
+        WV_CE_5 = ... # type: QSysInfo.WinVersion
+        WV_CE_6 = ... # type: QSysInfo.WinVersion
+        WV_CE_based = ... # type: QSysInfo.WinVersion
 
     class Endian(int):
         BigEndian = ... # type: QSysInfo.Endian
@@ -9967,7 +9942,7 @@ class QSysInfo(PyQt5.sipsimplewrapper):
     class Sizes(int):
         WordSize = ... # type: QSysInfo.Sizes
 
-    MacintoshVersion = ... # type: 'QSysInfo.MacVersion'
+    WindowsVersion = ... # type: 'QSysInfo.WinVersion'
 
     @typing.overload
     def __init__(self) -> None: ...
@@ -9993,7 +9968,22 @@ class QSysInfo(PyQt5.sipsimplewrapper):
     @staticmethod
     def buildAbi() -> str: ...
     @staticmethod
-    def macVersion() -> 'QSysInfo.MacVersion': ...
+    def windowsVersion() -> 'QSysInfo.WinVersion': ...
+
+
+class QWinEventNotifier(QObject):
+
+    @typing.overload
+    def __init__(self, parent: typing.Optional[QObject] = ...) -> None: ...
+    @typing.overload
+    def __init__(self, hEvent: typing.Optional[PyQt5.sip.voidptr], parent: typing.Optional[QObject] = ...) -> None: ...
+
+    def event(self, e: typing.Optional[QEvent]) -> bool: ...
+    activated: typing.ClassVar[pyqtSignal]
+    def setEnabled(self, enable: bool) -> None: ...
+    def setHandle(self, hEvent: typing.Optional[PyQt5.sip.voidptr]) -> None: ...
+    def isEnabled(self) -> bool: ...
+    def handle(self) -> typing.Optional[PyQt5.sip.voidptr]: ...
 
 
 PYQT_VERSION = ... # type: int

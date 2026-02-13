@@ -1,1 +1,0 @@
-../../../Resources/fontTools/feaLib/variableScalar.py

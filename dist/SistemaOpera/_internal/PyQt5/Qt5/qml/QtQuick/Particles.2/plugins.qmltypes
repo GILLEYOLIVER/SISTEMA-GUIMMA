@@ -238,6 +238,7 @@ Module {
     Component {
         file: "qquickdirection_p.h"
         name: "QQuickDirection"
+        prototype: "QObject"
         exports: ["QtQuick.Particles/NullVector 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -598,6 +599,7 @@ Module {
     }
     Component {
         name: "QQuickItemParticleAttached"
+        prototype: "QObject"
         Property { name: "particle"; type: "QQuickItemParticle"; isReadonly: true; isPointer: true }
         Signal { name: "detached" }
         Signal { name: "attached" }
@@ -879,6 +881,7 @@ Module {
     Component {
         file: "qquickparticleextruder_p.h"
         name: "QQuickParticleExtruder"
+        prototype: "QObject"
         exports: ["QtQuick.Particles/ParticleExtruder 2.0"]
         isCreatable: false
         exportMetaObjectRevisions: [0]
@@ -1109,6 +1112,7 @@ Module {
     }
     Component {
         name: "QQuickStochasticState"
+        prototype: "QObject"
         Property { name: "duration"; type: "int" }
         Property { name: "durationVariation"; type: "int" }
         Property { name: "randomStart"; type: "bool" }
