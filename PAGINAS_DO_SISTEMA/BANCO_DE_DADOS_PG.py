@@ -16,6 +16,7 @@ import sys
 import io
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse, parse_qs
 
 import psycopg2
 import psycopg2.extras
@@ -287,6 +288,52 @@ if CONFIG.get("auto_detect_ports", True) and not ENV_DSN and not str(CONFIG.get(
 # CONEXÃO
 # ==============================================================================
 _cached_conn = None
+_env_dsn_disabled = os.environ.get("OPERA_SKIP_ENV_DSN", "0") == "1"
+_env_dsn_disable_reason = os.environ.get("OPERA_SKIP_ENV_DSN_REASON", "")
+
+
+def _mark_env_dsn_disabled(reason: str) -> None:
+    global _env_dsn_disabled, _env_dsn_disable_reason
+    _env_dsn_disabled = True
+    _env_dsn_disable_reason = reason
+    os.environ["OPERA_SKIP_ENV_DSN"] = "1"
+    os.environ["OPERA_SKIP_ENV_DSN_REASON"] = reason[:300]
+
+
+def _tcp_port_is_open(host: str, port: int, timeout: float = 0.25) -> bool:
+    try:
+        with socket.create_connection((host, int(port)), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+def _precheck_env_dsn() -> Optional[str]:
+    """
+    Evita tentativa cara do psycopg2 quando o DSN aponta para localhost em porta fechada.
+    Retorna string de motivo para pular, ou None para tentar conexão normal.
+    """
+    if not ENV_DSN:
+        return None
+
+    try:
+        parsed = urlparse(ENV_DSN)
+        host = parsed.hostname
+        port = parsed.port
+
+        if not host and "host=" in ENV_DSN:
+            params = parse_qs(ENV_DSN.replace(" ", "&"))
+            host = (params.get("host") or [None])[0]
+            ptxt = (params.get("port") or [None])[0]
+            port = int(ptxt) if ptxt else None
+
+        if host in ("localhost", "127.0.0.1", "::1") and port:
+            if not _tcp_port_is_open(host, int(port), timeout=0.2):
+                return f"host={host} port={port} sem serviço ativo"
+    except Exception:
+        return None
+
+    return None
 
 
 def _apply_session_settings(conn) -> None:
@@ -328,14 +375,24 @@ def _create_connection():
     3) host/port/dbname/user/pass + autodetect + create db (se habilitado)
     """
     # 1) ENV DSN
-    if ENV_DSN:
-        log_info("Conectando via OPERA_PG_DSN (env)...")
-        try:
-            conn = _create_connection_by_dsn(ENV_DSN)
-            log_success("Conectado via OPERA_PG_DSN")
-            return conn
-        except Exception as e:
-            log_err(f"Falha via OPERA_PG_DSN: {_safe_exc_text(e)}")
+    global _env_dsn_disabled, _env_dsn_disable_reason
+    if ENV_DSN and not _env_dsn_disabled:
+        precheck_reason = _precheck_env_dsn()
+        if precheck_reason:
+            _mark_env_dsn_disabled(precheck_reason)
+            log_warn(f"OPERA_PG_DSN ignorado: {precheck_reason}. Usando fallback de config/porta.")
+        else:
+            log_info("Conectando via OPERA_PG_DSN (env)...")
+            try:
+                conn = _create_connection_by_dsn(ENV_DSN)
+                log_success("Conectado via OPERA_PG_DSN")
+                return conn
+            except Exception as e:
+                _mark_env_dsn_disabled(_safe_exc_text(e))
+                log_err(f"Falha via OPERA_PG_DSN: {_env_dsn_disable_reason}")
+                log_warn("OPERA_PG_DSN desativado para esta execução; usando fallback de config/porta.")
+    elif ENV_DSN and _env_dsn_disabled:
+        log_debug("OPERA_PG_DSN ignorado (já falhou nesta execução).")
 
     # 2) config DSN
     cfg_dsn = str(CONFIG.get("dsn", "")).strip()
