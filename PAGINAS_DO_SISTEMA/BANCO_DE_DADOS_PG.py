@@ -72,6 +72,22 @@ def log_success(msg): print(f"{Colors.BG_GREEN}[SUCESSO]{Colors.RESET} {msg}")
 def log_critical(msg): print(f"{Colors.BG_RED}[CRÍTICO]{Colors.RESET} {msg}")
 
 
+def _safe_exc_text(exc: Exception) -> str:
+    """
+    Evita quebrar ao formatar exceptions com bytes/encoding inválido
+    (caso comum quando a porta responde algo que não é PostgreSQL).
+    """
+    try:
+        text = str(exc)
+    except Exception:
+        text = repr(exc)
+
+    try:
+        return text.encode("utf-8", "replace").decode("utf-8", "replace")
+    except Exception:
+        return repr(exc)
+
+
 # ==============================================================================
 # CAMINHOS (PyInstaller / .app)
 # ==============================================================================
@@ -192,14 +208,36 @@ ENV_SCHEMA = (os.environ.get("OPERA_PG_SCHEMA") or "").strip()
 _MODULE_DIR = os.path.dirname(__file__)
 _BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-_CFG_CANDIDATES = [
-    os.path.join(_user_config_dir(), "config.json"),   # ✅ principal em app instalado
-    os.path.join(_MODULE_DIR, "config.json"),
-    os.path.join(_BASE_DIR, "config.json"),
-    os.path.join(_MODULE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
-    os.path.join(_BASE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
-    os.path.join(os.getcwd(), "config.json"),
-] + _runtime_pagina_config_candidates() + _resource_candidates()
+# Prioridade por contexto:
+# - Desenvolvimento (não empacotado): prefere config do projeto/PAGINAS_DO_SISTEMA
+# - Instalado (frozen): prefere AppData/Application Support
+if _is_frozen():
+    _CFG_CANDIDATES = [
+        os.path.join(_user_config_dir(), "config.json"),
+        os.path.join(_user_config_dir(), "PAGINAS_DO_SISTEMA", "config.json"),
+        *_runtime_pagina_config_candidates(),
+        os.path.join(_MODULE_DIR, "config.json"),
+        os.path.join(_BASE_DIR, "config.json"),
+        os.path.join(_MODULE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+        os.path.join(_BASE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+        os.path.join(os.getcwd(), "config.json"),
+        *_resource_candidates(),
+    ]
+else:
+    _CFG_CANDIDATES = [
+        os.path.join(_MODULE_DIR, "config.json"),
+        os.path.join(_BASE_DIR, "config.json"),
+        os.path.join(_MODULE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+        os.path.join(_BASE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+        *_runtime_pagina_config_candidates(),
+        os.path.join(os.getcwd(), "config.json"),
+        os.path.join(_user_config_dir(), "config.json"),
+        os.path.join(_user_config_dir(), "PAGINAS_DO_SISTEMA", "config.json"),
+        *_resource_candidates(),
+    ]
+
+# remove duplicados mantendo ordem
+_CFG_CANDIDATES = list(dict.fromkeys([p for p in _CFG_CANDIDATES if p]))
 
 CFG_PATH = next((p for p in _CFG_CANDIDATES if p and os.path.exists(p)), _CFG_CANDIDATES[0])
 CONFIG: Dict[str, Any] = dict(DEFAULT_CFG)
@@ -212,7 +250,7 @@ if os.path.exists(CFG_PATH):
             CONFIG.update(user_cfg)
         log_ok(f"config.json carregado: {CFG_PATH}")
     except Exception as e:
-        log_warn(f"Falha ao ler config.json ({CFG_PATH}): {e}")
+        log_warn(f"Falha ao ler config.json ({CFG_PATH}): {_safe_exc_text(e)}")
 else:
     log_warn(f"config.json não encontrado — usando padrão. (candidato principal: {CFG_PATH})")
 
@@ -297,7 +335,7 @@ def _create_connection():
             log_success("Conectado via OPERA_PG_DSN")
             return conn
         except Exception as e:
-            log_err(f"Falha via OPERA_PG_DSN: {e}")
+            log_err(f"Falha via OPERA_PG_DSN: {_safe_exc_text(e)}")
 
     # 2) config DSN
     cfg_dsn = str(CONFIG.get("dsn", "")).strip()
@@ -308,7 +346,7 @@ def _create_connection():
             log_success("Conectado via config.json (dsn)")
             return conn
         except Exception as e:
-            log_err(f"Falha via config.json (dsn): {e}")
+            log_err(f"Falha via config.json (dsn): {_safe_exc_text(e)}")
 
     # 3) modo antigo (host/port)
     host = (CONFIG.get("hosts") or ["localhost"])[0]
@@ -323,6 +361,7 @@ def _create_connection():
     for port in ports:
         try:
             log_info(f"Tentando {host}:{port} banco={target_db} user={user}")
+            log_debug("Validando serviço na porta antes da autenticação...")
             try:
                 conn = _create_connection_simple(host, int(port), target_db, user, pwd, timeout=timeout)
                 _apply_session_settings(conn)
@@ -330,7 +369,7 @@ def _create_connection():
                 return conn
 
             except psycopg2.OperationalError as e:
-                error_msg = str(e)
+                error_msg = _safe_exc_text(e)
 
                 # Banco não existe -> tenta criar
                 if ("does not exist" in error_msg or "não existe" in error_msg) and fallback_to_postgres:
@@ -357,14 +396,16 @@ def _create_connection():
                         return conn
 
                     except Exception as create_error:
-                        log_err(f"Falha ao criar banco: {create_error}")
+                        log_err(f"Falha ao criar banco: {_safe_exc_text(create_error)}")
                         continue
 
                 log_err(f"Erro de conexão: {error_msg}")
                 continue
 
         except Exception as e:
-            log_err(f"Falha na porta {port}: {e}")
+            if isinstance(e, UnicodeDecodeError):
+                log_err(f"Porta {port} respondeu com protocolo inválido (não parece PostgreSQL).")
+            log_err(f"Falha na porta {port}: {_safe_exc_text(e)}")
             continue
 
     raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
