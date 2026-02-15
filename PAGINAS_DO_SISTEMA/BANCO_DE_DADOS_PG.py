@@ -129,6 +129,41 @@ def _resource_candidates() -> List[str]:
     return cands
 
 
+def _runtime_pagina_config_candidates() -> List[str]:
+    """
+    Candidatos para encontrar config.json dentro da pasta PAGINAS_DO_SISTEMA
+    tanto no projeto (PyCharm) quanto no diretório de instalação.
+    """
+    cands: List[str] = []
+
+    try:
+        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+        cands.append(os.path.join(exe_dir, "PAGINAS_DO_SISTEMA", "config.json"))
+    except Exception:
+        pass
+
+    try:
+        cwd = os.path.abspath(os.getcwd())
+        cands.append(os.path.join(cwd, "PAGINAS_DO_SISTEMA", "config.json"))
+    except Exception:
+        pass
+
+    # AppData/Application Support espelhado
+    try:
+        cands.append(os.path.join(_user_config_dir(), "PAGINAS_DO_SISTEMA", "config.json"))
+    except Exception:
+        pass
+
+    # remove duplicados mantendo ordem
+    unique: List[str] = []
+    seen = set()
+    for p in cands:
+        if p and p not in seen:
+            seen.add(p)
+            unique.append(p)
+    return unique
+
+
 # ==============================================================================
 # CONFIGURAÇÃO (agora com ENV + config.json no AppData/Application Support)
 # ==============================================================================
@@ -161,8 +196,10 @@ _CFG_CANDIDATES = [
     os.path.join(_user_config_dir(), "config.json"),   # ✅ principal em app instalado
     os.path.join(_MODULE_DIR, "config.json"),
     os.path.join(_BASE_DIR, "config.json"),
+    os.path.join(_MODULE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+    os.path.join(_BASE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
     os.path.join(os.getcwd(), "config.json"),
-] + _resource_candidates()
+] + _runtime_pagina_config_candidates() + _resource_candidates()
 
 CFG_PATH = next((p for p in _CFG_CANDIDATES if p and os.path.exists(p)), _CFG_CANDIDATES[0])
 CONFIG: Dict[str, Any] = dict(DEFAULT_CFG)
