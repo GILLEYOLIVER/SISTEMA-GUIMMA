@@ -424,9 +424,18 @@ def main():
                 size_mb = item.stat().st_size / (1024 * 1024)
                 print(f"  📄 {rel_path} ({size_mb:.1f} MB)")
 
-        print("\n🎯 Próximos passos:")
-        print("   1. Para Windows: Execute packaging/windows/build_installer.ps1")
-        print("   2. Para macOS: Execute packaging/macos/build_installer.sh")
+        print("\n🎯 Próximos passos (copie e cole o comando, não digite apenas o número):")
+        if args.platform == "windows":
+            print("   PowerShell:")
+            print("   .\\packaging\\windows\\build_installer.ps1")
+        elif args.platform == "macos":
+            print("   Bash:")
+            print("   ./packaging/macos/build_installer.sh")
+        else:
+            print("   PowerShell (Windows):")
+            print("   .\\packaging\\windows\\build_installer.ps1")
+            print("   Bash (macOS):")
+            print("   ./packaging/macos/build_installer.sh")
         return 0
     else:
         print_header("❌ BUILD FALHOU")
