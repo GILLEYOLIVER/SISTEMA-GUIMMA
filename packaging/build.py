@@ -102,8 +102,9 @@ def build_windows():
         print("⚠️  Script de conversão de ícone não encontrado")
 
     # Caminhos
-    icon_path = Path("icons/ICONE_SISTEMA.ico")
-    main_script = Path("PAGINAS_DO_SISTEMA/MAIN.py")
+    project_root = Path.cwd().resolve()
+    icon_path = project_root / "icons" / "ICONE_SISTEMA.ico"
+    main_script = project_root / "PAGINAS_DO_SISTEMA" / "MAIN.py"
 
     if not main_script.exists():
         print(f"❌ Arquivo principal não encontrado: {main_script}")
@@ -137,11 +138,14 @@ def build_windows():
         else:
             print("⚠️  Ícone não encontrado, usando padrão")
 
-        # Adicionar dados
+        # Adicionar dados (caminhos absolutos evitam erro com --specpath=build no Windows)
+        pages_src = project_root / "PAGINAS_DO_SISTEMA"
+        icons_src = project_root / "icons"
+        data_src = project_root / "data"
         cmd.extend([
-            "--add-data", f"PAGINAS_DO_SISTEMA;PAGINAS_DO_SISTEMA",
-            "--add-data", f"icons;icons",
-            "--add-data", f"data;data",
+            "--add-data", f"{pages_src};PAGINAS_DO_SISTEMA",
+            "--add-data", f"{icons_src};icons",
+            "--add-data", f"{data_src};data",
         ])
 
         # Hidden imports
@@ -254,8 +258,9 @@ def build_macos():
     print_header("BUILD PARA macOS")
 
     # Caminhos
-    icon_path = Path("PAGINAS_DO_SISTEMA/ICONE_SISTEMA.icns")
-    main_script = Path("PAGINAS_DO_SISTEMA/MAIN.py")
+    project_root = Path.cwd().resolve()
+    icon_path = project_root / "PAGINAS_DO_SISTEMA" / "ICONE_SISTEMA.icns"
+    main_script = project_root / "PAGINAS_DO_SISTEMA" / "MAIN.py"
 
     if not main_script.exists():
         print(f"❌ Arquivo principal não encontrado: {main_script}")
@@ -295,10 +300,13 @@ def build_macos():
             print("⚠️  Ícone não encontrado, usando padrão")
 
     # Adicionar dados
+    pages_src = project_root / "PAGINAS_DO_SISTEMA"
+    icons_src = project_root / "icons"
+    data_src = project_root / "data"
     cmd.extend([
-        "--add-data", f"PAGINAS_DO_SISTEMA:PAGINAS_DO_SISTEMA",
-        "--add-data", f"icons:icons",
-        "--add-data", f"data:data",
+        "--add-data", f"{pages_src}:PAGINAS_DO_SISTEMA",
+        "--add-data", f"{icons_src}:icons",
+        "--add-data", f"{data_src}:data",
     ])
 
     # Hidden imports (mesmo do Windows)
