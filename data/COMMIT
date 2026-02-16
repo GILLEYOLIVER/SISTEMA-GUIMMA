@@ -34,9 +34,4 @@ No Windows (gera EXE e já cria o ZIP)
 
 python packaging/build.py --platform windows
 
-
-
-
-
-
 16/02/2026
