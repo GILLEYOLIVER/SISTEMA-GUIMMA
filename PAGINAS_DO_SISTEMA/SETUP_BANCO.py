@@ -252,6 +252,7 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
 # ============================================================
 class SetupBancoWindow:
     def __init__(self, parent=None):
+        # --- Aparência (somente UI) ---
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
@@ -271,99 +272,221 @@ class SetupBancoWindow:
         self.exit_code = 1
 
         self.root.title("Configuração do Banco de Dados - Sistema Opera")
-        self.root.minsize(900, 620)
+        self.root.minsize(940, 660)
 
         # fecha no X
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # tamanho + centralização
-        self._center_window(900, 620)
+        self._center_window(940, 660)
 
         # trazer pra frente
         self._bring_to_front()
 
         existing = load_existing_config() or DBConfig()
 
-        # ===== Layout =====
-        self.root.configure(fg_color="#0b1220")
+        # ===========================
+        # UI — Layout moderno (grid)
+        # ===========================
+        C_BG = "#0b1220"
+        C_SURFACE = "#0f1b2e"
+        C_CARD = "#0d1728"
+        C_BORDER = "#1f3b5c"
+        C_TEXT_SUB = "#b7c6d8"
+        C_OK = "#a6f3b0"
+        C_WARN = "#ffd18b"
+        C_ERR = "#ff9e9e"
 
-        outer = ctk.CTkFrame(self.root, fg_color="#0f1b2e", corner_radius=16, border_width=1, border_color="#1f3b5c")
+        self._ui_colors = {"sub": C_TEXT_SUB, "ok": C_OK, "warn": C_WARN, "err": C_ERR}
+
+        self.root.configure(fg_color=C_BG)
+
+        outer = ctk.CTkFrame(
+            self.root,
+            fg_color=C_SURFACE,
+            corner_radius=18,
+            border_width=1,
+            border_color=C_BORDER,
+        )
         outer.pack(fill="both", expand=True, padx=18, pady=18)
 
-        title = ctk.CTkLabel(outer, text="Configuração do Banco de Dados", font=ctk.CTkFont(size=22, weight="bold"))
-        title.place(x=26, y=22)
+        # grid base
+        outer.grid_columnconfigure(0, weight=1)
+        outer.grid_rowconfigure(1, weight=1)
+
+        # ---------- Header ----------
+        header = ctk.CTkFrame(outer, fg_color="transparent")
+        header.grid(row=0, column=0, sticky="ew", padx=18, pady=(16, 10))
+        header.grid_columnconfigure(0, weight=1)
+
+        title = ctk.CTkLabel(
+            header,
+            text="Configuração do Banco de Dados",
+            font=ctk.CTkFont(size=24, weight="bold"),
+        )
+        title.grid(row=0, column=0, sticky="w")
+
+        badge = ctk.CTkLabel(
+            header,
+            text="PostgreSQL",
+            fg_color="#162b44",
+            corner_radius=10,
+            text_color=C_TEXT_SUB,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            padx=10,
+            pady=4,
+        )
+        badge.grid(row=0, column=1, sticky="e")
 
         subtitle = ctk.CTkLabel(
-            outer,
-            text="Configure a conexão com o PostgreSQL",
+            header,
+            text="Informe os dados do servidor e teste a conexão antes de salvar.",
             font=ctk.CTkFont(size=12),
-            text_color="#b7c6d8",
+            text_color=C_TEXT_SUB,
         )
-        subtitle.place(x=26, y=58)
+        subtitle.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
-        # ===== Tipo (Local/Rede) =====
+        # ---------- Content (2 col) ----------
+        content = ctk.CTkFrame(outer, fg_color="transparent")
+        content.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 12))
+        content.grid_columnconfigure(0, weight=1, uniform="col")
+        content.grid_columnconfigure(1, weight=2, uniform="col")
+        content.grid_rowconfigure(0, weight=1)
+
+        # Left: resumo / ajuda rápida
+        left = ctk.CTkFrame(content, fg_color=C_CARD, corner_radius=16, border_width=1, border_color=C_BORDER)
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 12), pady=0)
+        left.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            left,
+            text="Passos rápidos",
+            font=ctk.CTkFont(size=14, weight="bold"),
+        ).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
+
+        steps_txt = (
+            "1) Escolha Local ou Rede\n"
+            "2) Preencha Host/IP e Porta\n"
+            "3) Informe Usuário, Senha e Schema\n"
+            "4) Clique em “Testar conexão”\n"
+            "5) Salve para concluir"
+        )
+        ctk.CTkLabel(
+            left,
+            text=steps_txt,
+            justify="left",
+            text_color=C_TEXT_SUB,
+            font=ctk.CTkFont(size=12),
+        ).grid(row=1, column=0, sticky="w", padx=16, pady=(0, 10))
+
+        # infos fixas (somente UI — leitura)
+        self._fixed_dbname = existing.dbname or "BANCO_OPERA"
+        info = ctk.CTkFrame(left, fg_color="transparent")
+        info.grid(row=2, column=0, sticky="ew", padx=16, pady=(6, 14))
+        info.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(info, text="Banco (fixo)", text_color=C_TEXT_SUB, font=ctk.CTkFont(size=11)).grid(
+            row=0, column=0, sticky="w"
+        )
+        ctk.CTkLabel(info, text=self._fixed_dbname, font=ctk.CTkFont(size=13, weight="bold")).grid(
+            row=1, column=0, sticky="w", pady=(2, 0)
+        )
+
+        # Right: formulário
+        right = ctk.CTkFrame(content, fg_color=C_CARD, corner_radius=16, border_width=1, border_color=C_BORDER)
+        right.grid(row=0, column=1, sticky="nsew", padx=(12, 0), pady=0)
+        right.grid_columnconfigure(0, weight=1)
+        right.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(
+            right,
+            text="Dados da conexão",
+            font=ctk.CTkFont(size=14, weight="bold"),
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=16, pady=(14, 10))
+
+        # --- Tipo (Local/Rede) ---
         self.var_mode = tk.StringVar(value=existing.mode if existing.mode in ("local", "rede") else "local")
 
-        ctk.CTkLabel(outer, text="Tipo de banco:", font=ctk.CTkFont(size=13, weight="bold")).place(x=26, y=100)
-        ctk.CTkRadioButton(outer, text="Local", value="local", variable=self.var_mode).place(x=150, y=100)
-        ctk.CTkRadioButton(outer, text="Rede", value="rede", variable=self.var_mode).place(x=240, y=100)
+        mode_box = ctk.CTkFrame(right, fg_color="transparent")
+        mode_box.grid(row=1, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 12))
+        mode_box.grid_columnconfigure(1, weight=1)
 
-        # ===== Campos =====
-        def mk_label(txt, x, y):
-            ctk.CTkLabel(outer, text=txt, font=ctk.CTkFont(size=13, weight="bold")).place(x=x, y=y)
+        ctk.CTkLabel(mode_box, text="Tipo de banco", text_color=C_TEXT_SUB, font=ctk.CTkFont(size=11)).grid(
+            row=0, column=0, sticky="w"
+        )
 
-        def mk_entry(x, y, w=220, default=""):
-            ent = ctk.CTkEntry(outer, width=w)
-            ent.place(x=x, y=y)
-            ent.insert(0, default)
+        rb = ctk.CTkFrame(mode_box, fg_color="transparent")
+        rb.grid(row=0, column=1, sticky="e")
+        ctk.CTkRadioButton(rb, text="Local", value="local", variable=self.var_mode).pack(side="left", padx=(0, 10))
+        ctk.CTkRadioButton(rb, text="Rede", value="rede", variable=self.var_mode).pack(side="left")
+
+        # --- Campos (grid) ---
+        def field(label: str, row: int, col: int, default: str = "", width: int = 320, show: str | None = None):
+            ctk.CTkLabel(
+                right,
+                text=label,
+                text_color=C_TEXT_SUB,
+                font=ctk.CTkFont(size=11),
+            ).grid(row=row, column=col, sticky="w", padx=16, pady=(0, 4))
+            ent = ctk.CTkEntry(right, width=width, show=show) if show else ctk.CTkEntry(right, width=width)
+            ent.grid(row=row + 1, column=col, sticky="ew", padx=16, pady=(0, 10))
+            if default:
+                ent.insert(0, default)
             return ent
 
-        self._fixed_dbname = existing.dbname or "BANCO_OPERA"
+        # Host / Porta
+        self.ent_host = field("Host / IP", 2, 0, default=str(existing.host or "localhost"))
+        self.ent_port = field("Porta", 2, 1, default=str(existing.port or 5432), width=220)
 
-        y1 = 190
-        mk_label("Host/IP:", 26, y1 - 22)
-        self.ent_host = mk_entry(26, y1, 390, existing.host)
+        # Usuário / Schema
+        self.ent_user = field("Usuário", 4, 0, default=str(existing.user or "postgres"))
+        self.ent_schema = field("Schema", 4, 1, default=str(existing.schema or "opera"), width=220)
 
-        mk_label("Porta:", 430, y1 - 22)
-        self.ent_port = mk_entry(430, y1, 390, str(existing.port))
+        # Senha (linha cheia)
+        ctk.CTkLabel(
+            right,
+            text="Senha",
+            text_color=C_TEXT_SUB,
+            font=ctk.CTkFont(size=11),
+        ).grid(row=6, column=0, sticky="w", padx=16, pady=(0, 4))
 
-        y2 = 270
-        mk_label("Senha:", 26, y2 - 22)
-        self.ent_pass = ctk.CTkEntry(outer, width=390, show="•")
-        self.ent_pass.place(x=26, y=y2)
+        self.ent_pass = ctk.CTkEntry(right, show="•")
+        self.ent_pass.grid(row=7, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 8))
         if existing.password:
             self.ent_pass.insert(0, existing.password)
 
-        mk_label("Schema:", 430, y2 - 22)
-        self.ent_schema = mk_entry(430, y2, 390, existing.schema)
-
         self.var_show = tk.BooleanVar(value=False)
-        ctk.CTkCheckBox(outer, text="Mostrar senha", variable=self.var_show, command=self._toggle_pass)\
-            .place(x=430, y=y2 + 20)
+        ctk.CTkCheckBox(
+            right,
+            text="Mostrar senha",
+            variable=self.var_show,
+            command=self._toggle_pass,
+        ).grid(row=8, column=0, columnspan=2, sticky="w", padx=16, pady=(0, 10))
 
-        y3 = 350
-        mk_label("Usuário:", 26, y3 - 22)
-        self.ent_user = mk_entry(26, y3, 390, existing.user)
+        # ---------- Footer ----------
+        footer = ctk.CTkFrame(outer, fg_color="transparent")
+        footer.grid(row=2, column=0, sticky="ew", padx=18, pady=(0, 16))
+        footer.grid_columnconfigure(0, weight=1)
 
-        # ===== Status =====
         self.lbl_status = ctk.CTkLabel(
-            outer,
-            text=f"Porta detectada: {existing.port}",
-            text_color="#b7c6d8",
+            footer,
+            text=f"Pronto. Porta sugerida: {existing.port}",
+            text_color=C_TEXT_SUB,
+            font=ctk.CTkFont(size=12),
         )
-        self.lbl_status.place(x=26, y=540)
+        self.lbl_status.grid(row=0, column=0, sticky="w")
 
-        # ===== Botões =====
-        self.btn_detect = ctk.CTkButton(outer, text="Detectar porta", width=100, command=self._on_detect_port)
-        self.btn_detect.place(x=26, y=565)
+        btns = ctk.CTkFrame(footer, fg_color="transparent")
+        btns.grid(row=0, column=1, sticky="e")
 
-        self.btn_test = ctk.CTkButton(outer, text="Testar conexão", width=110, command=self._on_test)
-        self.btn_test.place(x=136, y=565)
+        self.btn_detect = ctk.CTkButton(btns, text="Detectar porta", width=140, command=self._on_detect_port)
+        self.btn_detect.pack(side="left", padx=(0, 10))
 
-        self.btn_save = ctk.CTkButton(
-            outer, text="Salvar e continuar", width=170, command=self._on_save, state="disabled"
-        )
-        self.btn_save.place(x=650, y=565)
+        self.btn_test = ctk.CTkButton(btns, text="Testar conexão", width=140, command=self._on_test)
+        self.btn_test.pack(side="left", padx=(0, 10))
+
+        self.btn_save = ctk.CTkButton(btns, text="Salvar e continuar", width=170, command=self._on_save, state="disabled")
+        self.btn_save.pack(side="left")
 
         self.root.bind("<Escape>", lambda e: self._on_close())
 
@@ -444,16 +567,16 @@ class SetupBancoWindow:
 
     def _on_detect_port(self):
         host = self.ent_host.get().strip() or "localhost"
-        self.lbl_status.configure(text="Detectando portas...", text_color="#b7c6d8")
+        self.lbl_status.configure(text="Detectando portas...", text_color=self._ui_colors.get("sub", "#b7c6d8"))
         self.root.update_idletasks()
 
         ports = detect_ports(host)
         if ports:
             self.ent_port.delete(0, "end")
             self.ent_port.insert(0, str(ports[0]))
-            self.lbl_status.configure(text=f"Porta detectada: {ports[0]}", text_color="#a6f3b0")
+            self.lbl_status.configure(text=f"Porta detectada: {ports[0]}", text_color=self._ui_colors.get("ok", "#a6f3b0"))
         else:
-            self.lbl_status.configure(text="⚠️ Nenhuma porta detectada. Informe manualmente.", text_color="#ffd18b")
+            self.lbl_status.configure(text="⚠️ Nenhuma porta detectada. Informe manualmente.", text_color=self._ui_colors.get("warn", "#ffd18b"))
 
     def _on_test(self):
         cfg = self._current_cfg()
@@ -461,10 +584,10 @@ class SetupBancoWindow:
         self._last_test_ok = ok
 
         if ok:
-            self.lbl_status.configure(text=msg, text_color="#a6f3b0")
+            self.lbl_status.configure(text=msg, text_color=self._ui_colors.get("ok", "#a6f3b0"))
             self.btn_save.configure(state="normal")
         else:
-            self.lbl_status.configure(text=msg, text_color="#ff9e9e")
+            self.lbl_status.configure(text=msg, text_color=self._ui_colors.get("err", "#ff9e9e"))
             self.btn_save.configure(state="disabled")
 
     def _on_save(self):
