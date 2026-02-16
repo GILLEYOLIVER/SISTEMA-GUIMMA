@@ -5,6 +5,18 @@
 #define AppExeName "SistemaOpera.exe"
 #define ConfiguradorName "CONFIGURAR_BANCO.exe"
 
+#if FileExists("..\..\dist\windows\SistemaOpera.exe")
+  #define MainExeSource "..\..\dist\windows\SistemaOpera.exe"
+#else
+  #define MainExeSource "..\..\dist\SistemaOpera\SistemaOpera.exe"
+#endif
+
+#if FileExists("..\..\dist\SistemaOpera\CONFIGURAR_BANCO.exe")
+  #define DbConfigSource "..\..\dist\SistemaOpera\CONFIGURAR_BANCO.exe"
+#else
+  #define DbConfigSource "..\..\dist\windows\CONFIGURAR_BANCO.exe"
+#endif
+
 [Setup]
 AppName={#AppName}
 AppVersion={#AppVersion}
@@ -30,8 +42,8 @@ Name: "desktopicon"; Description: "Criar ícone na área de trabalho"; GroupDesc
 
 [Files]
 ; Arquivos principais
-Source: "..\..\dist\SistemaOpera\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\dist\SistemaOpera\{#ConfiguradorName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MainExeSource}"; DestDir: "{app}"; DestName: "{#AppExeName}"; Flags: ignoreversion
+Source: "{#DbConfigSource}"; DestDir: "{app}"; DestName: "{#ConfiguradorName}"; Flags: ignoreversion
 
 ; Ícones
 Source: "..\..\icons\ICONE_SISTEMA.ico"; DestDir: "{app}"; Flags: ignoreversion
