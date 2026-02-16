@@ -20,10 +20,12 @@
 [Setup]
 AppName={#AppName}
 AppVersion={#AppVersion}
+AppVerName={#AppName}
 AppPublisher={#AppPublisher}
 AppId={{E5D81A21-CC47-4A3A-9C0F-2D7A6C1D49AA}}
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
+UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\ICONE_SISTEMA.ico
 Compression=lzma2/ultra
 SolidCompression=yes
