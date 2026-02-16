@@ -23,12 +23,6 @@ git clean -fdx
 git status
 
 
-#03/02/2025
-
-
-
-# 31/01/2026##
-
 
 No Mac 
 
@@ -38,25 +32,11 @@ chmod +x packaging/macos/build_installer.sh && printf 's\ns\n' | ./packaging/mac
 
 No Windows (gera EXE e já cria o ZIP)
 
-# 1. Ir para a pasta do projeto
-cd C:\Users\User\PyCharmProjects\SISTEMA-GUIMA
-
-# 2. Ativar ambiente virtual (se necessário)
-.\.venv\Scripts\Activate
-
-# 3. Compilar o aplicativo principal
 python packaging/build.py --platform windows
 
-# 4. Compilar o configurador do banco
-python packaging/windows/build_db_config.py
-
-# 5. Criar o instalador
-.\packaging\windows\fazer_instalador.ps1
 
 
 
-# Liberar execução
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
-# Executar o script de compilação
-.\compilar_tudo.ps1
+
+16/02/2026
