@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Cria executável da janela de configuração do banco com ícone incorporado
+Cria executável da janela de configuração do banco (SETUP_BANCO.py) com ícone incorporado
 """
 import os
 import sys
@@ -83,7 +83,7 @@ def main():
     print("=" * 60)
 
     base_dir = Path(__file__).parent.parent.parent
-    script_path = base_dir / "packaging" / "windows" / "db_config_window.py"
+    script_path = base_dir / "PAGINAS_DO_SISTEMA" / "SETUP_BANCO.py"
     icons_dir = base_dir / "icons"
     build_dir = base_dir / "build"
     output_dir = base_dir / "dist" / "SistemaOpera"
@@ -92,8 +92,10 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if not script_path.exists():
-        print(f"Script não encontrado: {script_path}")
+        print(f"Script de setup não encontrado: {script_path}")
         return False
+
+    print(f"Script alvo do configurador: {script_path}")
 
     # Procurar ícone
     icon_candidates = [
@@ -137,6 +139,9 @@ def main():
         "--specpath", str(build_dir),
         "--icon", str(ico_path),
         "--hidden-import", "tkinter",
+        "--hidden-import", "customtkinter",
+        "--hidden-import", "OPERA_PATHS",
+        "--hidden-import", "psycopg2",
         "--hidden-import", "PIL",
         "--hidden-import", "PIL._imaging",
         "--hidden-import", "PIL.Image",
