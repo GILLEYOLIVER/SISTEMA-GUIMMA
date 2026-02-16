@@ -23,12 +23,15 @@ def check_dependencies():
     """Verifica dependências necessárias"""
     print_header("VERIFICANDO DEPENDÊNCIAS")
 
-    required = ['psycopg2', 'pillow']
+    required = {
+        'psycopg2': 'psycopg2',
+        'pillow': 'PIL',
+    }
     missing = []
 
-    for dep in required:
+    for dep, import_name in required.items():
         try:
-            __import__(dep.replace('-', '_'))
+            __import__(import_name)
             print(f"✅ {dep}")
         except ImportError:
             missing.append(dep)
@@ -99,8 +102,9 @@ def build_windows():
         print("⚠️  Script de conversão de ícone não encontrado")
 
     # Caminhos
-    icon_path = Path("icons/ICONE_SISTEMA.ico")
-    main_script = Path("PAGINAS_DO_SISTEMA/MAIN.py")
+    project_root = Path.cwd().resolve()
+    icon_path = project_root / "icons" / "ICONE_SISTEMA.ico"
+    main_script = project_root / "PAGINAS_DO_SISTEMA" / "MAIN.py"
 
     if not main_script.exists():
         print(f"❌ Arquivo principal não encontrado: {main_script}")
@@ -111,12 +115,12 @@ def build_windows():
     if spec_file.exists():
         print(f"📄 Usando arquivo .spec existente: {spec_file}")
         # Usar o .spec file
-        cmd = ["pyinstaller", "--clean", str(spec_file)]
+        cmd = [sys.executable, "-m", "PyInstaller", "--clean", str(spec_file)]
     else:
         print("📄 Criando build sem arquivo .spec")
         # Construir comando PyInstaller sem --spec
         cmd = [
-            "pyinstaller",
+            sys.executable, "-m", "PyInstaller",
             "--clean",
             "--onefile",
             "--windowed",
@@ -134,11 +138,14 @@ def build_windows():
         else:
             print("⚠️  Ícone não encontrado, usando padrão")
 
-        # Adicionar dados
+        # Adicionar dados (caminhos absolutos evitam erro com --specpath=build no Windows)
+        pages_src = project_root / "PAGINAS_DO_SISTEMA"
+        icons_src = project_root / "icons"
+        data_src = project_root / "data"
         cmd.extend([
-            "--add-data", f"PAGINAS_DO_SISTEMA;PAGINAS_DO_SISTEMA",
-            "--add-data", f"icons;icons",
-            "--add-data", f"data;data",
+            "--add-data", f"{pages_src};PAGINAS_DO_SISTEMA",
+            "--add-data", f"{icons_src};icons",
+            "--add-data", f"{data_src};data",
         ])
 
         # Hidden imports
@@ -184,8 +191,12 @@ def build_windows():
         for imp in hidden_imports:
             cmd.extend(["--hidden-import", imp])
 
-        for pkg in ["fpdf", "reportlab", "matplotlib", "pymupdf"]:
+        for pkg in ["fpdf", "reportlab", "pymupdf"]:
             cmd.extend(["--collect-all", pkg])
+
+        # Evita coletar suíte de testes pesada/instável no Windows
+        cmd.extend(["--exclude-module", "matplotlib.tests"])
+        cmd.extend(["--exclude-module", "PIL.tests"])
 
         # Adicionar script principal
         cmd.append(str(main_script))
@@ -196,7 +207,7 @@ def build_windows():
     # Executar
     try:
         print("\n🚀 Executando PyInstaller...")
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True, shell=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, shell=False)
         print("✅ Build concluído com sucesso!")
 
         # Verificar se executável foi criado
@@ -228,7 +239,17 @@ def build_windows():
 
     except subprocess.CalledProcessError as e:
         print(f"❌ Erro no PyInstaller: {e}")
-        print(f"Stderr: {e.stderr[:500]}...")
+        err_dir = Path("build")
+        err_dir.mkdir(parents=True, exist_ok=True)
+        err_log = err_dir / "pyinstaller_windows_error.log"
+        try:
+            err_log.write_text((e.stdout or "") + "\n\n--- STDERR ---\n" + (e.stderr or ""), encoding="utf-8", errors="replace")
+            print(f"📄 Log completo salvo em: {err_log}")
+        except Exception:
+            pass
+        stderr_text = (e.stderr or "").strip()
+        if stderr_text:
+            print(f"Stderr (últimas linhas):\n" + "\n".join(stderr_text.splitlines()[-40:]))
         return False
 
 
@@ -237,8 +258,9 @@ def build_macos():
     print_header("BUILD PARA macOS")
 
     # Caminhos
-    icon_path = Path("PAGINAS_DO_SISTEMA/ICONE_SISTEMA.icns")
-    main_script = Path("PAGINAS_DO_SISTEMA/MAIN.py")
+    project_root = Path.cwd().resolve()
+    icon_path = project_root / "PAGINAS_DO_SISTEMA" / "ICONE_SISTEMA.icns"
+    main_script = project_root / "PAGINAS_DO_SISTEMA" / "MAIN.py"
 
     if not main_script.exists():
         print(f"❌ Arquivo principal não encontrado: {main_script}")
@@ -246,7 +268,7 @@ def build_macos():
 
     # Construir comando PyInstaller
     cmd = [
-        "pyinstaller",
+        sys.executable, "-m", "PyInstaller",
         "--clean",
         "--windowed",
         "--noconsole",
@@ -278,10 +300,13 @@ def build_macos():
             print("⚠️  Ícone não encontrado, usando padrão")
 
     # Adicionar dados
+    pages_src = project_root / "PAGINAS_DO_SISTEMA"
+    icons_src = project_root / "icons"
+    data_src = project_root / "data"
     cmd.extend([
-        "--add-data", f"PAGINAS_DO_SISTEMA:PAGINAS_DO_SISTEMA",
-        "--add-data", f"icons:icons",
-        "--add-data", f"data:data",
+        "--add-data", f"{pages_src}:PAGINAS_DO_SISTEMA",
+        "--add-data", f"{icons_src}:icons",
+        "--add-data", f"{data_src}:data",
     ])
 
     # Hidden imports (mesmo do Windows)
@@ -341,7 +366,17 @@ def build_macos():
 
     except subprocess.CalledProcessError as e:
         print(f"❌ Erro no PyInstaller: {e}")
-        print(f"Stderr: {e.stderr[:500]}...")
+        err_dir = Path("build")
+        err_dir.mkdir(parents=True, exist_ok=True)
+        err_log = err_dir / "pyinstaller_macos_error.log"
+        try:
+            err_log.write_text((e.stdout or "") + "\n\n--- STDERR ---\n" + (e.stderr or ""), encoding="utf-8", errors="replace")
+            print(f"📄 Log completo salvo em: {err_log}")
+        except Exception:
+            pass
+        stderr_text = (e.stderr or "").strip()
+        if stderr_text:
+            print(f"Stderr (últimas linhas):\n" + "\n".join(stderr_text.splitlines()[-40:]))
         return False
 
 
@@ -389,9 +424,18 @@ def main():
                 size_mb = item.stat().st_size / (1024 * 1024)
                 print(f"  📄 {rel_path} ({size_mb:.1f} MB)")
 
-        print("\n🎯 Próximos passos:")
-        print("   1. Para Windows: Execute packaging/windows/build_installer.ps1")
-        print("   2. Para macOS: Execute packaging/macos/build_installer.sh")
+        print("\n🎯 Próximos passos (copie e cole o comando, não digite apenas o número):")
+        if args.platform == "windows":
+            print("   PowerShell:")
+            print("   .\\packaging\\windows\\build_installer.ps1")
+        elif args.platform == "macos":
+            print("   Bash:")
+            print("   ./packaging/macos/build_installer.sh")
+        else:
+            print("   PowerShell (Windows):")
+            print("   .\\packaging\\windows\\build_installer.ps1")
+            print("   Bash (macOS):")
+            print("   ./packaging/macos/build_installer.sh")
         return 0
     else:
         print_header("❌ BUILD FALHOU")

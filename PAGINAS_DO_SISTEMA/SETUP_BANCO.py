@@ -7,10 +7,12 @@ SETUP_BANCO.py — Configurador de Banco (Universal Mac/Windows)
 - Detecta porta e testa conexão para reencontrar o banco
 - Só permite "Salvar e concluir" após conexão OK
 - Se fechar no X sem salvar: retorna exit code 1 (cancelado)
-- Salva config.json atualizado em 3 lugares (criando pastas automaticamente):
+- Salva config.json atualizado em múltiplos lugares (criando pastas automaticamente):
   1) Local correto do app (Mac: Application Support / Windows: AppData)
-  2) Pasta atual do projeto (PAGINAS_DO_SISTEMA/config.json)
-  3) Raiz do projeto (../config.json)
+  2) AppData/Application Support/PAGINAS_DO_SISTEMA/config.json
+  3) Pasta atual do projeto (PAGINAS_DO_SISTEMA/config.json)
+  4) Raiz do projeto (../config.json)
+  5) Candidatos de instalação no diretório do executável e cwd
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ import json
 import os
 import socket
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Tuple
 
@@ -60,9 +62,40 @@ except Exception:
 
 APP_DATA_DIR = get_app_data_dir()
 CONFIG_FILE = APP_DATA_DIR / "config.json"
+APP_PAGINAS_CONFIG_FILE = APP_DATA_DIR / "PAGINAS_DO_SISTEMA" / "config.json"
 
 DEV_CONFIG_FILE_PAGINAS = PAGINAS_DIR / "config.json"
 DEV_CONFIG_FILE_PARENT = PROJECT_ROOT / "config.json"
+
+
+def _runtime_pagina_config_candidates() -> List[Path]:
+    """
+    Candidatos extras para instalação (Windows/Mac):
+    - diretório do executável + PAGINAS_DO_SISTEMA/config.json
+    - diretório atual + PAGINAS_DO_SISTEMA/config.json
+    """
+    candidates: List[Path] = []
+    try:
+        exe_dir = Path(sys.executable).resolve().parent
+        candidates.append(exe_dir / "PAGINAS_DO_SISTEMA" / "config.json")
+    except Exception:
+        pass
+
+    try:
+        cwd = Path.cwd().resolve()
+        candidates.append(cwd / "PAGINAS_DO_SISTEMA" / "config.json")
+    except Exception:
+        pass
+
+    # evita duplicados mantendo ordem
+    dedup: List[Path] = []
+    seen = set()
+    for p in candidates:
+        key = str(p)
+        if key not in seen:
+            seen.add(key)
+            dedup.append(p)
+    return dedup
 
 
 # ============================================================
@@ -81,7 +114,13 @@ class DBConfig:
 
 def _config_candidates() -> List[Path]:
     # prioridade dev -> oficial
-    return [DEV_CONFIG_FILE_PAGINAS, DEV_CONFIG_FILE_PARENT, CONFIG_FILE]
+    return [
+        DEV_CONFIG_FILE_PAGINAS,
+        DEV_CONFIG_FILE_PARENT,
+        APP_PAGINAS_CONFIG_FILE,
+        CONFIG_FILE,
+        *_runtime_pagina_config_candidates(),
+    ]
 
 
 def load_existing_config() -> Optional[DBConfig]:
@@ -127,17 +166,38 @@ def load_existing_config() -> Optional[DBConfig]:
 
 def save_config(cfg: DBConfig) -> Path:
     """
-    Salva config.json em 3 lugares e cria as pastas se não existirem.
+    Salva config.json em múltiplos lugares e cria as pastas se não existirem.
 
     Isso mantém o arquivo sempre atualizado para o módulo `banco_de_dados_pg`,
     inclusive em fluxos de recuperação quando a conexão foi perdida.
     """
-    payload = json.dumps(asdict(cfg), ensure_ascii=False, indent=2)
+    payload_dict = {
+        "mode": cfg.mode,
+        "host": cfg.host,
+        "port": int(cfg.port),
+        "dbname": cfg.dbname,
+        "user": cfg.user,
+        "password": cfg.password,
+        "schema": cfg.schema,
+        # formato expandido para compatibilidade com BANCO_DE_DADOS_PG.py
+        "defaults": {
+            "dbname": cfg.dbname,
+            "user": cfg.user,
+            "password": cfg.password,
+        },
+        "hosts": [cfg.host],
+        "ports": [int(cfg.port)],
+        "appname": "OPERA_APP",
+        "connect_timeout": 8,
+    }
+    payload = json.dumps(payload_dict, ensure_ascii=False, indent=2)
 
     targets = [
         CONFIG_FILE,             # oficial (Mac/Windows)
+        APP_PAGINAS_CONFIG_FILE, # AppData/Application Support/PAGINAS_DO_SISTEMA/config.json
         DEV_CONFIG_FILE_PAGINAS, # PAGINAS_DO_SISTEMA/config.json
         DEV_CONFIG_FILE_PARENT,  # raiz do projeto/config.json
+        *_runtime_pagina_config_candidates(),
     ]
 
     for path in targets:
