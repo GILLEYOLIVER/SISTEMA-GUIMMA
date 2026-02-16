@@ -30,8 +30,9 @@ chmod +x packaging/macos/build_installer.sh && printf 's\ns\n' | ./packaging/mac
 
 
 
-No Windows (gera EXE e já cria o ZIP)
+No Windows
 
-python packaging/build.py --platform windows
+.\packaging\windows\build_installer.ps1
+
 
 16/02/2026

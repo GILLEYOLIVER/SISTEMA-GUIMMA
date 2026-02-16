@@ -1,68 +1,106 @@
-# packaging/windows/build_installer_completo.ps1
+# packaging/windows/build_installer.ps1
+# ASCII-only where possible; output in UTF-8; stop on errors.
 
 param(
     [string]$Python = "python",
     [string]$Version = "1.0.0"
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# Force UTF-8 output (helps avoid "Ã­" / "âœ…" on some terminals)
+try {
+    chcp 65001 | Out-Null
+} catch { }
+try {
+    [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+} catch { }
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 Set-Location $repoRoot
 
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "  SISTEMA OPERA - CONSTRUTOR DE INSTALADOR" -ForegroundColor Cyan
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
+
+function Run-Step([string]$title, [scriptblock]$action) {
+    Write-Host ""
+    Write-Host $title -ForegroundColor Green
+    & $action
+}
 
 # PASSO 1: Preparar ícone
-Write-Host "`n[1/4] Preparando ícone..." -ForegroundColor Green
-& $Python packaging/windows/prepare_icon.py
+Run-Step "[1/4] Preparando icone..." {
+    & $Python "packaging/windows/prepare_icon.py"
+    if ($LASTEXITCODE -ne 0) { throw "Falha ao preparar icone." }
+}
 
 # PASSO 2: Construir app principal
-Write-Host "`n[2/4] Construindo aplicativo principal..." -ForegroundColor Green
-& $Python packaging/build.py --platform windows
+Run-Step "[2/4] Construindo aplicativo principal..." {
+    & $Python "packaging/build.py" --platform windows
+    if ($LASTEXITCODE -ne 0) { throw "Falha no build do app principal." }
+}
 
 # PASSO 3: Construir configurador do banco
-Write-Host "`n[3/4] Construindo configurador do banco..." -ForegroundColor Green
-& $Python packaging/windows/build_db_config.py
+Run-Step "[3/4] Construindo configurador do banco..." {
+    & $Python "packaging/windows/build_db_config.py"
+    if ($LASTEXITCODE -ne 0) { throw "Falha no build do configurador do banco." }
+}
 
 # PASSO 4: Criar instalador
-Write-Host "`n[4/4] Criando instalador..." -ForegroundColor Green
+Run-Step "[4/4] Criando instalador..." {
 
-# Encontrar Inno Setup
-$innoPaths = @(
-    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-    "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
-)
+    # Encontrar Inno Setup (ISCC)
+    $innoPaths = @(
+        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+        "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+    )
 
-$innoExe = $null
-foreach ($path in $innoPaths) {
-    if (Test-Path $path) {
-        $innoExe = $path
-        break
+    $innoExe = $null
+    foreach ($p in $innoPaths) {
+        if ($p -and (Test-Path $p)) { $innoExe = $p; break }
     }
-}
 
-if (-not $innoExe) {
-    Write-Host "❌ Inno Setup não encontrado!" -ForegroundColor Red
-    Write-Host "Por favor, instale o Inno Setup 6: https://jrsoftware.org/isdl.php" -ForegroundColor Yellow
-    exit 1
-}
+    if (-not $innoExe) {
+        throw "Inno Setup nao encontrado. Instale o Inno Setup 6."
+    }
 
-Write-Host "✅ Inno Setup encontrado: $innoExe" -ForegroundColor Green
+    Write-Host "OK Inno Setup: $innoExe" -ForegroundColor Green
 
-# Compilar instalador
-& $innoExe "packaging\windows\SISTEMA_OPERA_CORRIGIDO.iss"
+    $issPath = Join-Path $repoRoot "packaging\windows\SISTEMA_OPERA.iss"
+    if (-not (Test-Path $issPath)) {
+        throw "Arquivo .iss nao encontrado: $issPath"
+    }
 
-# Verificar resultado
-$installerPath = "dist\SistemaOpera_Setup.exe"
-if (Test-Path $installerPath) {
+    # Garantir que o .iss esteja em UTF-8 sem BOM (evita 'Text is not inside a section')
+    $bytes = [System.IO.File]::ReadAllBytes($issPath)
+    # Remove BOM se existir (EF BB BF)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        $bytes = $bytes[3..($bytes.Length-1)]
+        [System.IO.File]::WriteAllBytes($issPath, $bytes)
+    }
+
+    # Apagar instalador antigo para nao dar "sucesso falso"
+    $installerPath = Join-Path $repoRoot "dist\SistemaOpera_Setup.exe"
+    Remove-Item $installerPath -ErrorAction SilentlyContinue
+
+    # Compilar
+    & $innoExe $issPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "ISCC falhou. Veja a mensagem acima (arquivo faltando / caminho errado)."
+    }
+
+    if (-not (Test-Path $installerPath)) {
+        throw "ISCC terminou sem gerar o instalador: $installerPath"
+    }
+
     $installerSize = (Get-Item $installerPath).Length / 1MB
-    Write-Host "`n✅ INSTALADOR CRIADO COM SUCESSO!" -ForegroundColor Green
-    Write-Host "📦 Arquivo: $installerPath" -ForegroundColor Green
-    Write-Host "📏 Tamanho: $([math]::Round($installerSize, 2)) MB" -ForegroundColor Green
-} else {
-    Write-Host "❌ Instalador não foi criado!" -ForegroundColor Red
-    exit 1
+    Write-Host ""
+    Write-Host "INSTALADOR CRIADO COM SUCESSO!" -ForegroundColor Green
+    Write-Host "Arquivo: $installerPath" -ForegroundColor Green
+    Write-Host ("Tamanho: {0:N2} MB" -f $installerSize) -ForegroundColor Green
 }
 
-Write-Host "`n✅ Processo concluído!" -ForegroundColor Green
+Write-Host ""
+Write-Host "Processo concluido!" -ForegroundColor Green
