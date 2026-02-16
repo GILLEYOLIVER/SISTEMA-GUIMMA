@@ -59,5 +59,5 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename:
 Name: "{autodesktop}\Configurar Banco"; Filename: "{app}\{#ConfiguradorName}"; IconFilename: "{app}\icon_config.ico"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#ConfiguradorName}"; Description: "Configurar banco de dados agora"; Flags: postinstall runascurrentuser checked
-Filename: "{app}\{#AppExeName}"; Description: "Executar {#AppName}"; Flags: postinstall nowait runascurrentuser unchecked
+Filename: "{app}\{#ConfiguradorName}"; Description: "Configurar banco de dados agora"; Flags: postinstall runasoriginaluser
+Filename: "{app}\{#AppExeName}"; Description: "Executar {#AppName}"; Flags: postinstall nowait runasoriginaluser unchecked
