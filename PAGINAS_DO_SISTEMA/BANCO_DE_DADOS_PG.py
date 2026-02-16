@@ -16,6 +16,7 @@ import sys
 import io
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse, parse_qs
 
 import psycopg2
 import psycopg2.extras
@@ -70,6 +71,22 @@ def log_info(msg): print(f"{Colors.BLUE}[INFO]{Colors.RESET} {msg}")
 def log_debug(msg): print(f"{Colors.MAGENTA}[DEBUG]{Colors.RESET} {msg}")
 def log_success(msg): print(f"{Colors.BG_GREEN}[SUCESSO]{Colors.RESET} {msg}")
 def log_critical(msg): print(f"{Colors.BG_RED}[CRÍTICO]{Colors.RESET} {msg}")
+
+
+def _safe_exc_text(exc: Exception) -> str:
+    """
+    Evita quebrar ao formatar exceptions com bytes/encoding inválido
+    (caso comum quando a porta responde algo que não é PostgreSQL).
+    """
+    try:
+        text = str(exc)
+    except Exception:
+        text = repr(exc)
+
+    try:
+        return text.encode("utf-8", "replace").decode("utf-8", "replace")
+    except Exception:
+        return repr(exc)
 
 
 # ==============================================================================
@@ -129,6 +146,41 @@ def _resource_candidates() -> List[str]:
     return cands
 
 
+def _runtime_pagina_config_candidates() -> List[str]:
+    """
+    Candidatos para encontrar config.json dentro da pasta PAGINAS_DO_SISTEMA
+    tanto no projeto (PyCharm) quanto no diretório de instalação.
+    """
+    cands: List[str] = []
+
+    try:
+        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+        cands.append(os.path.join(exe_dir, "PAGINAS_DO_SISTEMA", "config.json"))
+    except Exception:
+        pass
+
+    try:
+        cwd = os.path.abspath(os.getcwd())
+        cands.append(os.path.join(cwd, "PAGINAS_DO_SISTEMA", "config.json"))
+    except Exception:
+        pass
+
+    # AppData/Application Support espelhado
+    try:
+        cands.append(os.path.join(_user_config_dir(), "PAGINAS_DO_SISTEMA", "config.json"))
+    except Exception:
+        pass
+
+    # remove duplicados mantendo ordem
+    unique: List[str] = []
+    seen = set()
+    for p in cands:
+        if p and p not in seen:
+            seen.add(p)
+            unique.append(p)
+    return unique
+
+
 # ==============================================================================
 # CONFIGURAÇÃO (agora com ENV + config.json no AppData/Application Support)
 # ==============================================================================
@@ -157,12 +209,36 @@ ENV_SCHEMA = (os.environ.get("OPERA_PG_SCHEMA") or "").strip()
 _MODULE_DIR = os.path.dirname(__file__)
 _BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-_CFG_CANDIDATES = [
-    os.path.join(_user_config_dir(), "config.json"),   # ✅ principal em app instalado
-    os.path.join(_MODULE_DIR, "config.json"),
-    os.path.join(_BASE_DIR, "config.json"),
-    os.path.join(os.getcwd(), "config.json"),
-] + _resource_candidates()
+# Prioridade por contexto:
+# - Desenvolvimento (não empacotado): prefere config do projeto/PAGINAS_DO_SISTEMA
+# - Instalado (frozen): prefere AppData/Application Support
+if _is_frozen():
+    _CFG_CANDIDATES = [
+        os.path.join(_user_config_dir(), "config.json"),
+        os.path.join(_user_config_dir(), "PAGINAS_DO_SISTEMA", "config.json"),
+        *_runtime_pagina_config_candidates(),
+        os.path.join(_MODULE_DIR, "config.json"),
+        os.path.join(_BASE_DIR, "config.json"),
+        os.path.join(_MODULE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+        os.path.join(_BASE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+        os.path.join(os.getcwd(), "config.json"),
+        *_resource_candidates(),
+    ]
+else:
+    _CFG_CANDIDATES = [
+        os.path.join(_MODULE_DIR, "config.json"),
+        os.path.join(_BASE_DIR, "config.json"),
+        os.path.join(_MODULE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+        os.path.join(_BASE_DIR, "PAGINAS_DO_SISTEMA", "config.json"),
+        *_runtime_pagina_config_candidates(),
+        os.path.join(os.getcwd(), "config.json"),
+        os.path.join(_user_config_dir(), "config.json"),
+        os.path.join(_user_config_dir(), "PAGINAS_DO_SISTEMA", "config.json"),
+        *_resource_candidates(),
+    ]
+
+# remove duplicados mantendo ordem
+_CFG_CANDIDATES = list(dict.fromkeys([p for p in _CFG_CANDIDATES if p]))
 
 CFG_PATH = next((p for p in _CFG_CANDIDATES if p and os.path.exists(p)), _CFG_CANDIDATES[0])
 CONFIG: Dict[str, Any] = dict(DEFAULT_CFG)
@@ -175,7 +251,7 @@ if os.path.exists(CFG_PATH):
             CONFIG.update(user_cfg)
         log_ok(f"config.json carregado: {CFG_PATH}")
     except Exception as e:
-        log_warn(f"Falha ao ler config.json ({CFG_PATH}): {e}")
+        log_warn(f"Falha ao ler config.json ({CFG_PATH}): {_safe_exc_text(e)}")
 else:
     log_warn(f"config.json não encontrado — usando padrão. (candidato principal: {CFG_PATH})")
 
@@ -212,6 +288,52 @@ if CONFIG.get("auto_detect_ports", True) and not ENV_DSN and not str(CONFIG.get(
 # CONEXÃO
 # ==============================================================================
 _cached_conn = None
+_env_dsn_disabled = os.environ.get("OPERA_SKIP_ENV_DSN", "0") == "1"
+_env_dsn_disable_reason = os.environ.get("OPERA_SKIP_ENV_DSN_REASON", "")
+
+
+def _mark_env_dsn_disabled(reason: str) -> None:
+    global _env_dsn_disabled, _env_dsn_disable_reason
+    _env_dsn_disabled = True
+    _env_dsn_disable_reason = reason
+    os.environ["OPERA_SKIP_ENV_DSN"] = "1"
+    os.environ["OPERA_SKIP_ENV_DSN_REASON"] = reason[:300]
+
+
+def _tcp_port_is_open(host: str, port: int, timeout: float = 0.25) -> bool:
+    try:
+        with socket.create_connection((host, int(port)), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+def _precheck_env_dsn() -> Optional[str]:
+    """
+    Evita tentativa cara do psycopg2 quando o DSN aponta para localhost em porta fechada.
+    Retorna string de motivo para pular, ou None para tentar conexão normal.
+    """
+    if not ENV_DSN:
+        return None
+
+    try:
+        parsed = urlparse(ENV_DSN)
+        host = parsed.hostname
+        port = parsed.port
+
+        if not host and "host=" in ENV_DSN:
+            params = parse_qs(ENV_DSN.replace(" ", "&"))
+            host = (params.get("host") or [None])[0]
+            ptxt = (params.get("port") or [None])[0]
+            port = int(ptxt) if ptxt else None
+
+        if host in ("localhost", "127.0.0.1", "::1") and port:
+            if not _tcp_port_is_open(host, int(port), timeout=0.2):
+                return f"host={host} port={port} sem serviço ativo"
+    except Exception:
+        return None
+
+    return None
 
 
 def _apply_session_settings(conn) -> None:
@@ -253,14 +375,24 @@ def _create_connection():
     3) host/port/dbname/user/pass + autodetect + create db (se habilitado)
     """
     # 1) ENV DSN
-    if ENV_DSN:
-        log_info("Conectando via OPERA_PG_DSN (env)...")
-        try:
-            conn = _create_connection_by_dsn(ENV_DSN)
-            log_success("Conectado via OPERA_PG_DSN")
-            return conn
-        except Exception as e:
-            log_err(f"Falha via OPERA_PG_DSN: {e}")
+    global _env_dsn_disabled, _env_dsn_disable_reason
+    if ENV_DSN and not _env_dsn_disabled:
+        precheck_reason = _precheck_env_dsn()
+        if precheck_reason:
+            _mark_env_dsn_disabled(precheck_reason)
+            log_warn(f"OPERA_PG_DSN ignorado: {precheck_reason}. Usando fallback de config/porta.")
+        else:
+            log_info("Conectando via OPERA_PG_DSN (env)...")
+            try:
+                conn = _create_connection_by_dsn(ENV_DSN)
+                log_success("Conectado via OPERA_PG_DSN")
+                return conn
+            except Exception as e:
+                _mark_env_dsn_disabled(_safe_exc_text(e))
+                log_err(f"Falha via OPERA_PG_DSN: {_env_dsn_disable_reason}")
+                log_warn("OPERA_PG_DSN desativado para esta execução; usando fallback de config/porta.")
+    elif ENV_DSN and _env_dsn_disabled:
+        log_debug("OPERA_PG_DSN ignorado (já falhou nesta execução).")
 
     # 2) config DSN
     cfg_dsn = str(CONFIG.get("dsn", "")).strip()
@@ -271,7 +403,7 @@ def _create_connection():
             log_success("Conectado via config.json (dsn)")
             return conn
         except Exception as e:
-            log_err(f"Falha via config.json (dsn): {e}")
+            log_err(f"Falha via config.json (dsn): {_safe_exc_text(e)}")
 
     # 3) modo antigo (host/port)
     host = (CONFIG.get("hosts") or ["localhost"])[0]
@@ -286,6 +418,7 @@ def _create_connection():
     for port in ports:
         try:
             log_info(f"Tentando {host}:{port} banco={target_db} user={user}")
+            log_debug("Validando serviço na porta antes da autenticação...")
             try:
                 conn = _create_connection_simple(host, int(port), target_db, user, pwd, timeout=timeout)
                 _apply_session_settings(conn)
@@ -293,7 +426,7 @@ def _create_connection():
                 return conn
 
             except psycopg2.OperationalError as e:
-                error_msg = str(e)
+                error_msg = _safe_exc_text(e)
 
                 # Banco não existe -> tenta criar
                 if ("does not exist" in error_msg or "não existe" in error_msg) and fallback_to_postgres:
@@ -320,14 +453,16 @@ def _create_connection():
                         return conn
 
                     except Exception as create_error:
-                        log_err(f"Falha ao criar banco: {create_error}")
+                        log_err(f"Falha ao criar banco: {_safe_exc_text(create_error)}")
                         continue
 
                 log_err(f"Erro de conexão: {error_msg}")
                 continue
 
         except Exception as e:
-            log_err(f"Falha na porta {port}: {e}")
+            if isinstance(e, UnicodeDecodeError):
+                log_err(f"Porta {port} respondeu com protocolo inválido (não parece PostgreSQL).")
+            log_err(f"Falha na porta {port}: {_safe_exc_text(e)}")
             continue
 
     raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
