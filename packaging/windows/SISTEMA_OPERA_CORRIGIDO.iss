@@ -5,6 +5,18 @@
 #define AppExeName "SistemaOpera.exe"
 #define ConfiguradorName "CONFIGURAR_BANCO.exe"
 
+#if FileExists("..\..\dist\windows\SistemaOpera.exe")
+  #define MainExeSource "..\..\dist\windows\SistemaOpera.exe"
+#else
+  #define MainExeSource "..\..\dist\SistemaOpera\SistemaOpera.exe"
+#endif
+
+#if FileExists("..\..\dist\SistemaOpera\CONFIGURAR_BANCO.exe")
+  #define DbConfigSource "..\..\dist\SistemaOpera\CONFIGURAR_BANCO.exe"
+#else
+  #define DbConfigSource "..\..\dist\windows\CONFIGURAR_BANCO.exe"
+#endif
+
 [Setup]
 AppName={#AppName}
 AppVersion={#AppVersion}
@@ -30,8 +42,8 @@ Name: "desktopicon"; Description: "Criar ícone na área de trabalho"; GroupDesc
 
 [Files]
 ; Arquivos principais
-Source: "..\..\dist\SistemaOpera\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\dist\SistemaOpera\{#ConfiguradorName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MainExeSource}"; DestDir: "{app}"; DestName: "{#AppExeName}"; Flags: ignoreversion
+Source: "{#DbConfigSource}"; DestDir: "{app}"; DestName: "{#ConfiguradorName}"; Flags: ignoreversion
 
 ; Ícones
 Source: "..\..\icons\ICONE_SISTEMA.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -59,5 +71,5 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename:
 Name: "{autodesktop}\Configurar Banco"; Filename: "{app}\{#ConfiguradorName}"; IconFilename: "{app}\icon_config.ico"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#ConfiguradorName}"; Description: "Configurar banco de dados agora"; Flags: postinstall runascurrentuser checked
-Filename: "{app}\{#AppExeName}"; Description: "Executar {#AppName}"; Flags: postinstall nowait runascurrentuser unchecked
+Filename: "{app}\{#ConfiguradorName}"; Description: "Configurar banco de dados agora"; Flags: postinstall runasoriginaluser
+Filename: "{app}\{#AppExeName}"; Description: "Executar {#AppName}"; Flags: postinstall nowait runasoriginaluser unchecked

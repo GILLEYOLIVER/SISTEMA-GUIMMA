@@ -7,10 +7,12 @@ SETUP_BANCO.py — Configurador de Banco (Universal Mac/Windows)
 - Detecta porta e testa conexão para reencontrar o banco
 - Só permite "Salvar e concluir" após conexão OK
 - Se fechar no X sem salvar: retorna exit code 1 (cancelado)
-- Salva config.json atualizado em 3 lugares (criando pastas automaticamente):
+- Salva config.json atualizado em múltiplos lugares (criando pastas automaticamente):
   1) Local correto do app (Mac: Application Support / Windows: AppData)
-  2) Pasta atual do projeto (PAGINAS_DO_SISTEMA/config.json)
-  3) Raiz do projeto (../config.json)
+  2) AppData/Application Support/PAGINAS_DO_SISTEMA/config.json
+  3) Pasta atual do projeto (PAGINAS_DO_SISTEMA/config.json)
+  4) Raiz do projeto (../config.json)
+  5) Candidatos de instalação no diretório do executável e cwd
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ import json
 import os
 import socket
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Tuple
 
@@ -60,9 +62,40 @@ except Exception:
 
 APP_DATA_DIR = get_app_data_dir()
 CONFIG_FILE = APP_DATA_DIR / "config.json"
+APP_PAGINAS_CONFIG_FILE = APP_DATA_DIR / "PAGINAS_DO_SISTEMA" / "config.json"
 
 DEV_CONFIG_FILE_PAGINAS = PAGINAS_DIR / "config.json"
 DEV_CONFIG_FILE_PARENT = PROJECT_ROOT / "config.json"
+
+
+def _runtime_pagina_config_candidates() -> List[Path]:
+    """
+    Candidatos extras para instalação (Windows/Mac):
+    - diretório do executável + PAGINAS_DO_SISTEMA/config.json
+    - diretório atual + PAGINAS_DO_SISTEMA/config.json
+    """
+    candidates: List[Path] = []
+    try:
+        exe_dir = Path(sys.executable).resolve().parent
+        candidates.append(exe_dir / "PAGINAS_DO_SISTEMA" / "config.json")
+    except Exception:
+        pass
+
+    try:
+        cwd = Path.cwd().resolve()
+        candidates.append(cwd / "PAGINAS_DO_SISTEMA" / "config.json")
+    except Exception:
+        pass
+
+    # evita duplicados mantendo ordem
+    dedup: List[Path] = []
+    seen = set()
+    for p in candidates:
+        key = str(p)
+        if key not in seen:
+            seen.add(key)
+            dedup.append(p)
+    return dedup
 
 
 # ============================================================
@@ -81,7 +114,13 @@ class DBConfig:
 
 def _config_candidates() -> List[Path]:
     # prioridade dev -> oficial
-    return [DEV_CONFIG_FILE_PAGINAS, DEV_CONFIG_FILE_PARENT, CONFIG_FILE]
+    return [
+        DEV_CONFIG_FILE_PAGINAS,
+        DEV_CONFIG_FILE_PARENT,
+        APP_PAGINAS_CONFIG_FILE,
+        CONFIG_FILE,
+        *_runtime_pagina_config_candidates(),
+    ]
 
 
 def load_existing_config() -> Optional[DBConfig]:
@@ -127,17 +166,38 @@ def load_existing_config() -> Optional[DBConfig]:
 
 def save_config(cfg: DBConfig) -> Path:
     """
-    Salva config.json em 3 lugares e cria as pastas se não existirem.
+    Salva config.json em múltiplos lugares e cria as pastas se não existirem.
 
     Isso mantém o arquivo sempre atualizado para o módulo `banco_de_dados_pg`,
     inclusive em fluxos de recuperação quando a conexão foi perdida.
     """
-    payload = json.dumps(asdict(cfg), ensure_ascii=False, indent=2)
+    payload_dict = {
+        "mode": cfg.mode,
+        "host": cfg.host,
+        "port": int(cfg.port),
+        "dbname": cfg.dbname,
+        "user": cfg.user,
+        "password": cfg.password,
+        "schema": cfg.schema,
+        # formato expandido para compatibilidade com BANCO_DE_DADOS_PG.py
+        "defaults": {
+            "dbname": cfg.dbname,
+            "user": cfg.user,
+            "password": cfg.password,
+        },
+        "hosts": [cfg.host],
+        "ports": [int(cfg.port)],
+        "appname": "OPERA_APP",
+        "connect_timeout": 8,
+    }
+    payload = json.dumps(payload_dict, ensure_ascii=False, indent=2)
 
     targets = [
         CONFIG_FILE,             # oficial (Mac/Windows)
+        APP_PAGINAS_CONFIG_FILE, # AppData/Application Support/PAGINAS_DO_SISTEMA/config.json
         DEV_CONFIG_FILE_PAGINAS, # PAGINAS_DO_SISTEMA/config.json
         DEV_CONFIG_FILE_PARENT,  # raiz do projeto/config.json
+        *_runtime_pagina_config_candidates(),
     ]
 
     for path in targets:
@@ -210,14 +270,14 @@ class SetupBancoWindow:
         self._last_test_ok = False
         self.exit_code = 1
 
-        self.root.title("Configuração do Banco - SistemaOpera")
-        self.root.minsize(980, 520)
+        self.root.title("Configuração do Banco de Dados - Sistema Opera")
+        self.root.minsize(900, 620)
 
         # fecha no X
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # tamanho + centralização
-        self._center_window(980, 520)
+        self._center_window(900, 620)
 
         # trazer pra frente
         self._bring_to_front()
@@ -235,7 +295,7 @@ class SetupBancoWindow:
 
         subtitle = ctk.CTkLabel(
             outer,
-            text="Instalação/Recuperação • Use esta tela sempre que perder conexão com o banco.",
+            text="Configure a conexão com o PostgreSQL",
             font=ctk.CTkFont(size=12),
             text_color="#b7c6d8",
         )
@@ -258,52 +318,52 @@ class SetupBancoWindow:
             ent.insert(0, default)
             return ent
 
-        y1 = 150
-        mk_label("Host/IP", 26, y1 - 22)
-        self.ent_host = mk_entry(26, y1, 220, existing.host)
+        self._fixed_dbname = existing.dbname or "BANCO_OPERA"
 
-        mk_label("Porta", 270, y1 - 22)
-        self.ent_port = mk_entry(270, y1, 140, str(existing.port))
+        y1 = 190
+        mk_label("Host/IP:", 26, y1 - 22)
+        self.ent_host = mk_entry(26, y1, 390, existing.host)
 
-        mk_label("Banco", 430, y1 - 22)
-        self.ent_db = mk_entry(430, y1, 240, existing.dbname)
+        mk_label("Porta:", 430, y1 - 22)
+        self.ent_port = mk_entry(430, y1, 390, str(existing.port))
 
-        mk_label("Schema", 690, y1 - 22)
-        self.ent_schema = mk_entry(690, y1, 240, existing.schema)
-
-        y2 = 220
-        mk_label("Usuário", 26, y2 - 22)
-        self.ent_user = mk_entry(26, y2, 220, existing.user)
-
-        mk_label("Senha", 270, y2 - 22)
-        self.ent_pass = ctk.CTkEntry(outer, width=220, show="•")
-        self.ent_pass.place(x=270, y=y2)
+        y2 = 270
+        mk_label("Senha:", 26, y2 - 22)
+        self.ent_pass = ctk.CTkEntry(outer, width=390, show="•")
+        self.ent_pass.place(x=26, y=y2)
         if existing.password:
             self.ent_pass.insert(0, existing.password)
 
+        mk_label("Schema:", 430, y2 - 22)
+        self.ent_schema = mk_entry(430, y2, 390, existing.schema)
+
         self.var_show = tk.BooleanVar(value=False)
         ctk.CTkCheckBox(outer, text="Mostrar senha", variable=self.var_show, command=self._toggle_pass)\
-            .place(x=420, y=y2 + 42)
+            .place(x=430, y=y2 + 20)
+
+        y3 = 350
+        mk_label("Usuário:", 26, y3 - 22)
+        self.ent_user = mk_entry(26, y3, 390, existing.user)
 
         # ===== Status =====
         self.lbl_status = ctk.CTkLabel(
             outer,
-            text="Aguardando validação. Ao salvar, o config.json fica atualizado para o módulo banco_de_dados_pg.",
+            text=f"Porta detectada: {existing.port}",
             text_color="#b7c6d8",
         )
-        self.lbl_status.place(x=26, y=300)
+        self.lbl_status.place(x=26, y=540)
 
         # ===== Botões =====
-        self.btn_detect = ctk.CTkButton(outer, text="Detectar porta", width=150, command=self._on_detect_port)
-        self.btn_detect.place(x=26, y=350)
+        self.btn_detect = ctk.CTkButton(outer, text="Detectar porta", width=100, command=self._on_detect_port)
+        self.btn_detect.place(x=26, y=565)
 
-        self.btn_test = ctk.CTkButton(outer, text="Testar conexão", width=150, command=self._on_test)
-        self.btn_test.place(x=190, y=350)
+        self.btn_test = ctk.CTkButton(outer, text="Testar conexão", width=110, command=self._on_test)
+        self.btn_test.place(x=136, y=565)
 
         self.btn_save = ctk.CTkButton(
-            outer, text="Salvar e concluir instalação", width=240, command=self._on_save, state="disabled"
+            outer, text="Salvar e continuar", width=170, command=self._on_save, state="disabled"
         )
-        self.btn_save.place(x=690, y=350)
+        self.btn_save.place(x=650, y=565)
 
         self.root.bind("<Escape>", lambda e: self._on_close())
 
@@ -361,7 +421,7 @@ class SetupBancoWindow:
     def _current_cfg(self) -> DBConfig:
         host = self.ent_host.get().strip() or "localhost"
         schema = self.ent_schema.get().strip() or "opera"
-        dbname = self.ent_db.get().strip() or "BANCO_OPERA"
+        dbname = self._fixed_dbname
         user = self.ent_user.get().strip() or "postgres"
         password = self.ent_pass.get()
 
@@ -391,7 +451,7 @@ class SetupBancoWindow:
         if ports:
             self.ent_port.delete(0, "end")
             self.ent_port.insert(0, str(ports[0]))
-            self.lbl_status.configure(text=f"✅ Portas detectadas: {ports}", text_color="#a6f3b0")
+            self.lbl_status.configure(text=f"Porta detectada: {ports[0]}", text_color="#a6f3b0")
         else:
             self.lbl_status.configure(text="⚠️ Nenhuma porta detectada. Informe manualmente.", text_color="#ffd18b")
 
