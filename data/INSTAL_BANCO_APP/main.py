@@ -1,138 +1,163 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-import sys
 import os
+import sys
 import traceback
-
-# =============================================================================
-# 🔥 LIMPEZA TOTAL DE CACHE - EXECUTAR ANTES DE TUDO
-# =============================================================================
-def clear_all_caches():
-    """Limpa todos os caches do Python e módulos"""
-    print("🧹 LIMPANDO CACHES...")
-
-    # Limpa cache de imports do Python
-    for module in list(sys.modules.keys()):
-        if any(x in module for x in ['interface', 'database_manager', 'scripts']):
-            del sys.modules[module]
-
-    # Limpa cache do filesystem se existir
-    import importlib
-    importlib.invalidate_caches()
-
-    print("✅ Caches limpos!")
+from pathlib import Path
 
 
-# Executa limpeza IMEDIATA
-clear_all_caches()
+# =========================
+# Helpers de caminho
+# =========================
+def is_frozen() -> bool:
+    return bool(getattr(sys, "frozen", False))
 
-# ==============================
-# 🔧 Importações principais
-# ==============================
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QTimer
 
-def handle_exception(exc_type, exc_value, exc_traceback):
-    """Captura exceções não tratadas"""
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
+def app_dir() -> Path:
+    """
+    Diretório do app:
+    - em modo empacotado: pasta onde está o .exe
+    - em modo source: pasta do arquivo .py
+    """
+    if is_frozen():
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
 
-    print("❌ ERRO NÃO TRATADO:")
-    traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-    # Tenta mostrar uma mensagem de erro
+def bundled_base_dir() -> Path:
+    """
+    Base do conteúdo embutido:
+    - onefile: sys._MEIPASS (pasta temporária)
+    - caso não exista: app_dir()
+    """
+    base = getattr(sys, "_MEIPASS", None)
+    if base:
+        return Path(base).resolve()
+    return app_dir()
+
+
+def pick_scripts_dir() -> Path:
+    """
+    1) Prioriza scripts externos ao lado do EXE (atualizável)
+    2) Fallback: scripts embutidos no onefile (sys._MEIPASS)
+    """
+    external = app_dir() / "scripts"
+    if external.exists() and external.is_dir():
+        return external
+    return bundled_base_dir() / "scripts"
+
+
+def resource_path(name: str) -> str:
+    """
+    Prioriza arquivo externo ao lado do EXE (atualizável),
+    fallback para embutido.
+    """
+    ext = app_dir() / name
+    if ext.exists():
+        return str(ext)
+    return str(bundled_base_dir() / name)
+
+
+# =========================
+# UX/Erros (sem input)
+# =========================
+def safe_pause(_msg: str = "") -> None:
+    # Nunca usa input() em app GUI (--windowed)
+    return
+
+
+def show_fatal_error(title: str, text: str) -> None:
     try:
-        from PyQt5.QtWidgets import QMessageBox
+        from PyQt5.QtWidgets import QApplication, QMessageBox
         app = QApplication.instance()
-        if app:
-            error_msg = f"Erro crítico:\n{str(exc_value)}\n\nVerifique o console para detalhes."
-            QMessageBox.critical(None, "Erro Crítico", error_msg)
-    except:
-        pass
-
-# Configura handler global de exceções
-sys.excepthook = handle_exception
+        if app is None:
+            app = QApplication(sys.argv)
+        QMessageBox.critical(None, title, text)
+    except Exception:
+        print(f"[{title}] {text}", file=sys.stderr)
 
 
-def check_environment():
-    """Verifica se o ambiente está configurado corretamente"""
-    print("🔍 Verificando ambiente...")
+# =========================
+# Validação de ambiente
+# =========================
+REQUIRED_SQL_FILES = (
+    "1_CRIAR_BANCO.sql",
+    "2_CRIAR_SCHEMA.sql",
+    "3_CRIAR_TABELAS.sql",
+    "APAGAR_TUDO.sql",
+)
 
-    # Verifica se a pasta scripts existe
-    scripts_path = os.path.join(os.getcwd(), "scripts")
-    if not os.path.exists(scripts_path):
-        print("❌ Pasta 'scripts' não encontrada!")
+
+def check_environment(scripts_dir: Path) -> bool:
+    if not scripts_dir.exists() or not scripts_dir.is_dir():
         return False
-
-    # Verifica se existem scripts SQL
-    sql_files = [f for f in os.listdir(scripts_path) if f.endswith('.sql')]
-    if not sql_files:
-        print("❌ Nenhum script SQL encontrado na pasta 'scripts'!")
-        return False
-
-    print(f"✅ {len(sql_files)} scripts SQL encontrados")
+    for f in REQUIRED_SQL_FILES:
+        if not (scripts_dir / f).exists():
+            return False
     return True
 
 
-def main():
+def main() -> int:
     try:
         print("🚀 INICIANDO INSTALADOR OPERA FASHION...")
         print(f"📁 Diretório atual: {os.getcwd()}")
+        print(f"📦 Modo empacotado: {is_frozen()}")
 
-        # Adiciona o diretório atual ao path
-        current_dir = os.getcwd()
-        if current_dir not in sys.path:
-            sys.path.insert(0, current_dir)
+        # Garantir que imports locais funcionem
+        cur = str(bundled_base_dir())
+        if cur not in sys.path:
+            sys.path.insert(0, cur)
 
-        # Verifica ambiente
-        if not check_environment():
-            print("❌ Ambiente não configurado corretamente.")
-            input("Pressione Enter para sair...")
-            return
+        scripts_dir = pick_scripts_dir()
+        print(f"📁 Scripts escolhidos: {scripts_dir}")
 
-        # Importa após verificar o ambiente
-        try:
-            from interface import InstallerApp
-            from database_manager import DatabaseManager
-        except ImportError as e:
-            print(f"❌ Erro ao importar módulos: {e}")
-            input("Pressione Enter para sair...")
-            return
+        if not check_environment(scripts_dir):
+            msg = (
+                "Pasta 'scripts' ou arquivos .sql não encontrados.\n\n"
+                "O instalador procura primeiro por:\n"
+                f"  1) {app_dir() / 'scripts'} (scripts externos ao lado do EXE)\n"
+                "e se não existir, usa fallback embutido.\n\n"
+                "Arquivos esperados em scripts/:\n"
+                " - 1_CRIAR_BANCO.sql\n"
+                " - 2_CRIAR_SCHEMA.sql\n"
+                " - 3_CRIAR_TABELAS.sql\n"
+                " - APAGAR_TUDO.sql\n"
+            )
+            show_fatal_error("Ambiente inválido", msg)
+            return 1
 
-        # Caminho dos scripts SQL
-        scripts_path = os.path.join(os.getcwd(), "scripts")
-        db_manager = DatabaseManager(scripts_path)
+        # Imports após validar scripts
+        from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtCore import QTimer
+        from interface import InstallerApp
+        from database_manager import DatabaseManager
 
-        # Inicia interface
+        # Inicializa manager apontando para scripts escolhidos
+        db_manager = DatabaseManager(str(scripts_dir))
+
+        # Inicia UI
         app = QApplication(sys.argv)
         app.setApplicationName("Instalador Opera Fashion")
         app.setApplicationVersion("1.0")
-
-        # Define estilo fusion para maior estabilidade
-        app.setStyle('Fusion')
+        app.setStyle("Fusion")
 
         window = InstallerApp(db_manager)
         window.show()
 
         print("✅ Interface iniciada com sucesso!")
 
-        # Timer para verificar se a aplicação ainda está responsiva
+        # Timer leve (opcional)
         timer = QTimer()
-        timer.timeout.connect(lambda: None)  # Callback vazio apenas para manter ativo
+        timer.timeout.connect(lambda: None)
         timer.start(1000)
 
-        # Garante que a aplicação feche completamente
-        result = app.exec_()
-        print(f"📝 Aplicação finalizada com código: {result}")
-        sys.exit(result)
+        code = app.exec()
+        print(f"📝 Aplicação finalizada com código: {code}")
+        return int(code)
 
-    except Exception as e:
-        print(f"❌ ERRO CRÍTICO NO MAIN: {e}")
-        traceback.print_exc()
-        input("Pressione Enter para sair...")
+    except Exception:
+        err = traceback.format_exc()
+        show_fatal_error("Erro inesperado", err)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

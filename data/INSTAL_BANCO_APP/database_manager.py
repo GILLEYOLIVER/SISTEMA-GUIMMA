@@ -7,7 +7,9 @@ import socket
 import shutil
 import json
 import platform
+import sys
 from typing import Tuple, List, Dict
+from pathlib import Path
 
 
 class DatabaseManager:
@@ -18,7 +20,9 @@ class DatabaseManager:
         Args:
             scripts_path (str): Caminho para a pasta contendo os scripts SQL
         """
-        self.scripts_path = scripts_path
+        self.original_scripts_path = scripts_path
+        self.scripts_path = self._resolve_scripts_path(scripts_path)
+        self.config_path = self._resolve_config_path()
 
         # 🔧 Configurações padrão
         self.default_config = {
@@ -39,6 +43,53 @@ class DatabaseManager:
 
         # 🎯 Validação inicial
         self._validate_initial_setup()
+
+
+    def _get_app_dir(self) -> str:
+        """Retorna a pasta do app (exe quando empacotado; pasta do arquivo quando dev)."""
+        try:
+            if getattr(sys, "frozen", False):
+                return os.path.dirname(sys.executable)
+        except Exception:
+            pass
+        return os.path.dirname(os.path.abspath(__file__))
+
+    def _resolve_scripts_path(self, scripts_path: str) -> str:
+        """
+        Prioriza scripts externos ao lado do EXE (atualizável).
+        Se não existir, usa o scripts_path recebido (ex.: embutido via _MEIPASS).
+        """
+        # normaliza
+        sp = os.path.abspath(scripts_path) if scripts_path else ""
+        external = os.path.join(self._get_app_dir(), "scripts")
+        if os.path.isdir(external):
+            return external
+        return sp
+
+    def _resolve_config_path(self) -> str:
+        """
+        Prioriza config.json externo ao lado do EXE.
+        Fallback: config.json ao lado do scripts_path atual.
+        """
+        # 1) externo ao lado do exe
+        external = os.path.join(self._get_app_dir(), "config.json")
+        if os.path.isfile(external):
+            return external
+
+        # 2) ao lado da pasta scripts atual
+        base = os.path.dirname(self.scripts_path) if self.scripts_path else self._get_app_dir()
+        candidate = os.path.join(base, "config.json")
+        if os.path.isfile(candidate):
+            return candidate
+
+        # 3) fallback: tenta _MEIPASS (onefile)
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            cand2 = os.path.join(meipass, "config.json")
+            if os.path.isfile(cand2):
+                return cand2
+
+        return external  # pode não existir; quem usa faz exists check
 
     def _validate_initial_setup(self):
         """Valida configuração inicial do gerenciador"""
@@ -77,7 +128,7 @@ class DatabaseManager:
                 print("❌ Nenhuma porta PostgreSQL encontrada")
 
             # Carregar configurações personalizadas se existirem
-            config_path = os.path.join(os.path.dirname(self.scripts_path), "config.json")
+            config_path = self.config_path
             if os.path.exists(config_path):
                 print(f"✅ Configurações personalizadas carregadas: {config_path}")
 
@@ -96,7 +147,7 @@ class DatabaseManager:
             return self._config_cache
 
         try:
-            config_path = os.path.join(os.path.dirname(self.scripts_path), "config.json")
+            config_path = self.config_path
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     user_config = json.load(f)
@@ -143,7 +194,7 @@ class DatabaseManager:
             return self._psql_path_cache
 
         # 1️⃣ Verifica se o caminho está definido no config.json
-        config_path = os.path.join(os.path.dirname(self.scripts_path), "config.json")
+        config_path = self.config_path
         if os.path.exists(config_path):
             try:
                 with open(config_path, "r", encoding="utf-8") as f:

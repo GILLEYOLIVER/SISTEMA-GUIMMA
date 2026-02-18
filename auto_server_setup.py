@@ -1,21 +1,38 @@
 import json
 import os
 import socket
-import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
-def run_ps_as_admin(ps1_path: Path) -> None:
-    # Você pode chamar isso do seu app/instalador; aqui é simples via subprocess.
-    # Execute o .ps1 manualmente como Admin se preferir.
-    pass
+def detect_scripts_dir() -> Optional[Path]:
+    """Descobre a pasta de scripts SQL em ambiente dev/instalador."""
+    base = Path(__file__).resolve().parent
+    candidates = [
+        base / "scripts",
+        base / "data" / "INSTAL_BANCO_APP" / "scripts",
+        Path.cwd() / "scripts",
+    ]
+    for cand in candidates:
+        if cand.exists() and cand.is_dir():
+            return cand
+    return None
 
 def detect_server_ip() -> str:
     # pega IP “principal” do Windows (sem 127.*)
     hostname = socket.gethostname()
     ips = socket.gethostbyname_ex(hostname)[2]
     ips = [ip for ip in ips if not ip.startswith("127.")]
-    return ips[0] if ips else "127.0.0.1"
+    if ips:
+        return ips[0]
+
+    # fallback mais resiliente para ambientes com DNS local ruim
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
 
 def ensure_psycopg2():
     try:
@@ -46,10 +63,10 @@ def main():
     superpass = os.environ.get("OPERA_PG_SUPERPASS", "admin")  # coloque via instalador/variável
     app_user = "opera"
     app_pass = os.environ.get("OPERA_PG_APP_PASS", "opera123")  # defina senha padrão e force trocar depois
-    dbname = "opera"
+    dbname = "BANCO_OPERA"
     schema = "opera"
 
-    scripts_dir = Path(__file__).parent / "scripts"
+    scripts_dir = detect_scripts_dir()
     # ordem típica: criar banco, schema, tabelas (ajuste se seus nomes forem outros)
     script_order = [
         "1_CRIAR_BANCO.sql",
@@ -108,21 +125,26 @@ def main():
     cur2.execute(f"ALTER ROLE {app_user} SET search_path TO {schema};")
 
     # 6) Rodar seus scripts SQL (se existirem)
-    for name in script_order:
-        p = scripts_dir / name
-        if p.exists():
-            print("Rodando:", p.name)
-            exec_sql_file(cur2, p)
-        else:
-            print("Ignorando (não encontrado):", p.name)
+    if scripts_dir is None:
+        print("ATENCAO: pasta de scripts SQL não encontrada. Pulando execução de arquivos .sql")
+    else:
+        for name in script_order:
+            p = scripts_dir / name
+            if p.exists():
+                print("Rodando:", p.name)
+                exec_sql_file(cur2, p)
+            else:
+                print("Ignorando (não encontrado):", p.name)
 
     cur2.close()
     conn2.close()
 
     # 7) Salvar server_info.json para os clientes
     server_ip = detect_server_ip()
-    out_dir = Path(os.environ.get("PROGRAMDATA", "C:\\ProgramData")) / "Opera"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dirs = [
+        Path(os.environ.get("PROGRAMDATA", "C:\\ProgramData")) / "Opera",
+        Path(__file__).resolve().parent,
+    ]
     info = {
         "host": server_ip,
         "port": port,
@@ -131,8 +153,13 @@ def main():
         "password": app_pass,
         "schema": schema,
     }
-    (out_dir / "server_info.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
-    print("OK. server_info.json salvo em:", out_dir / "server_info.json")
+    info_payload = json.dumps(info, indent=2, ensure_ascii=False)
+    for out_dir in out_dirs:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        target = out_dir / "server_info.json"
+        target.write_text(info_payload, encoding="utf-8")
+        print("OK. server_info.json salvo em:", target)
+
     print("IP do servidor para os clientes:", server_ip)
 
 if __name__ == "__main__":

@@ -1,0 +1,21 @@
+{
+  "schema": "opera",
+  "appname": "OPERA_APP",
+  "defaults": {
+    "dbname": "banco_opera",
+    "user": "postgres",
+    "password": "gil25802580"
+  },
+  "hosts": [
+    "localhost"
+  ],
+  "ports": [
+    5433,
+    5432,
+    5434
+  ],
+  "connect_timeout": 10,
+  "statement_timeout_ms": 0,
+  "description": "Configurações do Sistema Opera Fashion - Auto-detecção de porta ativada",
+  "ui_dark_mode": true
+}

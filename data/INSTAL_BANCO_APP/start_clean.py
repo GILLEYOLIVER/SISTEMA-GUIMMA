@@ -1,70 +1,110 @@
 import os
 import sys
 import shutil
+import subprocess
+from pathlib import Path
 
-def limpar_caches():
-    print("🧹 LIMPANDO CACHES...")
-    for pasta in ["__pycache__", "build", "dist"]:
-        if os.path.exists(pasta):
-            shutil.rmtree(pasta, ignore_errors=True)
-    print("✅ Caches limpos!")
 
-def detectar_diretorio_base():
-    """
-    Garante que, mesmo se o app for aberto via duplo clique (Finder),
-    ele entre no diretório correto do .app.
-    """
-    if getattr(sys, 'frozen', False):
-        # Caminho interno do .app
-        base_path = os.path.dirname(sys.executable)
-        # Se o app foi iniciado fora, força mudança para o diretório interno
-        if not os.path.exists(os.path.join(base_path, "scripts")):
-            possible_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(sys.executable))),
-                "Contents", "MacOS"
-            )
-            if os.path.exists(os.path.join(possible_path, "scripts")):
-                os.chdir(possible_path)
-                base_path = possible_path
-    else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(base_path)
+REQUIRED_SQL_FILES = (
+    "1_CRIAR_BANCO.sql",
+    "2_CRIAR_SCHEMA.sql",
+    "3_CRIAR_TABELAS.sql",
+    "APAGAR_TUDO.sql",
+)
 
-    return base_path
 
-def verificar_ambiente(base_path):
-    print("🚀 INICIANDO INSTALADOR OPERA FASHION...")
-    print(f"📁 Diretório atual: {base_path}")
-    print("🔍 Verificando ambiente...")
+def log(msg: str) -> None:
+    print(msg, flush=True)
 
-    scripts_path = os.path.join(base_path, "scripts")
-    if not os.path.exists(scripts_path):
-        print("❌ Pasta 'scripts' não encontrada!")
-        print("❌ Ambiente não configurado corretamente.")
-        input("Pressione Enter para sair...")
-        sys.exit(1)
 
-    print("✅ Ambiente verificado com sucesso!")
-    return scripts_path
+def is_frozen() -> bool:
+    return bool(getattr(sys, "frozen", False))
 
-def iniciar_instalador(scripts_path):
-    print("🟢 Iniciando o processo de instalação...")
-    main_script = os.path.join(os.path.dirname(scripts_path), "main.py")
 
-    if not os.path.exists(main_script):
-        print("⚠️ Arquivo principal não encontrado, usando executável embutido.")
-        main_exe = os.path.join(os.path.dirname(scripts_path), "InstaladorOperaFashion")
-        if os.path.exists(main_exe):
-            os.system(f'"{main_exe}"')
-        else:
-            print("❌ Nenhum arquivo executável encontrado!")
+def base_dir() -> Path:
+    if is_frozen():
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            return Path(meipass).resolve()
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def app_dir() -> Path:
+    if is_frozen():
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def clean_caches(project_dir: Path) -> None:
+    log("🧹 LIMPANDO CACHES...")
+    if is_frozen():
+        log("ℹ️ Modo empacotado — não limpa build/dist.")
         return
 
-    os.system(f'python3 "{main_script}"')
+    for folder in ("build", "dist"):
+        p = project_dir / folder
+        if p.exists():
+            shutil.rmtree(p, ignore_errors=True)
+
+    for p in project_dir.rglob("__pycache__"):
+        if p.is_dir():
+            shutil.rmtree(p, ignore_errors=True)
+
+    log("✅ Caches limpos!")
+
+
+def check_scripts_folder(preferred_scripts: Path) -> None:
+    log("🔍 Verificando ambiente...")
+
+    if not preferred_scripts.exists() or not preferred_scripts.is_dir():
+        raise RuntimeError(f"Pasta scripts não encontrada: {preferred_scripts}")
+
+    missing = [f for f in REQUIRED_SQL_FILES if not (preferred_scripts / f).exists()]
+    if missing:
+        raise RuntimeError("Arquivos SQL faltando em scripts/: " + ", ".join(missing))
+
+    log("✅ Ambiente verificado com sucesso!")
+
+
+def run_main(project_dir: Path) -> int:
+    log("🟢 Iniciando o processo de instalação...")
+
+    main_py = project_dir / "main.py"
+    if not main_py.exists():
+        raise RuntimeError(f"main.py não encontrado: {main_py}")
+
+    # IMPORTANTÍSSIMO: sys.executable (não usa 'python' do PATH)
+    proc = subprocess.run(
+        [sys.executable, str(main_py)],
+        cwd=str(project_dir),
+        check=False,
+    )
+    return int(proc.returncode)
+
+
+def main() -> int:
+    proj = app_dir()
+    try:
+        os.chdir(str(proj))
+    except Exception:
+        pass
+
+    try:
+        clean_caches(proj)
+
+        # Checa scripts externos no modo dev
+        scripts = proj / "scripts"
+        check_scripts_folder(scripts)
+
+        code = run_main(proj)
+        log(f"📝 Instalador finalizado com código: {code}")
+        return code
+    except Exception as e:
+        log("❌ ERRO:")
+        log(str(e))
+        return 1
+
 
 if __name__ == "__main__":
-    limpar_caches()
-    base = detectar_diretorio_base()
-    scripts = verificar_ambiente(base)
-    iniciar_instalador(scripts)
-    input("Pressione Enter para sair...")
+    raise SystemExit(main())
