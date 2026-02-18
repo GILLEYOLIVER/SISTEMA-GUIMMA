@@ -1,0 +1,22 @@
+{
+  "mode": "rede",
+  "host": "192.168.0.110",
+  "port": 5432,
+  "dbname": "BANCO_OPERA",
+  "user": "postgres",
+  "password": "admin",
+  "schema": "opera",
+  "defaults": {
+    "dbname": "BANCO_OPERA",
+    "user": "postgres",
+    "password": "admin"
+  },
+  "hosts": [
+    "192.168.0.110"
+  ],
+  "ports": [
+    5432
+  ],
+  "appname": "OPERA_APP",
+  "connect_timeout": 8
+}

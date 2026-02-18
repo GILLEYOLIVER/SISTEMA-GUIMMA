@@ -198,32 +198,34 @@ class DatabaseManager:
         print("❌ psql não encontrado automaticamente.")
         return ""
 
-    def _is_port_open(self, port: str) -> bool:
-        """Verifica se uma porta está aberta/localhost"""
+    def _is_port_open(self, port: str, host: str = "localhost") -> bool:
+        """Verifica se uma porta está aberta em um host (TCP)."""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(0.5)
-            result = sock.connect_ex(("localhost", int(port)))
+            result = sock.connect_ex((host, int(port)))
             sock.close()
             return result == 0
         except Exception:
             return False
 
-    def _auto_detect_port(self) -> str:
-        """Detecta automaticamente a porta do PostgreSQL"""
+    def _auto_detect_port(self, host: str = "localhost") -> str:
+        """Detecta automaticamente a porta do PostgreSQL em um host."""
 
-        # 🔥 Usar cache para melhor performance
-        if self._port_cache is not None:
+        # 🔥 Cache somente para localhost (evita cache errado em host remoto)
+        if host in ("localhost", "127.0.0.1") and self._port_cache is not None:
             return self._port_cache
 
         config = self.get_connection_config()
         ports = config.get("ports", [5433, 5432, 5434])
 
         for port in ports:
-            if self._is_port_open(str(port)):
-                print(f"📍 Porta {port} detectada como ativa")
-                self._port_cache = str(port)
-                return self._port_cache
+            if self._is_port_open(str(port), host=host):
+                print(f"📍 Porta {port} detectada como ativa em {host}")
+                if host in ("localhost", "127.0.0.1"):
+                    self._port_cache = str(port)
+                    return self._port_cache
+                return str(port)
 
         return ""
 
@@ -280,7 +282,7 @@ class DatabaseManager:
 
     def execute_sql_file(self, script_name: str, password: str = None,
                          database: str = None, user: str = "postgres",
-                         port: str = None) -> Tuple[bool, str]:
+                         port: str = None, host: str = "localhost") -> Tuple[bool, str]:
         try:
             sql_path = os.path.join(self.scripts_path, script_name)
             if not os.path.exists(sql_path):
@@ -305,7 +307,7 @@ class DatabaseManager:
             if not psql_path:
                 return False, "psql não encontrado (verifique instalação do PostgreSQL)"
 
-            if not self._is_port_open(port):
+            if not self._is_port_open(port, host=host):
                 return False, f"Porta {port} não está ativa"
 
             env = os.environ.copy()
@@ -316,7 +318,7 @@ class DatabaseManager:
             if script_name == "1_CRIAR_BANCO.sql":
                 cmd = [
                     psql_path,
-                    "-h", "localhost",
+                    "-h", host,
                     "-U", user,
                     "-p", str(port),
                     "-d", "postgres",  # Sempre usar postgres para criar banco
@@ -326,7 +328,7 @@ class DatabaseManager:
             else:
                 cmd = [
                     psql_path,
-                    "-h", "localhost",
+                    "-h", host,
                     "-U", user,
                     "-p", str(port),
                     "-d", target_database,
@@ -462,7 +464,7 @@ class DatabaseManager:
             return "BANCO_OPERA"
 
     def confirm_table_creation(self, password: str = None, user: str = "postgres",
-                               port: str = None, database: str = "BANCO_OPERA") -> Dict:
+                               port: str = None, database: str = "BANCO_OPERA", host: str = "localhost") -> Dict:
         """Confirmação final detalhada da criação das tabelas"""
         try:
             if not port:
@@ -493,7 +495,7 @@ class DatabaseManager:
             """
 
             cmd = [
-                psql_path, "-h", "localhost", "-U", user,
+                psql_path, "-h", host, "-U", user,
                 "-p", str(port), "-d", database, "-c", query,
                 "-t", "--quiet", "-A", "-F", "|"
             ]
@@ -521,7 +523,7 @@ class DatabaseManager:
     # 🔗 TESTE DE CONEXÃO
     # ==========================================================
     def test_connection(self, password: str = None, database: str = "postgres",
-                        user: str = "postgres", port: str = None) -> Tuple[bool, str]:
+                        user: str = "postgres", port: str = None, host: str = "localhost") -> Tuple[bool, str]:
         try:
             if not port:
                 port = self._auto_detect_port()
@@ -532,13 +534,13 @@ class DatabaseManager:
                 config = self.get_connection_config()
                 password = config.get("defaults", {}).get("password", "gil25802580")
 
-            print(f"🔍 Testando conexão com {database} ({user}@localhost:{port})")
+            print(f"🔍 Testando conexão com {database} ({user}@{host}:{port})")
 
             psql_path = self._find_psql_path()
             if not psql_path:
                 return False, "psql não encontrado"
 
-            if not self._is_port_open(port):
+            if not self._is_port_open(port, host=host):
                 return False, f"Porta {port} não está ativa"
 
             env = os.environ.copy()
@@ -548,7 +550,7 @@ class DatabaseManager:
 
             cmd = [
                 psql_path,
-                "-h", "localhost",
+                "-h", host,
                 "-U", user,
                 "-p", str(port),
                 "-d", database,
@@ -579,7 +581,7 @@ class DatabaseManager:
     # 🧮 OUTRAS FUNÇÕES (LISTAR / CONTAR)
     # ==========================================================
     def get_databases(self, password: str = None, user: str = "postgres",
-                      port: str = None) -> List[str]:
+                      port: str = None, host: str = "localhost") -> List[str]:
         try:
             if not port:
                 port = self._auto_detect_port()
@@ -599,7 +601,7 @@ class DatabaseManager:
 
             cmd = [
                 psql_path,
-                "-h", "localhost",
+                "-h", host,
                 "-U", user,
                 "-p", str(port),
                 "-d", "postgres",
@@ -631,7 +633,7 @@ class DatabaseManager:
         print("=" * 80)
 
     def count_tables(self, password: str = None, user: str = "postgres",
-                     port: str = None, database: str = "BANCO_OPERA") -> int:
+                     port: str = None, database: str = "BANCO_OPERA", host: str = "localhost") -> int:
         try:
             if not port:
                 port = self._auto_detect_port()
@@ -652,7 +654,7 @@ class DatabaseManager:
             query = """SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='opera' AND table_type='BASE TABLE';"""
 
             cmd = [
-                psql_path, "-h", "localhost", "-U", user,
+                psql_path, "-h", host, "-U", user,
                 "-p", str(port), "-d", database, "-c", query,
                 "-t", "--quiet", "-A"
             ]
@@ -668,7 +670,7 @@ class DatabaseManager:
             return 0
 
     def list_tables(self, password: str = None, user: str = "postgres",
-                    port: str = None, database: str = "BANCO_OPERA") -> List[str]:
+                    port: str = None, database: str = "BANCO_OPERA", host: str = "localhost") -> List[str]:
         try:
             if not port:
                 port = self._auto_detect_port()
@@ -689,7 +691,7 @@ class DatabaseManager:
             query = """SELECT table_name FROM information_schema.tables WHERE table_schema='opera' AND table_type='BASE TABLE' ORDER BY table_name;"""
 
             cmd = [
-                psql_path, "-h", "localhost", "-U", user,
+                psql_path, "-h", host, "-U", user,
                 "-p", str(port), "-d", database, "-c", query,
                 "-t", "--quiet", "-A"
             ]
@@ -705,7 +707,7 @@ class DatabaseManager:
             return []
 
     def get_database_info(self, password: str = None, user: str = "postgres",
-                          port: str = None, database: str = "BANCO_OPERA") -> Dict:
+                          port: str = None, database: str = "BANCO_OPERA", host: str = "localhost") -> Dict:
         """Retorna informações detalhadas sobre o banco"""
         try:
             if not port:
@@ -734,7 +736,7 @@ class DatabaseManager:
 
             info = {}
             for key, query in queries.items():
-                cmd = [psql_path, "-h", "localhost", "-U", user, "-p", str(port),
+                cmd = [psql_path, "-h", host, "-U", user, "-p", str(port),
                        "-d", database, "-c", query, "-t", "--quiet", "-A"]
 
                 result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=10)
@@ -748,7 +750,7 @@ class DatabaseManager:
 
     def check_database_exists(self, database: str = "BANCO_OPERA",
                               password: str = None, user: str = "postgres",
-                              port: str = None) -> bool:
+                              port: str = None, host: str = "localhost") -> bool:
         """Verifica se um banco de dados existe (respeitando maiúsculas do BANCO_OPERA)"""
         try:
             if not port:
@@ -777,7 +779,7 @@ class DatabaseManager:
             )
 
             cmd = [
-                psql_path, "-h", "localhost", "-U", user,
+                psql_path, "-h", host, "-U", user,
                 "-p", str(port), "-d", "postgres", "-c", query,
                 "-t", "--quiet", "-A"
             ]
@@ -791,7 +793,7 @@ class DatabaseManager:
             return False
 
     def backup_database(self, backup_path: str, password: str = None,
-                        user: str = "postgres", port: str = None) -> Tuple[bool, str]:
+                        user: str = "postgres", port: str = None, host: str = "localhost") -> Tuple[bool, str]:
         """Faz backup do banco BANCO_OPERA"""
         try:
             if not port:
@@ -812,7 +814,7 @@ class DatabaseManager:
 
             cmd = [
                 psql_path.replace("psql", "pg_dump"),  # Usa pg_dump para backup
-                "-h", "localhost",
+                "-h", host,
                 "-U", user,
                 "-p", str(port),
                 "-d", "BANCO_OPERA",
@@ -861,7 +863,7 @@ class DatabaseManager:
         except Exception as e:
             return False, f"Erro inesperado: {str(e)}", ""
 
-    def build_psql_command(self, password, database, user, port):
+    def build_psql_command(self, password: str, database: str, user: str, port: str, host: str = "localhost") -> List[str]:
         """Constrói comando psql base"""
         if not port:
             port = self._auto_detect_port()
@@ -881,7 +883,7 @@ class DatabaseManager:
 
         return [
             psql_path,
-            "-h", "localhost",
+            "-h", host,
             "-U", user,
             "-p", str(port),
             "-d", database

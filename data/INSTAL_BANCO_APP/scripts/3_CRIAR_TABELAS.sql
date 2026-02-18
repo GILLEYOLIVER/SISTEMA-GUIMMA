@@ -1181,11 +1181,11 @@ FROM opera.usuario_logs ul
 LEFT JOIN opera.usuarios u ON ul.usuario_id = u.id;
 
 ----------------------------------------
--- 16. CONFIGURAÇÃO DO USUÁRIO GIL DE OLIVEIRA
+-- 16. CONFIGURAÇÃO DO USUÁRIO ADMIN
 ----------------------------------------
 DO $$
 DECLARE
-    gil_id INTEGER;
+    admin_id INTEGER;
     tema_azul_noturno JSONB := '{
         "primaria": "#1E3A8A",
         "secundaria": "#3B82F6",
@@ -1222,7 +1222,7 @@ DECLARE
         "botao_export_pdf": "#F59E0B"
     }'::jsonb;
 BEGIN
-    -- 1. USUÁRIO GIL DE OLIVEIRA
+    -- 1. USUÁRIO ADMIN
     INSERT INTO opera.usuarios (
         usuario,
         senha_hash,
@@ -1232,12 +1232,12 @@ BEGIN
         dica_senha,
         tema_preferido
     ) VALUES (
-        'Gil de Oliveira',
-        '$2a$06$ao4NgQlOSXITaQa7tO0gHeCQFqTcmVuD5/SF2SDmJaW9RIH47tsji',
+        'admin',
+        '$2b$06$xOxt5sNynndfkGG/0Wx04exxGHV1it4WNz5fzoUbwxyOI8p5jwMJO',
         'Administrador',
-        'opera@gil.com',
+        'admin@opera.com',
         TRUE,
-        '25',
+        'ad',
         'AZUL_NOTURNO'
     ) ON CONFLICT (usuario) DO UPDATE SET
         senha_hash = EXCLUDED.senha_hash,
@@ -1246,11 +1246,11 @@ BEGIN
         ativo = EXCLUDED.ativo,
         dica_senha = EXCLUDED.dica_senha,
         tema_preferido = EXCLUDED.tema_preferido
-    RETURNING id INTO gil_id;
+    RETURNING id INTO admin_id;
 
     -- 2. TEMA PERSONALIZADO AZUL_NOTURNO
     DELETE FROM opera.usuario_temas_personalizados
-    WHERE usuario_id = gil_id AND nome_tema = 'AZUL_NOTURNO';
+    WHERE usuario_id = admin_id AND nome_tema = 'AZUL_NOTURNO';
 
     INSERT INTO opera.usuario_temas_personalizados (
         usuario_id,
@@ -1259,7 +1259,7 @@ BEGIN
         data_criacao,
         atualizado_em
     ) VALUES (
-        gil_id,
+        admin_id,
         'AZUL_NOTURNO',
         tema_azul_noturno,
         NOW(),
@@ -1267,7 +1267,7 @@ BEGIN
     );
 
     -- 3. PREFERÊNCIAS DO USUÁRIO
-    DELETE FROM opera.usuario_preferencias WHERE usuario_id = gil_id;
+    DELETE FROM opera.usuario_preferencias WHERE usuario_id = admin_id;
 
     INSERT INTO opera.usuario_preferencias (
         usuario_id,
@@ -1280,13 +1280,13 @@ BEGIN
         idioma,
         notificacoes
     ) VALUES (
-        gil_id,
+        admin_id,
         'AZUL_NOTURNO',
         TRUE, FALSE, FALSE, TRUE, TRUE, 'pt-BR', TRUE
     );
 
     -- 4. PERMISSÕES TOTAIS
-    DELETE FROM opera.usuario_permissoes WHERE usuario_id = gil_id;
+    DELETE FROM opera.usuario_permissoes WHERE usuario_id = admin_id;
 
     INSERT INTO opera.usuario_permissoes (
         usuario_id,
@@ -1297,7 +1297,7 @@ BEGIN
         pode_excluir,
         pode_administrar
     )
-    SELECT gil_id, codigo, TRUE, TRUE, TRUE, TRUE, TRUE
+    SELECT admin_id, codigo, TRUE, TRUE, TRUE, TRUE, TRUE
     FROM (VALUES
         ('dashboard'), ('cadastro_modelos'), ('cadastro_de_corte'),
         ('controle_envio_cortes'), ('controle_retorno_cortes'), ('finalizar_corte'),
@@ -1305,13 +1305,13 @@ BEGIN
         ('sistema_admin'), ('sistema_logs'), ('sistema_backup'), ('sistema_auditoria')
     ) AS paginas(codigo);
 
-    RAISE NOTICE '✅ [USUÁRIO 02] Gil de Oliveira configurado com ID: %', gil_id;
-    RAISE NOTICE '✅ [TABELA 06] Tema AZUL_NOTURNO criado para Gil';
-    RAISE NOTICE '✅ [TABELA 03] Preferências configuradas para Gil';
-    RAISE NOTICE '✅ [TABELA 04] Permissões totais concedidas a Gil';
+    RAISE NOTICE '✅ [USUÁRIO 02] admin configurado com ID: %', admin_id;
+    RAISE NOTICE '✅ [TABELA 06] Tema AZUL_NOTURNO criado para admin';
+    RAISE NOTICE '✅ [TABELA 03] Preferências configuradas para admin';
+    RAISE NOTICE '✅ [TABELA 04] Permissões totais concedidas a admin';
 
 EXCEPTION WHEN OTHERS THEN
-    RAISE NOTICE '❌ ERRO ao configurar Gil de Oliveira: %', SQLERRM;
+    RAISE NOTICE '❌ ERRO ao configurar admin: %', SQLERRM;
 END $$;
 
 ----------------------------------------
@@ -1384,13 +1384,13 @@ BEGIN
     FROM information_schema.routines
     WHERE routine_schema = 'opera';
 
-    -- Verificar configuração do Gil
+    -- Verificar configuração do admin
     SELECT u.id, u.usuario, u.tema_preferido, up.tema_nome, utp.nome_tema
     INTO gil_check
     FROM opera.usuarios u
     LEFT JOIN opera.usuario_preferencias up ON u.id = up.usuario_id
     LEFT JOIN opera.usuario_temas_personalizados utp ON u.id = utp.usuario_id
-    WHERE u.usuario = 'Gil de Oliveira';
+    WHERE u.usuario = 'admin';
 
     RAISE NOTICE '=======================================================';
     RAISE NOTICE '🎉 BANCO OPERA CRIADO COM SUCESSO - 60 TABELAS ENUMERADAS!';
@@ -1411,10 +1411,10 @@ BEGIN
     RAISE NOTICE '   • [TABELA 04] Permissões: 13 páginas com acesso total';
     RAISE NOTICE '=======================================================';
     RAISE NOTICE '🔐 CREDENCIAIS DE ACESSO:';
-    RAISE NOTICE '   • Usuário: Gil de Oliveira';
-    RAISE NOTICE '   • Senha: (criptografada do backup original)';
+    RAISE NOTICE '   • Usuário: admin';
+    RAISE NOTICE '   • Senha: admin';
     RAISE NOTICE '   • Tema: AZUL_NOTURNO aplicado automaticamente';
-    RAISE NOTICE '   • Email: opera@gil.com';
+    RAISE NOTICE '   • Email: admin@opera.com';
     RAISE NOTICE '=======================================================';
     RAISE NOTICE '📁 MÓDULOS IMPLEMENTADOS:';
     RAISE NOTICE '   1. Usuários e Permissões (Tabelas 01-06)';
@@ -1607,7 +1607,7 @@ BEGIN
     -- Obter ID do administrador
     SELECT id INTO usuario_admin_id
     FROM opera.usuarios
-    WHERE usuario = 'Gil de Oliveira';
+    WHERE usuario = 'admin';
 
     -- Mensagem final formatada
     RAISE NOTICE '=========================================';
@@ -1620,9 +1620,9 @@ BEGIN
     RAISE NOTICE '- % Triggers ativos', total_triggers;
     RAISE NOTICE '=========================================';
     RAISE NOTICE 'USUARIO ADMINISTRADOR CONFIGURADO:';
-    RAISE NOTICE '- Nome: Gil de Oliveira';
+    RAISE NOTICE '- Nome: admin';
     RAISE NOTICE '- ID: %', usuario_admin_id;
-    RAISE NOTICE '- Email: opera@gil.com';
+    RAISE NOTICE '- Email: admin@opera.com';
     RAISE NOTICE '- Permissoes: ACESSO TOTAL A TODOS OS MODULOS';
     RAISE NOTICE '=========================================';
     RAISE NOTICE 'MODULOS IMPLEMENTADOS:';
@@ -1639,8 +1639,9 @@ BEGIN
     RAISE NOTICE '=========================================';
     RAISE NOTICE 'O sistema OPERA esta pronto para uso!';
     RAISE NOTICE 'Usuario administrador ja pode fazer login com:';
-    RAISE NOTICE '- Usuario: Gil de Oliveira';
-    RAISE NOTICE '- Senha: (ja configurada no sistema)';
+    RAISE NOTICE '- Usuario: admin';
+    RAISE NOTICE '- Senha: admin';
+    RAISE NOTICE '- Dica: ad';
     RAISE NOTICE '- Hierarquia: Administrador';
     RAISE NOTICE '- Tema: AZUL_NOTURNO aplicado automaticamente';
     RAISE NOTICE '=========================================';

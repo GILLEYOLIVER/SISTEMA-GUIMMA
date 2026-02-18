@@ -30,6 +30,14 @@ from tkinter import messagebox
 
 import customtkinter as ctk
 
+# --- FIX encoding (Windows) ---
+# Em Postgres no Windows, o cluster pode estar em WIN1252 e algumas mensagens vêm em cp1252.
+# Se o psycopg2 carregar antes disso, pode dar: utf-8 codec can't decode byte 0xe3...
+if sys.platform.startswith("win"):
+    os.environ.setdefault("PGCLIENTENCODING", "WIN1252")
+    # Opcional: força também via GUC logo na conexão (não atrapalha)
+    os.environ.setdefault("PGOPTIONS", "-c client_encoding=WIN1252")
+
 try:
     import psycopg2
 except Exception:
@@ -231,6 +239,14 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
     if psycopg2 is None:
         return False, "psycopg2 não está instalado. Instale: pip install psycopg2-binary"
 
+    # 1) Pré-teste de rede/porta (evita timeout longo do psycopg2)
+    try:
+        with socket.create_connection((cfg.host, int(cfg.port)), timeout=1.2):
+            pass
+    except Exception as e:
+        return False, f"Falha: servidor/porta inacessível ({cfg.host}:{cfg.port}) - {e}"
+
+    # 2) Conexão real no Postgres
     try:
         conn = psycopg2.connect(
             host=cfg.host,
@@ -238,13 +254,24 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
             dbname=cfg.dbname,
             user=cfg.user,
             password=cfg.password,
-            connect_timeout=3,
+            connect_timeout=4,
             options=f"-c search_path={cfg.schema}",
         )
+        cur = conn.cursor()
+        cur.execute("SELECT 1;")
+        cur.fetchone()
+        cur.close()
         conn.close()
         return True, "✅ Conexão OK!"
     except Exception as e:
-        return False, f"❌ Falha: {e}"
+        # evita estourar decode ao converter erro em texto
+        try:
+            msg = str(e)
+        except Exception:
+            msg = repr(e)
+        return False, f"Falha: {msg}"
+
+
 
 
 # ============================================================
