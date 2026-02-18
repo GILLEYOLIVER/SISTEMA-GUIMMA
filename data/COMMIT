@@ -36,3 +36,10 @@ No Windows
 
 
 16/02/2026
+
+PG COMPPILAR
+
+pyinstaller --noconfirm --clean --onefile --windowed `
+  --name "OPERA_CONFIG_POSTGRES" `
+  --icon "PG_ICON.ico" `
+  "configurar_postgres.py"
