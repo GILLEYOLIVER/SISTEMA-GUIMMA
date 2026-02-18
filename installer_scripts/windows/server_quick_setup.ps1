@@ -7,8 +7,20 @@ param(
 )
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$appRoot = Resolve-Path (Join-Path $scriptDir "..\..")
-$toolsDir = Join-Path $appRoot "tools"
+
+# Compatível com dois layouts:
+# 1) Instalador principal: {app}\tools\server_quick_setup.ps1
+# 2) Instalador de banco dedicado: {app}\server_quick_setup.ps1
+if (Test-Path (Join-Path $scriptDir "AUTO_SERVER_SETUP.exe")) {
+  $toolsDir = $scriptDir
+}
+elseif (Test-Path (Join-Path $scriptDir "..\tools\AUTO_SERVER_SETUP.exe")) {
+  $toolsDir = Resolve-Path (Join-Path $scriptDir "..\tools")
+}
+else {
+  throw "Não consegui localizar AUTO_SERVER_SETUP.exe (nem em $scriptDir nem em ..\tools)."
+}
+
 $pgDir = Join-Path $toolsDir "postgresql"
 
 Write-Host "[OPERA] Setup rápido do servidor iniciado..."
