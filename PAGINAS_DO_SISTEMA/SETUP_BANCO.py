@@ -23,10 +23,10 @@ import socket
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Any
 
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
@@ -74,6 +74,65 @@ APP_PAGINAS_CONFIG_FILE = APP_DATA_DIR / "PAGINAS_DO_SISTEMA" / "config.json"
 
 DEV_CONFIG_FILE_PAGINAS = PAGINAS_DIR / "config.json"
 DEV_CONFIG_FILE_PARENT = PROJECT_ROOT / "config.json"
+
+
+
+def _server_info_candidates() -> List[Path]:
+    """Locais prováveis do server_info.json gerado no servidor."""
+    candidates: List[Path] = []
+
+    program_data = Path(os.environ.get("PROGRAMDATA", "C:/ProgramData"))
+    candidates.append(program_data / "Opera" / "server_info.json")
+
+    try:
+        exe_dir = Path(sys.executable).resolve().parent
+        candidates.append(exe_dir / "server_info.json")
+    except Exception:
+        pass
+
+    try:
+        cwd = Path.cwd().resolve()
+        candidates.append(cwd / "server_info.json")
+    except Exception:
+        pass
+
+    # fallback do repositório (útil em dev)
+    candidates.append(PROJECT_ROOT / "server_info.json")
+
+    dedup: List[Path] = []
+    seen = set()
+    for c in candidates:
+        key = str(c)
+        if key not in seen:
+            seen.add(key)
+            dedup.append(c)
+    return dedup
+
+
+def _load_server_info(path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        if not path.exists():
+            return None
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            return None
+
+        host = str(raw.get("host") or "").strip()
+        if not host:
+            return None
+
+        return {
+            "mode": "rede",
+            "host": host,
+            "port": int(raw.get("port") or 5432),
+            "dbname": str(raw.get("dbname") or "BANCO_OPERA"),
+            "user": str(raw.get("user") or "postgres"),
+            "password": str(raw.get("password") or ""),
+            "schema": str(raw.get("schema") or "opera"),
+            "source": str(path),
+        }
+    except Exception:
+        return None
 
 
 def _runtime_pagina_config_candidates() -> List[Path]:
@@ -129,6 +188,23 @@ def _config_candidates() -> List[Path]:
         CONFIG_FILE,
         *_runtime_pagina_config_candidates(),
     ]
+
+
+def _config_from_server_info() -> Optional[DBConfig]:
+    for path in _server_info_candidates():
+        data = _load_server_info(path)
+        if data:
+            print(f"[CONFIG] server_info.json detectado: {path}")
+            return DBConfig(
+                mode=str(data.get("mode") or "rede"),
+                host=str(data.get("host") or "localhost"),
+                port=int(data.get("port") or 5432),
+                dbname=str(data.get("dbname") or "BANCO_OPERA"),
+                user=str(data.get("user") or "postgres"),
+                password=str(data.get("password") or ""),
+                schema=str(data.get("schema") or "opera"),
+            )
+    return None
 
 
 def load_existing_config() -> Optional[DBConfig]:
@@ -310,7 +386,7 @@ class SetupBancoWindow:
         # trazer pra frente
         self._bring_to_front()
 
-        existing = load_existing_config() or DBConfig()
+        existing = load_existing_config() or _config_from_server_info() or DBConfig()
 
         # ===========================
         # UI — Layout moderno (grid)
@@ -509,6 +585,9 @@ class SetupBancoWindow:
         self.btn_detect = ctk.CTkButton(btns, text="Detectar porta", width=140, command=self._on_detect_port)
         self.btn_detect.pack(side="left", padx=(0, 10))
 
+        self.btn_import = ctk.CTkButton(btns, text="Importar server_info", width=170, command=self._on_import_server_info)
+        self.btn_import.pack(side="left", padx=(0, 10))
+
         self.btn_test = ctk.CTkButton(btns, text="Testar conexão", width=140, command=self._on_test)
         self.btn_test.pack(side="left", padx=(0, 10))
 
@@ -590,6 +669,57 @@ class SetupBancoWindow:
             user=user,
             password=password,
             schema=schema,
+        )
+
+
+    def _apply_external_cfg(self, cfg: DBConfig):
+        self.var_mode.set(cfg.mode if cfg.mode in ("local", "rede") else "rede")
+
+        self.ent_host.delete(0, "end")
+        self.ent_host.insert(0, str(cfg.host or "localhost"))
+
+        self.ent_port.delete(0, "end")
+        self.ent_port.insert(0, str(cfg.port or 5432))
+
+        self.ent_user.delete(0, "end")
+        self.ent_user.insert(0, str(cfg.user or "postgres"))
+
+        self.ent_schema.delete(0, "end")
+        self.ent_schema.insert(0, str(cfg.schema or "opera"))
+
+        self.ent_pass.delete(0, "end")
+        if cfg.password:
+            self.ent_pass.insert(0, cfg.password)
+
+        self._last_test_ok = False
+        self.btn_save.configure(state="disabled")
+
+    def _on_import_server_info(self):
+        path_txt = filedialog.askopenfilename(
+            title="Selecione o server_info.json",
+            filetypes=[("JSON", "*.json"), ("Todos", "*.*")],
+        )
+        if not path_txt:
+            return
+
+        data = _load_server_info(Path(path_txt))
+        if not data:
+            messagebox.showerror("Importação", "Arquivo inválido. Selecione um server_info.json válido.")
+            return
+
+        cfg = DBConfig(
+            mode=str(data.get("mode") or "rede"),
+            host=str(data.get("host") or "localhost"),
+            port=int(data.get("port") or 5432),
+            dbname=self._fixed_dbname,
+            user=str(data.get("user") or "postgres"),
+            password=str(data.get("password") or ""),
+            schema=str(data.get("schema") or "opera"),
+        )
+        self._apply_external_cfg(cfg)
+        self.lbl_status.configure(
+            text=f"server_info importado: {path_txt}",
+            text_color=self._ui_colors.get("ok", "#a6f3b0"),
         )
 
     def _on_detect_port(self):

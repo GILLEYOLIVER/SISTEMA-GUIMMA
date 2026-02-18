@@ -31,25 +31,31 @@ function Run-Step([string]$title, [scriptblock]$action) {
 }
 
 # PASSO 1: Preparar ícone
-Run-Step "[1/4] Preparando icone..." {
+Run-Step "[1/5] Preparando icone..." {
     & $Python "packaging/windows/prepare_icon.py"
     if ($LASTEXITCODE -ne 0) { throw "Falha ao preparar icone." }
 }
 
 # PASSO 2: Construir app principal
-Run-Step "[2/4] Construindo aplicativo principal..." {
+Run-Step "[2/5] Construindo aplicativo principal..." {
     & $Python "packaging/build.py" --platform windows
     if ($LASTEXITCODE -ne 0) { throw "Falha no build do app principal." }
 }
 
 # PASSO 3: Construir configurador do banco
-Run-Step "[3/4] Construindo configurador do banco..." {
+Run-Step "[3/5] Construindo configurador do banco..." {
     & $Python "packaging/windows/build_db_config.py"
     if ($LASTEXITCODE -ne 0) { throw "Falha no build do configurador do banco." }
 }
 
-# PASSO 4: Criar instalador
-Run-Step "[4/4] Criando instalador..." {
+# PASSO 4: Construir setup automático de servidor
+Run-Step "[4/5] Construindo setup automático de servidor..." {
+    & $Python "packaging/windows/build_server_setup.py"
+    if ($LASTEXITCODE -ne 0) { throw "Falha no build do setup automático de servidor." }
+}
+
+# PASSO 5: Criar instalador
+Run-Step "[5/5] Criando instalador..." {
 
     # Encontrar Inno Setup (ISCC)
     $innoPaths = @(
