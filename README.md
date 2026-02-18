@@ -318,3 +318,23 @@ Fluxo recomendado:
 2. Abra `packaging/windows/SISTEMA_OPERA.iss` no Inno Setup Compiler.
 3. Compile o instalador.
 4. No assistente, informe IP/porta do banco e clique em **Testar conexão** antes de avançar.
+
+## Build de instaladores no Windows
+
+### Instalador principal do sistema
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1
+```
+Gera: `dist/SistemaOpera_Setup.exe`.
+
+### Instalador dedicado do banco de dados (servidor)
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_db_installer.ps1
+```
+Gera: `dist/BancoDadosOpera_Setup.exe`.
+
+### Compilar apenas o executável de configuração do banco
+```bash
+python packaging/windows/build_db_config.py
+```
+Gera: `dist/SistemaOpera/CONFIGURAR_BANCO.exe`.
