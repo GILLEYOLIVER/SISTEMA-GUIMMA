@@ -18,13 +18,6 @@
   #define DbConfigSource "..\..\dist\windows\CONFIGURAR_BANCO.exe"
 #endif
 
-
-#if FileExists("..\..\dist\SistemaOpera\AUTO_SERVER_SETUP.exe")
-  #define AutoServerSetupSource "..\..\dist\SistemaOpera\AUTO_SERVER_SETUP.exe"
-#else
-  #define AutoServerSetupSource "..\..\dist\windows\AUTO_SERVER_SETUP.exe"
-#endif
-
 ; Icone do configurador: prioriza icon_config.ico, senao usa configurador.ico gerado no build
 #if FileExists("..\..\icons\icon_config.ico")
   #define IconConfigSource "..\..\icons\icon_config.ico"
@@ -70,20 +63,11 @@ Name: "portuguese"; MessagesFile: "compiler:Languages\Portuguese.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Criar icone na area de trabalho"; GroupDescription: "Icones adicionais:"; Flags: unchecked
-Name: "serverquicksetup"; Description: "Executar setup automático do servidor (PostgreSQL + banco)"; GroupDescription: "Servidor:"; Flags: unchecked
 
 [Files]
 ; Arquivos principais
 Source: "{#MainExeSource}"; DestDir: "{app}"; DestName: "{#AppExeName}"; Flags: ignoreversion
 Source: "{#DbConfigSource}"; DestDir: "{app}"; DestName: "{#ConfiguradorName}"; Flags: ignoreversion
-Source: "{#AutoServerSetupSource}"; DestDir: "{app}\tools"; DestName: "AUTO_SERVER_SETUP.exe"; Flags: ignoreversion
-Source: "..\..\auto_server_setup.py"; DestDir: "{app}\tools"; Flags: ignoreversion
-Source: "..\..\opera_server_config.ps1"; DestDir: "{app}\tools"; Flags: ignoreversion
-Source: "..\..\installer_scripts\windows\server_quick_setup.ps1"; DestDir: "{app}\tools"; Flags: ignoreversion
-
-; Instalador PostgreSQL opcional na raiz do projeto (evita comandos manuais do cliente)
-Source: "..\..\postgresql-18*-windows-*.exe"; DestDir: "{app}\tools\postgresql"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "..\..\postgresql*-windows-*.exe"; DestDir: "{app}\tools\postgresql"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; Icones (copiados direto para {app} para usar no Menu/Atalhos)
 Source: "..\..\icons\ICONE_SISTEMA.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -118,6 +102,5 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename:
 Name: "{autodesktop}\Configurar Banco"; Filename: "{app}\{#ConfiguradorName}"; IconFilename: "{app}\icon_config.ico"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\tools\server_quick_setup.ps1"""; Description: "Configurar servidor automaticamente (PostgreSQL + banco + server_info)"; Flags: postinstall waituntilterminated; Tasks: serverquicksetup
 Filename: "{app}\{#ConfiguradorName}"; Description: "Configurar banco de dados agora"; Flags: postinstall runasoriginaluser
 Filename: "{app}\{#AppExeName}"; Description: "Executar {#AppName}"; Flags: postinstall nowait runasoriginaluser unchecked
