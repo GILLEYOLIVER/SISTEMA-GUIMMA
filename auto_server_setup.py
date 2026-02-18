@@ -6,31 +6,14 @@ from pathlib import Path
 from typing import Optional
 
 def detect_scripts_dir() -> Optional[Path]:
-    """Descobre a pasta de scripts SQL em ambiente dev/instalador/executável."""
-    bases = [
-        Path(__file__).resolve().parent,
-        Path(sys.executable).resolve().parent,
-        Path.cwd().resolve(),
+    """Descobre a pasta de scripts SQL em ambiente dev/instalador."""
+    base = Path(__file__).resolve().parent
+    candidates = [
+        base / "scripts",
+        base / "data" / "INSTAL_BANCO_APP" / "scripts",
+        Path.cwd() / "scripts",
     ]
-
-    candidates = []
-    for base in bases:
-        candidates.extend([
-            base / "scripts",
-            base / "data" / "INSTAL_BANCO_APP" / "scripts",
-            base.parent / "data" / "INSTAL_BANCO_APP" / "scripts",
-        ])
-
-    # dedup mantendo ordem
-    seen = set()
-    ordered = []
-    for c in candidates:
-        k = str(c)
-        if k not in seen:
-            seen.add(k)
-            ordered.append(c)
-
-    for cand in ordered:
+    for cand in candidates:
         if cand.exists() and cand.is_dir():
             return cand
     return None
