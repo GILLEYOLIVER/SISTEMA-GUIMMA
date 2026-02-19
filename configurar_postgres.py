@@ -11,7 +11,7 @@ import subprocess
 from datetime import datetime
 
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 
 import winreg
 
@@ -20,15 +20,10 @@ APP_TITLE = "OPERA • Configurador PostgreSQL (Servidor)"
 DEFAULT_PORT = "5432"
 TAG_HBA = "# --- OPERA: acesso rede (adicionado automaticamente) ---"
 
-
-# --- FIX encoding (Windows) ---
-# Ajuda em ambientes PT-BR onde outputs/arquivos estão em cp1252 (ex: byte 0xE3 = ã).
-if sys.platform.startswith("win"):
-    os.environ.setdefault("PGCLIENTENCODING", "WIN1252")
-    os.environ.setdefault("PGOPTIONS", "-c client_encoding=WIN1252")
+DB_NAME_DEFAULT = "BANCO_OPERA"
 
 
-# ------------------ Helpers: Admin / subprocess / logging ------------------
+# ------------------ ADMIN (auto, sem mensagem) ------------------
 
 def is_admin() -> bool:
     try:
@@ -37,21 +32,20 @@ def is_admin() -> bool:
         return False
 
 
-def relaunch_as_admin():
+def relaunch_as_admin_silent():
     """
-    Relança o mesmo script elevando privilégios (UAC).
+    Reabre o app elevado (UAC). Sem messagebox.
     """
     try:
         params = " ".join([f'"{a}"' for a in sys.argv])
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
-    except Exception as e:
-        messagebox.showerror("Permissão", f"Não consegui solicitar Admin (UAC): {e}")
+    except Exception:
+        pass
 
+
+# ------------------ subprocess / utils ------------------
 
 def run_powershell(ps_command: str, timeout: int = 30) -> str:
-    """
-    Executa comando PowerShell e retorna stdout (str).
-    """
     completed = subprocess.run(
         ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_command],
         capture_output=True, text=True, timeout=timeout
@@ -63,10 +57,7 @@ def run_powershell(ps_command: str, timeout: int = 30) -> str:
     return (completed.stdout or "").strip()
 
 
-def run_cmd(cmd_list, timeout: int = 30, env=None) -> tuple[int, str, str]:
-    """
-    Executa comando e retorna (returncode, stdout, stderr).
-    """
+def run_cmd(cmd_list, timeout: int = 60, env=None) -> tuple[int, str, str]:
     p = subprocess.run(cmd_list, capture_output=True, text=True, timeout=timeout, env=env)
     return p.returncode, (p.stdout or ""), (p.stderr or "")
 
@@ -76,44 +67,106 @@ def now_stamp() -> str:
 
 
 def backup_file(path: str) -> str:
-    stamp = now_stamp()
-    bak = f"{path}.bak_{stamp}"
+    bak = f"{path}.bak_{now_stamp()}"
     shutil.copy2(path, bak)
     return bak
 
 
-# ------------------ Encoding-safe read/write ------------------
+# ------------------ scripts -> Desktop (blindado) ------------------
 
-def read_text_smart(path: str) -> tuple[list[str], str]:
+def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
     """
-    Lê arquivo tentando UTF-8 e fazendo fallback para cp1252/latin-1.
-    Retorna (linhas, encoding_usado).
+    Copia a pasta scripts para Desktop\scripts.
+    Funciona em:
+      - DEV (rodando .py)
+      - PyInstaller --onedir (scripts ao lado do exe)
+      - PyInstaller --onefile (scripts extraídos em sys._MEIPASS)
+    Retorna o caminho final Desktop\scripts.
     """
-    with open(path, "rb") as f:
-        raw = f.read()
+    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+    dst = os.path.join(desktop, "scripts")
 
-    for enc in ("utf-8", "utf-8-sig", "cp1252", "latin-1"):
-        try:
-            txt = raw.decode(enc)
-            return txt.splitlines(), enc
-        except UnicodeDecodeError:
-            continue
+    if os.path.isdir(dst):
+        if logger:
+            logger(f"Scripts já existem no Desktop: {dst}")
+        return dst
 
-    # último recurso: substitui caracteres inválidos
-    txt = raw.decode("utf-8", errors="replace")
-    return txt.splitlines(), "utf-8"
+    # base do exe ou do .py
+    if getattr(sys, "frozen", False):
+        base_exe = os.path.dirname(sys.executable)
+    else:
+        base_exe = os.path.dirname(os.path.abspath(__file__))
+
+    src_candidates = [
+        os.path.join(base_exe, "scripts"),                     # onedir
+        os.path.join(getattr(sys, "_MEIPASS", ""), "scripts"),  # onefile
+        os.path.join(os.getcwd(), "scripts"),                  # rodando pela raiz
+    ]
+
+    src = ""
+    for c in src_candidates:
+        if os.path.isdir(c):
+            src = c
+            break
+
+    if not src:
+        if logger:
+            logger("Não achei a pasta 'scripts' (exe/_MEIPASS/cwd). Sem origem para copiar.")
+            logger(f"DEBUG frozen={getattr(sys,'frozen',False)} exe={sys.executable}")
+            logger(f"DEBUG _MEIPASS={getattr(sys,'_MEIPASS','')}")
+            logger(f"DEBUG cwd={os.getcwd()}")
+        return dst
+
+    try:
+        os.makedirs(dst, exist_ok=True)
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+        if logger:
+            logger(f"Scripts copiados para o Desktop: {dst}")
+    except Exception as e:
+        if logger:
+            logger(f"Falha ao copiar scripts para Desktop: {e}")
+
+    return dst
 
 
-def write_text_smart(path: str, lines: list[str], encoding: str):
-    """
-    Escreve preservando a codificação detectada.
-    """
-    data = "\n".join(lines) + "\n"
-    with open(path, "w", encoding=encoding, errors="replace", newline="\n") as f:
-        f.write(data)
+# ------------------ SQL parsing (auto DB name) ------------------
+
+def extrair_nome_banco_do_sql(sql_path: str) -> str:
+    if not sql_path or not os.path.exists(sql_path):
+        return ""
+    with open(sql_path, "r", encoding="utf-8", errors="ignore") as f:
+        content = f.read()
+
+    content = re.sub(r"--.*?$", "", content, flags=re.MULTILINE)
+    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+
+    m = re.search(
+        r"\bCREATE\s+DATABASE\s+((?:\"[^\"]+\")|(?:[A-Za-z_][A-Za-z0-9_]*))",
+        content,
+        flags=re.IGNORECASE
+    )
+    if not m:
+        return ""
+    raw = m.group(1).strip()
+    if raw.startswith('"') and raw.endswith('"'):
+        raw = raw[1:-1]
+    return raw.strip()
 
 
-# ------------------ PostgreSQL detection (service + datadir) ------------------
+def extrair_encoding_do_sql(sql_path: str) -> str:
+    if not sql_path or not os.path.exists(sql_path):
+        return ""
+    with open(sql_path, "r", encoding="utf-8", errors="ignore") as f:
+        content = f.read()
+
+    content = re.sub(r"--.*?$", "", content, flags=re.MULTILINE)
+    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+
+    m = re.search(r"\bENCODING\s+['\"]?([A-Za-z0-9_\-]+)['\"]?", content, flags=re.IGNORECASE)
+    return (m.group(1).upper().strip() if m else "")
+
+
+# ------------------ PostgreSQL detection ------------------
 
 def _get_service_imagepath(service_name: str) -> str:
     key_path = rf"SYSTEM\CurrentControlSet\Services\{service_name}"
@@ -123,44 +176,35 @@ def _get_service_imagepath(service_name: str) -> str:
 
 
 def _extract_datadir_from_imagepath(image_path: str) -> str:
-    # Ex: ... pg_ctl.exe runservice -N "postgresql-x64-18" -D "C:\Program Files\PostgreSQL\18\data"
     m = re.search(r'-D\s+"([^"]+)"', image_path)
     if m:
         return m.group(1)
-
     m2 = re.search(r"-D\s+([^\s]+)", image_path)
     if m2:
         return m2.group(1)
-
     return ""
 
 
 def detectar_postgres_service_and_datadir() -> tuple[str, str]:
-    """
-    Retorna (service_name, data_dir) do PostgreSQL 18.
-    """
     candidates = ["postgresql-x64-18", "postgresql-18"]
-
     for svc in candidates:
         try:
             img = _get_service_imagepath(svc)
             datadir = _extract_datadir_from_imagepath(img)
-            if datadir:
-                return svc, datadir
-            return svc, ""
+            return svc, datadir
         except FileNotFoundError:
             continue
 
-    # fallback: procura serviços contendo postgres e 18
     try:
         out = run_powershell(
             r"Get-Service | Where-Object { $_.Name -match 'postgres' -and $_.Name -match '18' } | "
-            r"Select-Object -First 1 -ExpandProperty Name"
-        )
+            r"Select-Object -First 1 -ExpandProperty Name",
+            timeout=15
+        ).strip()
         if out:
-            img = _get_service_imagepath(out.strip())
+            img = _get_service_imagepath(out)
             datadir = _extract_datadir_from_imagepath(img)
-            return out.strip(), datadir
+            return out, datadir
     except Exception:
         pass
 
@@ -185,14 +229,14 @@ def find_psql_exe(datadir: str) -> str:
 # ------------------ Network detection ------------------
 
 def detectar_ip() -> str:
-    import socket
     s = None
     try:
+        import socket
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
         return s.getsockname()[0]
     except Exception:
-        return ""
+        return "Não detectado"
     finally:
         try:
             if s:
@@ -202,13 +246,8 @@ def detectar_ip() -> str:
 
 
 def detectar_rede_cidr_por_powershell(ip_alvo: str) -> str:
-    """
-    Pega PrefixLength do IP via Get-NetIPAddress e calcula rede CIDR.
-    Ex: 192.168.0.108 + prefix 24 => 192.168.0.0/24
-    """
-    if not ip_alvo:
+    if not ip_alvo or ip_alvo == "Não detectado":
         return ""
-
     ps = (
         "Get-NetIPAddress -AddressFamily IPv4 | "
         f"Where-Object {{ $_.IPAddress -eq '{ip_alvo}' }} | "
@@ -222,10 +261,11 @@ def detectar_rede_cidr_por_powershell(ip_alvo: str) -> str:
     return f"{net.network_address}/{prefix}"
 
 
-# ------------------ Config modifications ------------------
+# ------------------ Postgres config changes ------------------
 
 def set_listen_addresses(conf_path: str, logger) -> None:
-    lines, enc = read_text_smart(conf_path)
+    with open(conf_path, "r", encoding="utf-8", errors="replace") as f:
+        lines = f.read().splitlines()
 
     target = "listen_addresses = '*'"
     pattern = re.compile(r"^\s*#?\s*listen_addresses\s*=")
@@ -242,22 +282,25 @@ def set_listen_addresses(conf_path: str, logger) -> None:
         lines.append("# --- OPERA: habilita conexao local e via rede ---")
         lines.append(target)
 
-    write_text_smart(conf_path, lines, enc)
-    logger(f"postgresql.conf: {target} OK (encoding: {enc})")
+    with open(conf_path, "w", encoding="utf-8", errors="replace") as f:
+        f.write("\n".join(lines) + "\n")
+
+    logger(f"postgresql.conf: {target} OK")
 
 
 def ensure_pg_hba_rule(hba_path: str, network_cidr: str, logger) -> None:
     if not network_cidr:
         raise RuntimeError("Rede CIDR vazia. Não é possível atualizar pg_hba.conf.")
 
-    lines, enc = read_text_smart(hba_path)
+    with open(hba_path, "r", encoding="utf-8", errors="replace") as f:
+        lines = f.read().splitlines()
 
     rule = f"host    all             all             {network_cidr}            scram-sha-256"
     norm_rule = re.sub(r"\s+", " ", rule).strip().lower()
 
     for l in lines:
         if re.sub(r"\s+", " ", l).strip().lower() == norm_rule:
-            logger(f"pg_hba.conf: regra já existe ({network_cidr}) (encoding: {enc})")
+            logger(f"pg_hba.conf: regra já existe ({network_cidr})")
             return
 
     if TAG_HBA not in lines:
@@ -266,13 +309,14 @@ def ensure_pg_hba_rule(hba_path: str, network_cidr: str, logger) -> None:
 
     lines.append(rule)
 
-    write_text_smart(hba_path, lines, enc)
-    logger(f"pg_hba.conf: regra adicionada ({network_cidr}) (encoding: {enc})")
+    with open(hba_path, "w", encoding="utf-8", errors="replace") as f:
+        f.write("\n".join(lines) + "\n")
+
+    logger(f"pg_hba.conf: regra adicionada ({network_cidr})")
 
 
 def ensure_firewall_rule(port: str, logger) -> None:
     rule_name = f"PostgreSQL 18 (OPERA) - TCP {port}"
-
     try:
         out = run_powershell(
             f"Get-NetFirewallRule -DisplayName '{rule_name}' -ErrorAction SilentlyContinue | "
@@ -303,31 +347,40 @@ def restart_service(service_name: str, logger) -> None:
     logger(f"Serviço {service_name}: {status}")
 
 
-def test_psql_connection(psql_exe: str, host: str, port: str, user: str, password: str, dbname: str, logger) -> bool:
+# ------------------ SQL execution via psql ------------------
+
+def run_psql_file(psql_exe: str, host: str, port: str, user: str, password: str,
+                  dbname: str, sql_file: str, logger) -> None:
     if not psql_exe or not os.path.exists(psql_exe):
-        raise RuntimeError("psql.exe não encontrado (não consegui testar).")
+        raise RuntimeError("psql.exe não encontrado (não consigo executar scripts).")
+    if not sql_file or not os.path.exists(sql_file):
+        raise RuntimeError(f"Arquivo SQL não encontrado: {sql_file}")
 
     env = os.environ.copy()
     if password:
         env["PGPASSWORD"] = password
+    env["PGCLIENTENCODING"] = "UTF8"
 
-    # reforça encoding no subprocess
-    env["PGCLIENTENCODING"] = "WIN1252"
-    env["PGOPTIONS"] = "-c client_encoding=WIN1252"
+    cmd = [
+        psql_exe,
+        "-v", "ON_ERROR_STOP=1",
+        "-h", host,
+        "-p", str(port),
+        "-U", user,
+        "-d", dbname,
+        "-f", sql_file
+    ]
 
-    cmd = [psql_exe, "-h", host, "-p", port, "-U", user, "-d", dbname, "-c", "SELECT 1;"]
-    rc, out, err = run_cmd(cmd, timeout=25, env=env)
+    logger(f"Executando: {os.path.basename(sql_file)} (db={dbname}) ...")
+    rc, out, err = run_cmd(cmd, timeout=300, env=env)
 
-    if rc == 0:
-        logger("Teste psql: OK (SELECT 1)")
-        return True
-
-    logger("Teste psql: FALHOU")
     if out.strip():
-        logger("STDOUT:\n" + out.strip())
+        logger(out.strip())
     if err.strip():
-        logger("STDERR:\n" + err.strip())
-    return False
+        logger(err.strip())
+
+    if rc != 0:
+        raise RuntimeError(f"Falha ao executar {os.path.basename(sql_file)} (rc={rc}). Veja o log.")
 
 
 # ------------------ UI helpers ------------------
@@ -341,169 +394,147 @@ def centralizar_janela(win: ctk.CTk, width: int, height: int):
     win.geometry(f"{width}x{height}+{x}+{y}")
 
 
-# ------------------ UI App ------------------
+# ------------------ App ------------------
 
 class ConfigurarPostgresApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # ✅ SEM MENSAGEM: se não for Admin, só pede UAC e relança
-        # (quando abrir elevado, segue normalmente)
-        if not is_admin():
-            relaunch_as_admin()
-            self.after(50, self.destroy)
-            return
-
-        # Aparência
         ctk.set_appearance_mode("System")
         ctk.set_default_color_theme("blue")
 
-        # Janela
         self.title(APP_TITLE)
-        self.win_width = 1100
-        self.win_height = 800
-        centralizar_janela(self, self.win_width, self.win_height)
-        self.resizable(False, False)
 
-        # Queue do log (thread-safe)
+        self.win_width = 1400
+        self.win_height = 1000
+        centralizar_janela(self, self.win_width, self.win_height)
+        self.resizable(True, True)
+
         self.log_q = queue.Queue()
 
-        # ✅ TUDO VAZIO AO ABRIR (nada gravado / nada pré-preenchido)
-        self.ip_var = ctk.StringVar(value="")
-        self.port_var = ctk.StringVar(value="")
-        self.net_var = ctk.StringVar(value="")
-        self.svc_var = ctk.StringVar(value="")
-        self.datadir_var = ctk.StringVar(value="")
-        self.psql_var = ctk.StringVar(value="")
+        self.ip_var = ctk.StringVar(value=detectar_ip())
+        self.port_var = ctk.StringVar(value=DEFAULT_PORT)
+        self.net_var = ctk.StringVar(value="(não detectado)")
+        self.svc_var = ctk.StringVar(value="(não detectado)")
+        self.datadir_var = ctk.StringVar(value="(não detectado)")
+        self.psql_var = ctk.StringVar(value="(não detectado)")
 
-        self.user_var = ctk.StringVar(value="")
+        self.user_var = ctk.StringVar(value="postgres")
         self.pass_var = ctk.StringVar(value="")
-        self.db_var = ctk.StringVar(value="")
+        self.dbname_var = ctk.StringVar(value=DB_NAME_DEFAULT)
 
-        # UI
+        self.sql_banco_var = ctk.StringVar(value="")
+        self.sql_schema_var = ctk.StringVar(value="")
+        self.sql_tabelas_var = ctk.StringVar(value="")
+        self.sql_apagar_var = ctk.StringVar(value="")
+
         self._build_ui()
         self._pump_logs()
 
-        # ❌ NÃO detecta nada automaticamente ao abrir
-        # (o usuário clica em "Detectar tudo")
-        # self.detect_all()
+        self.detect_all(silent=True)
 
+        # prepara scripts no Desktop e auto-preenche
+        try:
+            desktop_scripts = garantir_scripts_na_area_de_trabalho(logger=self.log)
+
+            mapping = {
+                "1_CRIAR_BANCO.sql": self.sql_banco_var,
+                "2_CRIAR_SCHEMA.sql": self.sql_schema_var,
+                "3_CRIAR_TABELAS.sql": self.sql_tabelas_var,
+                "APAGAR_TUDO.sql": self.sql_apagar_var,
+            }
+
+            found_any = False
+            for fname, var in mapping.items():
+                p = os.path.join(desktop_scripts, fname)
+                if os.path.exists(p):
+                    var.set(p)
+                    found_any = True
+
+            if found_any:
+                self._apply_auto_db_from_1()
+                self.log("Scripts detectados no Desktop e preenchidos automaticamente ✅")
+            else:
+                self.log("Não encontrei scripts padrão no Desktop\\scripts (use 'Buscar pasta dos scripts').")
+        except Exception as e:
+            self.log(f"Falha ao preparar scripts no Desktop: {e}")
+
+    # ---------- UI ----------
     def _build_ui(self):
         wrapper = ctk.CTkFrame(self, corner_radius=14)
         wrapper.pack(fill="both", expand=True, padx=16, pady=16)
 
-        top = ctk.CTkFrame(wrapper, corner_radius=14)
-        top.pack(fill="x", padx=14, pady=(14, 10))
+        header = ctk.CTkFrame(wrapper, corner_radius=14)
+        header.pack(fill="x", padx=14, pady=(14, 10))
+
+        title_row = ctk.CTkFrame(header, fg_color="transparent")
+        title_row.pack(fill="x", padx=14, pady=(12, 6))
+        title_row.grid_columnconfigure(0, weight=1)
+        title_row.grid_columnconfigure(1, weight=0)
 
         ctk.CTkLabel(
-            top, text="Configurador do PostgreSQL (Servidor)",
-            font=ctk.CTkFont(size=20, weight="bold")
-        ).pack(anchor="w", padx=14, pady=(12, 0))
+            title_row,
+            text="Configuração do PostgreSQL (Servidor)",
+            font=ctk.CTkFont(size=22, weight="bold")
+        ).grid(row=0, column=0, sticky="w")
 
         ctk.CTkLabel(
-            top,
-            text="Detectar • Configurar REAL • Testar • Mostrar dados para clientes",
+            title_row,
+            text="Rede + Firewall + Banco/Tabelas",
             font=ctk.CTkFont(size=13)
-        ).pack(anchor="w", padx=14, pady=(4, 12))
+        ).grid(row=0, column=1, sticky="e")
 
-        main = ctk.CTkFrame(wrapper, corner_radius=14)
-        main.pack(fill="both", expand=True, padx=14, pady=(0, 14))
-        main.grid_columnconfigure(0, weight=1)
-        main.grid_columnconfigure(1, weight=1)
-        main.grid_rowconfigure(0, weight=1)
+        hint = ctk.CTkLabel(
+            header,
+            text="Fluxo: 1) Detectar  •  2) Configurar Rede/Firewall  •  3) Scripts  •  4) Executar (1→2→3)",
+            font=ctk.CTkFont(size=12)
+        )
+        hint.pack(anchor="w", padx=14, pady=(0, 12))
 
-        left = ctk.CTkFrame(main, corner_radius=14)
+        content = ctk.CTkFrame(wrapper, corner_radius=14)
+        content.pack(fill="both", expand=True, padx=14, pady=(0, 12))
+        content.grid_columnconfigure(0, weight=1)
+        content.grid_columnconfigure(1, weight=1)
+        content.grid_rowconfigure(0, weight=1)
+
+        left = ctk.CTkFrame(content, corner_radius=14)
         left.grid(row=0, column=0, sticky="nsew", padx=(14, 7), pady=14)
 
-        right = ctk.CTkFrame(main, corner_radius=14)
+        right = ctk.CTkFrame(content, corner_radius=14)
         right.grid(row=0, column=1, sticky="nsew", padx=(7, 14), pady=14)
-        right.grid_rowconfigure(1, weight=1)
-        right.grid_columnconfigure(0, weight=1)
 
-        # LEFT
-        ctk.CTkLabel(left, text="Detecção", font=ctk.CTkFont(size=15, weight="bold")).pack(
+        # LOG embaixo
+        log_frame = ctk.CTkFrame(wrapper, corner_radius=14)
+        log_frame.pack(fill="x", padx=14, pady=(0, 14))
+
+        ctk.CTkLabel(log_frame, text="Log (tempo real)", font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", padx=14, pady=(12, 6)
         )
 
-        form = ctk.CTkFrame(left, fg_color="transparent")
-        form.pack(fill="x", padx=14, pady=(0, 6))
-        form.grid_columnconfigure(0, weight=1)
-        form.grid_columnconfigure(1, weight=1)
+        self.logbox = ctk.CTkTextbox(log_frame, corner_radius=10, height=220)
+        self.logbox.pack(fill="both", expand=False, padx=14, pady=(0, 10))
+        self.logbox.configure(state="disabled")
 
-        ctk.CTkLabel(form, text="IP do servidor:", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=0, column=0, sticky="w", padx=(0, 10), pady=(0, 4)
-        )
-        ctk.CTkEntry(form, textvariable=self.ip_var, height=34).grid(
-            row=1, column=0, sticky="ew", padx=(0, 10), pady=(0, 10)
-        )
+        self.status_lbl = ctk.CTkLabel(log_frame, text="Status: pronto", font=ctk.CTkFont(size=12))
+        self.status_lbl.pack(anchor="w", padx=14, pady=(0, 12))
 
-        ctk.CTkLabel(form, text="Porta:", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=0, column=1, sticky="w", padx=(10, 0), pady=(0, 4)
-        )
-        ctk.CTkEntry(form, textvariable=self.port_var, height=34).grid(
-            row=1, column=1, sticky="ew", padx=(10, 0), pady=(0, 10)
+        # LEFT
+        ctk.CTkLabel(left, text="Detecção / Rede", font=ctk.CTkFont(size=16, weight="bold")).pack(
+            anchor="w", padx=14, pady=(14, 10)
         )
 
-        ctk.CTkLabel(form, text="Rede liberada (CIDR):", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=2, column=0, sticky="w", padx=(0, 10), pady=(0, 4)
-        )
-        ctk.CTkEntry(form, textvariable=self.net_var, height=34).grid(
-            row=3, column=0, sticky="ew", padx=(0, 10), pady=(0, 10)
-        )
+        det = ctk.CTkFrame(left, corner_radius=12)
+        det.pack(fill="x", padx=14, pady=(0, 14))
+        det.grid_columnconfigure(0, weight=1)
+        det.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(form, text="Serviço Postgres:", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=2, column=1, sticky="w", padx=(10, 0), pady=(0, 4)
-        )
-        ctk.CTkEntry(form, textvariable=self.svc_var, height=34).grid(
-            row=3, column=1, sticky="ew", padx=(10, 0), pady=(0, 10)
-        )
+        self._row_entry(det, 0, 0, "IP do servidor:", self.ip_var)
+        self._row_entry(det, 0, 1, "Porta:", self.port_var)
+        self._row_entry(det, 2, 0, "Rede (CIDR):", self.net_var)
+        self._row_entry(det, 2, 1, "Serviço:", self.svc_var)
+        self._row_entry(det, 4, 0, "DataDir (-D):", self.datadir_var)
+        self._row_entry(det, 4, 1, "psql.exe:", self.psql_var)
 
-        ctk.CTkLabel(form, text="Data Directory (-D):", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=4, column=0, sticky="w", padx=(0, 10), pady=(0, 4)
-        )
-        ctk.CTkEntry(form, textvariable=self.datadir_var, height=34).grid(
-            row=5, column=0, sticky="ew", padx=(0, 10), pady=(0, 10)
-        )
-
-        ctk.CTkLabel(form, text="psql.exe:", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=4, column=1, sticky="w", padx=(10, 0), pady=(0, 4)
-        )
-        ctk.CTkEntry(form, textvariable=self.psql_var, height=34).grid(
-            row=5, column=1, sticky="ew", padx=(10, 0), pady=(0, 10)
-        )
-
-        # Credenciais teste (vazias)
-        ctk.CTkLabel(left, text="Teste de conexão (psql)", font=ctk.CTkFont(size=15, weight="bold")).pack(
-            anchor="w", padx=14, pady=(8, 6)
-        )
-
-        form2 = ctk.CTkFrame(left, fg_color="transparent")
-        form2.pack(fill="x", padx=14, pady=(0, 10))
-        form2.grid_columnconfigure(0, weight=1)
-        form2.grid_columnconfigure(1, weight=1)
-
-        ctk.CTkLabel(form2, text="Usuário:", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=0, column=0, sticky="w", padx=(0, 10), pady=(0, 4)
-        )
-        ctk.CTkEntry(form2, textvariable=self.user_var, height=34).grid(
-            row=1, column=0, sticky="ew", padx=(0, 10), pady=(0, 10)
-        )
-
-        ctk.CTkLabel(form2, text="Banco:", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=0, column=1, sticky="w", padx=(10, 0), pady=(0, 4)
-        )
-        ctk.CTkEntry(form2, textvariable=self.db_var, height=34).grid(
-            row=1, column=1, sticky="ew", padx=(10, 0), pady=(0, 10)
-        )
-
-        ctk.CTkLabel(form2, text="Senha (não é salva):", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=2, column=0, sticky="w", padx=(0, 10), pady=(0, 4)
-        )
-        ctk.CTkEntry(form2, textvariable=self.pass_var, show="*", height=34).grid(
-            row=3, column=0, sticky="ew", padx=(0, 10), pady=(0, 10)
-        )
-
-        # Botões
         btns = ctk.CTkFrame(left, fg_color="transparent")
         btns.pack(fill="x", padx=14, pady=(0, 14))
         btns.grid_columnconfigure(0, weight=1)
@@ -512,34 +543,110 @@ class ConfigurarPostgresApp(ctk.CTk):
         self.btn_detect = ctk.CTkButton(btns, text="Detectar tudo", height=44, command=self.on_detect)
         self.btn_detect.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
-        self.btn_config = ctk.CTkButton(btns, text="CONFIGURAR AGORA (REAL)", height=44, command=self.on_configure_real)
+        self.btn_config = ctk.CTkButton(btns, text="Configurar Rede/Firewall (REAL)", height=44, command=self.on_configure_real)
         self.btn_config.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
-        btns2 = ctk.CTkFrame(left, fg_color="transparent")
-        btns2.pack(fill="x", padx=14, pady=(0, 14))
-        btns2.grid_columnconfigure(0, weight=1)
-        btns2.grid_columnconfigure(1, weight=1)
+        quick = ctk.CTkFrame(left, fg_color="transparent")
+        quick.pack(fill="x", padx=14, pady=(0, 14))
+        quick.grid_columnconfigure(0, weight=1)
+        quick.grid_columnconfigure(1, weight=1)
 
-        self.btn_test = ctk.CTkButton(btns2, text="Testar conexão (psql)", height=44, command=self.on_test)
-        self.btn_test.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self.btn_copy = ctk.CTkButton(
+            quick, text="Copiar host/porta/db", height=44,
+            fg_color="transparent", border_width=2,
+            command=self.on_copy
+        )
+        self.btn_copy.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
-        self.btn_copy = ctk.CTkButton(btns2, text="Copiar host/porta", height=44, fg_color="transparent", border_width=2,
-                                      command=self.on_copy)
-        self.btn_copy.grid(row=0, column=1, sticky="ew", padx=(8, 0))
+        self.btn_drop = ctk.CTkButton(quick, text="APAGAR TUDO (PERIGOSO)", height=44, fg_color="#8B0000",
+                                      command=self.on_run_drop_all)
+        self.btn_drop.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
-        # RIGHT: Logs
-        ctk.CTkLabel(right, text="Log (tempo real)", font=ctk.CTkFont(size=15, weight="bold")).grid(
-            row=0, column=0, sticky="w", padx=14, pady=(12, 6)
+        # RIGHT
+        ctk.CTkLabel(right, text="Scripts SQL (deixar pronto para o OPERA)", font=ctk.CTkFont(size=16, weight="bold")).pack(
+            anchor="w", padx=14, pady=(14, 10)
         )
 
-        self.logbox = ctk.CTkTextbox(right, corner_radius=10)
-        self.logbox.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 12))
-        self.logbox.configure(state="disabled")
+        scripts = ctk.CTkFrame(right, corner_radius=12)
+        scripts.pack(fill="both", expand=True, padx=14, pady=(0, 14))
+        scripts.grid_columnconfigure(0, weight=1)
+        scripts.grid_columnconfigure(1, weight=0)
 
-        self.status_lbl = ctk.CTkLabel(right, text="Status: pronto", font=ctk.CTkFont(size=12))
-        self.status_lbl.grid(row=2, column=0, sticky="w", padx=14, pady=(0, 12))
+        ctk.CTkLabel(
+            scripts, text="DB alvo (auto pelo 1_CRIAR_BANCO.sql):",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).grid(row=0, column=0, sticky="w", padx=12, pady=(12, 2))
+        ctk.CTkEntry(scripts, textvariable=self.dbname_var, height=34).grid(
+            row=1, column=0, sticky="ew", padx=12, pady=(0, 10)
+        )
 
-    # ---------------- logging ----------------
+        creds = ctk.CTkFrame(scripts, fg_color="transparent")
+        creds.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 10))
+        creds.grid_columnconfigure(0, weight=1)
+        creds.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(creds, text="Usuário:", font=ctk.CTkFont(size=12, weight="bold")).grid(
+            row=0, column=0, sticky="w", padx=(0, 10), pady=(0, 2)
+        )
+        ctk.CTkEntry(creds, textvariable=self.user_var, height=34).grid(
+            row=1, column=0, sticky="ew", padx=(0, 10), pady=(0, 6)
+        )
+
+        ctk.CTkLabel(creds, text="Senha:", font=ctk.CTkFont(size=12, weight="bold")).grid(
+            row=0, column=1, sticky="w", padx=(10, 0), pady=(0, 2)
+        )
+        ctk.CTkEntry(creds, textvariable=self.pass_var, show="*", height=34).grid(
+            row=1, column=1, sticky="ew", padx=(10, 0), pady=(0, 6)
+        )
+
+        self._file_picker_row(scripts, 3, "1) Criar Banco (.sql):", self.sql_banco_var, self.pick_sql_banco)
+        self._file_picker_row(scripts, 5, "2) Criar Schema (.sql):", self.sql_schema_var, self.pick_sql_schema)
+        self._file_picker_row(scripts, 7, "3) Criar Tabelas (.sql):", self.sql_tabelas_var, self.pick_sql_tabelas)
+        self._file_picker_row(scripts, 9, "APAGAR TUDO (.sql):", self.sql_apagar_var, self.pick_sql_apagar)
+
+        actions = ctk.CTkFrame(right, fg_color="transparent")
+        actions.pack(fill="x", padx=14, pady=(0, 14))
+        actions.grid_columnconfigure(0, weight=1)
+        actions.grid_columnconfigure(1, weight=1)
+
+        self.btn_folder = ctk.CTkButton(actions, text="Buscar pasta dos scripts", height=44, command=self.pick_scripts_folder)
+        self.btn_folder.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+
+        self.btn_run_all = ctk.CTkButton(
+            actions,
+            text="EXECUTAR CRIAÇÃO (1→2→3)",
+            height=44,
+            fg_color="#1f8b4c",
+            hover_color="#176b3a",
+            text_color="white",
+            command=self.on_run_create_all
+        )
+        self.btn_run_all.grid(row=0, column=1, sticky="ew", padx=(8, 0))
+
+    def _row_entry(self, parent, row, col, label, var):
+        ctk.CTkLabel(parent, text=label, font=ctk.CTkFont(size=12, weight="bold")).grid(
+            row=row, column=col, sticky="w",
+            padx=(12, 6) if col == 0 else (6, 12),
+            pady=(8 if row == 0 else 4, 2)
+        )
+        ctk.CTkEntry(parent, textvariable=var, height=34).grid(
+            row=row + 1, column=col, sticky="ew",
+            padx=(12, 6) if col == 0 else (6, 12),
+            pady=(0, 6)
+        )
+
+    def _file_picker_row(self, parent, row, label, var, cmd_pick):
+        ctk.CTkLabel(parent, text=label, font=ctk.CTkFont(size=12, weight="bold")).grid(
+            row=row, column=0, sticky="w", padx=12, pady=(6, 2)
+        )
+        ctk.CTkEntry(parent, textvariable=var, height=34).grid(
+            row=row + 1, column=0, sticky="ew", padx=12, pady=(0, 6)
+        )
+        ctk.CTkButton(parent, text="Buscar", width=110, height=34, command=cmd_pick).grid(
+            row=row + 1, column=1, sticky="e", padx=12, pady=(0, 6)
+        )
+
+    # ---------- Logging ----------
     def log(self, msg: str):
         self.log_q.put(msg)
 
@@ -560,73 +667,59 @@ class ConfigurarPostgresApp(ctk.CTk):
 
     def set_busy(self, busy: bool):
         state = "disabled" if busy else "normal"
-        for b in (self.btn_detect, self.btn_config, self.btn_test, self.btn_copy):
+        for b in (self.btn_detect, self.btn_config, self.btn_folder, self.btn_run_all, self.btn_copy, self.btn_drop):
             b.configure(state=state)
 
-    # ---------------- detection ----------------
-    def detect_all(self):
-        ip = detectar_ip()
+    # ---------- Detect ----------
+    def detect_all(self, silent: bool = False):
+        ip = self.ip_var.get().strip() or detectar_ip()
         self.ip_var.set(ip)
 
-        cidr = ""
         try:
             cidr = detectar_rede_cidr_por_powershell(ip)
         except Exception:
             cidr = ""
-        self.net_var.set(cidr)
+        self.net_var.set(cidr if cidr else "(não detectado)")
 
         svc, datadir = ("", "")
         try:
             svc, datadir = detectar_postgres_service_and_datadir()
-        except Exception as e:
-            raise RuntimeError(f"Falha ao detectar Postgres: {e}")
+        except Exception:
+            pass
 
-        self.svc_var.set(svc)
-        self.datadir_var.set(datadir)
+        self.svc_var.set(svc if svc else "(não detectado)")
+        self.datadir_var.set(datadir if datadir else "(não detectado)")
 
         psql = find_psql_exe(datadir) if datadir else ""
-        self.psql_var.set(psql)
+        self.psql_var.set(psql if psql else "(não detectado)")
 
-    def on_detect(self):
-        try:
-            self.detect_all()
+        if not silent:
             messagebox.showinfo(
                 "Detecção",
-                f"IP: {self.ip_var.get()}\n"
-                f"Rede: {self.net_var.get()}\n"
-                f"Serviço: {self.svc_var.get()}\n"
-                f"DataDir: {self.datadir_var.get()}\n"
-                f"psql: {self.psql_var.get()}"
+                f"IP: {self.ip_var.get()}\nRede: {self.net_var.get()}\n"
+                f"Serviço: {self.svc_var.get()}\nDataDir: {self.datadir_var.get()}\npsql: {self.psql_var.get()}"
             )
-        except Exception as e:
-            messagebox.showerror("Erro", str(e))
 
-    # ---------------- real configure ----------------
+    def on_detect(self):
+        self.detect_all(silent=False)
+
+    # ---------- Configure REAL ----------
     def on_configure_real(self):
-        if not is_admin():
-            messagebox.showerror("Permissão", "Rode como Administrador para configurar de verdade.")
-            return
-
-        try:
-            self.detect_all()
-        except Exception as e:
-            messagebox.showerror("Erro", f"Detecção falhou:\n{e}")
-            return
+        self.detect_all(silent=True)
 
         svc = self.svc_var.get().strip()
         datadir = self.datadir_var.get().strip()
         cidr = self.net_var.get().strip()
-        port = (self.port_var.get().strip() or DEFAULT_PORT)
-        self.port_var.set(port)
+        port = self.port_var.get().strip() or DEFAULT_PORT
 
-        if not svc:
+        if svc.startswith("(") or not svc:
             messagebox.showerror("Erro", "Não detectei o serviço do PostgreSQL 18.")
             return
-        if not datadir or not os.path.isdir(datadir):
-            messagebox.showerror("Erro", "Data Directory (-D) inválido.")
+        if datadir.startswith("(") or not datadir or not os.path.isdir(datadir):
+            messagebox.showerror("Erro", "Data Directory (-D) inválido. Instale o Postgres 18 e tente novamente.")
             return
-        if not cidr or "/" not in cidr:
-            messagebox.showerror("Erro", "Não consegui detectar a rede CIDR.")
+        if cidr.startswith("(") or not cidr or "/" not in cidr:
+            messagebox.showerror("Erro", "Não consegui detectar a rede (CIDR). Verifique e tente novamente.")
             return
 
         conf = os.path.join(datadir, "postgresql.conf")
@@ -637,139 +730,238 @@ class ConfigurarPostgresApp(ctk.CTk):
 
         if not messagebox.askyesno(
             "Confirmar",
-            "Vou configurar o PostgreSQL para aceitar conexões na rede:\n"
-            f"- Serviço: {svc}\n"
-            f"- Rede: {cidr}\n"
-            f"- Porta: {port}\n\n"
-            "Isso vai editar postgresql.conf e pg_hba.conf, abrir firewall e reiniciar o serviço.\n\n"
-            "Continuar?"
+            "Vou configurar o PostgreSQL para aceitar conexões na rede.\n\n"
+            f"Serviço: {svc}\nRede: {cidr}\nPorta: {port}\n\nContinuar?"
         ):
             return
 
         def worker():
             self.set_busy(True)
-            self.set_status("configurando...")
+            self.set_status("configurando rede/firewall...")
             try:
-                self.log("=== INÍCIO CONFIGURAÇÃO REAL ===")
+                self.log("=== CONFIGURAÇÃO REAL (REDE/FIREWALL) ===")
                 self.log(f"Serviço: {svc}")
                 self.log(f"DataDir: {datadir}")
-                self.log(f"Rede CIDR: {cidr}")
+                self.log(f"Rede: {cidr}")
                 self.log(f"Porta: {port}")
                 self.log("")
 
-                self.log("Criando backups...")
+                self.log("Backups...")
                 bak_conf = backup_file(conf)
                 bak_hba = backup_file(hba)
                 self.log(f"Backup conf: {bak_conf}")
                 self.log(f"Backup hba : {bak_hba}")
                 self.log("")
 
-                self.log("Ajustando postgresql.conf...")
                 set_listen_addresses(conf, self.log)
-                self.log("")
-
-                self.log("Ajustando pg_hba.conf...")
                 ensure_pg_hba_rule(hba, cidr, self.log)
-                self.log("")
-
-                self.log("Firewall...")
                 ensure_firewall_rule(port, self.log)
-                self.log("")
-
-                self.log("Reiniciando serviço...")
                 restart_service(svc, self.log)
-                self.log("")
 
-                self.log("✅ Configuração REAL concluída.")
-                self.set_status("configurado ✅")
-
-                ip = self.ip_var.get().strip()
-                msg = (
-                    "PostgreSQL configurado como SERVIDOR ✅\n\n"
-                    f"IP do servidor: {ip}\n"
-                    f"Porta: {port}\n"
-                    f"Rede liberada: {cidr}\n\n"
-                    "Nos clientes, use:\n"
-                    f"host={ip} port={port}\n"
-                )
-                messagebox.showinfo("OPERA • Servidor pronto", msg)
-
+                self.set_status("servidor pronto ✅")
+                messagebox.showinfo("OK", "Servidor PostgreSQL pronto para rede ✅\nAgora execute os scripts (1→2→3).")
             except Exception as e:
-                self.log("")
-                self.log("❌ ERRO na configuração REAL")
-                self.log(str(e))
                 self.set_status("erro ❌")
-                messagebox.showerror("Erro", f"Falha ao configurar:\n\n{e}")
+                self.log(f"ERRO: {e}")
+                messagebox.showerror("Erro", str(e))
             finally:
                 self.set_busy(False)
 
         threading.Thread(target=worker, daemon=True).start()
 
-    # ---------------- test connection ----------------
-    def on_test(self):
-        try:
-            self.detect_all()
-        except Exception as e:
-            messagebox.showerror("Erro", f"Detecção falhou:\n{e}")
+    # ---------- Script pickers ----------
+    def _pick_sql_file(self) -> str:
+        path = filedialog.askopenfilename(
+            title="Selecione um arquivo .sql",
+            filetypes=[("SQL", "*.sql"), ("Todos", "*.*")]
+        )
+        return path or ""
+
+    def _apply_auto_db_from_1(self):
+        p_banco = self.sql_banco_var.get().strip()
+        if p_banco and os.path.exists(p_banco):
+            db = extrair_nome_banco_do_sql(p_banco)
+            if db:
+                self.dbname_var.set(db)
+                self.log(f"Auto-detect DB pelo SQL: {db}")
+            enc = extrair_encoding_do_sql(p_banco)
+            if enc:
+                self.log(f"Encoding detectado no SQL: {enc}")
+
+    def pick_sql_banco(self):
+        p = self._pick_sql_file()
+        if p:
+            self.sql_banco_var.set(p)
+            self._apply_auto_db_from_1()
+
+    def pick_sql_schema(self):
+        p = self._pick_sql_file()
+        if p:
+            self.sql_schema_var.set(p)
+
+    def pick_sql_tabelas(self):
+        p = self._pick_sql_file()
+        if p:
+            self.sql_tabelas_var.set(p)
+
+    def pick_sql_apagar(self):
+        p = self._pick_sql_file()
+        if p:
+            self.sql_apagar_var.set(p)
+
+    def pick_scripts_folder(self):
+        folder = filedialog.askdirectory(title="Selecione a pasta onde estão os scripts .sql")
+        if not folder:
             return
+
+        mapping = {
+            "1_CRIAR_BANCO.sql": self.sql_banco_var,
+            "2_CRIAR_SCHEMA.sql": self.sql_schema_var,
+            "3_CRIAR_TABELAS.sql": self.sql_tabelas_var,
+            "APAGAR_TUDO.sql": self.sql_apagar_var,
+        }
+
+        found_any = False
+        for fname, var in mapping.items():
+            p = os.path.join(folder, fname)
+            if os.path.exists(p):
+                var.set(p)
+                found_any = True
+
+        if found_any:
+            self._apply_auto_db_from_1()
+            messagebox.showinfo("Scripts", "Scripts detectados e preenchidos automaticamente ✅")
+        else:
+            messagebox.showwarning("Scripts", "Não encontrei os nomes padrão nessa pasta.\nUse os botões 'Buscar'.")
+
+    # ---------- Execute scripts ----------
+    def on_run_create_all(self):
+        self.detect_all(silent=True)
 
         psql = self.psql_var.get().strip()
-        host = self.ip_var.get().strip()
-        port = (self.port_var.get().strip() or DEFAULT_PORT)
-        self.port_var.set(port)
-
-        user = self.user_var.get().strip()
+        host = "localhost"
+        port = self.port_var.get().strip() or DEFAULT_PORT
+        user = self.user_var.get().strip() or "postgres"
         pwd = self.pass_var.get()
-        dbn = self.db_var.get().strip()
+        dbname = self.dbname_var.get().strip() or DB_NAME_DEFAULT
 
-        if not psql or not os.path.exists(psql):
-            messagebox.showerror("Erro", "psql.exe não detectado.")
+        f1 = self.sql_banco_var.get().strip()
+        f2 = self.sql_schema_var.get().strip()
+        f3 = self.sql_tabelas_var.get().strip()
+
+        if not f1 or not os.path.exists(f1):
+            messagebox.showerror("Scripts", "Selecione o 1_CRIAR_BANCO.sql")
             return
-        if not host:
-            messagebox.showerror("Erro", "IP do servidor não detectado.")
+        if not f2 or not os.path.exists(f2):
+            messagebox.showerror("Scripts", "Selecione o 2_CRIAR_SCHEMA.sql")
             return
-        if not port:
-            messagebox.showerror("Erro", "Porta vazia.")
+        if not f3 or not os.path.exists(f3):
+            messagebox.showerror("Scripts", "Selecione o 3_CRIAR_TABELAS.sql")
             return
-        if not user or not dbn:
-            messagebox.showerror("Erro", "Informe usuário e banco para testar.")
+
+        if not messagebox.askyesno(
+            "Confirmar",
+            "Vou executar os scripts em sequência (1→2→3).\n\n"
+            f"DB: {dbname}\nUsuário: {user}\nHost: {host}\nPorta: {port}\n\nContinuar?"
+        ):
             return
 
         def worker():
             self.set_busy(True)
-            self.set_status("testando conexão...")
+            self.set_status("executando scripts...")
             try:
-                self.log("=== TESTE psql ===")
+                self.log("")
+                self.log("=== EXECUÇÃO SCRIPTS (1→2→3) ===")
                 self.log(f"psql: {psql}")
-                self.log(f"host: {host} port: {port} user: {user} db: {dbn}")
-                ok = test_psql_connection(psql, host, port, user, pwd, dbn, self.log)
-                self.set_status("teste OK ✅" if ok else "teste falhou ❌")
-                if ok:
-                    messagebox.showinfo("Teste", "Conexão OK ✅\n\nSELECT 1 executado com sucesso.")
-                else:
-                    messagebox.showerror("Teste", "Falha na conexão ❌\n\nVeja o log para detalhes.")
+                self.log(f"user: {user} host: {host} port: {port}")
+                self.log(f"DB alvo: {dbname}")
+                self.log("")
+
+                run_psql_file(psql, host, port, user, pwd, "postgres", f1, self.log)
+                self.log("✅ 1_CRIAR_BANCO concluído.\n")
+
+                run_psql_file(psql, host, port, user, pwd, dbname, f2, self.log)
+                self.log("✅ 2_CRIAR_SCHEMA concluído.\n")
+
+                run_psql_file(psql, host, port, user, pwd, dbname, f3, self.log)
+                self.log("✅ 3_CRIAR_TABELAS concluído.\n")
+
+                self.set_status("banco pronto ✅")
+
+                ip_servidor = self.ip_var.get().strip()
+                msg = (
+                    "BANCO PRONTO PARA O OPERA ✅\n\n"
+                    f"IP do servidor: {ip_servidor}\n"
+                    f"Porta: {port}\n"
+                    f"Banco: {dbname}\n"
+                    f"Usuário: {user}\n\n"
+                    f"host={ip_servidor} port={port} dbname={dbname}"
+                )
+                messagebox.showinfo("OPERA • Pronto", msg)
+
             except Exception as e:
-                self.log(str(e))
-                self.set_status("teste erro ❌")
-                messagebox.showerror("Erro", f"Falha no teste:\n\n{e}")
+                self.set_status("erro ❌")
+                self.log(f"ERRO: {e}")
+                messagebox.showerror("Erro ao executar scripts", str(e))
             finally:
                 self.set_busy(False)
 
         threading.Thread(target=worker, daemon=True).start()
 
-    # ---------------- copy ----------------
+    def on_run_drop_all(self):
+        self.detect_all(silent=True)
+
+        psql = self.psql_var.get().strip()
+        host = "localhost"
+        port = self.port_var.get().strip() or DEFAULT_PORT
+        user = self.user_var.get().strip() or "postgres"
+        pwd = self.pass_var.get()
+        dbname = self.dbname_var.get().strip() or DB_NAME_DEFAULT
+
+        fdrop = self.sql_apagar_var.get().strip()
+        if not fdrop or not os.path.exists(fdrop):
+            messagebox.showerror("Scripts", "Selecione o APAGAR_TUDO.sql")
+            return
+
+        if not messagebox.askyesno("⚠️ CONFIRMAÇÃO", f"Isso vai APAGAR o banco '{dbname}'.\n\nTem certeza?"):
+            return
+        if not messagebox.askyesno("⚠️ CONFIRMAÇÃO FINAL", "Última confirmação: deseja realmente APAGAR TUDO?"):
+            return
+
+        def worker():
+            self.set_busy(True)
+            self.set_status("apagando banco...")
+            try:
+                self.log("")
+                self.log("=== APAGAR TUDO ===")
+                run_psql_file(psql, host, port, user, pwd, "postgres", fdrop, self.log)
+                self.set_status("apagado ✅")
+                messagebox.showinfo("OK", f"Banco {dbname} removido ✅")
+            except Exception as e:
+                self.set_status("erro ❌")
+                self.log(f"ERRO: {e}")
+                messagebox.showerror("Erro", str(e))
+            finally:
+                self.set_busy(False)
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def on_copy(self):
         ip = self.ip_var.get().strip()
-        port = (self.port_var.get().strip() or DEFAULT_PORT)
-        if not ip:
-            messagebox.showerror("Erro", "IP vazio. Clique em 'Detectar tudo' primeiro.")
-            return
-        text = f"host={ip} port={port}"
+        port = self.port_var.get().strip() or DEFAULT_PORT
+        dbname = self.dbname_var.get().strip() or DB_NAME_DEFAULT
+        text = f"host={ip} port={port} dbname={dbname}"
         self.clipboard_clear()
         self.clipboard_append(text)
         messagebox.showinfo("Copiado", f"Copiado:\n\n{text}")
 
 
+# ------------------ ENTRYPOINT (auto admin) ------------------
+
 if __name__ == "__main__":
+    if not is_admin():
+        relaunch_as_admin_silent()
+        sys.exit(0)
+
     app = ConfigurarPostgresApp()
     app.mainloop()
