@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-SETUP_BANCO.py — Configurador de Banco (Universal Mac/Windows)
+SETUP_BANCO.py — Configurador de Banco (Sistema Opera)
 
-- Abre janela de configuração do Postgres
-- Deve ser chamada também quando a conexão com o banco cair (ou se o config.json sumir/corromper)
-- Detecta porta e testa conexão para reencontrar o banco
-- Só permite "Salvar e concluir" após conexão OK
-- Se fechar no X sem salvar: retorna exit code 1 (cancelado)
-- Salva config.json atualizado em múltiplos lugares (criando pastas automaticamente):
-  1) Local correto do app (Mac: Application Support / Windows: AppData)
-  2) AppData/Application Support/PAGINAS_DO_SISTEMA/config.json
-  3) Pasta atual do projeto (PAGINAS_DO_SISTEMA/config.json)
-  4) Raiz do projeto (../config.json)
-  5) Candidatos de instalação no diretório do executável e cwd
+Correções aplicadas:
+- Janela maior: self._center_window(1200, 700)
+- PRIMEIRA VEZ realmente vazia: somente preenche campos se existir config com validated_ok=True
+- Persistência real: ao salvar (após Teste OK) grava "validated_ok": true
+- Mensagens muito claras no centro do app (senha errada, host, porta, pg_hba, banco, schema etc)
 """
 
 from __future__ import annotations
@@ -30,12 +24,9 @@ from tkinter import messagebox
 
 import customtkinter as ctk
 
-# --- FIX encoding (Windows) ---
-# Em Postgres no Windows, o cluster pode estar em WIN1252 e algumas mensagens vêm em cp1252.
-# Se o psycopg2 carregar antes disso, pode dar: utf-8 codec can't decode byte 0xe3...
+# --- Encoding env (Windows) ---
 if sys.platform.startswith("win"):
     os.environ.setdefault("PGCLIENTENCODING", "WIN1252")
-    # Opcional: força também via GUC logo na conexão (não atrapalha)
     os.environ.setdefault("PGOPTIONS", "-c client_encoding=WIN1252")
 
 try:
@@ -45,7 +36,7 @@ except Exception:
 
 
 # ============================================================
-# Paths (usa OPERA_PATHS se existir; senão fallback)
+# Paths
 # ============================================================
 CURRENT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = CURRENT_DIR.parent
@@ -77,25 +68,18 @@ DEV_CONFIG_FILE_PARENT = PROJECT_ROOT / "config.json"
 
 
 def _runtime_pagina_config_candidates() -> List[Path]:
-    """
-    Candidatos extras para instalação (Windows/Mac):
-    - diretório do executável + PAGINAS_DO_SISTEMA/config.json
-    - diretório atual + PAGINAS_DO_SISTEMA/config.json
-    """
     candidates: List[Path] = []
     try:
         exe_dir = Path(sys.executable).resolve().parent
         candidates.append(exe_dir / "PAGINAS_DO_SISTEMA" / "config.json")
     except Exception:
         pass
-
     try:
         cwd = Path.cwd().resolve()
         candidates.append(cwd / "PAGINAS_DO_SISTEMA" / "config.json")
     except Exception:
         pass
 
-    # evita duplicados mantendo ordem
     dedup: List[Path] = []
     seen = set()
     for p in candidates:
@@ -112,74 +96,94 @@ def _runtime_pagina_config_candidates() -> List[Path]:
 @dataclass
 class DBConfig:
     mode: str = "local"      # local | rede
-    host: str = "localhost"
+    host: str = ""
     port: int = 5432
     dbname: str = "BANCO_OPERA"
-    user: str = "postgres"
+    user: str = ""
     password: str = ""
     schema: str = "opera"
 
 
 def _config_candidates() -> List[Path]:
-    # prioridade dev -> oficial
+    # ordem de leitura: prioriza AppData oficial, mas aceita dev/instalação
     return [
+        CONFIG_FILE,
+        APP_PAGINAS_CONFIG_FILE,
         DEV_CONFIG_FILE_PAGINAS,
         DEV_CONFIG_FILE_PARENT,
-        APP_PAGINAS_CONFIG_FILE,
-        CONFIG_FILE,
         *_runtime_pagina_config_candidates(),
     ]
 
 
-def load_existing_config() -> Optional[DBConfig]:
+def _read_json_file(path: Path) -> Optional[dict]:
+    try:
+        if not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        return None
+    return None
+
+
+def load_existing_config_validated() -> Optional[DBConfig]:
+    """
+    Só carrega e preenche se existir um config com validated_ok=True.
+    Isso garante:
+      - primeira vez = campos vazios
+      - configs antigos/genéricos não são reaproveitados
+    """
     for p in _config_candidates():
+        data = _read_json_file(p)
+        if not data:
+            continue
+
+        if not bool(data.get("validated_ok", False)):
+            # Ignora config não validado
+            continue
+
+        # suporta formato expandido ou simples
+        defaults = data.get("defaults") if isinstance(data.get("defaults"), dict) else {}
+        hosts = data.get("hosts") if isinstance(data.get("hosts"), list) else []
+        ports = data.get("ports") if isinstance(data.get("ports"), list) else []
+
+        host = (data.get("host") or (hosts[0] if hosts else "")) or ""
+        port = data.get("port") or (ports[0] if ports else 5432)
+        user = data.get("user") or (defaults.get("user") if defaults else "") or ""
+        password = data.get("password") or (defaults.get("password") if defaults else "") or ""
+        dbname = data.get("dbname") or (defaults.get("dbname") if defaults else "BANCO_OPERA") or "BANCO_OPERA"
+        schema = data.get("schema") or data.get("pg_schema") or "opera"
+
         try:
-            if p.exists():
-                data = json.loads(p.read_text(encoding="utf-8")) or {}
-                if not isinstance(data, dict):
-                    continue
-
-                # aceita "formato grande" (defaults/hosts/ports)
-                if "defaults" in data and isinstance(data.get("defaults"), dict):
-                    defaults = data.get("defaults") or {}
-                    host = (data.get("hosts") or ["localhost"])[0]
-                    ports = data.get("ports") or [5432]
-                    port = int(ports[0]) if ports else 5432
-                    schema = (data.get("schema") or data.get("pg_schema") or "opera") or "opera"
-
-                    return DBConfig(
-                        mode=(data.get("mode") or "local"),
-                        host=str(host or "localhost"),
-                        port=int(port),
-                        dbname=str(defaults.get("dbname") or "BANCO_OPERA"),
-                        user=str(defaults.get("user") or "postgres"),
-                        password=str(defaults.get("password") or ""),
-                        schema=str(schema),
-                    )
-
-                # formato simples
-                return DBConfig(
-                    mode=str(data.get("mode") or "local"),
-                    host=str(data.get("host") or "localhost"),
-                    port=int(data.get("port") or 5432),
-                    dbname=str(data.get("dbname") or "BANCO_OPERA"),
-                    user=str(data.get("user") or "postgres"),
-                    password=str(data.get("password") or ""),
-                    schema=str(data.get("schema") or "opera"),
-                )
+            port = int(port)
         except Exception:
-            pass
+            port = 5432
+
+        mode = str(data.get("mode") or "local")
+        if mode not in ("local", "rede"):
+            mode = "local"
+
+        return DBConfig(
+            mode=mode,
+            host=str(host),
+            port=int(port),
+            dbname=str(dbname),
+            user=str(user),
+            password=str(password),
+            schema=str(schema),
+        )
+
     return None
 
 
 def save_config(cfg: DBConfig) -> Path:
     """
     Salva config.json em múltiplos lugares e cria as pastas se não existirem.
-
-    Isso mantém o arquivo sempre atualizado para o módulo `banco_de_dados_pg`,
-    inclusive em fluxos de recuperação quando a conexão foi perdida.
+    Grava validated_ok=True (porque aqui só é chamado após Teste OK).
     """
     payload_dict = {
+        "validated_ok": True,  # <<< CHAVE QUE GARANTE PERSISTÊNCIA CERTA
         "mode": cfg.mode,
         "host": cfg.host,
         "port": int(cfg.port),
@@ -187,7 +191,6 @@ def save_config(cfg: DBConfig) -> Path:
         "user": cfg.user,
         "password": cfg.password,
         "schema": cfg.schema,
-        # formato expandido para compatibilidade com BANCO_DE_DADOS_PG.py
         "defaults": {
             "dbname": cfg.dbname,
             "user": cfg.user,
@@ -201,28 +204,29 @@ def save_config(cfg: DBConfig) -> Path:
     payload = json.dumps(payload_dict, ensure_ascii=False, indent=2)
 
     targets = [
-        CONFIG_FILE,             # oficial (Mac/Windows)
-        APP_PAGINAS_CONFIG_FILE, # AppData/Application Support/PAGINAS_DO_SISTEMA/config.json
-        DEV_CONFIG_FILE_PAGINAS, # PAGINAS_DO_SISTEMA/config.json
-        DEV_CONFIG_FILE_PARENT,  # raiz do projeto/config.json
+        CONFIG_FILE,
+        APP_PAGINAS_CONFIG_FILE,
+        DEV_CONFIG_FILE_PAGINAS,
+        DEV_CONFIG_FILE_PARENT,
         *_runtime_pagina_config_candidates(),
     ]
 
+    last_ok = CONFIG_FILE
     for path in targets:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(payload, encoding="utf-8")
-            print(f"[CONFIG] salvo em: {path}")
-        except Exception as e:
-            print(f"[CONFIG] falha ao salvar em {path}: {e}")
+            last_ok = path
+        except Exception:
+            pass
 
-    return CONFIG_FILE
+    return last_ok
 
 
 # ============================================================
-# Helpers: detect port / test connection
+# Port / Connection
 # ============================================================
-def _probe_port(host: str, port: int, timeout: float = 0.6) -> bool:
+def _probe_port(host: str, port: int, timeout: float = 0.7) -> bool:
     try:
         with socket.create_connection((host, int(port)), timeout=timeout):
             return True
@@ -235,18 +239,102 @@ def detect_ports(host: str) -> List[int]:
     return [p for p in common if _probe_port(host, p)]
 
 
+def _humanize_pg_error(raw: str, cfg: DBConfig) -> str:
+    s = (raw or "").strip()
+    low = s.lower()
+
+    # senha/usuário
+    if "password authentication failed" in low or "authentication failed" in low:
+        return (
+            "❌ SENHA OU USUÁRIO INCORRETO.\n\n"
+            "O servidor recusou o login.\n"
+            "• Verifique o campo USUÁRIO\n"
+            "• Verifique a SENHA\n"
+            "• Clique novamente em “Testar conexão”."
+        )
+
+    # bloqueio pg_hba
+    if "no pg_hba.conf entry" in low:
+        return (
+            "❌ ACESSO BLOQUEADO PELO SERVIDOR (pg_hba.conf).\n\n"
+            "O Postgres não liberou este computador na rede.\n"
+            "• Rode o CONFIGURADOR DO SERVIDOR\n"
+            "• Libere a rede (CIDR) no pg_hba.conf\n"
+            "• Reinicie o serviço do Postgres\n"
+            "Depois tente novamente."
+        )
+
+    # banco inexistente
+    if "does not exist" in low and "database" in low:
+        return (
+            f"❌ O BANCO '{cfg.dbname}' NÃO EXISTE.\n\n"
+            "No servidor, execute os scripts 1→2→3 para criar banco/schema/tabelas.\n"
+            "Depois teste novamente."
+        )
+
+    # schema inexistente
+    if "does not exist" in low and "schema" in low:
+        return (
+            f"❌ O SCHEMA '{cfg.schema}' NÃO EXISTE.\n\n"
+            "No servidor, execute os scripts 1→2→3.\n"
+            "Depois teste novamente."
+        )
+
+    # host inválido
+    if "could not translate host name" in low or "name or service not known" in low:
+        return (
+            "❌ HOST/IP INVÁLIDO.\n\n"
+            "• Confira o Host/IP (ex: 192.168.0.110)\n"
+            "• Se for “Local”, use localhost\n"
+            "Depois teste novamente."
+        )
+
+    # recusada / porta
+    if "connection refused" in low:
+        return (
+            "❌ CONEXÃO RECUSADA.\n\n"
+            "Possíveis causas:\n"
+            "• PostgreSQL está desligado no servidor\n"
+            "• Porta errada\n"
+            "• Firewall bloqueando a porta\n\n"
+            "Verifique e teste novamente."
+        )
+
+    if "timeout" in low or "timed out" in low:
+        return (
+            "❌ TIMEOUT NA REDE.\n\n"
+            "O servidor não respondeu a tempo.\n"
+            "• Verifique Host/IP\n"
+            "• Verifique a Porta\n"
+            "• Confirme se está na mesma rede\n"
+            "Depois teste novamente."
+        )
+
+    return f"❌ ERRO NA CONEXÃO:\n{s}" if s else "❌ ERRO NA CONEXÃO (motivo não identificado)."
+
+
 def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
     if psycopg2 is None:
-        return False, "psycopg2 não está instalado. Instale: pip install psycopg2-binary"
+        return False, "❌ psycopg2 não instalado. Instale: pip install psycopg2-binary"
 
-    # 1) Pré-teste de rede/porta (evita timeout longo do psycopg2)
+    # Pré-teste: porta aberta?
     try:
         with socket.create_connection((cfg.host, int(cfg.port)), timeout=1.2):
             pass
     except Exception as e:
-        return False, f"Falha: servidor/porta inacessível ({cfg.host}:{cfg.port}) - {e}"
+        return False, (
+            "❌ NÃO CONSIGO ALCANÇAR O SERVIDOR.\n\n"
+            f"Host/IP: {cfg.host}\n"
+            f"Porta: {cfg.port}\n\n"
+            "Possíveis causas:\n"
+            "• IP errado\n"
+            "• Porta fechada\n"
+            "• Firewall bloqueando\n"
+            "• Servidor desligado\n\n"
+            f"Detalhe técnico: {e}"
+        )
 
-    # 2) Conexão real no Postgres
+    # Conexão real
     try:
         conn = psycopg2.connect(
             host=cfg.host,
@@ -262,16 +350,10 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
         cur.fetchone()
         cur.close()
         conn.close()
-        return True, "✅ Conexão OK!"
+        return True, "✅ CONEXÃO OK!\nAgora você pode clicar em “Salvar e continuar”."
     except Exception as e:
-        # evita estourar decode ao converter erro em texto
-        try:
-            msg = str(e)
-        except Exception:
-            msg = repr(e)
-        return False, f"Falha: {msg}"
-
-
+        msg = str(e) if e else ""
+        return False, _humanize_pg_error(msg, cfg)
 
 
 # ============================================================
@@ -279,11 +361,9 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
 # ============================================================
 class SetupBancoWindow:
     def __init__(self, parent=None):
-        # --- Aparência (somente UI) ---
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
-        # Se já existe UI (root), criamos Toplevel modal
         if parent is not None:
             self.root = ctk.CTkToplevel(parent)
             try:
@@ -299,22 +379,22 @@ class SetupBancoWindow:
         self.exit_code = 1
 
         self.root.title("Configuração do Banco de Dados - Sistema Opera")
-        self.root.minsize(940, 660)
+        self.root.minsize(1100, 650)
 
-        # fecha no X
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        # tamanho + centralização
-        self._center_window(940, 660)
-
-        # trazer pra frente
+        # ✅ tamanho solicitado
+        self._center_window(1200, 700)
         self._bring_to_front()
 
-        existing = load_existing_config() or DBConfig()
+        # carrega SOMENTE se validated_ok=True
+        existing = load_existing_config_validated()
+        self._has_existing_config = existing is not None
 
-        # ===========================
-        # UI — Layout moderno (grid)
-        # ===========================
+        # dbname fixo
+        self._fixed_dbname = (existing.dbname if existing else "BANCO_OPERA")
+
+        # ====== UI ======
         C_BG = "#0b1220"
         C_SURFACE = "#0f1b2e"
         C_CARD = "#0d1728"
@@ -323,73 +403,52 @@ class SetupBancoWindow:
         C_OK = "#a6f3b0"
         C_WARN = "#ffd18b"
         C_ERR = "#ff9e9e"
+        C_INFO = "#9ecbff"
 
-        self._ui_colors = {"sub": C_TEXT_SUB, "ok": C_OK, "warn": C_WARN, "err": C_ERR}
-
+        self._ui_colors = {"sub": C_TEXT_SUB, "ok": C_OK, "warn": C_WARN, "err": C_ERR, "info": C_INFO}
         self.root.configure(fg_color=C_BG)
 
         outer = ctk.CTkFrame(
-            self.root,
-            fg_color=C_SURFACE,
-            corner_radius=18,
-            border_width=1,
-            border_color=C_BORDER,
+            self.root, fg_color=C_SURFACE, corner_radius=18,
+            border_width=1, border_color=C_BORDER
         )
         outer.pack(fill="both", expand=True, padx=18, pady=18)
-
-        # grid base
         outer.grid_columnconfigure(0, weight=1)
         outer.grid_rowconfigure(1, weight=1)
 
-        # ---------- Header ----------
         header = ctk.CTkFrame(outer, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=18, pady=(16, 10))
         header.grid_columnconfigure(0, weight=1)
 
-        title = ctk.CTkLabel(
-            header,
-            text="Configuração do Banco de Dados",
-            font=ctk.CTkFont(size=24, weight="bold"),
-        )
-        title.grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(header, text="Configuração do Banco de Dados",
+                     font=ctk.CTkFont(size=24, weight="bold")).grid(row=0, column=0, sticky="w")
 
-        badge = ctk.CTkLabel(
-            header,
-            text="PostgreSQL",
-            fg_color="#162b44",
-            corner_radius=10,
-            text_color=C_TEXT_SUB,
-            font=ctk.CTkFont(size=12, weight="bold"),
-            padx=10,
-            pady=4,
-        )
-        badge.grid(row=0, column=1, sticky="e")
+        ctk.CTkLabel(header, text="PostgreSQL", fg_color="#162b44", corner_radius=10,
+                     text_color=C_TEXT_SUB, font=ctk.CTkFont(size=12, weight="bold"),
+                     padx=10, pady=4).grid(row=0, column=1, sticky="e")
 
-        subtitle = ctk.CTkLabel(
-            header,
-            text="Informe os dados do servidor e teste a conexão antes de salvar.",
-            font=ctk.CTkFont(size=12),
-            text_color=C_TEXT_SUB,
-        )
-        subtitle.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        ctk.CTkLabel(header,
+                     text="Informe os dados do servidor e teste a conexão antes de salvar.",
+                     font=ctk.CTkFont(size=12), text_color=C_TEXT_SUB).grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
-        # ---------- Content (2 col) ----------
         content = ctk.CTkFrame(outer, fg_color="transparent")
         content.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 12))
         content.grid_columnconfigure(0, weight=1, uniform="col")
         content.grid_columnconfigure(1, weight=2, uniform="col")
         content.grid_rowconfigure(0, weight=1)
 
-        # Left: resumo / ajuda rápida
         left = ctk.CTkFrame(content, fg_color=C_CARD, corner_radius=16, border_width=1, border_color=C_BORDER)
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 12), pady=0)
-        left.grid_columnconfigure(0, weight=1)
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
 
-        ctk.CTkLabel(
-            left,
-            text="Passos rápidos",
-            font=ctk.CTkFont(size=14, weight="bold"),
-        ).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
+        right = ctk.CTkFrame(content, fg_color=C_CARD, corner_radius=16, border_width=1, border_color=C_BORDER)
+        right.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
+        right.grid_columnconfigure(0, weight=1)
+        right.grid_columnconfigure(1, weight=1)
+
+        # LEFT
+        ctk.CTkLabel(left, text="Passos rápidos", font=ctk.CTkFont(size=14, weight="bold")).pack(
+            anchor="w", padx=16, pady=(14, 6)
+        )
 
         steps_txt = (
             "1) Escolha Local ou Rede\n"
@@ -398,44 +457,34 @@ class SetupBancoWindow:
             "4) Clique em “Testar conexão”\n"
             "5) Salve para concluir"
         )
-        ctk.CTkLabel(
-            left,
-            text=steps_txt,
-            justify="left",
-            text_color=C_TEXT_SUB,
-            font=ctk.CTkFont(size=12),
-        ).grid(row=1, column=0, sticky="w", padx=16, pady=(0, 10))
-
-        # infos fixas (somente UI — leitura)
-        self._fixed_dbname = existing.dbname or "BANCO_OPERA"
-        info = ctk.CTkFrame(left, fg_color="transparent")
-        info.grid(row=2, column=0, sticky="ew", padx=16, pady=(6, 14))
-        info.grid_columnconfigure(0, weight=1)
-
-        ctk.CTkLabel(info, text="Banco (fixo)", text_color=C_TEXT_SUB, font=ctk.CTkFont(size=11)).grid(
-            row=0, column=0, sticky="w"
-        )
-        ctk.CTkLabel(info, text=self._fixed_dbname, font=ctk.CTkFont(size=13, weight="bold")).grid(
-            row=1, column=0, sticky="w", pady=(2, 0)
+        ctk.CTkLabel(left, text=steps_txt, justify="left",
+                     text_color=C_TEXT_SUB, font=ctk.CTkFont(size=12)).pack(
+            anchor="w", padx=16, pady=(0, 10)
         )
 
-        # Right: formulário
-        right = ctk.CTkFrame(content, fg_color=C_CARD, corner_radius=16, border_width=1, border_color=C_BORDER)
-        right.grid(row=0, column=1, sticky="nsew", padx=(12, 0), pady=0)
-        right.grid_columnconfigure(0, weight=1)
-        right.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(left, text="Banco (fixo)", text_color=C_TEXT_SUB,
+                     font=ctk.CTkFont(size=11)).pack(anchor="w", padx=16, pady=(10, 2))
+        ctk.CTkLabel(left, text=self._fixed_dbname,
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(anchor="w", padx=16, pady=(0, 12))
 
-        ctk.CTkLabel(
-            right,
-            text="Dados da conexão",
-            font=ctk.CTkFont(size=14, weight="bold"),
-        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=16, pady=(14, 10))
+        # RIGHT
+        ctk.CTkLabel(right, text="Dados da conexão", font=ctk.CTkFont(size=14, weight="bold")).grid(
+            row=0, column=0, columnspan=2, sticky="w", padx=16, pady=(14, 8)
+        )
 
-        # --- Tipo (Local/Rede) ---
-        self.var_mode = tk.StringVar(value=existing.mode if existing.mode in ("local", "rede") else "local")
+        # ✅ mensagem central bem visível
+        self.lbl_center = ctk.CTkLabel(
+            right, text="",
+            text_color=C_INFO,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            justify="left"
+        )
+        self.lbl_center.grid(row=1, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 12))
+
+        self.var_mode = tk.StringVar(value=(existing.mode if existing else "local"))
 
         mode_box = ctk.CTkFrame(right, fg_color="transparent")
-        mode_box.grid(row=1, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 12))
+        mode_box.grid(row=2, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 12))
         mode_box.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(mode_box, text="Tipo de banco", text_color=C_TEXT_SUB, font=ctk.CTkFont(size=11)).grid(
@@ -447,57 +496,45 @@ class SetupBancoWindow:
         ctk.CTkRadioButton(rb, text="Local", value="local", variable=self.var_mode).pack(side="left", padx=(0, 10))
         ctk.CTkRadioButton(rb, text="Rede", value="rede", variable=self.var_mode).pack(side="left")
 
-        # --- Campos (grid) ---
         def field(label: str, row: int, col: int, default: str = "", width: int = 320, show: str | None = None):
-            ctk.CTkLabel(
-                right,
-                text=label,
-                text_color=C_TEXT_SUB,
-                font=ctk.CTkFont(size=11),
-            ).grid(row=row, column=col, sticky="w", padx=16, pady=(0, 4))
+            ctk.CTkLabel(right, text=label, text_color=C_TEXT_SUB, font=ctk.CTkFont(size=11)).grid(
+                row=row, column=col, sticky="w", padx=16, pady=(0, 4)
+            )
             ent = ctk.CTkEntry(right, width=width, show=show) if show else ctk.CTkEntry(right, width=width)
             ent.grid(row=row + 1, column=col, sticky="ew", padx=16, pady=(0, 10))
-            if default:
+
+            # ✅ Só preenche se config VALIDADO existir
+            if self._has_existing_config and default:
                 ent.insert(0, default)
             return ent
 
-        # Host / Porta
-        self.ent_host = field("Host / IP", 2, 0, default=str(existing.host or "localhost"))
-        self.ent_port = field("Porta", 2, 1, default=str(existing.port or 5432), width=220)
+        self.ent_host = field("Host / IP", 4, 0, default=(existing.host if existing else ""))
+        self.ent_port = field("Porta", 4, 1, default=(str(existing.port) if existing else ""), width=220)
 
-        # Usuário / Schema
-        self.ent_user = field("Usuário", 4, 0, default=str(existing.user or "postgres"))
-        self.ent_schema = field("Schema", 4, 1, default=str(existing.schema or "opera"), width=220)
+        self.ent_user = field("Usuário", 6, 0, default=(existing.user if existing else ""))
+        self.ent_schema = field("Schema", 6, 1, default=(existing.schema if existing else "opera"), width=220)
 
-        # Senha (linha cheia)
-        ctk.CTkLabel(
-            right,
-            text="Senha",
-            text_color=C_TEXT_SUB,
-            font=ctk.CTkFont(size=11),
-        ).grid(row=6, column=0, sticky="w", padx=16, pady=(0, 4))
-
+        ctk.CTkLabel(right, text="Senha", text_color=C_TEXT_SUB, font=ctk.CTkFont(size=11)).grid(
+            row=8, column=0, sticky="w", padx=16, pady=(0, 4)
+        )
         self.ent_pass = ctk.CTkEntry(right, show="•")
-        self.ent_pass.grid(row=7, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 8))
-        if existing.password:
+        self.ent_pass.grid(row=9, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 8))
+        if self._has_existing_config and existing.password:
             self.ent_pass.insert(0, existing.password)
 
         self.var_show = tk.BooleanVar(value=False)
-        ctk.CTkCheckBox(
-            right,
-            text="Mostrar senha",
-            variable=self.var_show,
-            command=self._toggle_pass,
-        ).grid(row=8, column=0, columnspan=2, sticky="w", padx=16, pady=(0, 10))
+        ctk.CTkCheckBox(right, text="Mostrar senha", variable=self.var_show, command=self._toggle_pass).grid(
+            row=10, column=0, columnspan=2, sticky="w", padx=16, pady=(0, 10)
+        )
 
-        # ---------- Footer ----------
+        # Footer
         footer = ctk.CTkFrame(outer, fg_color="transparent")
         footer.grid(row=2, column=0, sticky="ew", padx=18, pady=(0, 16))
         footer.grid_columnconfigure(0, weight=1)
 
         self.lbl_status = ctk.CTkLabel(
             footer,
-            text=f"Pronto. Porta sugerida: {existing.port}",
+            text="Pronto. Preencha e clique em “Testar conexão”.",
             text_color=C_TEXT_SUB,
             font=ctk.CTkFont(size=12),
         )
@@ -517,9 +554,22 @@ class SetupBancoWindow:
 
         self.root.bind("<Escape>", lambda e: self._on_close())
 
-    # -------------------------
-    # Window helpers
-    # -------------------------
+        # mensagem inicial
+        if not self._has_existing_config:
+            self._set_center(
+                "Primeira configuração:\n"
+                "• Preencha Host/IP, Porta, Usuário, Senha e Schema\n"
+                "• Clique em “Testar conexão”\n"
+                "• Só depois “Salvar e continuar”",
+                "info"
+            )
+        else:
+            self._set_center(
+                "Configuração validada anterior carregada.\nClique em “Testar conexão” para confirmar.",
+                "info"
+            )
+
+    # ---------- helpers ----------
     def _center_window(self, w: int, h: int):
         try:
             self.root.update_idletasks()
@@ -540,86 +590,128 @@ class SetupBancoWindow:
         except Exception:
             pass
 
-    # -------------------------
-    # Close behavior
-    # -------------------------
-    def _on_close(self):
-        # Se não salvou com sucesso, consideramos cancelado
-        if not self._saved_ok:
-            self.exit_code = 1
-            try:
-                self.root.destroy()
-            except Exception:
-                pass
-            return
+    def _set_center(self, text: str, kind: str = "info"):
+        color = self._ui_colors.get(kind, self._ui_colors["info"])
+        self.lbl_center.configure(text=text, text_color=color)
 
-        self.exit_code = 0
+    def _toggle_pass(self):
+        self.ent_pass.configure(show="" if self.var_show.get() else "•")
+
+    def _on_close(self):
+        self.exit_code = 0 if self._saved_ok else 1
         try:
             self.root.destroy()
         except Exception:
             pass
 
-    # -------------------------
-    # UI actions
-    # -------------------------
-    def _toggle_pass(self):
-        try:
-            self.ent_pass.configure(show="" if self.var_show.get() else "•")
-        except Exception:
-            pass
-
     def _current_cfg(self) -> DBConfig:
-        host = self.ent_host.get().strip() or "localhost"
-        schema = self.ent_schema.get().strip() or "opera"
-        dbname = self._fixed_dbname
-        user = self.ent_user.get().strip() or "postgres"
+        host = self.ent_host.get().strip()
+        port_txt = self.ent_port.get().strip()
+        user = self.ent_user.get().strip()
         password = self.ent_pass.get()
+        schema = self.ent_schema.get().strip()
+        mode = self.var_mode.get().strip() or "local"
 
         try:
-            port = int(self.ent_port.get().strip() or "5432")
+            port = int(port_txt) if port_txt else 5432
         except Exception:
             port = 5432
-
-        mode = self.var_mode.get().strip() or "local"
 
         return DBConfig(
             mode=mode,
             host=host,
             port=port,
-            dbname=dbname,
+            dbname=self._fixed_dbname,
             user=user,
             password=password,
-            schema=schema,
+            schema=(schema or "opera"),
         )
 
+    def _validate_fields_before_test(self) -> Tuple[bool, str]:
+        host = self.ent_host.get().strip()
+        port = self.ent_port.get().strip()
+        user = self.ent_user.get().strip()
+        schema = self.ent_schema.get().strip()
+
+        missing = []
+        if not host:
+            missing.append("Host/IP")
+        if not port:
+            missing.append("Porta")
+        if not user:
+            missing.append("Usuário")
+        if not schema:
+            missing.append("Schema")
+
+        if missing:
+            return False, "⚠️ FALTANDO PREENCHER:\n• " + "\n• ".join(missing)
+
+        try:
+            p = int(port)
+            if p <= 0 or p > 65535:
+                return False, "⚠️ PORTA INVÁLIDA.\nUse um número entre 1 e 65535 (ex: 5432)."
+        except Exception:
+            return False, "⚠️ PORTA INVÁLIDA.\nUse somente números (ex: 5432)."
+
+        return True, ""
+
+    # ---------- actions ----------
     def _on_detect_port(self):
-        host = self.ent_host.get().strip() or "localhost"
-        self.lbl_status.configure(text="Detectando portas...", text_color=self._ui_colors.get("sub", "#b7c6d8"))
+        host = self.ent_host.get().strip()
+        if not host:
+            self._set_center("⚠️ Informe o Host/IP primeiro (ex: 192.168.0.110).", "warn")
+            return
+
+        self.lbl_status.configure(text="Detectando portas comuns...", text_color=self._ui_colors["sub"])
+        self._set_center("Procurando portas 5432/5433/5434/5435 abertas...", "info")
         self.root.update_idletasks()
 
         ports = detect_ports(host)
         if ports:
             self.ent_port.delete(0, "end")
             self.ent_port.insert(0, str(ports[0]))
-            self.lbl_status.configure(text=f"Porta detectada: {ports[0]}", text_color=self._ui_colors.get("ok", "#a6f3b0"))
+            self.lbl_status.configure(text=f"Porta detectada: {ports[0]}", text_color=self._ui_colors["ok"])
+            self._set_center(f"✅ Porta encontrada: {ports[0]}\nAgora clique em “Testar conexão”.", "ok")
         else:
-            self.lbl_status.configure(text="⚠️ Nenhuma porta detectada. Informe manualmente.", text_color=self._ui_colors.get("warn", "#ffd18b"))
+            self.lbl_status.configure(text="Nenhuma porta comum detectada.", text_color=self._ui_colors["warn"])
+            self._set_center(
+                "⚠️ Não encontrei portas comuns abertas.\n"
+                "• Informe a porta manualmente (geralmente 5432)\n"
+                "• Verifique firewall/servidor\n"
+                "Depois teste.",
+                "warn"
+            )
 
     def _on_test(self):
+        ok_fields, msg = self._validate_fields_before_test()
+        if not ok_fields:
+            self._last_test_ok = False
+            self.btn_save.configure(state="disabled")
+            self._set_center(msg, "warn")
+            self.lbl_status.configure(text="Aguardando correções...", text_color=self._ui_colors["warn"])
+            return
+
         cfg = self._current_cfg()
+
+        self.lbl_status.configure(text="Testando conexão...", text_color=self._ui_colors["sub"])
+        self._set_center("Testando conexão com o servidor...", "info")
+        self.root.update_idletasks()
+
         ok, msg = test_connection(cfg)
         self._last_test_ok = ok
 
         if ok:
-            self.lbl_status.configure(text=msg, text_color=self._ui_colors.get("ok", "#a6f3b0"))
+            self._set_center(msg, "ok")
+            self.lbl_status.configure(text="Conexão bem sucedida ✅", text_color=self._ui_colors["ok"])
             self.btn_save.configure(state="normal")
         else:
-            self.lbl_status.configure(text=msg, text_color=self._ui_colors.get("err", "#ff9e9e"))
+            self._set_center(msg, "err")
+            self.lbl_status.configure(text="Falha na conexão ❌", text_color=self._ui_colors["err"])
             self.btn_save.configure(state="disabled")
 
     def _on_save(self):
         if not self._last_test_ok:
-            messagebox.showwarning("Validação", "Teste a conexão e confirme que está OK antes de salvar.")
+            self._set_center("⚠️ Você precisa ter ✅ CONEXÃO OK antes de salvar.", "warn")
             return
 
         cfg = self._current_cfg()
@@ -627,9 +719,11 @@ class SetupBancoWindow:
             path = save_config(cfg)
             self._saved_ok = True
             self.exit_code = 0
+            self._set_center("✅ Configuração salva e validada.\nAbrindo o sistema...", "ok")
             messagebox.showinfo("Configuração salva", f"Configuração salva com sucesso em:\n{path}")
             self.root.destroy()
         except Exception as e:
+            self._set_center(f"❌ Falha ao salvar config.\nDetalhe: {e}", "err")
             messagebox.showerror("Erro ao salvar", f"Não foi possível salvar o config.json.\n\n{e}")
 
 
