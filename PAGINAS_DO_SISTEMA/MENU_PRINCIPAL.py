@@ -941,6 +941,7 @@ class OperaMenuApp(ctk.CTk):
     # Configurações de layout
     SIDEBAR_WIDTH = 300
     ITEM_HEIGHT = 40
+    TOPBAR_HEIGHT = 48
 
     # Ícones das categorias
     ICON_MAPPING = {
@@ -1118,6 +1119,9 @@ class OperaMenuApp(ctk.CTk):
         # Guardar e cancelar callbacks after de forma segura (compatível macOS/Windows)
         initialize_after_guard(self)
 
+        # Ajustes responsivos para telas menores (ex.: 1366x768)
+        self._configure_responsive_layout()
+
         # === INICIALIZAR CORES PADRÃO ===
         self.cor_fundo = "#1e1e1e"
         self.cor_primaria = "#2d2d30"
@@ -1207,6 +1211,34 @@ class OperaMenuApp(ctk.CTk):
         print(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         print(f"🎨 Tema aplicado: {self.current_theme_name}")
 
+    def _configure_responsive_layout(self):
+        """Define escala e métricas de layout com base na resolução atual."""
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        if screen_width <= 1366 or screen_height <= 768:
+            self.ui_scale = 0.85
+        elif screen_width <= 1600 or screen_height <= 900:
+            self.ui_scale = 0.93
+        else:
+            self.ui_scale = 1.0
+
+        try:
+            ctk.set_widget_scaling(self.ui_scale)
+            ctk.set_window_scaling(max(0.90, self.ui_scale))
+        except Exception as e:
+            print(f"⚠️ Erro ao aplicar escala de interface: {e}")
+
+        self.SIDEBAR_WIDTH = max(230, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale))
+        self.ITEM_HEIGHT = max(34, int(self.__class__.ITEM_HEIGHT * self.ui_scale))
+        self.TOPBAR_HEIGHT = max(40, int(self.__class__.TOPBAR_HEIGHT * self.ui_scale))
+
+        self.font_sidebar_titulo = ("Arial", max(18, int(24 * self.ui_scale)), "bold")
+        self.font_sidebar_subtitulo = ("Arial", max(13, int(18 * self.ui_scale)))
+        self.font_topbar_titulo = ("Arial", max(19, int(30 * self.ui_scale)))
+        self.font_topbar_icone = ("Arial", max(18, int(27 * self.ui_scale)))
+        self.icon_size_sidebar = max(42, int(60 * self.ui_scale))
+
   # ===== CONFIGURAÇÃO DA JANELA =====
     def _setup_window(self):
         """Configura a janela principal maximizada COM BARRA DE TAREFAS VISÍVEL."""
@@ -1236,7 +1268,7 @@ class OperaMenuApp(ctk.CTk):
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
 
-        self.minsize(1024, 768)
+        self.minsize(min(1024, screen_width), min(768, screen_height))
         self.focus_force()
         self.lift()
 
@@ -1659,7 +1691,11 @@ class OperaMenuApp(ctk.CTk):
             icon_path = os.path.join(APP_DIR, "ICONE_SISTEMA.png")
             if os.path.exists(icon_path):
                 img = Image.open(icon_path)
-                img = ctk.CTkImage(light_image=img, dark_image=img, size=(60, 60))
+                img = ctk.CTkImage(
+                    light_image=img,
+                    dark_image=img,
+                    size=(self.icon_size_sidebar, self.icon_size_sidebar),
+                )
 
                 icon_label = ctk.CTkLabel(
                     titulo_frame,
@@ -1674,7 +1710,7 @@ class OperaMenuApp(ctk.CTk):
         titulo = ctk.CTkLabel(
             titulo_frame,
             text="SISTEMA OPERA",
-            font=("Arial", 24, "bold"),
+            font=self.font_sidebar_titulo,
             text_color=self.cor_texto,
         )
         titulo.pack(side="left")
@@ -1683,7 +1719,7 @@ class OperaMenuApp(ctk.CTk):
         subtitulo = ctk.CTkLabel(
             self.sidebar,
             text="Menu Principal",
-            font=("Arial", 18),
+            font=self.font_sidebar_subtitulo,
             text_color=self.cor_texto,
         )
         subtitulo.pack(pady=(0, 40))
@@ -1733,7 +1769,7 @@ class OperaMenuApp(ctk.CTk):
             corner_radius=12,
             border_color=self.cor_borda,
             border_width=1,
-            height=48  # ⬅️ AQUI FOI AUMENTADO (~30% MAIOR)
+            height=self.TOPBAR_HEIGHT
         )
         self.topbar.grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 4))
         self.topbar.grid_propagate(False)  # Impede que widgets filhos alterem o tamanho
@@ -1750,7 +1786,7 @@ class OperaMenuApp(ctk.CTk):
         self.title_label = ctk.CTkLabel(
             self.topbar,
             text="Dashboard",
-            font=("Arial", 30),  # ⬅️ FONTE AUMENTADA EM ~30%
+            font=self.font_topbar_titulo,
             text_color=self.cor_texto,
         )
         self.title_label.grid(row=0, column=0, sticky="w", padx=15, pady=4)
@@ -1868,7 +1904,7 @@ class OperaMenuApp(ctk.CTk):
         self.icon_theme = ctk.CTkLabel(
             self.theme_switch_frame,
             text="🌙" if is_dark_mode else "☀️",
-            font=("Arial", 27),  # ⬅️ era 16, aumentado
+            font=self.font_topbar_icone,
         )
         self.icon_theme.pack(side="left", padx=(0, 10))
 
