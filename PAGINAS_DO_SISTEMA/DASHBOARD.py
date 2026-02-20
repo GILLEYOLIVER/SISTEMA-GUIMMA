@@ -223,6 +223,7 @@ class DashboardPage(ctk.CTkFrame):
         self.painel_prod_periodo_var = ctk.StringVar(value="7 dias")
         self.painel_prod_grafico_var = ctk.StringVar(value="Barras")
         self.painel_prod_setor_var = ctk.StringVar(value="Todos")
+        self.ui_scale = float(getattr(sistema, "ui_scale", 1.0) or 1.0)
 
         # Estado gráfico
         self.fig_grafico = None
@@ -249,6 +250,13 @@ class DashboardPage(ctk.CTkFrame):
         self.iniciar_atualizacao_automatica(30)
 
     def _construir(self):
+        scale = self.ui_scale
+        combo_small_w = max(76, int(90 * scale))
+        combo_setor_w = max(110, int(140 * scale))
+        combo_depart_w = max(120, int(160 * scale))
+        area_extra_h = max(150, int(190 * scale))
+        chart_h = max(64, int(80 * scale))
+
         self.tipos_estoque = ["Tecidos", "Aviamentos", "Insumos", "Escritorio", "Limpeza", "Outros"]
         self.cols_estoque = ("ID", "Número Item", "Descrição", "Código", "Data Entrada", "Quantidade")
 
@@ -300,7 +308,7 @@ class DashboardPage(ctk.CTkFrame):
         sb_e.grid(row=0, column=1, sticky="ns")
         self.tree_est.grid(row=0, column=0, sticky="nsew")
 
-        area_extra = ctk.CTkFrame(frame_est, fg_color="#F8F9FA", corner_radius=8, height=190)
+        area_extra = ctk.CTkFrame(frame_est, fg_color="#F8F9FA", corner_radius=8, height=area_extra_h)
         area_extra.grid(row=3, column=0, sticky="nsew", padx=10, pady=(2, 8))
         area_extra.grid_columnconfigure(0, weight=1)
         area_extra.grid_rowconfigure(2, weight=0)
@@ -325,7 +333,7 @@ class DashboardPage(ctk.CTkFrame):
             values=["Todos", "Ordem Corte", "Corte Pronto", "Enviado", "Conferência", "Pendente", "Pago"],
             variable=self.painel_prod_setor_var,
             command=lambda _: self._atualizar_painel_producao(),
-            width=140,
+            width=combo_setor_w,
             height=24,
         )
         self.combo_painel_setor.pack(side="left", padx=(0, 6))
@@ -335,7 +343,7 @@ class DashboardPage(ctk.CTkFrame):
             values=["7 dias", "15 dias", "30 dias"],
             variable=self.painel_prod_periodo_var,
             command=lambda _: self._atualizar_painel_producao(),
-            width=90,
+            width=combo_small_w,
             height=24,
         )
         self.combo_painel_periodo.pack(side="left", padx=(0, 6))
@@ -345,7 +353,7 @@ class DashboardPage(ctk.CTkFrame):
             values=["Barras", "Linha", "Rosca"],
             variable=self.painel_prod_grafico_var,
             command=lambda _: self._atualizar_painel_producao(),
-            width=90,
+            width=combo_small_w,
             height=24,
         )
         self.combo_painel_grafico.pack(side="left")
@@ -374,7 +382,7 @@ class DashboardPage(ctk.CTkFrame):
         card_efi, self.lbl_painel_eficiencia, self.pb_painel_eficiencia = _card("Eficiência diária", "#10B981")
         card_efi.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
 
-        self.painel_prod_chart = ctk.CTkCanvas(area_extra, bg="#FFFFFF", highlightthickness=0, height=80)
+        self.painel_prod_chart = ctk.CTkCanvas(area_extra, bg="#FFFFFF", highlightthickness=0, height=chart_h)
         self.painel_prod_chart.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 6))
 
         self._atualizar_tabela_estoque()
@@ -424,7 +432,7 @@ class DashboardPage(ctk.CTkFrame):
 
         self.combo_depart = ctk.CTkComboBox(
             filtro_frame, values=valores, variable=self.selected_depart,
-            command=lambda _: self._filtrar_tabela_andamento(), width=160, height=23)
+            command=lambda _: self._filtrar_tabela_andamento(), width=combo_depart_w, height=23)
         self.combo_depart.pack(side="left")
 
         cont = ctk.CTkFrame(frame_and, fg_color="#F8F9FA", corner_radius=6)
@@ -441,13 +449,13 @@ class DashboardPage(ctk.CTkFrame):
         for c in cols:
             self.tree_and.heading(c, text=c)
             if c == "Descrição":
-                self.tree_and.column(c, anchor="w", width=170, stretch=True)
+                self.tree_and.column(c, anchor="w", width=max(130, int(170 * scale)), stretch=True)
             elif c in ("Código", "Cortador", "Origem"):
-                self.tree_and.column(c, anchor="center", width=80, stretch=False)
+                self.tree_and.column(c, anchor="center", width=max(66, int(80 * scale)), stretch=False)
             elif c == "Data Registro":
-                self.tree_and.column(c, anchor="center", width=110, stretch=False)
+                self.tree_and.column(c, anchor="center", width=max(88, int(110 * scale)), stretch=False)
             else:
-                self.tree_and.column(c, anchor="center", width=90, stretch=False)
+                self.tree_and.column(c, anchor="center", width=max(72, int(90 * scale)), stretch=False)
 
         sb1 = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree_and.yview)
         self.tree_and.configure(yscroll=sb1.set)
@@ -472,7 +480,9 @@ class DashboardPage(ctk.CTkFrame):
             from matplotlib.figure import Figure
             from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-            self.fig_grafico = Figure(figsize=(6, 4), dpi=100, facecolor=self.cor_secundaria)
+            fig_w = 5.6 if self.ui_scale <= 0.85 else 6.0
+            fig_h = 3.6 if self.ui_scale <= 0.85 else 4.0
+            self.fig_grafico = Figure(figsize=(fig_w, fig_h), dpi=100, facecolor=self.cor_secundaria)
             self.canvas_grafico = FigureCanvasTkAgg(self.fig_grafico, master=self.grafico_container)
             self.canvas_grafico.get_tk_widget().pack(fill='both', expand=True)
 
@@ -487,6 +497,18 @@ class DashboardPage(ctk.CTkFrame):
             print(f"Erro ao criar gráfico: {e}")
             ctk.CTkLabel(self.grafico_container, text=f"Instale matplotlib\npip install matplotlib",
                          text_color="#FF6B6B").pack(expand=True)
+
+    def _apply_figure_layout(self):
+        """Ajusta margens dos gráficos para caber em resoluções menores."""
+        if not self.fig_grafico:
+            return
+        try:
+            self.fig_grafico.tight_layout(pad=0.8 if self.ui_scale <= 0.85 else 1.2)
+        except Exception:
+            try:
+                self.fig_grafico.subplots_adjust(left=0.08, right=0.98, top=0.90, bottom=0.14, wspace=0.30)
+            except Exception:
+                pass
 
     def _mostrar_grafico_producao(self):
         """Mostra gráficos de barras + linhas de status de produção."""
@@ -570,7 +592,7 @@ class DashboardPage(ctk.CTkFrame):
             self.ax_linha.set_title(f"Evolução ({dias}d)", fontsize=11, color=self.cor_texto, fontweight='bold')
             self.ax_linha.grid(True, alpha=0.3, color=self.cor_borda)
 
-            self.fig_grafico.tight_layout(pad=1.5)
+            self._apply_figure_layout()
             self.canvas_grafico.draw()
 
             total_cortes = sum(quantidades)
@@ -681,7 +703,7 @@ class DashboardPage(ctk.CTkFrame):
             ax.axis('equal')
             ax.set_title(f"Progresso: {codigo}", fontsize=12, color=self.cor_texto, fontweight='bold')
 
-            self.fig_grafico.tight_layout(pad=1.5)
+            self._apply_figure_layout()
             self.canvas_grafico.draw()
 
             if hasattr(self, "lbl_info_grafico"):
