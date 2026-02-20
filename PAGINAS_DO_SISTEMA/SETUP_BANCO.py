@@ -2,13 +2,13 @@
 """
 SETUP_BANCO.py — Configurador de Banco (Sistema Opera)
 
-Inclui:
+Funcionalidades:
 - Janela 1200x700 centralizada
-- Campos vazios na primeira vez (só preenche se config validado existir)
-- Persistência real: salva validated_ok=True apenas após Teste OK
-- Mensagens claras no centro do app
-- Detectar portas comuns
-- Detectar SERVIDORES na rede (scan CIDR) nas portas 5432–5435
+- Primeira vez: campos vazios (só preenche se config validado existir)
+- Persistência real: salva validated_ok=True somente após Teste OK
+- Mensagens muito claras no centro do app
+- Detectar porta (5432–5435)
+- Detectar servidores PostgreSQL na rede (scan /24) PARALLEL + CANCEL + PROGRESSO
 """
 
 from __future__ import annotations
@@ -18,9 +18,11 @@ import os
 import socket
 import sys
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import tkinter as tk
 from tkinter import messagebox
@@ -28,6 +30,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 # --- Encoding env (Windows) ---
+# Ajuda em ambientes Postgres cluster WIN1252 etc.
 if sys.platform.startswith("win"):
     os.environ.setdefault("PGCLIENTENCODING", "WIN1252")
     os.environ.setdefault("PGOPTIONS", "-c client_encoding=WIN1252")
@@ -71,6 +74,11 @@ DEV_CONFIG_FILE_PARENT = PROJECT_ROOT / "config.json"
 
 
 def _runtime_pagina_config_candidates() -> List[Path]:
+    """
+    Candidatos extras (ambiente compilado):
+    - pasta do executável
+    - pasta atual (cwd)
+    """
     candidates: List[Path] = []
     try:
         exe_dir = Path(sys.executable).resolve().parent
@@ -86,9 +94,9 @@ def _runtime_pagina_config_candidates() -> List[Path]:
     dedup: List[Path] = []
     seen = set()
     for p in candidates:
-        key = str(p)
-        if key not in seen:
-            seen.add(key)
+        k = str(p)
+        if k not in seen:
+            seen.add(k)
             dedup.append(p)
     return dedup
 
@@ -108,7 +116,7 @@ class DBConfig:
 
 
 def _config_candidates() -> List[Path]:
-    # ordem de leitura: prioriza AppData oficial, mas aceita dev/instalação
+    # ordem de leitura: prioriza AppData oficial
     return [
         CONFIG_FILE,
         APP_PAGINAS_CONFIG_FILE,
@@ -133,6 +141,9 @@ def _read_json_file(path: Path) -> Optional[dict]:
 def load_existing_config_validated() -> Optional[DBConfig]:
     """
     Só carrega e preenche se existir um config com validated_ok=True.
+    Isso garante:
+      - primeira vez = campos vazios
+      - configs antigos não validos são ignorados
     """
     for p in _config_candidates():
         data = _read_json_file(p)
@@ -171,12 +182,13 @@ def load_existing_config_validated() -> Optional[DBConfig]:
             password=str(password),
             schema=str(schema),
         )
+
     return None
 
 
 def save_config(cfg: DBConfig) -> Path:
     """
-    Salva config.json e marca validated_ok=True (somente após teste OK).
+    Salva config.json e marca validated_ok=True.
     """
     payload_dict = {
         "validated_ok": True,
@@ -216,21 +228,19 @@ def save_config(cfg: DBConfig) -> Path:
 
 
 # ============================================================
-# Network helpers (IP / CIDR)
+# Network helpers
 # ============================================================
 def get_local_ip() -> str:
     """
-    IP local provável (não depende de internet).
+    IP local provável (sem depender de internet).
     """
     s = None
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # não precisa existir, só força stack a escolher interface
+        # Força a seleção de interface (não precisa existir)
         s.connect(("192.0.2.1", 1))
-        ip = s.getsockname()[0]
-        return ip
+        return s.getsockname()[0]
     except Exception:
-        # fallback
         try:
             return socket.gethostbyname(socket.gethostname())
         except Exception:
@@ -245,8 +255,8 @@ def get_local_ip() -> str:
 
 def infer_cidr_24(ip: str) -> str:
     """
-    Simplão e eficaz pra LAN comum: assume /24.
-    Ex: 192.168.0.108 -> 192.168.0.0/24
+    Assume /24 (LAN comum).
+    192.168.0.108 -> 192.168.0.0/24
     """
     if not ip or "." not in ip:
         return ""
@@ -257,10 +267,6 @@ def infer_cidr_24(ip: str) -> str:
 
 
 def iter_ips_from_cidr24(cidr: str):
-    """
-    Itera hosts de um /24 sem lib externa.
-    """
-    # esperado: A.B.C.0/24
     base = cidr.split("/")[0].strip()
     parts = base.split(".")
     if len(parts) != 4:
@@ -273,7 +279,7 @@ def iter_ips_from_cidr24(cidr: str):
 # ============================================================
 # Port / Connection
 # ============================================================
-def _probe_port(host: str, port: int, timeout: float = 0.35) -> bool:
+def _probe_port(host: str, port: int, timeout: float = 0.14) -> bool:
     try:
         with socket.create_connection((host, int(port)), timeout=timeout):
             return True
@@ -282,8 +288,8 @@ def _probe_port(host: str, port: int, timeout: float = 0.35) -> bool:
 
 
 def detect_ports(host: str) -> List[int]:
-    common = [5432, 5433, 5434, 5435]
-    return [p for p in common if _probe_port(host, p)]
+    ports = [5432, 5433, 5434, 5435]
+    return [p for p in ports if _probe_port(host, p, timeout=0.25)]
 
 
 def _humanize_pg_error(raw: str, cfg: DBConfig) -> str:
@@ -294,40 +300,39 @@ def _humanize_pg_error(raw: str, cfg: DBConfig) -> str:
         return (
             "❌ SENHA OU USUÁRIO INCORRETO.\n\n"
             "O servidor recusou o login.\n"
-            "• Verifique o campo USUÁRIO\n"
-            "• Verifique a SENHA\n"
-            "• Clique novamente em “Testar conexão”."
+            "• Confirme o USUÁRIO\n"
+            "• Confirme a SENHA\n"
+            "• Teste novamente."
         )
 
     if "no pg_hba.conf entry" in low:
         return (
-            "❌ ACESSO BLOQUEADO PELO SERVIDOR (pg_hba.conf).\n\n"
-            "O Postgres não liberou este computador na rede.\n"
-            "• Rode o CONFIGURADOR DO SERVIDOR\n"
-            "• Libere a rede (CIDR) no pg_hba.conf\n"
-            "• Reinicie o serviço do Postgres\n"
-            "Depois tente novamente."
+            "❌ ACESSO BLOQUEADO (pg_hba.conf).\n\n"
+            "O servidor não liberou este computador na rede.\n"
+            "• No SERVIDOR: libere a rede (CIDR) no pg_hba.conf\n"
+            "• Reinicie o serviço do PostgreSQL\n"
+            "Depois teste novamente."
         )
 
     if "does not exist" in low and "database" in low:
         return (
-            f"❌ O BANCO '{cfg.dbname}' NÃO EXISTE.\n\n"
-            "No servidor, execute os scripts 1→2→3 para criar banco/schema/tabelas.\n"
+            f"❌ BANCO '{cfg.dbname}' NÃO EXISTE.\n\n"
+            "No servidor, crie o banco/schema/tabelas (scripts 1→2→3).\n"
             "Depois teste novamente."
         )
 
     if "does not exist" in low and "schema" in low:
         return (
-            f"❌ O SCHEMA '{cfg.schema}' NÃO EXISTE.\n\n"
-            "No servidor, execute os scripts 1→2→3.\n"
+            f"❌ SCHEMA '{cfg.schema}' NÃO EXISTE.\n\n"
+            "No servidor, crie schema/tabelas (scripts 1→2→3).\n"
             "Depois teste novamente."
         )
 
     if "could not translate host name" in low or "name or service not known" in low:
         return (
             "❌ HOST/IP INVÁLIDO.\n\n"
-            "• Confira o Host/IP (ex: 192.168.0.110)\n"
-            "• Se for “Local”, use localhost\n"
+            "• Em REDE use IP (ex: 192.168.0.110)\n"
+            "• Em LOCAL use localhost\n"
             "Depois teste novamente."
         )
 
@@ -335,20 +340,19 @@ def _humanize_pg_error(raw: str, cfg: DBConfig) -> str:
         return (
             "❌ CONEXÃO RECUSADA.\n\n"
             "Possíveis causas:\n"
-            "• PostgreSQL está desligado no servidor\n"
+            "• PostgreSQL desligado no servidor\n"
             "• Porta errada\n"
-            "• Firewall bloqueando a porta\n\n"
-            "Verifique e teste novamente."
+            "• Firewall bloqueando\n\n"
+            "Verifique e tente novamente."
         )
 
     if "timeout" in low or "timed out" in low:
         return (
             "❌ TIMEOUT NA REDE.\n\n"
-            "O servidor não respondeu a tempo.\n"
-            "• Verifique Host/IP\n"
-            "• Verifique a Porta\n"
-            "• Confirme se está na mesma rede\n"
-            "Depois teste novamente."
+            "• IP errado ou servidor fora\n"
+            "• Porta bloqueada\n"
+            "• Rede lenta\n\n"
+            "Verifique Host/IP e Porta."
         )
 
     return f"❌ ERRO NA CONEXÃO:\n{s}" if s else "❌ ERRO NA CONEXÃO (motivo não identificado)."
@@ -358,6 +362,7 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
     if psycopg2 is None:
         return False, "❌ psycopg2 não instalado. Instale: pip install psycopg2-binary"
 
+    # Pré-teste: porta aberta?
     try:
         with socket.create_connection((cfg.host, int(cfg.port)), timeout=1.2):
             pass
@@ -374,6 +379,7 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
             f"Detalhe técnico: {e}"
         )
 
+    # Conexão real
     try:
         conn = psycopg2.connect(
             host=cfg.host,
@@ -389,7 +395,7 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
         cur.fetchone()
         cur.close()
         conn.close()
-        return True, "✅ CONEXÃO OK!\nAgora você pode clicar em “Salvar e continuar”."
+        return True, "✅ CONEXÃO OK!\nAgora clique em “Salvar e continuar”."
     except Exception as e:
         msg = str(e) if e else ""
         return False, _humanize_pg_error(msg, cfg)
@@ -413,6 +419,10 @@ class SetupBancoWindow:
         else:
             self.root = ctk.CTk()
 
+        # scan control
+        self._scan_stop = threading.Event()
+        self._scan_running = False
+
         self._saved_ok = False
         self._last_test_ok = False
         self.exit_code = 1
@@ -421,13 +431,12 @@ class SetupBancoWindow:
         self.root.minsize(1100, 650)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        # tamanho solicitado
+        # ✅ tamanho solicitado
         self._center_window(1200, 700)
         self._bring_to_front()
 
         existing = load_existing_config_validated()
         self._has_existing_config = existing is not None
-
         self._fixed_dbname = (existing.dbname if existing else "BANCO_OPERA")
 
         # colors
@@ -449,6 +458,7 @@ class SetupBancoWindow:
         outer.grid_columnconfigure(0, weight=1)
         outer.grid_rowconfigure(1, weight=1)
 
+        # Header
         header = ctk.CTkFrame(outer, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=18, pady=(16, 10))
         header.grid_columnconfigure(0, weight=1)
@@ -465,6 +475,7 @@ class SetupBancoWindow:
             row=1, column=0, columnspan=2, sticky="w", pady=(6, 0)
         )
 
+        # Content
         content = ctk.CTkFrame(outer, fg_color="transparent")
         content.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 12))
         content.grid_columnconfigure(0, weight=1, uniform="col")
@@ -479,13 +490,13 @@ class SetupBancoWindow:
         right.grid_columnconfigure(0, weight=1)
         right.grid_columnconfigure(1, weight=1)
 
-        # LEFT: passos + banco fixo + "servidores encontrados"
+        # LEFT
         ctk.CTkLabel(left, text="Passos rápidos", font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", padx=16, pady=(14, 6)
         )
         steps_txt = (
             "1) Escolha Local ou Rede\n"
-            "2) Preencha Host/IP e Porta\n"
+            "2) Detecte servidores ou preencha Host/IP e Porta\n"
             "3) Informe Usuário, Senha e Schema\n"
             "4) Clique em “Testar conexão”\n"
             "5) Salve para concluir"
@@ -500,7 +511,6 @@ class SetupBancoWindow:
         ctk.CTkLabel(left, text=self._fixed_dbname,
                      font=ctk.CTkFont(size=13, weight="bold")).pack(anchor="w", padx=16, pady=(0, 12))
 
-        # Servidores encontrados (dropdown)
         ctk.CTkLabel(left, text="Servidores encontrados", text_color=C_TEXT_SUB,
                      font=ctk.CTkFont(size=11)).pack(anchor="w", padx=16, pady=(6, 2))
 
@@ -514,9 +524,16 @@ class SetupBancoWindow:
         self.opt_found.pack(fill="x", padx=16, pady=(0, 10))
 
         self.btn_scan = ctk.CTkButton(left, text="Detectar servidores na rede", command=self._on_scan_network)
-        self.btn_scan.pack(fill="x", padx=16, pady=(0, 14))
+        self.btn_scan.pack(fill="x", padx=16, pady=(0, 8))
 
-        # RIGHT: dados conexão
+        self.btn_cancel_scan = ctk.CTkButton(
+            left, text="Cancelar scan",
+            fg_color="#7a1f1f", hover_color="#9a2a2a",
+            command=self._on_cancel_scan, state="disabled"
+        )
+        self.btn_cancel_scan.pack(fill="x", padx=16, pady=(0, 14))
+
+        # RIGHT
         ctk.CTkLabel(right, text="Dados da conexão", font=ctk.CTkFont(size=14, weight="bold")).grid(
             row=0, column=0, columnspan=2, sticky="w", padx=16, pady=(14, 8)
         )
@@ -538,7 +555,6 @@ class SetupBancoWindow:
         ctk.CTkLabel(mode_box, text="Tipo de banco", text_color=C_TEXT_SUB, font=ctk.CTkFont(size=11)).grid(
             row=0, column=0, sticky="w"
         )
-
         rb = ctk.CTkFrame(mode_box, fg_color="transparent")
         rb.grid(row=0, column=1, sticky="e")
         ctk.CTkRadioButton(rb, text="Local", value="local", variable=self.var_mode).pack(side="left", padx=(0, 10))
@@ -600,12 +616,12 @@ class SetupBancoWindow:
 
         self.root.bind("<Escape>", lambda e: self._on_close())
 
-        # mensagem inicial
+        # Mensagem inicial
         if not self._has_existing_config:
             self._set_center(
                 "Primeira configuração:\n"
-                "• Você pode clicar em “Detectar servidores na rede” (lado esquerdo)\n"
-                "• Ou preencher manualmente Host/IP e Porta\n"
+                "• Clique em “Detectar servidores na rede” (esquerda)\n"
+                "• Ou preencha Host/IP e Porta manualmente\n"
                 "Depois: Testar conexão → Salvar.",
                 "info"
             )
@@ -650,7 +666,7 @@ class SetupBancoWindow:
         except Exception:
             pass
 
-    # ---------- found servers ----------
+    # ---------- servers found ----------
     def _on_select_found_server(self, value: str):
         """
         value no formato: "192.168.0.110:5432"
@@ -663,6 +679,7 @@ class SetupBancoWindow:
             ip, port = value.split(":", 1)
             ip = ip.strip()
             port = port.strip()
+
             if ip:
                 self.ent_host.delete(0, "end")
                 self.ent_host.insert(0, ip)
@@ -677,10 +694,25 @@ class SetupBancoWindow:
         except Exception:
             pass
 
-    def _scan_network_for_postgres(self) -> List[str]:
+    # ---------- scan control ----------
+    def _on_cancel_scan(self):
+        if self._scan_running:
+            self._scan_stop.set()
+            self._set_center("⛔ Cancelando scan... aguarde.", "warn")
+
+    def _scan_try_ip(self, ip: str, ports_to_check: List[int]) -> Optional[str]:
+        if self._scan_stop.is_set():
+            return None
+        for p in ports_to_check:
+            if self._scan_stop.is_set():
+                return None
+            if _probe_port(ip, p, timeout=0.14):
+                return f"{ip}:{p}"
+        return None
+
+    def _scan_network_for_postgres_parallel(self) -> List[str]:
         """
-        Faz scan na rede /24 procurando portas 5432–5435 abertas.
-        Retorna lista ["ip:port", ...]
+        Scan paralelo em /24 procurando portas 5432–5435.
         """
         local_ip = get_local_ip()
         cidr = infer_cidr_24(local_ip)
@@ -688,64 +720,122 @@ class SetupBancoWindow:
             return []
 
         ports_to_check = [5432, 5433, 5434, 5435]
-        found: List[str] = []
+        ips = [ip for ip in iter_ips_from_cidr24(cidr) if ip != local_ip]
 
-        # otimização: pula seu próprio IP
-        for ip in iter_ips_from_cidr24(cidr):
-            if ip == local_ip:
-                continue
-            # tenta portas 5432-5435
-            for p in ports_to_check:
-                if _probe_port(ip, p, timeout=0.25):
-                    found.append(f"{ip}:{p}")
-                    # achou uma porta, não precisa tentar as outras nesse IP
+        found: List[str] = []
+        total = len(ips)
+        tested = 0
+        last_ui = 0.0
+
+        max_workers = 64  # rápido na LAN; se quiser mais leve, use 32
+
+        def ui_update(force=False):
+            nonlocal last_ui
+            now = time.time()
+            if force or (now - last_ui) > 0.25:
+                last_ui = now
+                self._set_center(
+                    f"🔎 Escaneando rede {cidr} (5432–5435)\n"
+                    f"Progresso: {tested}/{total} | Encontrados: {len(found)}\n"
+                    f"{'⛔ Cancelamento solicitado...' if self._scan_stop.is_set() else ''}",
+                    "warn" if self._scan_stop.is_set() else "info"
+                )
+                self.lbl_status.configure(
+                    text=f"Escaneando... {tested}/{total} | encontrados: {len(found)}",
+                    text_color=self._ui_colors["sub"]
+                )
+                self.root.update_idletasks()
+
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {ex.submit(self._scan_try_ip, ip, ports_to_check): ip for ip in ips}
+
+            for fut in as_completed(futures):
+                if self._scan_stop.is_set():
                     break
 
-        # ordena por ip
+                tested += 1
+                try:
+                    res = fut.result()
+                    if res:
+                        found.append(res)
+                except Exception:
+                    pass
+
+                ui_update(force=False)
+
+        ui_update(force=True)
         found.sort()
         return found
 
     def _on_scan_network(self):
-        """
-        Botão: Detectar servidores na rede.
-        """
+        if self._scan_running:
+            return
+
+        self._scan_running = True
+        self._scan_stop.clear()
+
         self.btn_scan.configure(state="disabled")
-        self._set_center("🔎 Procurando servidores PostgreSQL na rede (5432–5435)...", "info")
-        self.lbl_status.configure(text="Escaneando rede... (pode levar alguns segundos)", text_color=self._ui_colors["sub"])
+        self.btn_cancel_scan.configure(state="normal")
+        self._set_center("🔎 Iniciando scan rápido na rede (5432–5435)...", "info")
+        self.lbl_status.configure(text="Escaneando rede... (rápido)", text_color=self._ui_colors["sub"])
         self.root.update_idletasks()
 
         def worker():
             try:
-                found = self._scan_network_for_postgres()
+                found = self._scan_network_for_postgres_parallel()
             except Exception:
                 found = []
 
             def done():
+                self._scan_running = False
+                self.btn_scan.configure(state="normal")
+                self.btn_cancel_scan.configure(state="disabled")
+
+                if self._scan_stop.is_set():
+                    if found:
+                        self.opt_found.configure(values=found)
+                        self.var_found.set(found[0])
+                        self._on_select_found_server(found[0])
+                        self._set_center(
+                            f"⛔ Scan cancelado.\nMesmo assim encontrei {len(found)} servidor(es).\nSelecione e teste conexão.",
+                            "warn"
+                        )
+                        self.lbl_status.configure(text="Scan cancelado (com resultados)", text_color=self._ui_colors["warn"])
+                    else:
+                        self.opt_found.configure(values=["(nenhum encontrado)"])
+                        self.var_found.set("(nenhum encontrado)")
+                        self._set_center("⛔ Scan cancelado. Nenhum servidor listado.", "warn")
+                        self.lbl_status.configure(text="Scan cancelado", text_color=self._ui_colors["warn"])
+                    return
+
                 if found:
                     self.opt_found.configure(values=found)
                     self.var_found.set(found[0])
-                    # auto preenche o primeiro
                     self._on_select_found_server(found[0])
                     self.lbl_status.configure(text=f"Encontrados: {len(found)}", text_color=self._ui_colors["ok"])
+                    self._set_center(
+                        f"✅ Encontrei {len(found)} servidor(es).\nSelecione um e clique em “Testar conexão”.",
+                        "ok"
+                    )
                 else:
                     self.opt_found.configure(values=["(nenhum encontrado)"])
                     self.var_found.set("(nenhum encontrado)")
+                    self.lbl_status.configure(text="Nenhum servidor encontrado", text_color=self._ui_colors["warn"])
                     self._set_center(
-                        "⚠️ Não encontrei servidor PostgreSQL na sua rede.\n"
-                        "• Confirme se o servidor está ligado\n"
-                        "• Confirme se a porta está liberada no firewall\n"
-                        "• Tente preencher Host/IP manualmente e clicar em “Detectar porta”.",
+                        "⚠️ Não encontrei PostgreSQL na rede.\n\n"
+                        "Cheque no SERVIDOR:\n"
+                        "• PostgreSQL ligado\n"
+                        "• Firewall liberando 5432–5435\n"
+                        "• listen_addresses = '*'\n"
+                        "Depois tente novamente.",
                         "warn"
                     )
-                    self.lbl_status.configure(text="Nenhum servidor encontrado", text_color=self._ui_colors["warn"])
-
-                self.btn_scan.configure(state="normal")
 
             self.root.after(0, done)
 
         threading.Thread(target=worker, daemon=True).start()
 
-    # ---------- validate ----------
+    # ---------- validate / actions ----------
     def _validate_fields_before_test(self) -> Tuple[bool, str]:
         host = self.ent_host.get().strip()
         port = self.ent_port.get().strip()
@@ -774,7 +864,6 @@ class SetupBancoWindow:
 
         return True, ""
 
-    # ---------- actions ----------
     def _on_detect_port(self):
         host = self.ent_host.get().strip()
         if not host:
