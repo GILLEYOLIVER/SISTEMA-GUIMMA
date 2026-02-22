@@ -1,3 +1,5 @@
+baixar do github
+
 git status
 git add -A
 git status
@@ -6,7 +8,7 @@ git push origin main
 
 ___________________________________________________________________________________
 
-empurrar forçado
+empurrar forçado para o github
 
 
 git status
@@ -16,7 +18,7 @@ git push --force-with-lease origin main
 
 
 ___________________________________________________________________________________
-baixar
+baixar do github
 
 git fetch --all --prune
 git checkout main
@@ -25,21 +27,23 @@ git clean -fdx
 git status
 
 
-
-No Mac 
+______________________________________________________________________________________________________
+No Mac cria o sistema sistema
 
 chmod +x packaging/macos/build_installer.sh && printf 's\ns\n' | ./packaging/macos/build_installer.sh
+______________________________________________________________________________________________________
+No Mac cria o configurador do banco
 
+bash packaging/macos/build_db_config.sh
 
+__________________________________________________________
 
-No Windows
+No Windows conpilar o sistema opera
 
 .\packaging\windows\build_installer.ps1
+___________________________________________________________
 
-
-16/02/2026
-
-PG COMPPILAR
+comando para compilar configurador do banco
 
 pyinstaller --noconfirm --clean --onefile --windowed `
   --name "OPERA_CONFIG_POSTGRES" `
