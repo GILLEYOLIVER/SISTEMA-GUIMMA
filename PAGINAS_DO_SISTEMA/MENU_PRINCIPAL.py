@@ -464,6 +464,17 @@ class ThemeManager:
                     )
                     parar_recursao = True
 
+                elif isinstance(widget, ctk.CTkProgressBar):
+                    try:
+                        widget.configure(
+                            fg_color=cor_secundaria,
+                            progress_color=cor_destaque,
+                            border_color=cor_borda,
+                        )
+                    except Exception as e:
+                        print(f"[Tema][DEBUG] Falha ao ajustar CTkProgressBar {_describe_widget(widget)}: {e}")
+                    parar_recursao = True
+
                 elif isinstance(widget, ctk.CTkScrollbar):
                     try:
                         widget.configure(
@@ -595,7 +606,7 @@ class ThemeManager:
                     )
                     parar_recursao = True
 
-                elif isinstance(widget, tk.Frame):
+                elif isinstance(widget, tk.Frame) and not widget.__class__.__module__.startswith("customtkinter"):
                     widget.configure(bg=cor_fundo)
                     parar_recursao = False  # frames são containers normais
 
