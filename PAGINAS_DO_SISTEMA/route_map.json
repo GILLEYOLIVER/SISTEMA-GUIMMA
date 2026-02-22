@@ -203,5 +203,8 @@
   "RELATORIOS": {
     "file": "RELATORIO_ENVIO_DETALHADO.py",
     "class": "RelatorioEnvioDetalhado"
+  },
+  "Trocar Usuário": {
+    "action": "trocar_usuario"
   }
 }
