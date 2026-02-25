@@ -1455,16 +1455,23 @@ class OperaMenuApp(ctk.CTk):
 
     def ask_quit(self, event=None):
         """Pergunta se o usuário deseja sair."""
-        if messagebox.askyesno("Sair", "Deseja realmente sair do sistema?"):
-            self.destroy()  # ✅ sempre destroy
+        if getattr(self, "_closing", False):
+            return
+        try:
+            confirmar = messagebox.askyesno("Sair", "Deseja realmente sair do sistema?", parent=self)
+        except Exception:
+            confirmar = messagebox.askyesno("Sair", "Deseja realmente sair do sistema?")
+
+        if confirmar:
+            self._agendar_after(1, self.destroy)
 
     def destroy(self):
-        """Finaliza a aplicação cancelando timers pendentes."""
-        try:
-            self._closing = True
-            self._fechando = True
-        except Exception:
-            pass
+        """Finaliza a aplicação cancelando timers pendentes e encerra o processo sem janela residual."""
+        if getattr(self, "_closing", False):
+            return
+
+        self._closing = True
+        self._fechando = True
 
         try:
             cancel_all_afters(self)
@@ -1472,12 +1479,30 @@ class OperaMenuApp(ctk.CTk):
         except Exception:
             pass
 
-        # ✅ fecha de verdade a janela
+        try:
+            self.unbind_all("<ButtonRelease-1>")
+            self.unbind_all("<<TreeviewSelect>>")
+            self.unbind_all("<<ComboboxSelected>>")
+            self.unbind_all("<KeyRelease>")
+        except Exception:
+            pass
+
+        try:
+            self.withdraw()
+            self.update_idletasks()
+        except Exception:
+            pass
+
         try:
             super().destroy()
         except Exception:
             pass
 
+        try:
+            import os
+            os._exit(0)
+        except Exception:
+            pass
 
     # ===== CONFIGURAÇÃO DE TECLADO =====
     def _setup_bindings(self):
