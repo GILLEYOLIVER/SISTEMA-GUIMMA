@@ -1223,6 +1223,9 @@ class OperaMenuApp(ctk.CTk):
             self.deiconify()
             self.lift()
             self.focus_force()
+            self._maximize_window()
+            self._agendar_after(80, self._maximize_window)
+            self._agendar_after(220, self._maximize_window)
         except Exception:
             pass
 
@@ -1286,14 +1289,14 @@ class OperaMenuApp(ctk.CTk):
 
     def _apply_global_scaling(self, scale: float):
         """Aplica escala global de forma estável para evitar jitter visual."""
-        target = max(0.60, min(1.0, float(scale)))
+        target = max(0.52, min(1.0, float(scale)))
         current = getattr(self, "_applied_global_scale", None)
         if current is not None and abs(current - target) < 0.01:
             return
         self._applied_global_scale = target
         try:
             ctk.set_widget_scaling(target)
-            ctk.set_window_scaling(max(0.64, target))
+            ctk.set_window_scaling(max(0.56, target))
         except Exception as e:
             print(f"⚠️ Erro ao aplicar escala de interface: {e}")
 
@@ -1376,7 +1379,7 @@ class OperaMenuApp(ctk.CTk):
             pass
 
     def _apply_page_fit_scale(self, frame):
-        """Ajusta escala global da página ativa para evitar cortes em resoluções pequenas."""
+        """Ajusta escala da página ativa para evitar cortes sem usar barras de rolagem."""
         if not hasattr(self, "content") or not self.content.winfo_exists() or not frame.winfo_exists():
             return
 
@@ -1388,12 +1391,24 @@ class OperaMenuApp(ctk.CTk):
         req_w = max(1, frame.winfo_reqwidth())
         req_h = max(1, frame.winfo_reqheight())
 
-        fit = min(avail_w / req_w, avail_h / req_h, 1.0)
+        fit_w = avail_w / req_w
+        fit_h = avail_h / req_h
+        fit = min(fit_w, fit_h, 1.0)
+
         base = getattr(self, "_base_ui_scale", getattr(self, "ui_scale", 1.0))
-        target = max(0.60, min(base, base * fit))
+
+        # Para 1280x720 e cenários semelhantes, permite encolhimento adicional controlado.
+        if avail_w <= 1300 or avail_h <= 730:
+            min_fit = 0.50
+        elif avail_w <= 1366 or avail_h <= 768:
+            min_fit = 0.54
+        else:
+            min_fit = 0.58
+
+        target = max(min_fit, min(base, base * fit))
 
         last_target = getattr(self, "_last_page_target_scale", None)
-        if last_target is not None and abs(last_target - target) < 0.02:
+        if last_target is not None and abs(last_target - target) < 0.012:
             return
         self._last_page_target_scale = target
         self._apply_global_scaling(target)
@@ -1449,6 +1464,8 @@ class OperaMenuApp(ctk.CTk):
         # maximiza antes da janela aparecer para evitar “contorções” visuais
         self._maximize_window()
         self.after(10, self._maximize_window)
+        self.after(120, self._maximize_window)
+        self.after(260, self._maximize_window)
 
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
@@ -3039,7 +3056,9 @@ class OperaMenuApp(ctk.CTk):
                 except Exception:
                     pass
                 frame.pack(fill="both", expand=True, padx=10, pady=10)
-                self._agendar_after(45, self._refresh_active_page_layout)
+                self._agendar_after(30, self._refresh_active_page_layout)
+                self._agendar_after(120, self._refresh_active_page_layout)
+                self._agendar_after(260, self._refresh_active_page_layout)
 
                 # CORREÇÃO ESPECÍFICA PARA PÁGINA DE TEMAS
                 if page_name == "Temas":
