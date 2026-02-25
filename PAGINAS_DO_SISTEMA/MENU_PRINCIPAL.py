@@ -2582,7 +2582,7 @@ class OperaMenuApp(ctk.CTk):
         """Mantido por compatibilidade: largura do submenu é estável e não precisa retune."""
         return
     def _show_submenu(self, categoria: str):
-        """Mostra submenu lado a lado com o botão principal, inclusive em telas pequenas."""
+        """Mostra submenu colado ao botão primário, sem deslocamento em telas pequenas."""
         if categoria not in self.submenu_frames:
             self._create_submenu(categoria)
 
@@ -2593,33 +2593,28 @@ class OperaMenuApp(ctk.CTk):
             return
 
         self.update_idletasks()
-        if hasattr(self, "sidebar") and self.sidebar.winfo_exists():
-            self.sidebar.update_idletasks()
-        if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists():
-            self.menu_frame.update_idletasks()
         btn_frame.update_idletasks()
         frame.update_idletasks()
 
-        sidebar_x = self.sidebar.winfo_x() if hasattr(self, "sidebar") and self.sidebar.winfo_exists() else 0
-        menu_x = self.menu_frame.winfo_x() if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() else 0
-        btn_x = sidebar_x + menu_x + btn_frame.winfo_x()
-
-        sidebar_y = self.sidebar.winfo_y() if hasattr(self, "sidebar") and self.sidebar.winfo_exists() else 0
-        menu_y = self.menu_frame.winfo_y() if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() else 0
-        btn_y = sidebar_y + menu_y + btn_frame.winfo_y()
+        # Coordenadas reais no root evitam offsets de pack/grid em resoluções menores.
+        btn_x = btn_frame.winfo_rootx() - self.winfo_rootx()
+        btn_y = btn_frame.winfo_rooty() - self.winfo_rooty()
 
         btn_w = max(1, btn_frame.winfo_width())
         btn_h = max(1, btn_frame.winfo_height())
         frame_w = max(1, frame.winfo_reqwidth())
         frame_h = max(1, frame.winfo_reqheight())
 
-        gap_x = max(3, int(4 * getattr(self, "ui_scale", 1.0)))
+        gap_x = max(2, int(3 * getattr(self, "ui_scale", 1.0)))
         rel_x = btn_x + btn_w + gap_x
 
-        # Alinha pelo centro do botão primário e depois faz clamp vertical seguro.
-        rel_y = btn_y + ((btn_h - frame_h) // 2)
+        # Preferência: centralizado no botão; fallback pela base quando faltar espaço embaixo.
+        desired_y = btn_y + ((btn_h - frame_h) // 2)
+        if desired_y + frame_h > self.winfo_height() - 8:
+            desired_y = btn_y + btn_h - frame_h
+        rel_y = desired_y
 
-        # Se não couber à direita, abre à esquerda mantendo o mesmo alinhamento vertical.
+        # Se não couber à direita, abre à esquerda mantendo referência no botão origem.
         if rel_x + frame_w > self.winfo_width() - 8:
             rel_x = btn_x - frame_w - gap_x
 
