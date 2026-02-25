@@ -1125,6 +1125,7 @@ class OperaMenuApp(ctk.CTk):
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         reset_tk_default_root()
         super().__init__()
+        self.withdraw()
         print("🚀 Iniciando sistema OPERA...")
 
         # Guardar e cancelar callbacks after de forma segura (compatível macOS/Windows)
@@ -1133,6 +1134,10 @@ class OperaMenuApp(ctk.CTk):
         # Ajustes responsivos para telas menores (ex.: 1366x768)
         self._current_ui_scale = None
         self._pending_responsive_job = None
+        self._responsive_reflow_lock = False
+        self._window_scale_applied = False
+        self._startup_responsive_ready = False
+        self._last_configure_size = None
         self._configure_responsive_layout(initial=True)
 
         # === INICIALIZAR CORES PADRÃO ===
@@ -1194,10 +1199,10 @@ class OperaMenuApp(ctk.CTk):
         self._page_cache_order = []
         self._page_cache_size = 3
         self._current_frame = None
+        self._backup_launch_scheduled = False
 
         # Configuração da janela
         self._setup_window()
-        self._setup_responsive_watcher()
 
         # Carregar tema - AGORA ESTE MÉTODO DECIDE O TEMA CORRETAMENTE
         print("🎨 Iniciando carregamento do tema...")
@@ -1213,45 +1218,64 @@ class OperaMenuApp(ctk.CTk):
         self._setup_activity_logging()
 
         self._preload_complete = True
-        self.deiconify()
 
-        # Atualizar display do usuário
+        # Faz todo o ajuste inicial ainda oculto para evitar "contorção" visual.
+        self._apply_fast_initial_fit()
 
-
+        # Carrega a página inicial ainda com a janela escondida.
         self._open_initial_page()
-        self._ativar_backup_silencioso()
-        self._agendar_after(100, self._update_user_display)
+        try:
+            self.update_idletasks()
+        except Exception:
+            pass
+        self._fit_current_page_to_content()
+
+        # Só depois de tudo pronto a janela aparece.
+        self.deiconify()
+        self.lift()
+
+        # Habilita o watcher somente após a janela existir de fato na tela.
+        self._startup_responsive_ready = True
+        self._last_configure_size = (int(self.winfo_width() or 0), int(self.winfo_height() or 0))
+        self._setup_responsive_watcher()
+        self._agendar_after(20, self._maximize_window)
+
+        # Inicializa tarefas secundárias depois que a UI já estabilizou.
+        self._agendar_after(80, self._update_user_display)
+        self._agendar_after(12000, self._ativar_backup_silencioso)
 
         print(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         print(f"🎨 Tema aplicado: {self.current_theme_name}")
 
     def _calculate_ui_scale(self, width: int, height: int) -> float:
-        """Calcula escala da UI para adaptar automaticamente o layout."""
-        if width <= 1280 or height <= 720:
-            return 0.68
-        if width <= 1366 or height <= 768:
-            return 0.75
-        if width <= 1600 or height <= 900:
-            return 0.88
-        if width <= 1920 or height <= 1080:
-            return 0.95
-        return 1.0
+        """Calcula uma escala proporcional única, preservando o mesmo layout em telas menores."""
+        width = max(1, int(width or self.winfo_screenwidth()))
+        height = max(1, int(height or self.winfo_screenheight()))
 
-    def _apply_global_scaling(self, scale: float):
-        """Aplica escala global de forma estável para evitar jitter visual."""
-        target = max(0.62, min(1.0, float(scale)))
-        current = getattr(self, "_applied_global_scale", None)
-        if current is not None and abs(current - target) < 0.01:
-            return
-        self._applied_global_scale = target
-        try:
-            ctk.set_widget_scaling(target)
-            ctk.set_window_scaling(max(0.78, target))
-        except Exception as e:
-            print(f"⚠️ Erro ao aplicar escala de interface: {e}")
+        # Base visual pensada para preservar o mesmo desenho do layout grande.
+        design_w = 1720
+        design_h = 960
+        usable_w = max(980, width - 36)
+        usable_h = max(620, height - 88)
+
+        fit_w = usable_w / float(design_w)
+        fit_h = usable_h / float(design_h)
+        scale = min(fit_w, fit_h)
+
+        # Em telas menores, reduzimos a escala sem mudar a estrutura do layout.
+        if width <= 1320 or height <= 720:
+            scale = min(scale, 0.64)
+        elif width <= 1366 or height <= 768:
+            scale = min(scale, 0.69)
+        elif width <= 1600 or height <= 900:
+            scale = min(scale, 0.82)
+        elif width <= 1920 or height <= 1080:
+            scale = min(scale, 0.95)
+
+        return max(0.60, min(1.0, round(scale, 3)))
 
     def _configure_responsive_layout(self, *, initial: bool = False, width: int | None = None, height: int | None = None):
-        """Define escala e métricas de layout; em runtime usa tamanho da janela."""
+        """Aplica um *fit to screen* proporcional e depois reajusta a página ativa."""
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         current_width = int(width or self.winfo_width() or screen_width)
@@ -1260,144 +1284,63 @@ class OperaMenuApp(ctk.CTk):
         if initial or current_width <= 1 or current_height <= 1:
             current_width, current_height = screen_width, screen_height
 
-        last_size = getattr(self, "_last_responsive_size", None)
-        if (
-            not initial
-            and last_size
-            and abs(current_width - last_size[0]) < 12
-            and abs(current_height - last_size[1]) < 12
-        ):
-            return
-        self._last_responsive_size = (current_width, current_height)
-
         new_scale = self._calculate_ui_scale(current_width, current_height)
-        if self._current_ui_scale is not None and abs(self._current_ui_scale - new_scale) < 0.01:
+        same_scale = self._current_ui_scale is not None and abs(self._current_ui_scale - new_scale) < 0.015
+
+        if same_scale and not initial:
+            try:
+                self._fit_current_page_to_content()
+            except Exception:
+                pass
             return
 
         self.ui_scale = new_scale
         self._current_ui_scale = new_scale
 
-        self._base_ui_scale = self.ui_scale
-        self._apply_global_scaling(self._base_ui_scale)
-
-        sidebar_por_viewport = int(current_width * 0.23)
-        self.SIDEBAR_WIDTH = max(180, min(sidebar_por_viewport, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale)))
-        self.ITEM_HEIGHT = max(32, int(self.__class__.ITEM_HEIGHT * self.ui_scale))
-        self.TOPBAR_HEIGHT = max(38, int(self.__class__.TOPBAR_HEIGHT * self.ui_scale))
-
-        self.font_sidebar_titulo = ("Arial", max(16, int(24 * self.ui_scale)), "bold")
-        self.font_sidebar_subtitulo = ("Arial", max(12, int(18 * self.ui_scale)))
-        self.font_topbar_titulo = ("Arial", max(17, int(30 * self.ui_scale)))
-        self.font_topbar_icone = ("Arial", max(16, int(27 * self.ui_scale)))
-        self.icon_size_sidebar = max(38, int(60 * self.ui_scale))
-
-        if hasattr(self, "topbar") and self.topbar.winfo_exists():
-            self.topbar.configure(height=self.TOPBAR_HEIGHT)
-        if hasattr(self, "sidebar") and self.sidebar.winfo_exists():
-            self.sidebar.configure(width=self.SIDEBAR_WIDTH)
-        if hasattr(self, "title_label") and self.title_label.winfo_exists():
-            self.title_label.configure(font=self.font_topbar_titulo)
-        if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
-            self.icon_theme.configure(font=self.font_topbar_icone)
-
-        if hasattr(self, "content") and self.content.winfo_exists():
-            try:
-                self.content.update_idletasks()
-            except Exception:
-                pass
-
-        self._refresh_active_page_layout()
-
-    def _refresh_active_page_layout(self):
-        """Força a página ativa a recalcular o layout ao redimensionar a janela."""
-        frame = getattr(self, "_current_frame", None)
-        if not frame or not frame.winfo_exists():
+        if getattr(self, "_responsive_reflow_lock", False):
             return
+
+        self._responsive_reflow_lock = True
         try:
-            frame.update_idletasks()
-            if hasattr(frame, "on_resize"):
-                frame.on_resize()
-            elif hasattr(frame, "atualizar_layout_responsivo"):
-                frame.atualizar_layout_responsivo()
-            self._apply_page_fit_scale(frame)
-        except Exception:
-            pass
-
-    def _apply_page_fit_scale(self, frame):
-        """Ajusta escala global + dimensões da página para caber na área útil sem scroll."""
-        if not hasattr(self, "content") or not self.content.winfo_exists():
-            return
-
-        self.content.update_idletasks()
-        frame.update_idletasks()
-
-        avail_w = max(1, self.content.winfo_width())
-        avail_h = max(1, self.content.winfo_height())
-        req_w = max(1, frame.winfo_reqwidth())
-        req_h = max(1, frame.winfo_reqheight())
-
-        fit = min(avail_w / req_w, avail_h / req_h, 1.0)
-        base_scale = getattr(self, "_base_ui_scale", getattr(self, "ui_scale", 1.0))
-
-        # 1) escala global (tipografia + espaçamentos)
-        target_scale = max(0.62, min(1.0, base_scale * max(0.82, fit)))
-        self._apply_global_scaling(target_scale)
-
-        # 2) escala de widgets com largura/altura fixa (entries, combos, botões etc.)
-        self._apply_widget_dimension_scale(frame, fit)
-
-    def _apply_widget_dimension_scale(self, root_widget, factor: float):
-        """Escala dimensões fixas dos widgets da página para evitar cortes em telas menores."""
-        factor = max(0.72, min(1.0, float(factor)))
-
-        classes_largura = {
-            "CTkEntry", "CTkButton", "CTkComboBox", "CTkOptionMenu", "CTkSwitch",
-            "CTkTextbox", "Entry", "Button", "Combobox"
-        }
-        classes_altura = {
-            "CTkEntry", "CTkButton", "CTkComboBox", "CTkOptionMenu", "CTkSwitch",
-            "CTkTextbox"
-        }
-
-        def walk(widget):
             try:
-                wclass = widget.winfo_class()
-            except Exception:
-                wclass = ""
+                if not self._window_scale_applied:
+                    ctk.set_window_scaling(1.0)
+                    self._window_scale_applied = True
+                ctk.set_widget_scaling(self.ui_scale)
+            except Exception as e:
+                print(f"⚠️ Erro ao aplicar escala de interface: {e}")
+
+            self.SIDEBAR_WIDTH = max(220, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale))
+            self.ITEM_HEIGHT = max(32, int(self.__class__.ITEM_HEIGHT * self.ui_scale))
+            self.TOPBAR_HEIGHT = max(38, int(self.__class__.TOPBAR_HEIGHT * self.ui_scale))
+
+            self.font_sidebar_titulo = ("Arial", max(16, int(24 * self.ui_scale)), "bold")
+            self.font_sidebar_subtitulo = ("Arial", max(12, int(18 * self.ui_scale)))
+            self.font_topbar_titulo = ("Arial", max(17, int(30 * self.ui_scale)))
+            self.font_topbar_icone = ("Arial", max(16, int(27 * self.ui_scale)))
+            self.icon_size_sidebar = max(38, int(60 * self.ui_scale))
+
+            if hasattr(self, "topbar") and self.topbar.winfo_exists():
+                self.topbar.configure(height=self.TOPBAR_HEIGHT)
+            if hasattr(self, "sidebar") and self.sidebar.winfo_exists():
+                self.sidebar.configure(width=self.SIDEBAR_WIDTH)
+            if hasattr(self, "title_label") and self.title_label.winfo_exists():
+                self.title_label.configure(font=self.font_topbar_titulo)
+            if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
+                self.icon_theme.configure(font=self.font_topbar_icone)
 
             try:
-                if wclass in classes_largura:
-                    cur_w = int(widget.cget("width"))
-                    if cur_w > 0:
-                        base_w = getattr(widget, "_opera_base_width", None)
-                        if base_w is None:
-                            widget._opera_base_width = cur_w
-                            base_w = cur_w
-                        new_w = max(40, int(base_w * factor))
-                        widget.configure(width=new_w)
+                self._fit_current_page_to_content()
             except Exception:
                 pass
 
             try:
-                if wclass in classes_altura:
-                    cur_h = int(widget.cget("height"))
-                    if cur_h > 0:
-                        base_h = getattr(widget, "_opera_base_height", None)
-                        if base_h is None:
-                            widget._opera_base_height = cur_h
-                            base_h = cur_h
-                        new_h = max(22, int(base_h * factor))
-                        widget.configure(height=new_h)
+                if getattr(self, "_active_submenu", None):
+                    self._show_submenu(self._active_submenu)
             except Exception:
                 pass
-
-            try:
-                for child in widget.winfo_children():
-                    walk(child)
-            except Exception:
-                pass
-
-        walk(root_widget)
+        finally:
+            self._responsive_reflow_lock = False
 
     def _setup_responsive_watcher(self):
         """Recalibra escala automaticamente quando a janela muda de tamanho."""
@@ -1406,14 +1349,32 @@ class OperaMenuApp(ctk.CTk):
     def _on_window_configure(self, event):
         if event.widget is not self:
             return
+        if not getattr(self, "_startup_responsive_ready", False):
+            return
+        if getattr(self, "_responsive_reflow_lock", False):
+            return
+
+        width = int(getattr(event, "width", 0) or 0)
+        height = int(getattr(event, "height", 0) or 0)
+        if width < 100 or height < 100:
+            return
+
+        previous = self._last_configure_size
+        self._last_configure_size = (width, height)
+        if previous is not None:
+            pw, ph = previous
+            if abs(width - pw) < 12 and abs(height - ph) < 12:
+                return
+
         if self._pending_responsive_job:
             try:
                 self.after_cancel(self._pending_responsive_job)
             except Exception:
                 pass
+
         self._pending_responsive_job = self.after(
-            120,
-            lambda w=event.width, h=event.height: self._configure_responsive_layout(width=w, height=h),
+            90,
+            lambda w=width, h=height: self._configure_responsive_layout(width=w, height=h),
         )
 
   # ===== CONFIGURAÇÃO DA JANELA =====
@@ -1440,13 +1401,14 @@ class OperaMenuApp(ctk.CTk):
         else:
             self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
 
-        self.after(50, self._maximize_window)
+        # Faz o ajuste inicial ainda com a janela oculta para evitar "contorções" visuais.
+        self.update_idletasks()
+        self._maximize_window()
 
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
 
-        self.minsize(min(900, screen_width), min(620, screen_height))
-        self.focus_force()
+        self.minsize(min(1024, screen_width), min(768, screen_height))
         self.lift()
 
     def toggle_fullscreen(self, event=None):
@@ -1462,6 +1424,25 @@ class OperaMenuApp(ctk.CTk):
             else:
                 self.state("zoomed")
         except tk.TclError:
+            pass
+
+    def _apply_fast_initial_fit(self):
+        """Aplica o fit inicial uma única vez, ainda com a janela oculta."""
+        try:
+            self.update_idletasks()
+        except Exception:
+            pass
+
+        try:
+            width = int(self.winfo_screenwidth())
+            height = int(self.winfo_screenheight())
+            self._configure_responsive_layout(initial=True, width=width, height=height)
+        except Exception as exc:
+            print(f"⚠️ Falha no ajuste inicial rápido: {exc}")
+
+        try:
+            self.update_idletasks()
+        except Exception:
             pass
 
     def ask_quit(self, event=None):
@@ -1489,12 +1470,6 @@ class OperaMenuApp(ctk.CTk):
         except Exception:
             pass
 
-        # ✅ garante encerramento total
-        try:
-            import sys
-            sys.exit(0)
-        except Exception:
-            pass
 
     # ===== CONFIGURAÇÃO DE TECLADO =====
     def _setup_bindings(self):
@@ -1928,19 +1903,15 @@ class OperaMenuApp(ctk.CTk):
 
         self._build_topbar()
 
-        self.content_shell = ctk.CTkFrame(
+        self.content = ctk.CTkFrame(
             self.main,
             fg_color=self.cor_fundo,
             corner_radius=10,
             border_color=self.cor_borda,
             border_width=1,
         )
-        self.content_shell.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
-        self.content_shell.grid_columnconfigure(0, weight=1)
-        self.content_shell.grid_rowconfigure(0, weight=1)
-
-        self.content = ctk.CTkFrame(self.content_shell, fg_color=self.cor_fundo)
-        self.content.grid(row=0, column=0, sticky="nsew")
+        self.content.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.content.grid_propagate(False)
 
     def _build_topbar(self):
         """Constrói a barra superior com altura ~30% maior."""
@@ -2474,7 +2445,7 @@ class OperaMenuApp(ctk.CTk):
         self._show_submenu(categoria)
 
     def _show_submenu(self, categoria: str):
-        """Mostra submenu para uma categoria."""
+        """Mostra o submenu colado ao lado do botão primário, sem sobrepor a dashboard."""
         if categoria not in self.submenu_frames:
             self._create_submenu(categoria)
 
@@ -2484,22 +2455,36 @@ class OperaMenuApp(ctk.CTk):
         if not btn_frame:
             return
 
-        btn_y = btn_frame.winfo_rooty()
-        self_x = self.winfo_rootx()
-        self_y = self.winfo_rooty()
-
-        sidebar_right = self.sidebar.winfo_rootx() - self_x + self.sidebar.winfo_width()
-        rel_x = sidebar_right - 8
-        rel_y = btn_y - self_y
-
+        self.update_idletasks()
         frame.update_idletasks()
-        frame_w = frame.winfo_reqwidth()
-        frame_h = frame.winfo_reqheight()
-        screen_h = self.winfo_screenheight()
-        max_x = max(10, self.winfo_width() - frame_w - 10)
-        max_y = max(10, min(self.winfo_height(), screen_h) - frame_h - 10)
-        rel_x = max(10, min(rel_x, max_x))
-        rel_y = max(10, min(rel_y, max_y))
+        btn_frame.update_idletasks()
+
+        margin = 8
+        gap = 4
+
+        frame_w = max(frame.winfo_reqwidth(), frame.winfo_width())
+        frame_h = max(frame.winfo_reqheight(), frame.winfo_height())
+
+        host_root_x = self.winfo_rootx()
+        host_root_y = self.winfo_rooty()
+
+        btn_x = btn_frame.winfo_rootx() - host_root_x
+        btn_y = btn_frame.winfo_rooty() - host_root_y
+        btn_w = btn_frame.winfo_width()
+        btn_h = btn_frame.winfo_height()
+
+        preferred_right_x = btn_x + btn_w + gap
+        preferred_left_x = btn_x - frame_w - gap
+
+        if preferred_right_x + frame_w + margin <= self.winfo_width():
+            rel_x = preferred_right_x
+        elif preferred_left_x >= margin:
+            rel_x = preferred_left_x
+        else:
+            rel_x = max(margin, min(preferred_right_x, self.winfo_width() - frame_w - margin))
+
+        preferred_y = btn_y + max(0, (btn_h - frame_h) // 2)
+        rel_y = max(margin, min(preferred_y, self.winfo_height() - frame_h - margin))
 
         frame.place(x=rel_x, y=rel_y)
         frame.lift()
@@ -2672,8 +2657,8 @@ class OperaMenuApp(ctk.CTk):
 
     # ===== GERENCIAMENTO DE PÁGINAS =====
     def _open_initial_page(self):
-        """Abre página inicial após carregamento."""
-        self._agendar_after(100, self._open_dashboard_automatico)
+        """Abre a página inicial imediatamente, sem atraso visível."""
+        self._open_dashboard_automatico()
 
 
     # ==============================================================
@@ -2681,7 +2666,7 @@ class OperaMenuApp(ctk.CTk):
     # ==============================================================
     def _ativar_backup_silencioso(self):
         """
-        Ativa o backup automático assim que o MENU é carregado.
+        Ativa o backup automático depois que a UI já estabilizou.
         NÃO cria interface (BackupPage), apenas manipula BACKUP_AUTO global.
         Compatível com Windows e macOS.
 
@@ -2689,6 +2674,18 @@ class OperaMenuApp(ctk.CTk):
         Usa o mesmo módulo da rota (opera_page_BACKUP) para evitar estado duplicado
         entre imports diferentes do arquivo BACKUP.py.
         """
+
+        if getattr(self, "_backup_launch_scheduled", False):
+            self._backup_launch_scheduled = False
+
+        # Se a janela ainda não estiver visível/estável, adia novamente sem bloquear a UI.
+        try:
+            if not self.winfo_exists() or self.state() == "withdrawn":
+                self._backup_launch_scheduled = True
+                self._agendar_after(5000, self._ativar_backup_silencioso)
+                return
+        except Exception:
+            pass
 
         try:
             route = self.routes.get("Backup", {})
@@ -2910,7 +2907,6 @@ class OperaMenuApp(ctk.CTk):
             if frame:
                 # Exibir no container principal
                 frame.pack(fill="both", expand=True, padx=10, pady=10)
-                self._agendar_after(60, self._refresh_active_page_layout)
 
                 # CORREÇÃO ESPECÍFICA PARA PÁGINA DE TEMAS
                 if page_name == "Temas":
@@ -2971,6 +2967,12 @@ class OperaMenuApp(ctk.CTk):
                 self.current_page = page_name
                 self._current_frame = frame
 
+                try:
+                    self._fit_current_page_to_content()
+                    self._agendar_after(120, self._fit_current_page_to_content)
+                except Exception:
+                    pass
+
                 # Guardar última página nas configurações
                 try:
                     self.settings["last_page"] = page_name
@@ -2993,6 +2995,30 @@ class OperaMenuApp(ctk.CTk):
             traceback.print_exc()
         finally:
             self._page_loading = False
+
+    def _fit_current_page_to_content(self):
+        """Reaplica o encaixe da página atual dentro da área útil da dashboard."""
+        frame = getattr(self, "_current_frame", None)
+        if not frame or not frame.winfo_exists():
+            return
+        if not hasattr(self, "content") or not self.content.winfo_exists():
+            return
+
+        self.update_idletasks()
+        content_w = int(self.content.winfo_width() or max(100, self.main.winfo_width() - 24))
+        content_h = int(self.content.winfo_height() or max(100, self.main.winfo_height() - self.TOPBAR_HEIGHT - 24))
+        page_pad = max(2, int(8 * float(getattr(self, "ui_scale", 1.0) or 1.0)))
+
+        try:
+            frame.pack_configure(fill="both", expand=True, padx=page_pad, pady=page_pad)
+        except Exception:
+            pass
+
+        if hasattr(frame, "on_host_resize"):
+            try:
+                frame.on_host_resize(content_w, content_h, float(getattr(self, "ui_scale", 1.0) or 1.0))
+            except Exception as exc:
+                print(f"⚠️ Ajuste responsivo falhou em '{getattr(self, 'current_page', '')}': {exc}")
 
     def _log_page_access(self, page_name: str):
         """Registra acesso à página no sistema de logs"""
