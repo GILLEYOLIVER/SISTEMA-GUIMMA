@@ -1135,6 +1135,10 @@ class OperaMenuApp(ctk.CTk):
         # Ajustes responsivos para telas menores (ex.: 1366x768)
         self._current_ui_scale = None
         self._pending_responsive_job = None
+        self._responsive_reflow_lock = False
+        self._window_scale_applied = False
+        self._startup_responsive_ready = False
+        self._last_configure_size = None
         self._configure_responsive_layout(initial=True)
 
         # === INICIALIZAR CORES PADRÃO ===
@@ -1196,10 +1200,10 @@ class OperaMenuApp(ctk.CTk):
         self._page_cache_order = []
         self._page_cache_size = 3
         self._current_frame = None
+        self._backup_launch_scheduled = False
 
         # Configuração da janela
         self._setup_window()
-        self._setup_responsive_watcher()
 
         # Carregar tema - AGORA ESTE MÉTODO DECIDE O TEMA CORRETAMENTE
         print("🎨 Iniciando carregamento do tema...")
@@ -1227,10 +1231,30 @@ class OperaMenuApp(ctk.CTk):
 
         # Atualizar display do usuário
 
+        # Faz todo o ajuste inicial ainda oculto para evitar "contorção" visual.
+        self._apply_fast_initial_fit()
 
+        # Carrega a página inicial ainda com a janela escondida.
         self._open_initial_page()
-        self._ativar_backup_silencioso()
-        self._agendar_after(100, self._update_user_display)
+        try:
+            self.update_idletasks()
+        except Exception:
+            pass
+        self._fit_current_page_to_content()
+
+        # Só depois de tudo pronto a janela aparece.
+        self.deiconify()
+        self.lift()
+
+        # Habilita o watcher somente após a janela existir de fato na tela.
+        self._startup_responsive_ready = True
+        self._last_configure_size = (int(self.winfo_width() or 0), int(self.winfo_height() or 0))
+        self._setup_responsive_watcher()
+        self._agendar_after(20, self._maximize_window)
+
+        # Inicializa tarefas secundárias depois que a UI já estabilizou.
+        self._agendar_after(80, self._update_user_display)
+        self._agendar_after(12000, self._ativar_backup_silencioso)
 
         print(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         print(f"🎨 Tema aplicado: {self.current_theme_name}")
@@ -1277,7 +1301,7 @@ class OperaMenuApp(ctk.CTk):
             print(f"⚠️ Erro ao aplicar escala de interface: {e}")
 
     def _configure_responsive_layout(self, *, initial: bool = False, width: int | None = None, height: int | None = None):
-        """Define escala e métricas de layout; em runtime usa tamanho da janela."""
+        """Aplica um *fit to screen* proporcional e depois reajusta a página ativa."""
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         current_width = int(width or self.winfo_width() or screen_width)
@@ -1297,7 +1321,13 @@ class OperaMenuApp(ctk.CTk):
         self._last_responsive_size = (current_width, current_height)
 
         new_scale = self._calculate_ui_scale(current_width, current_height)
-        if self._current_ui_scale is not None and abs(self._current_ui_scale - new_scale) < 0.01:
+        same_scale = self._current_ui_scale is not None and abs(self._current_ui_scale - new_scale) < 0.015
+
+        if same_scale and not initial:
+            try:
+                self._fit_current_page_to_content()
+            except Exception:
+                pass
             return
 
         self.ui_scale = new_scale
@@ -1401,6 +1431,7 @@ class OperaMenuApp(ctk.CTk):
                 self.after_cancel(self._pending_responsive_job)
             except Exception:
                 pass
+
         self._pending_responsive_job = self.after(
             40,
             lambda w=event.width, h=event.height: self._configure_responsive_layout(width=w, height=h),
@@ -1456,6 +1487,25 @@ class OperaMenuApp(ctk.CTk):
             else:
                 self.state("zoomed")
         except tk.TclError:
+            pass
+
+    def _apply_fast_initial_fit(self):
+        """Aplica o fit inicial uma única vez, ainda com a janela oculta."""
+        try:
+            self.update_idletasks()
+        except Exception:
+            pass
+
+        try:
+            width = int(self.winfo_screenwidth())
+            height = int(self.winfo_screenheight())
+            self._configure_responsive_layout(initial=True, width=width, height=height)
+        except Exception as exc:
+            print(f"⚠️ Falha no ajuste inicial rápido: {exc}")
+
+        try:
+            self.update_idletasks()
+        except Exception:
             pass
 
     def ask_quit(self, event=None):
@@ -2752,8 +2802,8 @@ class OperaMenuApp(ctk.CTk):
 
     # ===== GERENCIAMENTO DE PÁGINAS =====
     def _open_initial_page(self):
-        """Abre página inicial após carregamento."""
-        self._agendar_after(100, self._open_dashboard_automatico)
+        """Abre a página inicial imediatamente, sem atraso visível."""
+        self._open_dashboard_automatico()
 
 
     # ==============================================================
@@ -2761,7 +2811,7 @@ class OperaMenuApp(ctk.CTk):
     # ==============================================================
     def _ativar_backup_silencioso(self):
         """
-        Ativa o backup automático assim que o MENU é carregado.
+        Ativa o backup automático depois que a UI já estabilizou.
         NÃO cria interface (BackupPage), apenas manipula BACKUP_AUTO global.
         Compatível com Windows e macOS.
 
@@ -2769,6 +2819,18 @@ class OperaMenuApp(ctk.CTk):
         Usa o mesmo módulo da rota (opera_page_BACKUP) para evitar estado duplicado
         entre imports diferentes do arquivo BACKUP.py.
         """
+
+        if getattr(self, "_backup_launch_scheduled", False):
+            self._backup_launch_scheduled = False
+
+        # Se a janela ainda não estiver visível/estável, adia novamente sem bloquear a UI.
+        try:
+            if not self.winfo_exists() or self.state() == "withdrawn":
+                self._backup_launch_scheduled = True
+                self._agendar_after(5000, self._ativar_backup_silencioso)
+                return
+        except Exception:
+            pass
 
         try:
             route = self.routes.get("Backup", {})
@@ -3057,6 +3119,12 @@ class OperaMenuApp(ctk.CTk):
                 self.current_page = page_name
                 self._current_frame = frame
 
+                try:
+                    self._fit_current_page_to_content()
+                    self._agendar_after(120, self._fit_current_page_to_content)
+                except Exception:
+                    pass
+
                 # Guardar última página nas configurações
                 try:
                     self.settings["last_page"] = page_name
@@ -3079,6 +3147,30 @@ class OperaMenuApp(ctk.CTk):
             traceback.print_exc()
         finally:
             self._page_loading = False
+
+    def _fit_current_page_to_content(self):
+        """Reaplica o encaixe da página atual dentro da área útil da dashboard."""
+        frame = getattr(self, "_current_frame", None)
+        if not frame or not frame.winfo_exists():
+            return
+        if not hasattr(self, "content") or not self.content.winfo_exists():
+            return
+
+        self.update_idletasks()
+        content_w = int(self.content.winfo_width() or max(100, self.main.winfo_width() - 24))
+        content_h = int(self.content.winfo_height() or max(100, self.main.winfo_height() - self.TOPBAR_HEIGHT - 24))
+        page_pad = max(2, int(8 * float(getattr(self, "ui_scale", 1.0) or 1.0)))
+
+        try:
+            frame.pack_configure(fill="both", expand=True, padx=page_pad, pady=page_pad)
+        except Exception:
+            pass
+
+        if hasattr(frame, "on_host_resize"):
+            try:
+                frame.on_host_resize(content_w, content_h, float(getattr(self, "ui_scale", 1.0) or 1.0))
+            except Exception as exc:
+                print(f"⚠️ Ajuste responsivo falhou em '{getattr(self, 'current_page', '')}': {exc}")
 
     def _log_page_access(self, page_name: str):
         """Registra acesso à página no sistema de logs"""
