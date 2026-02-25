@@ -1235,18 +1235,18 @@ class OperaMenuApp(ctk.CTk):
     def _calculate_ui_scale(self, width: int, height: int) -> float:
         """Calcula escala uniforme para manter o mesmo padrão visual em qualquer monitor."""
         base = min(width / 1920.0, height / 1080.0)
-        return max(0.78, min(1.0, round(base, 3)))
+        return max(0.74, min(1.0, round(base, 3)))
 
     def _apply_global_scaling(self, scale: float):
         """Aplica escala global de forma estável para evitar jitter visual."""
-        target = max(0.78, min(1.0, float(scale)))
+        target = max(0.74, min(1.0, float(scale)))
         current = getattr(self, "_applied_global_scale", None)
         if current is not None and abs(current - target) < 0.01:
             return
         self._applied_global_scale = target
         try:
             ctk.set_widget_scaling(target)
-            ctk.set_window_scaling(max(0.78, target))
+            ctk.set_window_scaling(max(0.74, target))
         except Exception as e:
             print(f"⚠️ Erro ao aplicar escala de interface: {e}")
 
@@ -1280,16 +1280,15 @@ class OperaMenuApp(ctk.CTk):
         self._base_ui_scale = self.ui_scale
         self._apply_global_scaling(self._base_ui_scale)
 
-        sidebar_por_viewport = int(current_width * 0.23)
-        self.SIDEBAR_WIDTH = max(180, min(sidebar_por_viewport, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale)))
-        self.ITEM_HEIGHT = max(32, int(self.__class__.ITEM_HEIGHT * self.ui_scale))
-        self.TOPBAR_HEIGHT = max(38, int(self.__class__.TOPBAR_HEIGHT * self.ui_scale))
+        self.SIDEBAR_WIDTH = max(220, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale))
+        self.ITEM_HEIGHT = max(30, int(self.__class__.ITEM_HEIGHT * self.ui_scale))
+        self.TOPBAR_HEIGHT = max(36, int(self.__class__.TOPBAR_HEIGHT * self.ui_scale))
 
-        self.font_sidebar_titulo = ("Arial", max(16, int(24 * self.ui_scale)), "bold")
-        self.font_sidebar_subtitulo = ("Arial", max(12, int(18 * self.ui_scale)))
-        self.font_topbar_titulo = ("Arial", max(17, int(30 * self.ui_scale)))
-        self.font_topbar_icone = ("Arial", max(16, int(27 * self.ui_scale)))
-        self.icon_size_sidebar = max(38, int(60 * self.ui_scale))
+        self.font_sidebar_titulo = ("Arial", max(14, int(22 * self.ui_scale)), "bold")
+        self.font_sidebar_subtitulo = ("Arial", max(11, int(16 * self.ui_scale)))
+        self.font_topbar_titulo = ("Arial", max(14, int(26 * self.ui_scale)))
+        self.font_topbar_icone = ("Arial", max(14, int(22 * self.ui_scale)))
+        self.icon_size_sidebar = max(28, int(52 * self.ui_scale))
 
         if hasattr(self, "topbar") and self.topbar.winfo_exists():
             self.topbar.configure(height=self.TOPBAR_HEIGHT)
@@ -1346,7 +1345,7 @@ class OperaMenuApp(ctk.CTk):
             except Exception:
                 pass
         self._pending_responsive_job = self.after(
-            180,
+            16,
             lambda w=event.width, h=event.height: self._configure_responsive_layout(width=w, height=h),
         )
 
@@ -2273,9 +2272,9 @@ class OperaMenuApp(ctk.CTk):
         self.botoes_menu[categoria] = btn_frame
 
     def _get_submenu_metrics(self, categoria: str, items: list[str]) -> tuple[int, tuple]:
-        """Define métricas fixas/proporcionais para manter menu igual em telas grandes e pequenas."""
-        font_cfg = ("Arial", max(11, int(12 * getattr(self, "ui_scale", 1.0))))
-        width = max(180, int(self.SIDEBAR_WIDTH - 6))
+        """Define métricas estáveis dos submenus para manter alinhamento entre resoluções."""
+        font_cfg = ("Arial", max(10, int(11 * getattr(self, "ui_scale", 1.0))))
+        width = max(170, int(self.SIDEBAR_WIDTH - 12))
         return width, font_cfg
 
     def _truncate_submenu_text(self, text: str, font_cfg: tuple, avail_px: int) -> str:
@@ -2463,10 +2462,12 @@ class OperaMenuApp(ctk.CTk):
 
         btn_x = btn_frame.winfo_rootx()
         btn_y = btn_frame.winfo_rooty()
+        btn_h = max(1, btn_frame.winfo_height())
         self_x = self.winfo_rootx()
         self_y = self.winfo_rooty()
 
         frame_w = frame.winfo_reqwidth()
+        frame_h = frame.winfo_reqheight()
         btn_rel_x = btn_x - self_x
         btn_rel_y = btn_y - self_y
         right_edge_x = btn_rel_x + btn_frame.winfo_width()
@@ -2475,8 +2476,12 @@ class OperaMenuApp(ctk.CTk):
         if rel_x + frame_w > self.winfo_width() - 10:
             rel_x = btn_rel_x - frame_w - 2
 
-        rel_x = max(10, min(rel_x, max(10, self.winfo_width() - frame_w - 10)))
-        rel_y = max(10, btn_rel_y)
+        max_x = max(10, self.winfo_width() - frame_w - 10)
+        max_y = max(10, self.winfo_height() - frame_h - 10)
+        rel_x = max(10, min(rel_x, max_x))
+        rel_y = btn_rel_y
+        if rel_y > max_y:
+            rel_y = max(10, btn_rel_y + btn_h - frame_h)
 
         frame.place(x=rel_x, y=rel_y)
         frame.lift()
