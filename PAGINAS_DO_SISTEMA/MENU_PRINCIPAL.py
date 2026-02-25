@@ -1233,20 +1233,24 @@ class OperaMenuApp(ctk.CTk):
         print(f"🎨 Tema aplicado: {self.current_theme_name}")
 
     def _calculate_ui_scale(self, width: int, height: int) -> float:
-        """Calcula escala uniforme para manter o mesmo padrão visual em qualquer monitor."""
+        """Calcula escala preservando legibilidade e encaixe em telas menores."""
         base = min(width / 1920.0, height / 1080.0)
+        if width <= 1320 or height <= 720:
+            return max(0.68, min(0.78, round(base, 3)))
+        if width <= 1366 or height <= 768:
+            return max(0.72, min(0.84, round(base, 3)))
         return max(0.74, min(1.0, round(base, 3)))
 
     def _apply_global_scaling(self, scale: float):
         """Aplica escala global de forma estável para evitar jitter visual."""
-        target = max(0.74, min(1.0, float(scale)))
+        target = max(0.68, min(1.0, float(scale)))
         current = getattr(self, "_applied_global_scale", None)
         if current is not None and abs(current - target) < 0.01:
             return
         self._applied_global_scale = target
         try:
             ctk.set_widget_scaling(target)
-            ctk.set_window_scaling(max(0.74, target))
+            ctk.set_window_scaling(max(0.70, target))
         except Exception as e:
             print(f"⚠️ Erro ao aplicar escala de interface: {e}")
 
@@ -1345,7 +1349,7 @@ class OperaMenuApp(ctk.CTk):
             except Exception:
                 pass
         self._pending_responsive_job = self.after(
-            16,
+            64,
             lambda w=event.width, h=event.height: self._configure_responsive_layout(width=w, height=h),
         )
 
@@ -2272,9 +2276,15 @@ class OperaMenuApp(ctk.CTk):
         self.botoes_menu[categoria] = btn_frame
 
     def _get_submenu_metrics(self, categoria: str, items: list[str]) -> tuple[int, tuple]:
-        """Define métricas estáveis dos submenus para manter alinhamento entre resoluções."""
+        """Define métricas dos submenus equilibrando alinhamento e texto completo."""
         font_cfg = ("Arial", max(10, int(11 * getattr(self, "ui_scale", 1.0))))
-        width = max(170, int(self.SIDEBAR_WIDTH - 12))
+        base_w = max(170, int(self.SIDEBAR_WIDTH - 12))
+        try:
+            meter = tkfont.Font(family=font_cfg[0], size=font_cfg[1])
+            texto_max = max((meter.measure(it) for it in items), default=base_w - 56)
+            width = max(base_w, min(int(texto_max + 58), int(self.winfo_width() * 0.33)))
+        except Exception:
+            width = base_w
         return width, font_cfg
 
     def _truncate_submenu_text(self, text: str, font_cfg: tuple, avail_px: int) -> str:
@@ -2480,8 +2490,9 @@ class OperaMenuApp(ctk.CTk):
         max_y = max(10, self.winfo_height() - frame_h - 10)
         rel_x = max(10, min(rel_x, max_x))
         rel_y = btn_rel_y
-        if rel_y > max_y:
-            rel_y = max(10, btn_rel_y + btn_h - frame_h)
+        if rel_y + frame_h > self.winfo_height() - 10:
+            rel_y = btn_rel_y + btn_h - frame_h
+        rel_y = max(10, min(rel_y, max_y))
 
         frame.place(x=rel_x, y=rel_y)
         frame.lift()
