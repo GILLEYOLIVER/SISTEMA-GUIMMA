@@ -2444,6 +2444,8 @@ class OperaMenuApp(ctk.CTk):
             border_width=1,
             command=lambda i=item: self._on_submenu_click(categoria, i),
         )
+        btn._full_text = item
+        btn._submenu_font = submenu_font
         btn.pack(fill="both", expand=True)
         self._remove_button_focus(btn)
 
@@ -2519,6 +2521,23 @@ class OperaMenuApp(ctk.CTk):
         self._collapse_all_submenus()
         self._show_submenu(categoria)
 
+    def _retune_submenu_items(self, frame, submenu_width: int):
+        """Reajusta largura e texto dos itens do submenu para evitar sobreposição."""
+        text_px = max(72, submenu_width - 64)
+        for item_frame in frame.winfo_children():
+            try:
+                item_frame.configure(width=max(140, submenu_width - 16))
+            except Exception:
+                pass
+            for child in item_frame.winfo_children():
+                try:
+                    if child.winfo_class() == "CTkButton":
+                        full_text = getattr(child, "_full_text", child.cget("text").strip())
+                        font_cfg = getattr(child, "_submenu_font", ("Arial", max(10, int(13 * self.ui_scale))))
+                        child.configure(text=f"  {self._truncate_submenu_text(full_text, font_cfg, text_px)}")
+                except Exception:
+                    pass
+
     def _show_submenu(self, categoria: str):
         """Mostra submenu para uma categoria."""
         if categoria not in self.submenu_frames:
@@ -2539,8 +2558,28 @@ class OperaMenuApp(ctk.CTk):
         frame_w = frame.winfo_reqwidth()
         frame_h = frame.winfo_reqheight()
 
-        rel_x = (btn_x - self_x) + btn_frame.winfo_width() + 2
-        rel_y = (btn_y - self_y) + max(0, (btn_frame.winfo_height() - frame_h) // 2)
+        btn_rel_x = btn_x - self_x
+        btn_rel_y = btn_y - self_y
+        right_edge_x = btn_rel_x + btn_frame.winfo_width()
+
+        # espaço livre à direita do botão principal
+        avail_right = self.winfo_width() - right_edge_x - 12
+        if avail_right < frame_w:
+            adjusted_w = max(150, avail_right)
+            if adjusted_w < frame_w:
+                frame.configure(width=adjusted_w)
+                self._retune_submenu_items(frame, adjusted_w)
+                frame.update_idletasks()
+                frame_w = frame.winfo_reqwidth()
+                frame_h = frame.winfo_reqheight()
+
+        rel_x = right_edge_x + 2
+        rel_y = btn_rel_y
+
+        # se não couber à direita, abre à esquerda do botão
+        if rel_x + frame_w > self.winfo_width() - 10:
+            rel_x = btn_rel_x - frame_w - 2
+
         screen_h = self.winfo_screenheight()
         max_x = max(10, self.winfo_width() - frame_w - 10)
         max_y = max(10, min(self.winfo_height(), screen_h) - frame_h - 10)
