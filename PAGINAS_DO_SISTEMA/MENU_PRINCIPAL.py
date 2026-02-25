@@ -1126,7 +1126,6 @@ class OperaMenuApp(ctk.CTk):
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         reset_tk_default_root()
         super().__init__()
-        self.withdraw()
         print("🚀 Iniciando sistema OPERA...")
 
         # Guardar e cancelar callbacks after de forma segura (compatível macOS/Windows)
@@ -1215,7 +1214,12 @@ class OperaMenuApp(ctk.CTk):
         self._setup_activity_logging()
 
         self._preload_complete = True
-        self.deiconify()
+        try:
+            self.deiconify()
+            self.lift()
+            self.focus_force()
+        except Exception:
+            pass
 
         # Atualizar display do usuário
 
