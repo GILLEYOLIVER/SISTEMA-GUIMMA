@@ -2549,8 +2549,10 @@ class OperaMenuApp(ctk.CTk):
         if not btn_frame:
             return
 
+        btn_frame.update_idletasks()
         btn_x = btn_frame.winfo_rootx()
         btn_y = btn_frame.winfo_rooty()
+        btn_h = max(1, btn_frame.winfo_height())
         self_x = self.winfo_rootx()
         self_y = self.winfo_rooty()
 
@@ -2581,10 +2583,15 @@ class OperaMenuApp(ctk.CTk):
             rel_x = btn_rel_x - frame_w - 2
 
         screen_h = self.winfo_screenheight()
+        win_h = min(self.winfo_height(), screen_h)
         max_x = max(10, self.winfo_width() - frame_w - 10)
-        max_y = max(10, min(self.winfo_height(), screen_h) - frame_h - 10)
+
+        # Mantém submenu ao lado do botão; se faltar espaço abaixo, ancora pela base do botão.
+        if rel_y + frame_h > win_h - 10:
+            rel_y = btn_rel_y + btn_h - frame_h
+
         rel_x = max(10, min(rel_x, max_x))
-        rel_y = max(10, min(rel_y, max_y))
+        rel_y = max(10, min(rel_y, max(10, win_h - frame_h - 10)))
 
         frame.place(x=rel_x, y=rel_y)
         frame.lift()
