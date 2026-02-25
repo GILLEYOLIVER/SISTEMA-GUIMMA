@@ -1126,6 +1126,7 @@ class OperaMenuApp(ctk.CTk):
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         reset_tk_default_root()
         super().__init__()
+        self.withdraw()
         print("🚀 Iniciando sistema OPERA...")
 
         # Guardar e cancelar callbacks after de forma segura (compatível macOS/Windows)
@@ -1228,14 +1229,14 @@ class OperaMenuApp(ctk.CTk):
 
     def _calculate_ui_scale(self, width: int, height: int) -> float:
         """Calcula escala da UI para adaptar automaticamente o layout."""
-        if width <= 1280 or height <= 720:
-            return 0.68
+        if width <= 1320 or height <= 720:
+            return 0.62
         if width <= 1366 or height <= 768:
-            return 0.75
+            return 0.70
         if width <= 1600 or height <= 900:
-            return 0.88
+            return 0.84
         if width <= 1920 or height <= 1080:
-            return 0.95
+            return 0.93
         return 1.0
 
     def _apply_global_scaling(self, scale: float):
@@ -1325,7 +1326,7 @@ class OperaMenuApp(ctk.CTk):
             pass
 
     def _apply_page_fit_scale(self, frame):
-        """Ajusta escala global + dimensões da página para caber na área útil sem scroll."""
+        """Ajusta dimensões da página para caber na área útil sem ficar recalculando em loop."""
         if not hasattr(self, "content") or not self.content.winfo_exists():
             return
 
@@ -1338,13 +1339,13 @@ class OperaMenuApp(ctk.CTk):
         req_h = max(1, frame.winfo_reqheight())
 
         fit = min(avail_w / req_w, avail_h / req_h, 1.0)
-        base_scale = getattr(self, "_base_ui_scale", getattr(self, "ui_scale", 1.0))
+        fit = max(0.72, min(1.0, fit))
 
-        # 1) escala global (tipografia + espaçamentos)
-        target_scale = max(0.62, min(1.0, base_scale * max(0.82, fit)))
-        self._apply_global_scaling(target_scale)
+        last_fit = getattr(frame, "_opera_last_fit", None)
+        if last_fit is not None and abs(last_fit - fit) < 0.03:
+            return
+        frame._opera_last_fit = fit
 
-        # 2) escala de widgets com largura/altura fixa (entries, combos, botões etc.)
         self._apply_widget_dimension_scale(frame, fit)
 
     def _apply_widget_dimension_scale(self, root_widget, factor: float):
@@ -1441,7 +1442,9 @@ class OperaMenuApp(ctk.CTk):
         else:
             self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
 
-        self.after(50, self._maximize_window)
+        # maximiza antes da janela aparecer para evitar “contorções” visuais
+        self._maximize_window()
+        self.after(10, self._maximize_window)
 
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
@@ -3001,8 +3004,12 @@ class OperaMenuApp(ctk.CTk):
 
             if frame:
                 # Exibir no container principal
+                try:
+                    frame._opera_last_fit = None
+                except Exception:
+                    pass
                 frame.pack(fill="both", expand=True, padx=10, pady=10)
-                self._agendar_after(60, self._refresh_active_page_layout)
+                self._agendar_after(45, self._refresh_active_page_layout)
 
                 # CORREÇÃO ESPECÍFICA PARA PÁGINA DE TEMAS
                 if page_name == "Temas":
