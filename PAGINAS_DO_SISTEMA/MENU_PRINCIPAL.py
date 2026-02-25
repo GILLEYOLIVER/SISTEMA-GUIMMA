@@ -2526,7 +2526,7 @@ class OperaMenuApp(ctk.CTk):
         """Mantido por compatibilidade: largura do submenu é estável e não precisa retune."""
         return
     def _show_submenu(self, categoria: str):
-        """Mostra submenu sempre ao lado do botão principal correspondente."""
+        """Mostra submenu alinhado ao botão principal correspondente."""
         if categoria not in self.submenu_frames:
             self._create_submenu(categoria)
 
@@ -2536,31 +2536,34 @@ class OperaMenuApp(ctk.CTk):
         if not btn_frame:
             return
 
+        self.update_idletasks()
         btn_frame.update_idletasks()
         frame.update_idletasks()
 
-        btn_x = btn_frame.winfo_rootx()
-        btn_y = btn_frame.winfo_rooty()
-        btn_h = max(1, btn_frame.winfo_height())
-        self_x = self.winfo_rootx()
-        self_y = self.winfo_rooty()
+        # Coordenadas relativas robustas (evita desalinhamento em janelas menores/escala)
+        sidebar_x = self.sidebar.winfo_x()
+        sidebar_y = self.sidebar.winfo_y()
+        menu_x = self.menu_frame.winfo_x() if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() else 0
+        menu_y = self.menu_frame.winfo_y() if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() else 0
 
+        btn_rel_x = sidebar_x + menu_x + btn_frame.winfo_x()
+        btn_rel_y = sidebar_y + menu_y + btn_frame.winfo_y()
+
+        btn_w = max(1, btn_frame.winfo_width())
+        btn_h = max(1, btn_frame.winfo_height())
         frame_w = frame.winfo_reqwidth()
         frame_h = frame.winfo_reqheight()
-        btn_rel_x = btn_x - self_x
-        btn_rel_y = btn_y - self_y
-        right_edge_x = btn_rel_x + btn_frame.winfo_width()
 
-        rel_x = right_edge_x + 2
+        rel_x = btn_rel_x + btn_w + 2
         if rel_x + frame_w > self.winfo_width() - 10:
             rel_x = btn_rel_x - frame_w - 2
+
+        # Alinha verticalmente ao centro do botão principal
+        rel_y = btn_rel_y + max(0, (btn_h - frame_h) // 2)
 
         max_x = max(10, self.winfo_width() - frame_w - 10)
         max_y = max(10, self.winfo_height() - frame_h - 10)
         rel_x = max(10, min(rel_x, max_x))
-        rel_y = btn_rel_y
-        if rel_y + frame_h > self.winfo_height() - 10:
-            rel_y = btn_rel_y + btn_h - frame_h
         rel_y = max(10, min(rel_y, max_y))
 
         frame.place(x=rel_x, y=rel_y)
