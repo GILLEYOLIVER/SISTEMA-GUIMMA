@@ -1257,13 +1257,32 @@ class OperaMenuApp(ctk.CTk):
         print(f"🎨 Tema aplicado: {self.current_theme_name}")
 
     def _calculate_ui_scale(self, width: int, height: int) -> float:
-        """Calcula escala preservando legibilidade e encaixe em telas menores."""
+        """Calcula escala base sem deformar o layout entre monitores pequenos e grandes."""
         base = min(width / 1920.0, height / 1080.0)
-        if width <= 1280 or height <= 720:
-            return max(0.60, min(0.74, round(base, 3)))
+        if width <= 1320 or height <= 720:
+            return max(0.67, min(0.79, round(base, 3)))
         if width <= 1366 or height <= 768:
-            return max(0.66, min(0.82, round(base, 3)))
-        return max(0.72, min(1.0, round(base, 3)))
+            return max(0.72, min(0.86, round(base, 3)))
+        return max(0.80, min(1.0, round(base, 3)))
+
+    def _compute_menu_metrics(self, window_height: int | None = None):
+        """Calcula métricas do novo layout de menu para manter todos os botões visíveis."""
+        total_items = max(1, len(self.MENU_ESTRUTURA))
+        h = int(window_height or self.winfo_height() or self.winfo_screenheight())
+
+        # Reserva superior/inferior do menu lateral (título + subtítulo + margens)
+        reserved = max(180, int(212 * self.ui_scale))
+        available = max(300, h - reserved)
+
+        # Altura por item adaptativa para não perder botões em telas menores
+        slot = available // total_items
+        gap = max(2, int(4 * self.ui_scale))
+        item_h = max(28, min(int(44 * self.ui_scale), slot - gap))
+
+        self._menu_button_gap = gap
+        self._menu_button_padx = max(6, int(10 * self.ui_scale))
+        self._menu_item_font = ("Arial", max(10, int(14 * self.ui_scale)))
+        self.ITEM_HEIGHT = item_h
 
     def _apply_global_scaling(self, scale: float):
         """Aplica escala global de forma estável para evitar jitter visual."""
@@ -1315,8 +1334,8 @@ class OperaMenuApp(ctk.CTk):
         self._apply_global_scaling(self._base_ui_scale)
 
         self.SIDEBAR_WIDTH = max(190, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale))
-        self.ITEM_HEIGHT = max(30, int(self.__class__.ITEM_HEIGHT * self.ui_scale))
         self.TOPBAR_HEIGHT = max(36, int(self.__class__.TOPBAR_HEIGHT * self.ui_scale))
+        self._compute_menu_metrics(current_height)
 
         self.font_sidebar_titulo = ("Arial", max(14, int(22 * self.ui_scale)), "bold")
         self.font_sidebar_subtitulo = ("Arial", max(11, int(16 * self.ui_scale)))
@@ -1399,7 +1418,7 @@ class OperaMenuApp(ctk.CTk):
                 pass
 
         self._pending_responsive_job = self.after(
-            64,
+            40,
             lambda w=event.width, h=event.height: self._configure_responsive_layout(width=w, height=h),
         )
 
@@ -2289,8 +2308,8 @@ class OperaMenuApp(ctk.CTk):
         # Frame "card" do botão
         btn_frame = ctk.CTkFrame(self.menu_frame, fg_color="transparent")
         btn_frame.pack_propagate(False)
-        btn_frame.configure(width=self.SIDEBAR_WIDTH - 20, height=self.ITEM_HEIGHT)
-        btn_frame.pack(fill="x", padx=(10, 10), pady=4)
+        btn_frame.configure(width=self.SIDEBAR_WIDTH - (self._menu_button_padx * 2), height=self.ITEM_HEIGHT)
+        btn_frame.pack(fill="x", padx=(self._menu_button_padx, self._menu_button_padx), pady=self._menu_button_gap)
 
         icon = self.icons_cache.get(categoria)
 
@@ -2313,7 +2332,7 @@ class OperaMenuApp(ctk.CTk):
         # Antes: font=("Arial", 16, "bold") if categoria == "Dashboard" else ("Arial", 16)
         # Agora: TODOS usam fonte normal (sem bold)
         # ===============================================
-        font_usado = ("Arial", max(11, int(14 * self.ui_scale)))
+        font_usado = getattr(self, "_menu_item_font", ("Arial", max(11, int(14 * self.ui_scale))))
 
         btn = ctk.CTkButton(
             btn_frame,
@@ -2338,7 +2357,7 @@ class OperaMenuApp(ctk.CTk):
         # ==============================
         def on_enter(_e):
             try:
-                btn_frame.pack_configure(padx=(12, 8))
+                btn_frame.pack_configure(padx=(self._menu_button_padx + 2, max(2, self._menu_button_padx - 2)))
 
                 if categoria != "Dashboard":
                     self._cancel_submenu_close(categoria)
@@ -2348,7 +2367,7 @@ class OperaMenuApp(ctk.CTk):
 
         def on_leave(_e):
             try:
-                btn_frame.pack_configure(padx=(10, 10))
+                btn_frame.pack_configure(padx=(self._menu_button_padx, self._menu_button_padx))
 
                 if categoria != "Dashboard":
                     self._schedule_submenu_close(categoria)
@@ -2365,12 +2384,12 @@ class OperaMenuApp(ctk.CTk):
 
     def _get_submenu_metrics(self, categoria: str, items: list[str]) -> tuple[int, tuple]:
         """Define métricas dos submenus equilibrando alinhamento e texto completo."""
-        font_cfg = ("Arial", max(10, int(11 * getattr(self, "ui_scale", 1.0))))
-        base_w = max(170, int(self.SIDEBAR_WIDTH - 10))
+        font_cfg = ("Arial", max(10, int(12 * getattr(self, "ui_scale", 1.0))))
+        base_w = max(180, int(self.SIDEBAR_WIDTH - 8))
         try:
             meter = tkfont.Font(family=font_cfg[0], size=font_cfg[1])
             texto_max = max((meter.measure(it) for it in items), default=base_w - 56)
-            max_w = max(base_w + 50, int(self.winfo_width() * 0.24))
+            max_w = max(base_w + 40, int(self.winfo_width() * 0.28))
             width = max(base_w, min(int(texto_max + 56), max_w))
         except Exception:
             width = base_w
@@ -2436,8 +2455,8 @@ class OperaMenuApp(ctk.CTk):
         item_frame = ctk.CTkFrame(parent, fg_color="transparent")
         item_frame.pack_propagate(False)
         item_frame.pack(fill="x", padx=(6, 6), pady=3)
-        item_frame.configure(width=max(160, submenu_width - 16),
-                             height=max(28, self.ITEM_HEIGHT - 6))
+        item_frame.configure(width=max(170, submenu_width - 12),
+                             height=max(30, self.ITEM_HEIGHT - 2))
 
         submenu_icon = self._get_submenu_icon(categoria, item)
 
@@ -2447,7 +2466,7 @@ class OperaMenuApp(ctk.CTk):
         item_border = self.cor_borda
         item_border_hover = self._realcar_cor(item_border, 1.4)
 
-        text_px = max(88, submenu_width - 64)
+        text_px = max(100, submenu_width - 58)
         item_text = self._truncate_submenu_text(item, submenu_font, text_px)
 
         btn = ctk.CTkButton(
@@ -2546,7 +2565,7 @@ class OperaMenuApp(ctk.CTk):
         """Mantido por compatibilidade: largura do submenu é estável e não precisa retune."""
         return
     def _show_submenu(self, categoria: str):
-        """Mostra submenu alinhado ao botão principal correspondente."""
+        """Mostra submenu lado a lado com o botão principal, inclusive em telas pequenas."""
         if categoria not in self.submenu_frames:
             self._create_submenu(categoria)
 
@@ -2557,26 +2576,43 @@ class OperaMenuApp(ctk.CTk):
             return
 
         self.update_idletasks()
+        if hasattr(self, "sidebar") and self.sidebar.winfo_exists():
+            self.sidebar.update_idletasks()
+        if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists():
+            self.menu_frame.update_idletasks()
         btn_frame.update_idletasks()
         frame.update_idletasks()
 
-        btn_x = btn_frame.winfo_rootx() - self.winfo_rootx()
-        btn_y = btn_frame.winfo_rooty() - self.winfo_rooty()
+        sidebar_x = self.sidebar.winfo_x() if hasattr(self, "sidebar") and self.sidebar.winfo_exists() else 0
+        menu_x = self.menu_frame.winfo_x() if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() else 0
+        btn_x = sidebar_x + menu_x + btn_frame.winfo_x()
+
+        sidebar_y = self.sidebar.winfo_y() if hasattr(self, "sidebar") and self.sidebar.winfo_exists() else 0
+        menu_y = self.menu_frame.winfo_y() if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() else 0
+        btn_y = sidebar_y + menu_y + btn_frame.winfo_y()
+
         btn_w = max(1, btn_frame.winfo_width())
         btn_h = max(1, btn_frame.winfo_height())
-        frame_w = frame.winfo_reqwidth()
-        frame_h = frame.winfo_reqheight()
+        frame_w = max(1, frame.winfo_reqwidth())
+        frame_h = max(1, frame.winfo_reqheight())
 
-        rel_x = btn_x + btn_w + 4
-        rel_y = btn_y + max(0, (btn_h - frame_h) // 2)
+        gap_x = max(3, int(4 * getattr(self, "ui_scale", 1.0)))
+        rel_x = btn_x + btn_w + gap_x
 
-        if rel_x + frame_w > self.winfo_width() - 10:
-            rel_x = btn_x - frame_w - 4
+        # Alinha pelo centro do botão primário e depois faz clamp vertical seguro.
+        rel_y = btn_y + ((btn_h - frame_h) // 2)
 
-        max_x = max(10, self.winfo_width() - frame_w - 10)
-        max_y = max(10, self.winfo_height() - frame_h - 10)
-        rel_x = max(10, min(rel_x, max_x))
-        rel_y = max(10, min(rel_y, max_y))
+        # Se não couber à direita, abre à esquerda mantendo o mesmo alinhamento vertical.
+        if rel_x + frame_w > self.winfo_width() - 8:
+            rel_x = btn_x - frame_w - gap_x
+
+        min_x = 8
+        max_x = max(min_x, self.winfo_width() - frame_w - 8)
+        min_y = 8
+        max_y = max(min_y, self.winfo_height() - frame_h - 8)
+
+        rel_x = max(min_x, min(rel_x, max_x))
+        rel_y = max(min_y, min(rel_y, max_y))
 
         frame.place(x=rel_x, y=rel_y)
         frame.lift()
