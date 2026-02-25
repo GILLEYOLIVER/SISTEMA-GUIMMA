@@ -1126,7 +1126,8 @@ class OperaMenuApp(ctk.CTk):
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         reset_tk_default_root()
         super().__init__()
-        print("🚀 Iniciando sistema OPERA...")
+
+        self._preload_complete = False
 
         # Guardar e cancelar callbacks after de forma segura (compatível macOS/Windows)
         initialize_after_guard(self)
@@ -1232,20 +1233,13 @@ class OperaMenuApp(ctk.CTk):
         print(f"🎨 Tema aplicado: {self.current_theme_name}")
 
     def _calculate_ui_scale(self, width: int, height: int) -> float:
-        """Calcula escala da UI para adaptar automaticamente o layout."""
-        if width <= 1320 or height <= 720:
-            return 0.62
-        if width <= 1366 or height <= 768:
-            return 0.70
-        if width <= 1600 or height <= 900:
-            return 0.84
-        if width <= 1920 or height <= 1080:
-            return 0.93
-        return 1.0
+        """Calcula escala uniforme para manter o mesmo padrão visual em qualquer monitor."""
+        base = min(width / 1920.0, height / 1080.0)
+        return max(0.78, min(1.0, round(base, 3)))
 
     def _apply_global_scaling(self, scale: float):
         """Aplica escala global de forma estável para evitar jitter visual."""
-        target = max(0.62, min(1.0, float(scale)))
+        target = max(0.78, min(1.0, float(scale)))
         current = getattr(self, "_applied_global_scale", None)
         if current is not None and abs(current - target) < 0.01:
             return
@@ -1270,8 +1264,8 @@ class OperaMenuApp(ctk.CTk):
         if (
             not initial
             and last_size
-            and abs(current_width - last_size[0]) < 12
-            and abs(current_height - last_size[1]) < 12
+            and abs(current_width - last_size[0]) < 24
+            and abs(current_height - last_size[1]) < 24
         ):
             return
         self._last_responsive_size = (current_width, current_height)
@@ -1330,80 +1324,12 @@ class OperaMenuApp(ctk.CTk):
             pass
 
     def _apply_page_fit_scale(self, frame):
-        """Ajusta dimensões da página para caber na área útil sem ficar recalculando em loop."""
-        if not hasattr(self, "content") or not self.content.winfo_exists():
-            return
-
-        self.content.update_idletasks()
-        frame.update_idletasks()
-
-        avail_w = max(1, self.content.winfo_width())
-        avail_h = max(1, self.content.winfo_height())
-        req_w = max(1, frame.winfo_reqwidth())
-        req_h = max(1, frame.winfo_reqheight())
-
-        fit = min(avail_w / req_w, avail_h / req_h, 1.0)
-        fit = max(0.72, min(1.0, fit))
-
-        last_fit = getattr(frame, "_opera_last_fit", None)
-        if last_fit is not None and abs(last_fit - fit) < 0.03:
-            return
-        frame._opera_last_fit = fit
-
-        self._apply_widget_dimension_scale(frame, fit)
+        """Mantido por compatibilidade: evita múltiplas reescalas durante navegação."""
+        return
 
     def _apply_widget_dimension_scale(self, root_widget, factor: float):
-        """Escala dimensões fixas dos widgets da página para evitar cortes em telas menores."""
-        factor = max(0.72, min(1.0, float(factor)))
-
-        classes_largura = {
-            "CTkEntry", "CTkButton", "CTkComboBox", "CTkOptionMenu", "CTkSwitch",
-            "CTkTextbox", "Entry", "Button", "Combobox"
-        }
-        classes_altura = {
-            "CTkEntry", "CTkButton", "CTkComboBox", "CTkOptionMenu", "CTkSwitch",
-            "CTkTextbox"
-        }
-
-        def walk(widget):
-            try:
-                wclass = widget.winfo_class()
-            except Exception:
-                wclass = ""
-
-            try:
-                if wclass in classes_largura:
-                    cur_w = int(widget.cget("width"))
-                    if cur_w > 0:
-                        base_w = getattr(widget, "_opera_base_width", None)
-                        if base_w is None:
-                            widget._opera_base_width = cur_w
-                            base_w = cur_w
-                        new_w = max(40, int(base_w * factor))
-                        widget.configure(width=new_w)
-            except Exception:
-                pass
-
-            try:
-                if wclass in classes_altura:
-                    cur_h = int(widget.cget("height"))
-                    if cur_h > 0:
-                        base_h = getattr(widget, "_opera_base_height", None)
-                        if base_h is None:
-                            widget._opera_base_height = cur_h
-                            base_h = cur_h
-                        new_h = max(22, int(base_h * factor))
-                        widget.configure(height=new_h)
-            except Exception:
-                pass
-
-            try:
-                for child in widget.winfo_children():
-                    walk(child)
-            except Exception:
-                pass
-
-        walk(root_widget)
+        """Sem redimensionamento forçado por widget para manter layout consistente."""
+        return
 
     def _setup_responsive_watcher(self):
         """Recalibra escala automaticamente quando a janela muda de tamanho."""
@@ -1412,13 +1338,15 @@ class OperaMenuApp(ctk.CTk):
     def _on_window_configure(self, event):
         if event.widget is not self:
             return
+        if not getattr(self, "_preload_complete", False):
+            return
         if self._pending_responsive_job:
             try:
                 self.after_cancel(self._pending_responsive_job)
             except Exception:
                 pass
         self._pending_responsive_job = self.after(
-            120,
+            180,
             lambda w=event.width, h=event.height: self._configure_responsive_layout(width=w, height=h),
         )
 
@@ -2345,21 +2273,9 @@ class OperaMenuApp(ctk.CTk):
         self.botoes_menu[categoria] = btn_frame
 
     def _get_submenu_metrics(self, categoria: str, items: list[str]) -> tuple[int, tuple]:
-        """Calcula largura/fonte ideais para submenu conforme texto e escala atual."""
-        font_size = max(10, int(13 * getattr(self, "ui_scale", 1.0)))
-        font_cfg = ("Arial", font_size)
-        try:
-            meter = tkfont.Font(family="Arial", size=font_size)
-            max_text = max((meter.measure(item) for item in items), default=120)
-        except Exception:
-            max_text = 180
-
-        icon_space = 46
-        horizontal_padding = 34
-        min_w = max(190, int(self.SIDEBAR_WIDTH * 0.9))
-        desired_w = int(max_text + icon_space + horizontal_padding)
-        max_w = int(max(self.SIDEBAR_WIDTH + 30, self.winfo_width() * 0.34))
-        width = max(min_w, min(desired_w, max_w))
+        """Define métricas fixas/proporcionais para manter menu igual em telas grandes e pequenas."""
+        font_cfg = ("Arial", max(11, int(12 * getattr(self, "ui_scale", 1.0))))
+        width = max(180, int(self.SIDEBAR_WIDTH - 6))
         return width, font_cfg
 
     def _truncate_submenu_text(self, text: str, font_cfg: tuple, avail_px: int) -> str:
@@ -2529,24 +2445,10 @@ class OperaMenuApp(ctk.CTk):
         self._show_submenu(categoria)
 
     def _retune_submenu_items(self, frame, submenu_width: int):
-        """Reajusta largura e texto dos itens do submenu para evitar sobreposição."""
-        text_px = max(72, submenu_width - 64)
-        for item_frame in frame.winfo_children():
-            try:
-                item_frame.configure(width=max(140, submenu_width - 16))
-            except Exception:
-                pass
-            for child in item_frame.winfo_children():
-                try:
-                    if child.winfo_class() == "CTkButton":
-                        full_text = getattr(child, "_full_text", child.cget("text").strip())
-                        font_cfg = getattr(child, "_submenu_font", ("Arial", max(10, int(13 * self.ui_scale))))
-                        child.configure(text=f"  {self._truncate_submenu_text(full_text, font_cfg, text_px)}")
-                except Exception:
-                    pass
-
+        """Mantido por compatibilidade: largura do submenu é estável e não precisa retune."""
+        return
     def _show_submenu(self, categoria: str):
-        """Mostra submenu para uma categoria."""
+        """Mostra submenu sempre ao lado do botão principal correspondente."""
         if categoria not in self.submenu_frames:
             self._create_submenu(categoria)
 
@@ -2557,48 +2459,24 @@ class OperaMenuApp(ctk.CTk):
             return
 
         btn_frame.update_idletasks()
+        frame.update_idletasks()
+
         btn_x = btn_frame.winfo_rootx()
         btn_y = btn_frame.winfo_rooty()
-        btn_h = max(1, btn_frame.winfo_height())
         self_x = self.winfo_rootx()
         self_y = self.winfo_rooty()
 
-        frame.update_idletasks()
         frame_w = frame.winfo_reqwidth()
-        frame_h = frame.winfo_reqheight()
-
         btn_rel_x = btn_x - self_x
         btn_rel_y = btn_y - self_y
         right_edge_x = btn_rel_x + btn_frame.winfo_width()
 
-        # espaço livre à direita do botão principal
-        avail_right = self.winfo_width() - right_edge_x - 12
-        if avail_right < frame_w:
-            adjusted_w = max(150, avail_right)
-            if adjusted_w < frame_w:
-                frame.configure(width=adjusted_w)
-                self._retune_submenu_items(frame, adjusted_w)
-                frame.update_idletasks()
-                frame_w = frame.winfo_reqwidth()
-                frame_h = frame.winfo_reqheight()
-
         rel_x = right_edge_x + 2
-        rel_y = btn_rel_y
-
-        # se não couber à direita, abre à esquerda do botão
         if rel_x + frame_w > self.winfo_width() - 10:
             rel_x = btn_rel_x - frame_w - 2
 
-        screen_h = self.winfo_screenheight()
-        win_h = min(self.winfo_height(), screen_h)
-        max_x = max(10, self.winfo_width() - frame_w - 10)
-
-        # Mantém submenu ao lado do botão; se faltar espaço abaixo, ancora pela base do botão.
-        if rel_y + frame_h > win_h - 10:
-            rel_y = btn_rel_y + btn_h - frame_h
-
-        rel_x = max(10, min(rel_x, max_x))
-        rel_y = max(10, min(rel_y, max(10, win_h - frame_h - 10)))
+        rel_x = max(10, min(rel_x, max(10, self.winfo_width() - frame_w - 10)))
+        rel_y = max(10, btn_rel_y)
 
         frame.place(x=rel_x, y=rel_y)
         frame.lift()
