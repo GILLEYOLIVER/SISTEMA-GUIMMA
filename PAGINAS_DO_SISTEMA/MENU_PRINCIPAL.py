@@ -1259,22 +1259,22 @@ class OperaMenuApp(ctk.CTk):
     def _calculate_ui_scale(self, width: int, height: int) -> float:
         """Calcula escala preservando legibilidade e encaixe em telas menores."""
         base = min(width / 1920.0, height / 1080.0)
-        if width <= 1320 or height <= 720:
-            return max(0.68, min(0.78, round(base, 3)))
+        if width <= 1280 or height <= 720:
+            return max(0.60, min(0.74, round(base, 3)))
         if width <= 1366 or height <= 768:
-            return max(0.72, min(0.84, round(base, 3)))
-        return max(0.74, min(1.0, round(base, 3)))
+            return max(0.66, min(0.82, round(base, 3)))
+        return max(0.72, min(1.0, round(base, 3)))
 
     def _apply_global_scaling(self, scale: float):
         """Aplica escala global de forma estável para evitar jitter visual."""
-        target = max(0.68, min(1.0, float(scale)))
+        target = max(0.60, min(1.0, float(scale)))
         current = getattr(self, "_applied_global_scale", None)
         if current is not None and abs(current - target) < 0.01:
             return
         self._applied_global_scale = target
         try:
             ctk.set_widget_scaling(target)
-            ctk.set_window_scaling(max(0.70, target))
+            ctk.set_window_scaling(max(0.64, target))
         except Exception as e:
             print(f"⚠️ Erro ao aplicar escala de interface: {e}")
 
@@ -1314,7 +1314,7 @@ class OperaMenuApp(ctk.CTk):
         self._base_ui_scale = self.ui_scale
         self._apply_global_scaling(self._base_ui_scale)
 
-        self.SIDEBAR_WIDTH = max(220, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale))
+        self.SIDEBAR_WIDTH = max(190, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale))
         self.ITEM_HEIGHT = max(30, int(self.__class__.ITEM_HEIGHT * self.ui_scale))
         self.TOPBAR_HEIGHT = max(36, int(self.__class__.TOPBAR_HEIGHT * self.ui_scale))
 
@@ -1357,8 +1357,27 @@ class OperaMenuApp(ctk.CTk):
             pass
 
     def _apply_page_fit_scale(self, frame):
-        """Mantido por compatibilidade: evita múltiplas reescalas durante navegação."""
-        return
+        """Ajusta escala global da página ativa para evitar cortes em resoluções pequenas."""
+        if not hasattr(self, "content") or not self.content.winfo_exists() or not frame.winfo_exists():
+            return
+
+        self.content.update_idletasks()
+        frame.update_idletasks()
+
+        avail_w = max(1, self.content.winfo_width())
+        avail_h = max(1, self.content.winfo_height())
+        req_w = max(1, frame.winfo_reqwidth())
+        req_h = max(1, frame.winfo_reqheight())
+
+        fit = min(avail_w / req_w, avail_h / req_h, 1.0)
+        base = getattr(self, "_base_ui_scale", getattr(self, "ui_scale", 1.0))
+        target = max(0.60, min(base, base * fit))
+
+        last_target = getattr(self, "_last_page_target_scale", None)
+        if last_target is not None and abs(last_target - target) < 0.02:
+            return
+        self._last_page_target_scale = target
+        self._apply_global_scaling(target)
 
     def _apply_widget_dimension_scale(self, root_widget, factor: float):
         """Sem redimensionamento forçado por widget para manter layout consistente."""
@@ -2347,11 +2366,12 @@ class OperaMenuApp(ctk.CTk):
     def _get_submenu_metrics(self, categoria: str, items: list[str]) -> tuple[int, tuple]:
         """Define métricas dos submenus equilibrando alinhamento e texto completo."""
         font_cfg = ("Arial", max(10, int(11 * getattr(self, "ui_scale", 1.0))))
-        base_w = max(170, int(self.SIDEBAR_WIDTH - 12))
+        base_w = max(170, int(self.SIDEBAR_WIDTH - 10))
         try:
             meter = tkfont.Font(family=font_cfg[0], size=font_cfg[1])
             texto_max = max((meter.measure(it) for it in items), default=base_w - 56)
-            width = max(base_w, min(int(texto_max + 58), int(self.winfo_width() * 0.33)))
+            max_w = max(base_w + 50, int(self.winfo_width() * 0.24))
+            width = max(base_w, min(int(texto_max + 56), max_w))
         except Exception:
             width = base_w
         return width, font_cfg
@@ -2540,26 +2560,18 @@ class OperaMenuApp(ctk.CTk):
         btn_frame.update_idletasks()
         frame.update_idletasks()
 
-        # Coordenadas relativas robustas (evita desalinhamento em janelas menores/escala)
-        sidebar_x = self.sidebar.winfo_x()
-        sidebar_y = self.sidebar.winfo_y()
-        menu_x = self.menu_frame.winfo_x() if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() else 0
-        menu_y = self.menu_frame.winfo_y() if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() else 0
-
-        btn_rel_x = sidebar_x + menu_x + btn_frame.winfo_x()
-        btn_rel_y = sidebar_y + menu_y + btn_frame.winfo_y()
-
+        btn_x = btn_frame.winfo_rootx() - self.winfo_rootx()
+        btn_y = btn_frame.winfo_rooty() - self.winfo_rooty()
         btn_w = max(1, btn_frame.winfo_width())
         btn_h = max(1, btn_frame.winfo_height())
         frame_w = frame.winfo_reqwidth()
         frame_h = frame.winfo_reqheight()
 
-        rel_x = btn_rel_x + btn_w + 2
-        if rel_x + frame_w > self.winfo_width() - 10:
-            rel_x = btn_rel_x - frame_w - 2
+        rel_x = btn_x + btn_w + 4
+        rel_y = btn_y + max(0, (btn_h - frame_h) // 2)
 
-        # Alinha verticalmente ao centro do botão principal
-        rel_y = btn_rel_y + max(0, (btn_h - frame_h) // 2)
+        if rel_x + frame_w > self.winfo_width() - 10:
+            rel_x = btn_x - frame_w - 4
 
         max_x = max(10, self.winfo_width() - frame_w - 10)
         max_y = max(10, self.winfo_height() - frame_h - 10)
