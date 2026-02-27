@@ -1534,7 +1534,10 @@ class OperaMenuApp(ctk.CTk):
         cor_secundaria = self._resolve_theme_color(pal.get("secundaria", self.cor_secundaria), self.cor_secundaria)
         cor_hover_base = self._resolve_theme_color(pal.get("hover", cor_secundaria), cor_secundaria)
         cor_borda = self._resolve_theme_color(pal.get("borda", self.cor_borda), self.cor_borda)
-        tema_escuro = self._is_dark_tk_color(cor_secundaria)
+        tema_escuro = (
+            self._is_dark_tk_color(cor_secundaria)
+            or self._is_dark_tk_color(getattr(self, "cor_fundo", "#111827"))
+        )
 
         if tema_escuro:
             menu_bg = self._realcar_cor(cor_secundaria, 1.06)
@@ -1549,8 +1552,12 @@ class OperaMenuApp(ctk.CTk):
         hover_texto = self._contrast_text_for_color(hover_bg, fallback=menu_texto)
         submenu_texto = self._contrast_text_for_color(submenu_bg, fallback=menu_texto)
 
+        # Segurança extra: se qualquer fundo do menu for escuro, sempre usar texto claro.
+        submenu_escuro = self._is_dark_tk_color(submenu_bg)
+        menu_escuro = self._is_dark_tk_color(menu_bg)
+
         # Reforço: no tema escuro NUNCA permitir texto escuro no menu/submenu.
-        if tema_escuro:
+        if tema_escuro or submenu_escuro or menu_escuro:
             menu_texto = "#F8FAFC"
             hover_texto = "#FFFFFF"
             submenu_texto = "#F8FAFC"
