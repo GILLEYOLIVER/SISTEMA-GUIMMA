@@ -785,76 +785,11 @@ class ThemeManager:
             _dprint(f"[Tema] Erro ao reconstruir interface: {e}")
 
     def _update_menu_buttons_colors(self):
-        """Atualiza as cores dos botões do menu e submenu mantendo o mesmo padrão visual."""
+        """Sincroniza menu/submenu delegando ao app para manter um único padrão."""
         try:
             app = self.app
-            if not hasattr(app, "botoes_menu"):
-                return
-
-            cor_secundaria = self.current_palette.get("secundaria", "#1F2937")
-            cor_texto = self.current_palette.get("texto", "#FFFFFF")
-            cor_borda = self.current_palette.get("borda", "#333333")
-            cor_sidebar = self.current_palette.get("primaria", cor_secundaria)
-
-            if is_dark_color(cor_secundaria):
-                btn_bg = self._realcar_cor(cor_secundaria, 1.06)
-            else:
-                btn_bg = app._darker(cor_secundaria, 0.95)
-
-            btn_hover = "#2B2B2B"
-            texto_hover = "#F8FAFC"
-
-            # Botões principais
-            for categoria, btn_frame in app.botoes_menu.items():
-                if not btn_frame.winfo_exists():
-                    continue
-
-                for child in btn_frame.winfo_children():
-                    if isinstance(child, ctk.CTkButton):
-                        ativo = categoria == app._active_submenu
-                        child.configure(
-                            fg_color=btn_hover if ativo else btn_bg,
-                            hover_color=btn_hover,
-                            text_color=texto_hover if ativo else cor_texto,
-                            border_color=cor_borda,
-                            border_width=1
-                        )
-
-            # Submenus
-            # Submenus
-            for categoria, submenu_frame in app.submenu_frames.items():
-                if not submenu_frame.winfo_exists():
-                    continue
-
-                submenu_frame.configure(
-                    fg_color=cor_secundaria,
-                    border_color=cor_borda
-                )
-
-                for inner_frame in submenu_frame.winfo_children():
-                    if isinstance(inner_frame, ctk.CTkFrame):
-                        for btn_container in inner_frame.winfo_children():
-                            if isinstance(btn_container, ctk.CTkFrame):
-                                for btn in btn_container.winfo_children():
-                                    if isinstance(btn, ctk.CTkButton):
-                                        # Recalcula a cor normal de fundo conforme o tema
-                                        if is_dark_color(cor_secundaria):
-                                            normal_bg = self._realcar_cor(cor_secundaria, 1.06)
-                                        else:
-                                            normal_bg = self._darker(cor_secundaria, 0.95)
-
-                                        # Atualiza as cores do botão e armazena os valores normais
-                                        btn.configure(
-                                            fg_color=normal_bg,
-                                            hover_color=normal_bg,  # desativa hover automático
-                                            text_color=cor_texto,
-                                            border_color=cor_borda,
-                                            border_width=0
-                                        )
-                                        btn._normal_bg = normal_bg
-                                        btn._normal_fg = cor_texto
-
-            _dprint("[Tema] Cores do menu e submenu atualizadas.")
+            if hasattr(app, "_update_menu_buttons_colors"):
+                app._update_menu_buttons_colors()
         except Exception as e:
             _dprint(f"[Tema] Erro ao atualizar cores do menu: {e}")
 
@@ -1552,33 +1487,73 @@ class OperaMenuApp(ctk.CTk):
         # Destaca o botão da categoria ativa
         self._highlight_active_category(categoria)
 
+    def _get_menu_style_tokens(self) -> dict:
+        """Calcula as cores padronizadas de menu/submenu com contraste garantido."""
+        pal = getattr(getattr(self, "theme_manager", None), "current_palette", None) or {}
+
+        cor_secundaria = pal.get("secundaria", self.cor_secundaria)
+        cor_hover_base = pal.get("hover", cor_secundaria)
+        cor_borda = pal.get("borda", self.cor_borda)
+
+        if is_dark_color(cor_secundaria):
+            menu_bg = self._realcar_cor(cor_secundaria, 1.06)
+            submenu_bg = self._realcar_cor(cor_secundaria, 1.06)
+        else:
+            menu_bg = self._darker(cor_secundaria, 0.95)
+            submenu_bg = self._darker(cor_secundaria, 0.95)
+
+        if is_dark_color(cor_hover_base):
+            hover_bg = self._realcar_cor(cor_hover_base, 1.18)
+        else:
+            hover_bg = self._darker(cor_hover_base, 0.82)
+
+        menu_texto = get_contraste_texto(menu_bg) or self.cor_texto
+        hover_texto = get_contraste_texto(hover_bg) or menu_texto
+        submenu_texto = get_contraste_texto(submenu_bg) or menu_texto
+
+        return {
+            "menu_bg": menu_bg,
+            "menu_texto": menu_texto,
+            "hover_bg": hover_bg,
+            "hover_texto": hover_texto,
+            "submenu_painel_bg": cor_secundaria,
+            "submenu_bg": submenu_bg,
+            "submenu_texto": submenu_texto,
+            "cor_borda": cor_borda,
+        }
+
+    def _apply_submenu_button_base_style(self, btn, style: dict):
+        """Aplica e memoriza estilo padrão de um botão de submenu."""
+        btn.configure(
+            fg_color=style["submenu_bg"],
+            hover=False,
+            hover_color=style["submenu_bg"],
+            text_color=style["submenu_texto"],
+            text_color_disabled=style["submenu_texto"],
+            border_color=style["submenu_bg"],
+            border_width=1,
+        )
+        btn._normal_bg = style["submenu_bg"]
+        btn._normal_fg = style["submenu_texto"]
+        btn._hover_bg = style["hover_bg"]
+        btn._hover_fg = style["hover_texto"]
+
     def _highlight_active_category(self, categoria: str):
         """Destaca o botao da categoria com submenu aberto."""
         try:
-            hover_bg = "#2B2B2B"
-            hover_text = "#F8FAFC"
+            style = self._get_menu_style_tokens()
 
             # Primeiro, reseta todos os botoes para a cor padrao
             for cat, btn_frame in self.botoes_menu.items():
                 for child in btn_frame.winfo_children():
                     if isinstance(child, ctk.CTkButton):
-                        if hasattr(self, 'theme_manager') and self.theme_manager.current_palette:
-                            pal = self.theme_manager.current_palette
-                            cor_secundaria = pal.get("secundaria", "#1F2937")
-                            if is_dark_color(cor_secundaria):
-                                cor_padrao = self._realcar_cor(cor_secundaria, 1.06)
-                            else:
-                                cor_padrao = self._darker(cor_secundaria, 0.95)
-                        else:
-                            if is_dark_color(self.cor_secundaria):
-                                cor_padrao = self._realcar_cor(self.cor_secundaria, 1.06)
-                            else:
-                                cor_padrao = self._darker(self.cor_secundaria, 0.95)
-
                         child.configure(
-                            fg_color=cor_padrao,
-                            hover_color=hover_bg,
-                            text_color=self.cor_texto
+                            fg_color=style["menu_bg"],
+                            hover_color=style["hover_bg"],
+                            text_color=style["menu_texto"],
+                            text_color_disabled=style["menu_texto"],
+                            border_color=self.cor_borda,
+                            border_width=1,
                         )
 
             # Depois, destaca o botao da categoria ativa com o mesmo hover escuro
@@ -1587,9 +1562,12 @@ class OperaMenuApp(ctk.CTk):
                 for child in btn_frame.winfo_children():
                     if isinstance(child, ctk.CTkButton):
                         child.configure(
-                            fg_color=hover_bg,
-                            hover_color=hover_bg,
-                            text_color=hover_text
+                            fg_color=style["hover_bg"],
+                            hover_color=style["hover_bg"],
+                            text_color=style["hover_texto"],
+                            text_color_disabled=style["hover_texto"],
+                            border_color=self.cor_borda,
+                            border_width=1,
                         )
         except Exception as e:
             _dprint(f"Erro ao destacar categoria: {e}")
@@ -2285,14 +2263,18 @@ class OperaMenuApp(ctk.CTk):
 
     def _on_category_enter(self, categoria: str):
         """Mouse entra na categoria."""
-        hover_bg = "#2B2B2B"
-        hover_text = "#F8FAFC"
+        style = self._get_menu_style_tokens()
 
         if categoria in self.botoes_menu:
             btn_frame = self.botoes_menu[categoria]
             for child in btn_frame.winfo_children():
                 if isinstance(child, ctk.CTkButton):
-                    child.configure(fg_color=hover_bg, text_color=hover_text)
+                    child.configure(
+                        fg_color=style["hover_bg"],
+                        hover_color=style["hover_bg"],
+                        text_color=style["hover_texto"],
+                        text_color_disabled=style["hover_texto"],
+                    )
 
         if categoria == "Dashboard":
             self._hide_all_submenus()
@@ -2312,19 +2294,7 @@ class OperaMenuApp(ctk.CTk):
 
     def _on_category_leave(self, categoria: str):
         """Mouse sai da categoria."""
-        # Calcula a cor normal de fundo baseada no tema
-        if hasattr(self, 'theme_manager') and self.theme_manager.current_palette:
-            pal = self.theme_manager.current_palette
-            cor_secundaria = pal.get("secundaria", "#1F2937")
-            if is_dark_color(cor_secundaria):
-                cor_padrao = self._realcar_cor(cor_secundaria, 1.06)
-            else:
-                cor_padrao = self._darker(cor_secundaria, 0.95)
-        else:
-            if is_dark_color(self.cor_secundaria):
-                cor_padrao = self._realcar_cor(self.cor_secundaria, 1.06)
-            else:
-                cor_padrao = self._darker(self.cor_secundaria, 0.95)
+        style = self._get_menu_style_tokens()
 
         if categoria == "Dashboard":
             if categoria in self.botoes_menu:
@@ -2332,9 +2302,12 @@ class OperaMenuApp(ctk.CTk):
                 for child in btn_frame.winfo_children():
                     if isinstance(child, ctk.CTkButton):
                         child.configure(
-                            fg_color=cor_padrao,
-                            hover_color="#2B2B2B",
-                            text_color=self.cor_texto
+                            fg_color=style["menu_bg"],
+                            hover_color=style["hover_bg"],
+                            text_color=style["menu_texto"],
+                            text_color_disabled=style["menu_texto"],
+                            border_color=self.cor_borda,
+                            border_width=1,
                         )
             return
 
@@ -2347,9 +2320,12 @@ class OperaMenuApp(ctk.CTk):
             for child in btn_frame.winfo_children():
                 if isinstance(child, ctk.CTkButton):
                     child.configure(
-                        fg_color=cor_padrao,
-                        hover_color="#2B2B2B",
-                        text_color=self.cor_texto
+                        fg_color=style["menu_bg"],
+                        hover_color=style["hover_bg"],
+                        text_color=style["menu_texto"],
+                        text_color_disabled=style["menu_texto"],
+                        border_color=self.cor_borda,
+                        border_width=1,
                     )
 
     def _on_submenu_enter(self, categoria: str):
@@ -2362,50 +2338,20 @@ class OperaMenuApp(ctk.CTk):
             self._submenu_timer = None
 
     def _hide_submenu(self, categoria: str):
-        """Esconde submenu e reseta os botões internos com texto sempre branco."""
+        """Esconde submenu e reaplica o estilo padronizado aos botões."""
         frame = self.submenu_frames.get(categoria)
-        texto_fixo = "#F8FAFC"
+        style = self._get_menu_style_tokens()
 
         if frame:
             try:
-                base = self.cor_secundaria
-                if is_dark_color(base):
-                    btn_bg = self._realcar_cor(base, 1.06)
-                else:
-                    btn_bg = self._darker(base, 0.95)
-
                 for inner in frame.winfo_children():
                     for child in inner.winfo_children():
                         if isinstance(child, ctk.CTkFrame):
                             for subchild in child.winfo_children():
                                 if isinstance(subchild, ctk.CTkButton):
-                                    subchild.configure(
-                                        fg_color=btn_bg,
-                                        hover=False,
-                                        hover_color=btn_bg,
-                                        text_color=texto_fixo,
-                                        text_color_disabled=texto_fixo,
-                                        border_width=1,
-                                        border_color=btn_bg
-                                    )
-                                    subchild._normal_bg = btn_bg
-                                    subchild._normal_fg = texto_fixo
-                                    subchild._hover_bg = "#2B2B2B"
-                                    subchild._hover_fg = texto_fixo
+                                    self._apply_submenu_button_base_style(subchild, style)
                         elif isinstance(child, ctk.CTkButton):
-                            child.configure(
-                                fg_color=btn_bg,
-                                hover=False,
-                                hover_color=btn_bg,
-                                text_color=texto_fixo,
-                                text_color_disabled=texto_fixo,
-                                border_width=1,
-                                border_color=btn_bg
-                            )
-                            child._normal_bg = btn_bg
-                            child._normal_fg = texto_fixo
-                            child._hover_bg = "#2B2B2B"
-                            child._hover_fg = texto_fixo
+                            self._apply_submenu_button_base_style(child, style)
             except Exception:
                 pass
 
@@ -2418,24 +2364,13 @@ class OperaMenuApp(ctk.CTk):
                 btn_frame = self.botoes_menu[categoria]
                 for child in btn_frame.winfo_children():
                     if isinstance(child, ctk.CTkButton):
-                        if hasattr(self, "theme_manager") and self.theme_manager.current_palette:
-                            pal = self.theme_manager.current_palette
-                            cor_secundaria = pal.get("secundaria", "#1F2937")
-                            if is_dark_color(cor_secundaria):
-                                cor_padrao = self._realcar_cor(cor_secundaria, 1.06)
-                            else:
-                                cor_padrao = self._darker(cor_secundaria, 0.95)
-                        else:
-                            if is_dark_color(self.cor_secundaria):
-                                cor_padrao = self._realcar_cor(self.cor_secundaria, 1.06)
-                            else:
-                                cor_padrao = self._darker(self.cor_secundaria, 0.95)
-
                         child.configure(
-                            fg_color=cor_padrao,
-                            hover_color="#2B2B2B",
-                            text_color=texto_fixo,
-                            text_color_disabled=texto_fixo
+                            fg_color=style["menu_bg"],
+                            hover_color=style["hover_bg"],
+                            text_color=style["menu_texto"],
+                            text_color_disabled=style["menu_texto"],
+                            border_color=self.cor_borda,
+                            border_width=1,
                         )
 
     def _on_submenu_leave(self, categoria: str):
@@ -2457,56 +2392,36 @@ class OperaMenuApp(ctk.CTk):
         )
 
     def _update_menu_buttons_colors(self):
-        """Atualiza as cores dos botões do menu com texto sempre branco."""
+        """Atualiza menu e submenu aplicando tokens de tema e contraste."""
         try:
-            app = self.app
-            if not hasattr(app, "botoes_menu"):
-                return
+            style = self._get_menu_style_tokens()
 
-            cor_secundaria = self.current_palette.get("secundaria", "#1F2937")
-            cor_borda = self.current_palette.get("borda", "#333333")
-
-            texto_fixo = "#F8FAFC"
-            is_dark = is_dark_color(cor_secundaria)
-
-            if is_dark:
-                btn_bg = self._realcar_cor(cor_secundaria, 1.06)
-                btn_hover = "#2B2B2B"
-                submenu_btn_bg = self._realcar_cor(cor_secundaria, 1.06)
-            else:
-                btn_bg = self._darker(cor_secundaria, 0.95)
-                btn_hover = self._darker(cor_secundaria, 0.85)
-                submenu_btn_bg = self._darker(cor_secundaria, 0.95)
-
-            # Botões principais
-            for categoria, btn_frame in app.botoes_menu.items():
+            for categoria, btn_frame in self.botoes_menu.items():
                 if not btn_frame.winfo_exists():
                     continue
 
                 for child in btn_frame.winfo_children():
-                    if isinstance(child, ctk.CTkButton):
-                        fg = btn_bg
-                        if categoria == app._active_submenu:
-                            fg = btn_hover
+                    if not isinstance(child, ctk.CTkButton):
+                        continue
 
-                        child.configure(
-                            fg_color=fg,
-                            hover_color=btn_hover,
-                            text_color=texto_fixo,
-                            text_color_disabled=texto_fixo,
-                            border_color=cor_borda,
-                            border_width=1
-                        )
+                    ativo = categoria == self._active_submenu
+                    child.configure(
+                        fg_color=style["hover_bg"] if ativo else style["menu_bg"],
+                        hover_color=style["hover_bg"],
+                        text_color=style["hover_texto"] if ativo else style["menu_texto"],
+                        text_color_disabled=style["hover_texto"] if ativo else style["menu_texto"],
+                        border_color=self.cor_borda,
+                        border_width=1,
+                    )
 
-            # Submenus
-            for categoria, submenu_frame in app.submenu_frames.items():
+            for _, submenu_frame in self.submenu_frames.items():
                 if not submenu_frame.winfo_exists():
                     continue
 
                 submenu_frame.configure(
-                    fg_color=cor_secundaria,
-                    border_color=cor_borda,
-                    border_width=1
+                    fg_color=style["submenu_painel_bg"],
+                    border_color=self.cor_borda,
+                    border_width=1,
                 )
 
                 for inner_frame in submenu_frame.winfo_children():
@@ -2515,68 +2430,26 @@ class OperaMenuApp(ctk.CTk):
                             if isinstance(btn_container, ctk.CTkFrame):
                                 for btn in btn_container.winfo_children():
                                     if isinstance(btn, ctk.CTkButton):
-                                        btn.configure(
-                                            fg_color=submenu_btn_bg,
-                                            hover=False,
-                                            hover_color=submenu_btn_bg,
-                                            text_color=texto_fixo,
-                                            text_color_disabled=texto_fixo,
-                                            border_color=submenu_btn_bg,
-                                            border_width=1
-                                        )
-                                        btn._normal_bg = submenu_btn_bg
-                                        btn._normal_fg = texto_fixo
-                                        btn._hover_bg = "#2B2B2B"
-                                        btn._hover_fg = texto_fixo
+                                        self._apply_submenu_button_base_style(btn, style)
 
             _dprint("[Tema] Cores do menu e submenu atualizadas.")
         except Exception as e:
             _dprint(f"[Tema] Erro ao atualizar cores do menu: {e}")
 
     def _hide_all_submenus(self):
-        """Esconde todos os submenus com texto sempre branco."""
-        texto_fixo = "#F8FAFC"
+        """Esconde todos os submenus e restaura os botões ao padrão do tema."""
+        style = self._get_menu_style_tokens()
 
         for frame in self.submenu_frames.values():
             try:
-                base = self.cor_secundaria
-                if is_dark_color(base):
-                    btn_bg = self._realcar_cor(base, 1.06)
-                else:
-                    btn_bg = self._darker(base, 0.95)
-
                 for inner in frame.winfo_children():
                     for child in inner.winfo_children():
                         if isinstance(child, ctk.CTkFrame):
                             for subchild in child.winfo_children():
                                 if isinstance(subchild, ctk.CTkButton):
-                                    subchild.configure(
-                                        fg_color=btn_bg,
-                                        hover=False,
-                                        hover_color=btn_bg,
-                                        text_color=texto_fixo,
-                                        text_color_disabled=texto_fixo,
-                                        border_color=btn_bg,
-                                        border_width=1
-                                    )
-                                    subchild._normal_bg = btn_bg
-                                    subchild._normal_fg = texto_fixo
-                                    subchild._hover_bg = "#2B2B2B"
-                                    subchild._hover_fg = texto_fixo
+                                    self._apply_submenu_button_base_style(subchild, style)
                         elif isinstance(child, ctk.CTkButton):
-                            child.configure(
-                                fg_color=btn_bg,
-                                hover=False,
-                                hover_color=btn_bg,
-                                text_color=texto_fixo,
-                                text_color_disabled=texto_fixo,
-                                border_color=btn_bg,
-                                border_width=1
-                            )
-                            child._normal_bg = btn_bg
-                            child._normal_fg = texto_fixo
-                            child._hover_bg = "#2B2B2B"
-                            child._hover_fg = texto_fixo
+                            self._apply_submenu_button_base_style(child, style)
             except Exception:
                 pass
 
@@ -2591,24 +2464,13 @@ class OperaMenuApp(ctk.CTk):
                 btn_frame = self.botoes_menu[categoria]
                 for child in btn_frame.winfo_children():
                     if isinstance(child, ctk.CTkButton):
-                        if hasattr(self, 'theme_manager') and self.theme_manager.current_palette:
-                            pal = self.theme_manager.current_palette
-                            cor_secundaria = pal.get("secundaria", "#1F2937")
-                            if is_dark_color(cor_secundaria):
-                                cor_padrao = self._realcar_cor(cor_secundaria, 1.06)
-                            else:
-                                cor_padrao = self._darker(cor_secundaria, 0.95)
-                        else:
-                            if is_dark_color(self.cor_secundaria):
-                                cor_padrao = self._realcar_cor(self.cor_secundaria, 1.06)
-                            else:
-                                cor_padrao = self._darker(self.cor_secundaria, 0.95)
-
                         child.configure(
-                            fg_color=cor_padrao,
-                            hover_color="#2B2B2B",
-                            text_color=texto_fixo,
-                            text_color_disabled=texto_fixo
+                            fg_color=style["menu_bg"],
+                            hover_color=style["hover_bg"],
+                            text_color=style["menu_texto"],
+                            text_color_disabled=style["menu_texto"],
+                            border_color=self.cor_borda,
+                            border_width=1,
                         )
 
         self._active_submenu = None
@@ -2633,22 +2495,9 @@ class OperaMenuApp(ctk.CTk):
 
         icon = self.icons_cache.get(categoria)
 
-        # Cores base do tema
-        base = self.cor_secundaria
-        if is_dark_color(base):
-            btn_bg = self._realcar_cor(base, 1.06)
-        else:
-            btn_bg = self._darker(base, 0.95)
-        cor_texto = self.cor_texto
-
-        # Cores fixas de hover
-        hover_bg = "#2B2B2B"
-        hover_text = "#F8FAFC"
-
-        # Se for a categoria ativa, já inicia com hover
-        if categoria == self._active_submenu:
-            btn_bg = hover_bg
-            cor_texto = hover_text
+        style = self._get_menu_style_tokens()
+        btn_bg = style["hover_bg"] if categoria == self._active_submenu else style["menu_bg"]
+        cor_texto = style["hover_texto"] if categoria == self._active_submenu else style["menu_texto"]
 
         btn = ctk.CTkButton(
             btn_frame,
@@ -2657,8 +2506,9 @@ class OperaMenuApp(ctk.CTk):
             compound="left",
             anchor="w",
             fg_color=btn_bg,
-            hover_color=hover_bg,  # hover automático usa a mesma cor fixa
+            hover_color=style["hover_bg"],
             text_color=cor_texto,
+            text_color_disabled=cor_texto,
             font=("Arial", max(11, int(14 * self.ui_scale))),
             corner_radius=max(8, int(10 * self.ui_scale)),
             border_color=self.cor_borda,
@@ -2688,8 +2538,8 @@ class OperaMenuApp(ctk.CTk):
         if not itens_visiveis:
             return
 
-        # MESMA COR DE FUNDO DO MENU
-        cor_fundo = self.cor_secundaria
+        style = self._get_menu_style_tokens()
+        cor_fundo = style["submenu_painel_bg"]
         cor_borda = self.cor_borda
 
         # Apenas largura maior, sem mexer na aparência
@@ -2736,14 +2586,7 @@ class OperaMenuApp(ctk.CTk):
 
         icon = self._get_submenu_icon(categoria, item)
 
-        base = self.cor_secundaria
-        if is_dark_color(base):
-            btn_bg = self._realcar_cor(base, 1.06)
-        else:
-            btn_bg = self._darker(base, 0.95)
-
-        texto_fixo = "#F8FAFC"
-        hover_bg = "#2B2B2B"
+        style = self._get_menu_style_tokens()
 
         btn = ctk.CTkButton(
             item_frame,
@@ -2751,11 +2594,11 @@ class OperaMenuApp(ctk.CTk):
             image=icon,
             compound="left",
             anchor="w",
-            fg_color=btn_bg,
+            fg_color=style["submenu_bg"],
             hover=False,
-            hover_color=btn_bg,
-            text_color=texto_fixo,
-            text_color_disabled=texto_fixo,
+            hover_color=style["submenu_bg"],
+            text_color=style["submenu_texto"],
+            text_color_disabled=style["submenu_texto"],
             font=("Arial", max(11, int(13 * getattr(self, "ui_scale", 1.0)))),
             height=max(32, int(36 * getattr(self, "ui_scale", 1.0))),
             corner_radius=6,
@@ -2764,10 +2607,10 @@ class OperaMenuApp(ctk.CTk):
         )
         btn.pack(fill="x", expand=True, padx=4, pady=2)
 
-        btn._normal_bg = btn_bg
-        btn._normal_fg = texto_fixo
-        btn._hover_bg = hover_bg
-        btn._hover_fg = texto_fixo
+        btn._normal_bg = style["submenu_bg"]
+        btn._normal_fg = style["submenu_texto"]
+        btn._hover_bg = style["hover_bg"]
+        btn._hover_fg = style["hover_texto"]
 
         def hover_on(event=None):
             if btn.winfo_exists():
