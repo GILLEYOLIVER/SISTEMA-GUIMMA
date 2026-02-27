@@ -1487,39 +1487,53 @@ class OperaMenuApp(ctk.CTk):
         # Destaca o botão da categoria ativa
         self._highlight_active_category(categoria)
 
-    def _is_dark_tk_color(self, color: str) -> bool:
-        """Detecta se a cor (hex ou nome Tk) é escura."""
+    def _resolve_theme_color(self, color, fallback: str) -> str:
+        """Resolve cor (str/tupla/lista) para um valor único conforme modo atual."""
+        if isinstance(color, (tuple, list)) and color:
+            try:
+                modo = ctk.get_appearance_mode().lower()
+            except Exception:
+                modo = "dark"
+            if len(color) >= 2:
+                return str(color[1] if modo == "dark" else color[0])
+            return str(color[0])
+        if isinstance(color, str) and color.strip():
+            return color
+        return fallback
+
+    def _is_dark_tk_color(self, color) -> bool:
+        """Detecta se a cor (hex/nome Tk/tupla CTk) é escura."""
+        cor = self._resolve_theme_color(color, "#111827")
         try:
-            if isinstance(color, str) and color.startswith("#") and len(color) == 7:
-                return is_dark_color(color)
-            r16, g16, b16 = self.winfo_rgb(color)
+            if cor.startswith("#") and len(cor) == 7:
+                return is_dark_color(cor)
+            r16, g16, b16 = self.winfo_rgb(cor)
             r, g, b = r16 / 65535.0, g16 / 65535.0, b16 / 65535.0
             luminancia = (0.299 * r + 0.587 * g + 0.114 * b)
             return luminancia < 0.5
         except Exception:
-            return is_dark_color(color) if isinstance(color, str) else False
+            return is_dark_color(cor)
 
-    def _contrast_text_for_color(self, color: str, fallback: str = "#F8FAFC") -> str:
+    def _contrast_text_for_color(self, color, fallback: str = "#F8FAFC") -> str:
         """Retorna texto de alto contraste para qualquer cor reconhecida pelo Tk."""
+        cor = self._resolve_theme_color(color, "#111827")
         try:
-            if isinstance(color, str) and color.startswith("#") and len(color) == 7:
-                return get_contraste_texto(color)
-            r16, g16, b16 = self.winfo_rgb(color)
+            if cor.startswith("#") and len(cor) == 7:
+                return get_contraste_texto(cor)
+            r16, g16, b16 = self.winfo_rgb(cor)
             r, g, b = r16 / 65535.0, g16 / 65535.0, b16 / 65535.0
             luminancia = (0.299 * r + 0.587 * g + 0.114 * b)
             return "#000000" if luminancia > 0.5 else "#FFFFFF"
         except Exception:
-            if isinstance(color, str):
-                return get_contraste_texto(color) or fallback
-            return fallback
+            return get_contraste_texto(cor) or fallback
 
     def _get_menu_style_tokens(self) -> dict:
         """Calcula cores padronizadas com contraste forte para menu e submenu."""
         pal = getattr(getattr(self, "theme_manager", None), "current_palette", None) or {}
 
-        cor_secundaria = pal.get("secundaria", self.cor_secundaria)
-        cor_hover_base = pal.get("hover", cor_secundaria)
-        cor_borda = pal.get("borda", self.cor_borda)
+        cor_secundaria = self._resolve_theme_color(pal.get("secundaria", self.cor_secundaria), self.cor_secundaria)
+        cor_hover_base = self._resolve_theme_color(pal.get("hover", cor_secundaria), cor_secundaria)
+        cor_borda = self._resolve_theme_color(pal.get("borda", self.cor_borda), self.cor_borda)
         tema_escuro = self._is_dark_tk_color(cor_secundaria)
 
         if tema_escuro:
