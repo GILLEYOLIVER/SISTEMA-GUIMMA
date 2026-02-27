@@ -1488,28 +1488,32 @@ class OperaMenuApp(ctk.CTk):
         self._highlight_active_category(categoria)
 
     def _get_menu_style_tokens(self) -> dict:
-        """Calcula as cores padronizadas de menu/submenu com contraste garantido."""
+        """Calcula cores padronizadas com contraste forte para menu e submenu."""
         pal = getattr(getattr(self, "theme_manager", None), "current_palette", None) or {}
 
         cor_secundaria = pal.get("secundaria", self.cor_secundaria)
         cor_hover_base = pal.get("hover", cor_secundaria)
         cor_borda = pal.get("borda", self.cor_borda)
+        tema_escuro = is_dark_color(cor_secundaria)
 
-        if is_dark_color(cor_secundaria):
+        if tema_escuro:
             menu_bg = self._realcar_cor(cor_secundaria, 1.06)
             submenu_bg = self._realcar_cor(cor_secundaria, 1.06)
+            hover_bg = self._realcar_cor(cor_hover_base, 1.12)
         else:
             menu_bg = self._darker(cor_secundaria, 0.95)
             submenu_bg = self._darker(cor_secundaria, 0.95)
-
-        if is_dark_color(cor_hover_base):
-            hover_bg = self._realcar_cor(cor_hover_base, 1.18)
-        else:
             hover_bg = self._darker(cor_hover_base, 0.82)
 
         menu_texto = get_contraste_texto(menu_bg) or self.cor_texto
         hover_texto = get_contraste_texto(hover_bg) or menu_texto
         submenu_texto = get_contraste_texto(submenu_bg) or menu_texto
+
+        # Reforço: no tema escuro NUNCA permitir texto escuro no menu/submenu.
+        if tema_escuro:
+            menu_texto = "#F8FAFC"
+            hover_texto = "#FFFFFF"
+            submenu_texto = "#F8FAFC"
 
         return {
             "menu_bg": menu_bg,
@@ -1520,6 +1524,7 @@ class OperaMenuApp(ctk.CTk):
             "submenu_bg": submenu_bg,
             "submenu_texto": submenu_texto,
             "cor_borda": cor_borda,
+            "tema_escuro": tema_escuro,
         }
 
     def _apply_submenu_button_base_style(self, btn, style: dict):
