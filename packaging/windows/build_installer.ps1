@@ -9,15 +9,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# Force UTF-8 output (helps avoid "Ã­" / "âœ…" on some terminals)
-try {
-    chcp 65001 | Out-Null
-} catch { }
-try {
-    [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
-} catch { }
+# Force UTF-8 output
+try { chcp 65001 | Out-Null } catch { }
+try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch { }
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path
 Set-Location $repoRoot
 
 Write-Host ("=" * 60) -ForegroundColor Cyan
@@ -30,7 +26,21 @@ function Run-Step([string]$title, [scriptblock]$action) {
     & $action
 }
 
-# PASSO 1: Preparar ícone
+function Show-LastLines([string]$path, [int]$lines = 80) {
+    if (Test-Path $path) {
+        Write-Host "" 
+        Write-Host "---- ULTIMAS LINHAS: $path ----" -ForegroundColor Yellow
+        try {
+            Get-Content -LiteralPath $path -Tail $lines | ForEach-Object { $_ }
+        } catch {
+            Write-Host "(nao foi possivel ler o log)" -ForegroundColor Yellow
+        }
+        Write-Host "---- FIM ----" -ForegroundColor Yellow
+        Write-Host ""
+    }
+}
+
+# PASSO 1: Preparar icone
 Run-Step "[1/4] Preparando icone..." {
     & $Python "packaging/windows/prepare_icon.py"
     if ($LASTEXITCODE -ne 0) { throw "Falha ao preparar icone." }
@@ -39,13 +49,35 @@ Run-Step "[1/4] Preparando icone..." {
 # PASSO 2: Construir app principal
 Run-Step "[2/4] Construindo aplicativo principal..." {
     & $Python "packaging/build.py" --platform windows
-    if ($LASTEXITCODE -ne 0) { throw "Falha no build do app principal." }
+    if ($LASTEXITCODE -ne 0) {
+        # Mostra log do build.py (quando existir)
+        Show-LastLines (Join-Path $repoRoot "build\pyinstaller_windows_error.log") 120
+        throw "Falha no build do app principal."
+    }
 }
 
 # PASSO 3: Construir configurador do banco
 Run-Step "[3/4] Construindo configurador do banco..." {
     & $Python "packaging/windows/build_db_config.py"
     if ($LASTEXITCODE -ne 0) { throw "Falha no build do configurador do banco." }
+}
+
+# PASSO 3.5: Verificacao rapida (runtime do PyInstaller)
+Run-Step "[3.5/4] Verificando runtime (_internal\\python312.dll)..." {
+    $candidates = @(
+        (Join-Path $repoRoot "dist\SistemaOpera\_internal\python312.dll"),
+        (Join-Path $repoRoot "dist\windows\SistemaOpera\_internal\python312.dll"),
+        (Join-Path $repoRoot "dist\windows\_internal\python312.dll")
+    )
+
+    $found = $false
+    foreach ($p in $candidates) {
+        if (Test-Path $p) { $found = $true; Write-Host "OK runtime encontrado: $p" -ForegroundColor Green; break }
+    }
+
+    if (-not $found) {
+        throw "Build incompleto: python312.dll nao encontrado. O instalador precisa da pasta _internal junto do exe." 
+    }
 }
 
 # PASSO 4: Criar instalador
@@ -73,19 +105,17 @@ Run-Step "[4/4] Criando instalador..." {
         throw "Arquivo .iss nao encontrado: $issPath"
     }
 
-    # Garantir que o .iss esteja em UTF-8 sem BOM (evita 'Text is not inside a section')
+    # Garantir que o .iss esteja em UTF-8 sem BOM
     $bytes = [System.IO.File]::ReadAllBytes($issPath)
-    # Remove BOM se existir (EF BB BF)
     if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
         $bytes = $bytes[3..($bytes.Length-1)]
         [System.IO.File]::WriteAllBytes($issPath, $bytes)
     }
 
-    # Apagar instalador antigo para nao dar "sucesso falso"
+    # Apagar instalador antigo
     $installerPath = Join-Path $repoRoot "dist\SistemaOpera_Setup.exe"
     Remove-Item $installerPath -ErrorAction SilentlyContinue
 
-    # Compilar
     & $innoExe $issPath
     if ($LASTEXITCODE -ne 0) {
         throw "ISCC falhou. Veja a mensagem acima (arquivo faltando / caminho errado)."

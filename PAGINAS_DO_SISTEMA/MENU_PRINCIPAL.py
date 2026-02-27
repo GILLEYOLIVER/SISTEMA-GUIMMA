@@ -2,6 +2,7 @@
 """
 MENU_PRINCIPAL.py - Sistema OPERA Refatorado
 Menu principal com sistema de temas, permissões e cache otimizado.
+VERSÃO CORRIGIDA - SUBMENUS FUNCIONANDO 100%
 """
 
 import json
@@ -14,12 +15,21 @@ import sys
 import threading
 import time
 from datetime import datetime
+
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk, font as tkfont
+
 from PIL import Image, ImageTk
-from tkinter import messagebox, ttk
-from PIL import Image
 import customtkinter as ctk
+
+OPERA_DEBUG = bool(os.environ.get('OPERA_DEBUG', '').strip())
+
+
+def _dprint(*args, **kwargs):
+    """Print controlado por OPERA_DEBUG para não atrasar o startup."""
+    if OPERA_DEBUG:
+        print(*args, **kwargs)
+
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.abspath(os.path.join(APP_DIR, ".."))
@@ -28,9 +38,10 @@ if SRC_DIR not in sys.path:
 
 from PAGINAS_DO_SISTEMA.TEMAS import (
     TemasPage,
+    ModuloPaletas,
     aplicar_estilo_treeview,
     get_contraste_texto,
-    is_dark_color,
+    is_dark_color,  # Esta linha é crucial
     padronizar_treeview,
     remover_bordas_botoes_tema,
 )
@@ -43,17 +54,15 @@ from PAGINAS_DO_SISTEMA.ui_after_guard import (
 )
 from PAGINAS_DO_SISTEMA.LOG_SISTEMA import get_logger
 
-
-
 # ===== IMPORTAÇÕES DO SISTEMA =====
 try:
     from PAGINAS_DO_SISTEMA.USUARIOS import registrar_log_db
 
     LOGS_DISPONIVEIS = True
-    print("✅ Função de logs disponível.")
+    _dprint("✅ Função de logs disponível.")
 except ImportError as e:
     LOGS_DISPONIVEIS = False
-    print(f"⚠️ Logs não disponíveis: {e}")
+    _dprint(f"⚠️ Logs não disponíveis: {e}")
 
 
     def registrar_log_db(usuario, acao, pagina, detalhe=""):
@@ -64,13 +73,15 @@ try:
     from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema
 
     MENU_POSTGRES_AVAILABLE = True
-    print("✅ PostgreSQL disponível.")
+    _dprint("✅ PostgreSQL disponível.")
 except Exception as e:
-    print(f"❌ PostgreSQL indisponível: {e}")
+    _dprint(f"❌ PostgreSQL indisponível: {e}")
     MENU_POSTGRES_AVAILABLE = False
+
 
     def get_conn():
         raise RuntimeError("PostgreSQL indisponível")
+
 
     def get_schema():
         return "opera"
@@ -80,6 +91,7 @@ IS_MAC = platform.system() == "Darwin"
 IS_WIN = platform.system() == "Windows"
 BASE_DIR = os.path.dirname(APP_DIR)
 ROOT_DIR = os.path.dirname(SRC_DIR)
+
 
 # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 def _resolve_app_path(filename: str) -> str:
@@ -143,14 +155,14 @@ class ConfigManager:
                 if isinstance(data, dict) and data:
                     return data
             except Exception as exc:
-                print(f"⚠️ Falha ao carregar rotas em {path}: {exc}")
+                _dprint(f"⚠️ Falha ao carregar rotas em {path}: {exc}")
         return {}
 
     @staticmethod
     def ensure_icons_directory():
         """Garante que a pasta de ícones existe."""
         if not os.path.exists(ICONS_DIR):
-            print(f"📁 Criando pasta de ícones: {ICONS_DIR}")
+            _dprint(f"📁 Criando pasta de ícones: {ICONS_DIR}")
             os.makedirs(ICONS_DIR, exist_ok=True)
         return ICONS_DIR
 
@@ -165,23 +177,34 @@ class ThemeManager:
         self.current_palette: dict | None = None
         self.fonts = self._default_fonts()
 
-    def apply_theme(self, theme_name: str, palette: dict | None = None):
+    def apply_theme(self, theme_name: str, palette: dict | None = None, *, rebuild_interface: bool = False):
         """Aplica o tema informado (padrão ou personalizado) consistentemente."""
         import customtkinter as ctk
-        from PAGINAS_DO_SISTEMA.TEMAS import TemasPage, is_dark_color
+        from PAGINAS_DO_SISTEMA.TEMAS import ModuloPaletas, is_dark_color
 
         # Obtém a paleta
         if palette:
-            pal = dict(palette)  # cópia defensiva
-            print(f"[Tema] Aplicando paleta personalizada para '{theme_name}'.")
+            pal = dict(palette)
+            _dprint(f"[Tema] Aplicando paleta personalizada para '{theme_name}'.")
         else:
-            pal = TemasPage.PADROES.get(theme_name)
-            if not pal:
-                print(f"[Tema] Tema '{theme_name}' não encontrado. Usando 'Noite Urbana'.")
-                pal = TemasPage.PADROES.get("Noite Urbana", {})
-            else:
-                pal = dict(pal)
-                print(f"[Tema] Aplicando tema padrão '{theme_name}'.")
+            # Usa ModuloPaletas em vez de TemasPage.PADROES
+            try:
+                pal = ModuloPaletas().PADROES.get(theme_name)
+                if not pal:
+                    _dprint(f"[Tema] Tema '{theme_name}' não encontrado. Usando 'Noite Urbana'.")
+                    pal = ModuloPaletas().PADROES.get("Noite Urbana", {})
+                else:
+                    pal = dict(pal)
+                    _dprint(f"[Tema] Aplicando tema padrão '{theme_name}'.")
+            except:
+                # Fallback manual
+                fallback = {
+                    "primaria": "#121212", "secundaria": "#1F1F1F", "terciaria": "#3E3E3E",
+                    "fundo": "#181818", "texto": "#EEEEEE", "destaque": "#BB86FC",
+                    "sucesso": "#03DAC6", "alerta": "#CF6679", "borda": "#3A3A3A",
+                    "hover": "#2C2C2C", "selecao": "#BB86FC"
+                }
+                pal = fallback
 
         # Guardar estado atual do tema
         self.current_theme_name = theme_name
@@ -192,7 +215,7 @@ class ThemeManager:
             for chave, valor in pal.items():
                 setattr(self.app, f"cor_{chave}", valor)
         except Exception as e:
-            print(f"[Tema] Erro ao aplicar atributos de cor no app: {e}")
+            _dprint(f"[Tema] Erro ao aplicar atributos de cor no app: {e}")
 
         # Ajusta estilos base de botões antes de estilizar widgets existentes
         self._configure_button_styles(pal)
@@ -207,9 +230,9 @@ class ThemeManager:
             ctk.set_appearance_mode(modo)
             self.app.tema_modo = modo
         except Exception as e:
-            print(f"[Tema] Erro ao definir modo claro/escuro: {e}")
+            _dprint(f"[Tema] Erro ao definir modo claro/escuro: {e}")
 
-        # Ajusta o tema padrão do CustomTkinter para que novos widgets sigam o modo atual
+        # Ajusta o tema padrão do CustomTkinter
         try:
             ctk.set_default_color_theme("dark" if getattr(self.app, "tema_modo", "dark") == "dark" else "light")
         except Exception:
@@ -218,13 +241,22 @@ class ThemeManager:
         # Aplica globalmente a paleta nos widgets já existentes
         self._apply_global_theme(pal)
 
-        # Reconstrói a interface completamente (sidebar, topbar, etc.)
-        self._rebuild_interface()
+        # --- NOVO: Atualiza cores dos botões do menu ---
+        self._update_menu_buttons_colors()
 
-        # Persiste preferências locais para que novas páginas herdem o tema
+        # Atualiza widgets já existentes sem destruir a UI
+        try:
+            if hasattr(self.app, 'refresh_theme_widgets'):
+                self.app.refresh_theme_widgets()
+            elif rebuild_interface:
+                self._rebuild_interface()
+        except Exception as e:
+            _dprint(f"[Tema] Falha ao atualizar widgets existentes: {e}")
+
+        # Persiste preferências locais
         self._persist_theme_choice(theme_name, pal)
 
-        print(f"[Tema] Tema '{theme_name}' aplicado com sucesso!")
+        _dprint(f"[Tema] Tema '{theme_name}' aplicado com sucesso!")
 
     def _default_fonts(self):
         """Retorna o conjunto padrão de fontes para o sistema."""
@@ -282,7 +314,7 @@ class ThemeManager:
                 bordercolor=[("pressed", ""), ("active", "")],
             )
         except Exception as e:
-            print(f"[Tema] Erro ao configurar estilos base de botões: {e}")
+            _dprint(f"[Tema] Erro ao configurar estilos base de botões: {e}")
 
         try:
             # Remove bordas e destaques padrão de botões Tk
@@ -303,7 +335,7 @@ class ThemeManager:
             self.app.font_small = self.fonts["small"]
             self.app.font_button = self.fonts["button"]
         except Exception as e:
-            print(f"[Tema] Erro ao configurar fontes base: {e}")
+            _dprint(f"[Tema] Erro ao configurar fontes base: {e}")
 
     def _apply_palette_to_widget(self, root_widget, palette: dict, fonts: dict):
         """Aplica a paleta informada recursivamente em um widget raiz."""
@@ -338,7 +370,7 @@ class ThemeManager:
                 altura_linha=28,
             )
         except Exception as e:
-            print(f"[Tema] Erro ao aplicar estilo Treeview: {e}")
+            _dprint(f"[Tema] Erro ao aplicar estilo Treeview: {e}")
 
         # === Estilo base para ttk.Button ===
         try:
@@ -365,7 +397,7 @@ class ThemeManager:
                 relief=[("pressed", tk.FLAT), ("active", tk.FLAT)],
             )
         except Exception as e:
-            print(f"[Tema] Erro ao aplicar tema em botões ttk: {e}")
+            _dprint(f"[Tema] Erro ao aplicar tema em botões ttk: {e}")
 
         # ========== FUNÇÃO RECURSIVA ==========
         def _describe_widget(widget) -> str:
@@ -450,7 +482,7 @@ class ThemeManager:
                             dropdown_hover_color=cor_hover_realcado,
                         )
                     except Exception as e:
-                        print(f"[Tema][DEBUG] Falha ao ajustar CTkOptionMenu {_describe_widget(widget)}: {e}")
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkOptionMenu {_describe_widget(widget)}: {e}")
                     parar_recursao = True
 
                 elif isinstance(widget, (ctk.CTkCheckBox, ctk.CTkSwitch)):
@@ -472,7 +504,7 @@ class ThemeManager:
                             border_color=cor_borda,
                         )
                     except Exception as e:
-                        print(f"[Tema][DEBUG] Falha ao ajustar CTkProgressBar {_describe_widget(widget)}: {e}")
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkProgressBar {_describe_widget(widget)}: {e}")
                     parar_recursao = True
 
                 elif isinstance(widget, ctk.CTkScrollbar):
@@ -484,21 +516,21 @@ class ThemeManager:
                             progress_color=cor_primaria,
                         )
                     except Exception as e:
-                        print(f"[Tema][DEBUG] Falha ao ajustar CTkScrollbar {_describe_widget(widget)}: {e}")
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkScrollbar {_describe_widget(widget)}: {e}")
                     parar_recursao = True
 
                 elif isinstance(widget, ctk.CTk):
                     try:
                         widget.configure(fg_color=cor_fundo)
                     except Exception as e:
-                        print(f"[Tema][DEBUG] Falha ao ajustar CTk root {_describe_widget(widget)}: {e}")
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar CTk root {_describe_widget(widget)}: {e}")
                     parar_recursao = False
 
                 elif isinstance(widget, ctk.CTkToplevel):
                     try:
                         widget.configure(fg_color=cor_fundo)
                     except Exception as e:
-                        print(f"[Tema][DEBUG] Falha ao ajustar CTkToplevel {_describe_widget(widget)}: {e}")
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkToplevel {_describe_widget(widget)}: {e}")
                     parar_recursao = False
 
                 elif isinstance(widget, ctk.CTkTabview):
@@ -558,7 +590,7 @@ class ThemeManager:
                             "Opera.Vertical.TScrollbar" if orient == "vertical" else "Opera.Horizontal.TScrollbar"
                         )
                     except Exception as e:
-                        print(f"[Tema][DEBUG] Falha ao ajustar ttk.Scrollbar {_describe_widget(widget)}: {e}")
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar ttk.Scrollbar {_describe_widget(widget)}: {e}")
                     parar_recursao = True
 
                 elif isinstance(widget, tk.Scrollbar):
@@ -572,14 +604,14 @@ class ThemeManager:
                             relief=tk.FLAT,
                         )
                     except Exception as e:
-                        print(f"[Tema][DEBUG] Falha ao ajustar tk.Scrollbar {_describe_widget(widget)}: {e}")
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar tk.Scrollbar {_describe_widget(widget)}: {e}")
                     parar_recursao = True
 
                 elif isinstance(widget, tk.Canvas):
                     try:
                         widget.configure(bg=cor_fundo, highlightthickness=0, bd=0)
                     except Exception as e:
-                        print(f"[Tema][DEBUG] Falha ao ajustar tk.Canvas {_describe_widget(widget)}: {e}")
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar tk.Canvas {_describe_widget(widget)}: {e}")
                     parar_recursao = False
 
                 elif isinstance(widget, ttk.Button):
@@ -611,10 +643,10 @@ class ThemeManager:
                     parar_recursao = False  # frames são containers normais
 
                 else:
-                    print(f"[Tema][DEBUG] Widget não tratado: {_describe_widget(widget)}")
+                    _dprint(f"[Tema][DEBUG] Widget não tratado: {_describe_widget(widget)}")
 
             except Exception as e:
-                print(f"[Tema] Erro ao aplicar tema em widget {_describe_widget(widget)}: {e}")
+                _dprint(f"[Tema] Erro ao aplicar tema em widget {_describe_widget(widget)}: {e}")
 
             # === Recursão apenas se não for widget complexo do CTk / ttk ===
             if not parar_recursao:
@@ -642,7 +674,7 @@ class ThemeManager:
             padronizar_botoes_container(self.app)
 
         except Exception as e:
-            print(f"[Tema] Erro ao aplicar tema global: {e}")
+            _dprint(f"[Tema] Erro ao aplicar tema global: {e}")
 
     def apply_theme_to_widget(self, widget):
         """Aplica o tema atual a um widget específico (ex.: páginas recém-carregadas)."""
@@ -656,7 +688,7 @@ class ThemeManager:
             palette = TemasPage.PADROES.get(self.current_theme_name or "Noite Urbana", {})
 
         if not palette:
-            print("[Tema] Nenhuma paleta disponível para aplicar no widget.")
+            _dprint("[Tema] Nenhuma paleta disponível para aplicar no widget.")
             return
 
         try:
@@ -665,9 +697,9 @@ class ThemeManager:
             self._apply_palette_to_widget(widget, palette, self.fonts)
             padronizar_treeviews_container(widget)
             padronizar_botoes_container(widget)
-            print(f"[Tema] Tema '{self.current_theme_name}' aplicado ao widget {widget.__class__.__name__}.")
+            _dprint(f"[Tema] Tema '{self.current_theme_name}' aplicado ao widget {widget.__class__.__name__}.")
         except Exception as e:
-            print(f"[Tema] Não foi possível aplicar tema ao widget {widget}: {e}")
+            _dprint(f"[Tema] Não foi possível aplicar tema ao widget {widget}: {e}")
 
     def _realcar_cor(self, hex_color: str, factor: float = 1.2) -> str:
         """Clareia uma cor hex para criar hover realçado."""
@@ -697,13 +729,13 @@ class ThemeManager:
             settings["last_palette"] = palette
             ConfigManager.save_settings(settings)
         except Exception as e:
-            print(f"[Tema] Não foi possível salvar preferências locais: {e}")
+            _dprint(f"[Tema] Não foi possível salvar preferências locais: {e}")
 
     def _rebuild_interface(self):
         """Reconstrói completamente a interface para aplicar o tema."""
         try:
             app = self.app
-            print("🔄 Reconstruindo interface com novo tema...")
+            _dprint("🔄 Reconstruindo interface com novo tema...")
 
             # Remove widgets antigos
             if hasattr(app, 'sidebar'):
@@ -739,7 +771,7 @@ class ThemeManager:
                 from PAGINAS_DO_SISTEMA.TEMAS import remover_bordas_botoes_tema
                 remover_bordas_botoes_tema(app)
             except Exception as e:
-                print("[Tema] Falha ao remover bordas após reconstrução:", e)
+                _dprint("[Tema] Falha ao remover bordas após reconstrução:", e)
 
             # Atualiza display do usuário
             if hasattr(app, '_update_user_display'):
@@ -750,27 +782,102 @@ class ThemeManager:
                 app._agendar_after(500, lambda: app.open_page(app.current_page))
 
         except Exception as e:
-            print(f"[Tema] Erro ao reconstruir interface: {e}")
+            _dprint(f"[Tema] Erro ao reconstruir interface: {e}")
+
+    def _update_menu_buttons_colors(self):
+        """Atualiza as cores dos botões do menu e submenu mantendo o mesmo padrão visual."""
+        try:
+            app = self.app
+            if not hasattr(app, "botoes_menu"):
+                return
+
+            cor_secundaria = self.current_palette.get("secundaria", "#1F2937")
+            cor_texto = self.current_palette.get("texto", "#FFFFFF")
+            cor_borda = self.current_palette.get("borda", "#333333")
+            cor_sidebar = self.current_palette.get("primaria", cor_secundaria)
+
+            if is_dark_color(cor_secundaria):
+                btn_bg = self._realcar_cor(cor_secundaria, 1.06)
+            else:
+                btn_bg = app._darker(cor_secundaria, 0.95)
+
+            btn_hover = "#2B2B2B"
+            texto_hover = "#F8FAFC"
+
+            # Botões principais
+            for categoria, btn_frame in app.botoes_menu.items():
+                if not btn_frame.winfo_exists():
+                    continue
+
+                for child in btn_frame.winfo_children():
+                    if isinstance(child, ctk.CTkButton):
+                        ativo = categoria == app._active_submenu
+                        child.configure(
+                            fg_color=btn_hover if ativo else btn_bg,
+                            hover_color=btn_hover,
+                            text_color=texto_hover if ativo else cor_texto,
+                            border_color=cor_borda,
+                            border_width=1
+                        )
+
+            # Submenus
+            # Submenus
+            for categoria, submenu_frame in app.submenu_frames.items():
+                if not submenu_frame.winfo_exists():
+                    continue
+
+                submenu_frame.configure(
+                    fg_color=cor_secundaria,
+                    border_color=cor_borda
+                )
+
+                for inner_frame in submenu_frame.winfo_children():
+                    if isinstance(inner_frame, ctk.CTkFrame):
+                        for btn_container in inner_frame.winfo_children():
+                            if isinstance(btn_container, ctk.CTkFrame):
+                                for btn in btn_container.winfo_children():
+                                    if isinstance(btn, ctk.CTkButton):
+                                        # Recalcula a cor normal de fundo conforme o tema
+                                        if is_dark_color(cor_secundaria):
+                                            normal_bg = self._realcar_cor(cor_secundaria, 1.06)
+                                        else:
+                                            normal_bg = self._darker(cor_secundaria, 0.95)
+
+                                        # Atualiza as cores do botão e armazena os valores normais
+                                        btn.configure(
+                                            fg_color=normal_bg,
+                                            hover_color=normal_bg,  # desativa hover automático
+                                            text_color=cor_texto,
+                                            border_color=cor_borda,
+                                            border_width=0
+                                        )
+                                        btn._normal_bg = normal_bg
+                                        btn._normal_fg = cor_texto
+
+            _dprint("[Tema] Cores do menu e submenu atualizadas.")
+        except Exception as e:
+            _dprint(f"[Tema] Erro ao atualizar cores do menu: {e}")
+
 
 class UserManager:
 
     def __init__(self, app=None, usuario_id=None, usuario_nome=None, usuario_hierarquia=None):
-            self.app = app
-            # Usa parâmetros fornecidos OU define padrões
-            self.usuario_id = usuario_id
-            self.usuario_nome = usuario_nome or "Admin"
-            self.usuario_hierarquia = usuario_hierarquia or "Administrador"
-            self.permissoes = {}
+        self.app = app
+        # Usa parâmetros fornecidos OU define padrões
+        self.usuario_id = usuario_id
+        self.usuario_nome = usuario_nome or "Admin"
+        self.usuario_hierarquia = usuario_hierarquia or "Administrador"
+        self.permissoes = {}
 
-            print(f"[UserManager] Iniciado para usuário: {self.usuario_nome} ({self.usuario_hierarquia})")
+        _dprint(f"[UserManager] Iniciado para usuário: {self.usuario_nome} ({self.usuario_hierarquia})")
 
-        # Se o UserManager atual não aceita parâmetros, use esta versão alternativa:
+    # Se o UserManager atual não aceita parâmetros, use esta versão alternativa:
     def load_user_theme_completo(self):
         """Carrega tema completo (com paleta personalizada)."""
         import json
         default_theme = "Noite Urbana"
         if not getattr(self.app, "usuario_id", None):
-            print("[UserManager][DEBUG] usuario_id não definido ao carregar tema completo; usando padrão")
+            _dprint("[UserManager][DEBUG] usuario_id não definido ao carregar tema completo; usando padrão")
             return default_theme, None
 
         schema = get_schema()
@@ -788,7 +895,7 @@ class UserManager:
             cur.execute(query, (default_theme, self.app.usuario_id))
             row = cur.fetchone()
             if not row:
-                print(
+                _dprint(
                     f"[UserManager][DEBUG] Nenhum registro de preferências encontrado para usuario_id={self.app.usuario_id}; "
                     "usando tema padrão"
                 )
@@ -798,10 +905,10 @@ class UserManager:
             if usar_custom and tema_json:
                 try:
                     paleta = json.loads(tema_json)
-                    print(f"[Tema] Paleta personalizada carregada para {self.app.usuario_nome}.")
+                    _dprint(f"[Tema] Paleta personalizada carregada para {self.app.usuario_nome}.")
                     return tema_nome, paleta
                 except json.JSONDecodeError:
-                    print(
+                    _dprint(
                         f"[Tema][ERRO] JSON inválido no tema_personalizado para usuario_id={self.app.usuario_id}: {tema_json}"
                     )
             return tema_nome, None
@@ -809,12 +916,12 @@ class UserManager:
     def save_user_theme(self, theme_name: str):
         """Salva o nome do tema (padrão) no banco."""
         if not getattr(self.app, "usuario_id", None):
-            print("[UserManager][DEBUG] usuario_id ausente ao salvar tema padrão; operação ignorada")
+            _dprint("[UserManager][DEBUG] usuario_id ausente ao salvar tema padrão; operação ignorada")
             return
 
         schema = get_schema()
         try:
-            print(
+            _dprint(
                 f"[UserManager][DEBUG] Gravando tema padrão '{theme_name}' para usuario_id={self.app.usuario_id} no schema {schema}"
             )
             with get_conn() as conn, conn.cursor() as cur:
@@ -829,19 +936,19 @@ class UserManager:
                         tema_personalizado = NULL
                 """, (self.app.usuario_id, theme_name))
                 conn.commit()
-            print("[UserManager][DEBUG] Tema padrão salvo com sucesso")
+            _dprint("[UserManager][DEBUG] Tema padrão salvo com sucesso")
         except Exception as e:
-            print(f"[UserManager][ERRO] Falha ao salvar tema padrão '{theme_name}': {e}")
+            _dprint(f"[UserManager][ERRO] Falha ao salvar tema padrão '{theme_name}': {e}")
 
     def save_user_theme_personalizado(self, theme_name: str, palette_json: str):
         """Salva tema personalizado com paleta JSON."""
         if not getattr(self.app, "usuario_id", None):
-            print("[UserManager][DEBUG] usuario_id ausente ao salvar tema personalizado; operação ignorada")
+            _dprint("[UserManager][DEBUG] usuario_id ausente ao salvar tema personalizado; operação ignorada")
             return
 
         schema = get_schema()
         try:
-            print(
+            _dprint(
                 f"[UserManager][DEBUG] Gravando tema personalizado '{theme_name}' (len={len(palette_json) if palette_json else 0}) "
                 f"para usuario_id={self.app.usuario_id} no schema {schema}"
             )
@@ -857,9 +964,9 @@ class UserManager:
                         tema_personalizado = EXCLUDED.tema_personalizado
                 """, (self.app.usuario_id, theme_name, palette_json))
                 conn.commit()
-            print("[UserManager][DEBUG] Tema personalizado salvo com sucesso")
+            _dprint("[UserManager][DEBUG] Tema personalizado salvo com sucesso")
         except Exception as e:
-            print(f"[UserManager][ERRO] Falha ao salvar tema personalizado '{theme_name}': {e}")
+            _dprint(f"[UserManager][ERRO] Falha ao salvar tema personalizado '{theme_name}': {e}")
 
     def _is_admin(self) -> bool:
         """Retorna True se o usuário for administrador."""
@@ -869,13 +976,13 @@ class UserManager:
                 return True
             return False
         except Exception as e:
-            print(f"[UserManager] Erro ao verificar se é admin: {e}")
+            _dprint(f"[UserManager] Erro ao verificar se é admin: {e}")
             return False
 
     def load_user_permissions(self):
         """Carrega todas as permissões do banco de dados para o usuário atual."""
         if not self.usuario_id:
-            print("[Permissões] ⚠️ Nenhum usuário definido — permissões não carregadas.")
+            _dprint("[Permissões] ⚠️ Nenhum usuário definido — permissões não carregadas.")
             self.permissoes = {}
             return {}
 
@@ -907,11 +1014,11 @@ class UserManager:
                 for row in rows
             }
 
-            print(f"[Permissões] {len(self.permissoes)} permissões carregadas para '{self.usuario_nome}'.")
+            _dprint(f"[Permissões] {len(self.permissoes)} permissões carregadas para '{self.usuario_nome}'.")
             return self.permissoes
 
         except Exception as e:
-            print(f"[Permissões] ❌ Erro ao carregar permissões: {e}")
+            _dprint(f"[Permissões] ❌ Erro ao carregar permissões: {e}")
             self.permissoes = {}
             return {}
 
@@ -1125,7 +1232,8 @@ class OperaMenuApp(ctk.CTk):
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         reset_tk_default_root()
         super().__init__()
-        print("🚀 Iniciando sistema OPERA...")
+
+        self._preload_complete = False
 
         # Guardar e cancelar callbacks after de forma segura (compatível macOS/Windows)
         initialize_after_guard(self)
@@ -1133,7 +1241,10 @@ class OperaMenuApp(ctk.CTk):
         # Ajustes responsivos para telas menores (ex.: 1366x768)
         self._current_ui_scale = None
         self._pending_responsive_job = None
-        self._configure_responsive_layout(initial=True)
+        self._responsive_reflow_lock = False
+        self._window_scale_applied = False
+        self._startup_responsive_ready = False
+        self._last_configure_size = None
 
         # === INICIALIZAR CORES PADRÃO ===
         self.cor_fundo = "#1e1e1e"
@@ -1154,13 +1265,11 @@ class OperaMenuApp(ctk.CTk):
             self.usuario_id = 0
             self.usuario_nome = "Administrador Local"
             self.usuario_hierarquia = "Admin"
-            print("⚙️ Execução direta detectada — modo Admin.")
-            # NOVO: Não definir current_theme_name aqui, deixar para o _load_initial_theme
+            _dprint("⚙️ Execução direta detectada — modo Admin.")
         else:
             self.usuario_id = usuario_id
             self.usuario_nome = usuario_nome
             self.usuario_hierarquia = usuario_hierarquia
-            # NOVO: Não definir current_theme_name aqui, deixar para o _load_initial_theme
 
         # Configurações gerais
         self.settings = ConfigManager.load_settings()
@@ -1183,27 +1292,28 @@ class OperaMenuApp(ctk.CTk):
         # Estados
         self._closing = False
         self._page_loading = False
-        self.current_theme_name = None  # SERÁ DEFINIDO NO _load_initial_theme
+        self.current_theme_name = None
         self.current_page = None
-        self.submenu_frames = {}
-        self.botoes_menu = {}
+        self.submenu_frames = {}  # Dicionário de frames de submenu
+        self.botoes_menu = {}  # Dicionário de frames de botões
         self._submenu_close_jobs = {}
         self.icons_cache = {}
         self._active_submenu = None
+        self._submenu_timer = None
         self._page_cache = {}
         self._page_cache_order = []
         self._page_cache_size = 3
         self._current_frame = None
+        self._backup_launch_scheduled = False
+        self.permissoes_usuario = {}
 
-        # Configuração da janela
+        # Configuração da janela - calcular escala primeiro
+        self._calculate_initial_scale_and_fonts()
         self._setup_window()
-        self._setup_responsive_watcher()
 
-        # Carregar tema - AGORA ESTE MÉTODO DECIDE O TEMA CORRETAMENTE
-        print("🎨 Iniciando carregamento do tema...")
-
+        # Carregar tema
+        _dprint("🎨 Iniciando carregamento do tema...")
         self._load_initial_theme()
-
 
         # Construir interface
         self._load_icons()
@@ -1211,92 +1321,297 @@ class OperaMenuApp(ctk.CTk):
         self._load_user_permissions()
         self._setup_bindings()
         self._setup_activity_logging()
-
+        self._setup_responsive_watcher()
         self._preload_complete = True
+
+        # Mostrar janela
         self.deiconify()
+        self.lift()
+        self.focus_force()
 
-        # Atualizar display do usuário
+        # Ajustes iniciais
+        self._apply_initial_layout()
 
+        # Abrir Dashboard
+        self._open_dashboard_agora()
 
-        self._open_initial_page()
-        self._ativar_backup_silencioso()
+        # Inicializa tarefas secundárias
         self._agendar_after(100, self._update_user_display)
+        self._agendar_after(5000, self._ativar_backup_silencioso)
 
-        print(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
-        print(f"🎨 Tema aplicado: {self.current_theme_name}")
+        _dprint(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
+        _dprint(f"🎨 Tema aplicado: {self.current_theme_name}")
 
-    def _calculate_ui_scale(self, width: int, height: int) -> float:
-        """Calcula escala da UI para adaptar automaticamente o layout."""
-        if width <= 1366 or height <= 768:
-            return 0.82
-        if width <= 1600 or height <= 900:
-            return 0.90
-        if width <= 1920 or height <= 1080:
-            return 0.97
-        return 1.0
-
-    def _configure_responsive_layout(self, *, initial: bool = False, width: int | None = None, height: int | None = None):
-        """Define escala e métricas de layout; em runtime usa tamanho da janela."""
+    def _calculate_initial_scale_and_fonts(self):
+        """Calcula escala inicial e define todas as fontes."""
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
-        current_width = int(width or self.winfo_width() or screen_width)
-        current_height = int(height or self.winfo_height() or screen_height)
 
-        if initial or current_width <= 1 or current_height <= 1:
-            current_width, current_height = screen_width, screen_height
+        # Calcular escala base
+        base = min(screen_width / 1920.0, screen_height / 1080.0)
+        if screen_width <= 1320 or screen_height <= 720:
+            self.ui_scale = max(0.68, min(0.78, round(base, 3)))
+        elif screen_width <= 1366 or screen_height <= 768:
+            self.ui_scale = max(0.72, min(0.84, round(base, 3)))
+        else:
+            self.ui_scale = max(0.74, min(1.0, round(base, 3)))
 
-        new_scale = self._calculate_ui_scale(current_width, current_height)
-        if self._current_ui_scale is not None and abs(self._current_ui_scale - new_scale) < 0.01:
-            return
-
-        self.ui_scale = new_scale
-        self._current_ui_scale = new_scale
-
+        # Aplicar escala global
         try:
             ctk.set_widget_scaling(self.ui_scale)
-            ctk.set_window_scaling(max(0.88, self.ui_scale))
+            ctk.set_window_scaling(max(0.70, self.ui_scale))
         except Exception as e:
-            print(f"⚠️ Erro ao aplicar escala de interface: {e}")
+            _dprint(f"⚠️ Erro ao aplicar escala: {e}")
 
-        self.SIDEBAR_WIDTH = max(220, int(self.__class__.SIDEBAR_WIDTH * self.ui_scale))
-        self.ITEM_HEIGHT = max(32, int(self.__class__.ITEM_HEIGHT * self.ui_scale))
-        self.TOPBAR_HEIGHT = max(38, int(self.__class__.TOPBAR_HEIGHT * self.ui_scale))
+        # Calcular dimensões
+        self.SIDEBAR_WIDTH = max(220, int(300 * self.ui_scale))
+        self.ITEM_HEIGHT = max(32, int(40 * self.ui_scale))
+        self.TOPBAR_HEIGHT = max(36, int(48 * self.ui_scale))
 
-        self.font_sidebar_titulo = ("Arial", max(16, int(24 * self.ui_scale)), "bold")
-        self.font_sidebar_subtitulo = ("Arial", max(12, int(18 * self.ui_scale)))
-        self.font_topbar_titulo = ("Arial", max(17, int(30 * self.ui_scale)))
-        self.font_topbar_icone = ("Arial", max(16, int(27 * self.ui_scale)))
-        self.icon_size_sidebar = max(38, int(60 * self.ui_scale))
+        # Definir fontes
+        self.font_sidebar_titulo = ("Arial", max(14, int(22 * self.ui_scale)), "bold")
+        self.font_sidebar_subtitulo = ("Arial", max(11, int(16 * self.ui_scale)))
+        self.font_topbar_titulo = ("Arial", max(14, int(26 * self.ui_scale)))
+        self.font_topbar_icone = ("Arial", max(14, int(22 * self.ui_scale)))
+        self.icon_size_sidebar = max(28, int(52 * self.ui_scale))
 
-        if hasattr(self, "topbar") and self.topbar.winfo_exists():
-            self.topbar.configure(height=self.TOPBAR_HEIGHT)
-        if hasattr(self, "sidebar") and self.sidebar.winfo_exists():
-            self.sidebar.configure(width=self.SIDEBAR_WIDTH)
-        if hasattr(self, "title_label") and self.title_label.winfo_exists():
-            self.title_label.configure(font=self.font_topbar_titulo)
-        if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
-            self.icon_theme.configure(font=self.font_topbar_icone)
+    def _apply_initial_layout(self):
+        """Aplica layout inicial."""
+        self._maximize_window()
+        self.update_idletasks()
 
     def _setup_responsive_watcher(self):
-        """Recalibra escala automaticamente quando a janela muda de tamanho."""
+        """Ativa watcher de resize com debounce."""
         self.bind("<Configure>", self._on_window_configure, add="+")
 
     def _on_window_configure(self, event):
+        """Debounce do redimensionamento para evitar loop visual."""
         if event.widget is not self:
             return
+        if not getattr(self, "_preload_complete", False):
+            return
+
+        size_key = (int(event.width), int(event.height))
+        if getattr(self, "_last_resize_seen", None) == size_key and self._pending_responsive_job:
+            return
+
+        self._last_resize_seen = size_key
+
         if self._pending_responsive_job:
             try:
                 self.after_cancel(self._pending_responsive_job)
             except Exception:
                 pass
-        self._pending_responsive_job = self.after(
-            120,
-            lambda w=event.width, h=event.height: self._configure_responsive_layout(width=w, height=h),
-        )
+            self._pending_responsive_job = None
 
-  # ===== CONFIGURAÇÃO DA JANELA =====
+        def _apply_resize():
+            self._pending_responsive_job = None
+            self._configure_responsive_layout(width=size_key[0], height=size_key[1])
+
+        self._pending_responsive_job = self.after(120, _apply_resize)
+
+    def _calculate_ui_scale(self, width: int, height: int) -> float:
+        """
+        Apenas 2 escalas fixas para evitar oscilação:
+        - normal: telas maiores
+        - compacta: janela menor
+        """
+        if width < 1500 or height < 900:
+            return 0.78
+        return 1.0
+
+    def _configure_responsive_layout(self, *, initial: bool = False, width: int | None = None,
+                                     height: int | None = None):
+        """
+        Ajusta apenas métricas do menu/sidebar.
+        NÃO chama ctk.set_widget_scaling aqui, para não entrar em loop.
+        """
+        if getattr(self, "_responsive_reflow_lock", False) and not initial:
+            return
+
+        self._responsive_reflow_lock = True
+        try:
+            screen_width = self.winfo_screenwidth()
+            screen_height = self.winfo_screenheight()
+
+            current_width = int(width or self.winfo_width() or screen_width)
+            current_height = int(height or self.winfo_height() or screen_height)
+
+            if initial or current_width <= 1 or current_height <= 1:
+                current_width, current_height = screen_width, screen_height
+
+            new_scale = self._calculate_ui_scale(current_width, current_height)
+            old_scale = float(getattr(self, "ui_scale", 1.0))
+
+            mode_changed = initial or abs(old_scale - new_scale) >= 0.01
+
+            # Se não mudou de modo, só reposiciona submenu aberto
+            if not mode_changed:
+                if self._active_submenu and self._active_submenu in self.submenu_frames:
+                    self.after_idle(lambda: self._show_submenu(self._active_submenu))
+                return
+
+            self.ui_scale = new_scale
+            self._responsive_mode = "compact" if new_scale < 1.0 else "normal"
+
+            # Métricas principais
+            self.SIDEBAR_WIDTH = max(220, int(300 * self.ui_scale))
+            self.ITEM_HEIGHT = max(32, int(40 * self.ui_scale))
+            self.TOPBAR_HEIGHT = max(36, int(48 * self.ui_scale))
+
+            # Fontes e ícones usados pelos botões do menu
+            self.font_sidebar_titulo = ("Arial", max(14, int(22 * self.ui_scale)), "bold")
+            self.font_sidebar_subtitulo = ("Arial", max(11, int(16 * self.ui_scale)))
+            self.font_topbar_titulo = ("Arial", max(14, int(26 * self.ui_scale)))
+            self.font_topbar_icone = ("Arial", max(14, int(22 * self.ui_scale)))
+            self.icon_size_sidebar = max(28, int(52 * self.ui_scale))
+
+            # Sidebar
+            if hasattr(self, "sidebar") and self.sidebar.winfo_exists():
+                self.grid_columnconfigure(0, weight=0, minsize=self.SIDEBAR_WIDTH + 16)
+                self.sidebar.configure(width=self.SIDEBAR_WIDTH)
+
+            # Topbar
+            if hasattr(self, "topbar") and self.topbar.winfo_exists():
+                self.topbar.configure(height=self.TOPBAR_HEIGHT)
+
+            # Recarrega ícones e reconstrói menu/submenus com a nova escala
+            if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists():
+                self._hide_all_submenus()
+                self._load_icons()
+                self._build_menu_content()
+
+            self.update_idletasks()
+
+            # Reposiciona submenu aberto, se houver
+            if self._active_submenu and self._active_submenu in self.submenu_frames:
+                self.after_idle(lambda: self._show_submenu(self._active_submenu))
+
+        finally:
+            self._responsive_reflow_lock = False
+
+    def _show_submenu(self, categoria: str):
+        """Mostra submenu alinhado ao botão da categoria."""
+        frame = self.submenu_frames.get(categoria)
+        btn_frame = self.botoes_menu.get(categoria)
+
+        if not frame or not btn_frame:
+            return
+
+        self.update_idletasks()
+
+        # Fecha qualquer outro submenu antes
+        for nome, outro_frame in self.submenu_frames.items():
+            if nome != categoria:
+                try:
+                    outro_frame.place_forget()
+                except Exception:
+                    pass
+
+        # Coordenadas do botão
+        root_x = self.winfo_rootx()
+        root_y = self.winfo_rooty()
+
+        btn_x = btn_frame.winfo_rootx() - root_x
+        btn_y = btn_frame.winfo_rooty() - root_y
+        btn_w = btn_frame.winfo_width()
+        btn_h = btn_frame.winfo_height()
+
+        # Largura do submenu
+        frame.update_idletasks()
+        frame_width = frame.winfo_width()
+        frame_height = frame.winfo_reqheight()
+
+        # Posiciona à direita do botão
+        x = btn_x + btn_w + 4
+        y = btn_y
+
+        area_w = self.winfo_width()
+
+        # Se não couber à direita, posiciona à esquerda
+        if x + frame_width > area_w - 10:
+            x = btn_x - frame_width - 4
+
+        # Garante que não saia da tela
+        if x < 10:
+            x = 10
+
+        # Ajuste vertical
+        area_h = self.winfo_height()
+        if y + frame_height > area_h - 10:
+            y = area_h - frame_height - 10
+        if y < 10:
+            y = 10
+
+        frame.place(in_=self, x=x, y=y)
+        frame.lift()
+        frame.tkraise()
+
+        self._active_submenu = categoria
+
+        # Destaca o botão da categoria ativa
+        self._highlight_active_category(categoria)
+
+    def _highlight_active_category(self, categoria: str):
+        """Destaca o botao da categoria com submenu aberto."""
+        try:
+            hover_bg = "#2B2B2B"
+            hover_text = "#F8FAFC"
+
+            # Primeiro, reseta todos os botoes para a cor padrao
+            for cat, btn_frame in self.botoes_menu.items():
+                for child in btn_frame.winfo_children():
+                    if isinstance(child, ctk.CTkButton):
+                        if hasattr(self, 'theme_manager') and self.theme_manager.current_palette:
+                            pal = self.theme_manager.current_palette
+                            cor_secundaria = pal.get("secundaria", "#1F2937")
+                            if is_dark_color(cor_secundaria):
+                                cor_padrao = self._realcar_cor(cor_secundaria, 1.06)
+                            else:
+                                cor_padrao = self._darker(cor_secundaria, 0.95)
+                        else:
+                            if is_dark_color(self.cor_secundaria):
+                                cor_padrao = self._realcar_cor(self.cor_secundaria, 1.06)
+                            else:
+                                cor_padrao = self._darker(self.cor_secundaria, 0.95)
+
+                        child.configure(
+                            fg_color=cor_padrao,
+                            hover_color=hover_bg,
+                            text_color=self.cor_texto
+                        )
+
+            # Depois, destaca o botao da categoria ativa com o mesmo hover escuro
+            if categoria in self.botoes_menu:
+                btn_frame = self.botoes_menu[categoria]
+                for child in btn_frame.winfo_children():
+                    if isinstance(child, ctk.CTkButton):
+                        child.configure(
+                            fg_color=hover_bg,
+                            hover_color=hover_bg,
+                            text_color=hover_text
+                        )
+        except Exception as e:
+            _dprint(f"Erro ao destacar categoria: {e}")
+
+    def _open_dashboard_agora(self):
+        """Abre o Dashboard imediatamente."""
+        try:
+            if self.user_manager.has_permission("Dashboard", "ver"):
+                _dprint("🚀 Abrindo Dashboard...")
+                self.open_page("Dashboard")
+            else:
+                for pagina in self.routes.keys():
+                    if self.user_manager.has_permission(pagina, "ver"):
+                        _dprint(f"🚀 Abrindo '{pagina}'...")
+                        self.open_page(pagina)
+                        break
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao abrir Dashboard: {e}")
+
+    # ===== CONFIGURAÇÃO DA JANELA =====
     def _setup_window(self):
-        """Configura a janela principal maximizada COM BARRA DE TAREFAS VISÍVEL."""
+        """Configura a janela principal maximizada."""
         self.title("OPERA • Sistema de Gestão")
 
         # Ícone
@@ -1304,9 +1619,9 @@ class OperaMenuApp(ctk.CTk):
             if os.path.exists(ICONE_SISTEMA):
                 icon_image = Image.open(ICONE_SISTEMA)
                 self.iconphoto(True, ImageTk.PhotoImage(icon_image))
-                print("✅ Ícone do sistema carregado.")
+                _dprint("✅ Ícone do sistema carregado.")
         except Exception as e:
-            print(f"⚠️ Erro ao carregar ícone: {e}")
+            _dprint(f"⚠️ Erro ao carregar ícone: {e}")
 
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
@@ -1318,22 +1633,18 @@ class OperaMenuApp(ctk.CTk):
         else:
             self.geometry(f"{screen_width - 16}x{screen_height - 80}+0+0")
 
-        self.after(50, self._maximize_window)
-
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
         self.bind("<Escape>", lambda e: self.ask_quit())
 
-        self.minsize(min(1024, screen_width), min(768, screen_height))
-        self.focus_force()
-        self.lift()
+        self.minsize(min(900, screen_width), min(620, screen_height))
 
     def toggle_fullscreen(self, event=None):
-        """Ativa ou desativa modo tela cheia real."""
+        """Ativa ou desativa modo tela cheia."""
         current_state = self.attributes('-fullscreen')
         self.attributes('-fullscreen', not current_state)
 
     def _maximize_window(self):
-        """Garante a janela maximizada respeitando a barra de tarefas."""
+        """Maximiza a janela."""
         try:
             if IS_MAC:
                 self.attributes("-zoomed", True)
@@ -1343,17 +1654,23 @@ class OperaMenuApp(ctk.CTk):
             pass
 
     def ask_quit(self, event=None):
-        """Pergunta se o usuário deseja sair."""
-        if messagebox.askyesno("Sair", "Deseja realmente sair do sistema?"):
-            self.destroy()  # ✅ sempre destroy
+        """Pergunta se deseja sair."""
+        if getattr(self, "_closing", False):
+            return
+        try:
+            confirmar = messagebox.askyesno("Sair", "Deseja realmente sair do sistema?", parent=self)
+        except Exception:
+            confirmar = messagebox.askyesno("Sair", "Deseja realmente sair do sistema?")
+
+        if confirmar:
+            self._agendar_after(1, self.destroy)
 
     def destroy(self):
-        """Finaliza a aplicação cancelando timers pendentes."""
-        try:
-            self._closing = True
-            self._fechando = True
-        except Exception:
-            pass
+        """Finaliza a aplicação."""
+        if getattr(self, "_closing", False):
+            return
+
+        self._closing = True
 
         try:
             cancel_all_afters(self)
@@ -1361,30 +1678,29 @@ class OperaMenuApp(ctk.CTk):
         except Exception:
             pass
 
-        # ✅ fecha de verdade a janela
+        try:
+            self.withdraw()
+            self.update_idletasks()
+        except Exception:
+            pass
+
         try:
             super().destroy()
         except Exception:
             pass
 
-        # ✅ garante encerramento total
         try:
-            import sys
-            sys.exit(0)
+            import os
+            os._exit(0)
         except Exception:
             pass
 
     # ===== CONFIGURAÇÃO DE TECLADO =====
     def _setup_bindings(self):
-        """Configura atalhos de teclado (fechamento correto)."""
-
-        # Recarregar página
+        """Configura atalhos de teclado."""
         self.bind("<F5>", lambda e: self.reload_current_page())
-
-        # Fullscreen
         self.bind("<F11>", lambda e: self.toggle_fullscreen())
 
-        # ✅ FECHAR SEMPRE COM DESTROY (nunca quit)
         if IS_WIN:
             self.bind("<Escape>", lambda e: self.ask_quit())
             self.bind("<Control-q>", lambda e: self.ask_quit())
@@ -1393,14 +1709,13 @@ class OperaMenuApp(ctk.CTk):
             self.bind("<Command-q>", lambda e: self.ask_quit())
             self.bind("<Command-f>", lambda e: self.toggle_fullscreen())
 
-        # ✅ Botão X do Windows/macOS fecha corretamente
         try:
             self.protocol("WM_DELETE_WINDOW", self.ask_quit)
         except Exception:
             pass
 
     def _setup_activity_logging(self):
-        """Configura logging automático das atividades do usuário."""
+        """Configura logging automático."""
         self._activity_logger = get_logger(APP_DIR)
         self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
         self._activity_logger.set_pagina(self.current_page or "MenuPrincipal")
@@ -1413,11 +1728,11 @@ class OperaMenuApp(ctk.CTk):
         self.bind_all("<KeyRelease>", self._on_user_key, add="+")
 
     def _limpar_logs_antigos(self):
-        """Remove logs antigos (arquivo e banco) após 365 dias."""
+        """Remove logs antigos."""
         try:
             self._activity_logger.limpar_logs_antigos(dias_manter=365)
         except Exception as e:
-            print(f"⚠️ Erro ao limpar logs em arquivo: {e}")
+            _dprint(f"⚠️ Erro ao limpar logs em arquivo: {e}")
 
         if not MENU_POSTGRES_AVAILABLE:
             return
@@ -1431,10 +1746,10 @@ class OperaMenuApp(ctk.CTk):
                 )
                 conn.commit()
         except Exception as e:
-            print(f"⚠️ Erro ao limpar logs no banco: {e}")
+            _dprint(f"⚠️ Erro ao limpar logs no banco: {e}")
 
     def _log_user_activity(self, acao: str, detalhe: str = "", pagina: str | None = None):
-        """Registra atividade do usuário no banco e em arquivo."""
+        """Registra atividade do usuário."""
         pagina_log = pagina or self.current_page or "MenuPrincipal"
         self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
         self._activity_logger.set_pagina(pagina_log)
@@ -1445,7 +1760,7 @@ class OperaMenuApp(ctk.CTk):
         registrar_log_db(self.usuario_nome, acao, pagina_log, detalhe_log)
 
     def _should_log_event(self, chave: str, intervalo: float = 0.4) -> bool:
-        """Evita logs duplicados em sequência rápida."""
+        """Evita logs duplicados."""
         agora = time.monotonic()
         ultimo = self._activity_log_cache.get(chave, 0.0)
         if (agora - ultimo) < intervalo:
@@ -1454,7 +1769,7 @@ class OperaMenuApp(ctk.CTk):
         return True
 
     def _on_user_click(self, event):
-        """Registra cliques em botões e elementos clicáveis."""
+        """Registra cliques."""
         widget = event.widget
         if not widget or widget is self:
             return
@@ -1530,7 +1845,7 @@ class OperaMenuApp(ctk.CTk):
             self._log_user_activity("Selecionou opção", detalhe)
 
     def _on_user_key(self, event):
-        """Registra teclas de ação (atalhos)."""
+        """Registra teclas de atalho."""
         keysym = event.keysym or ""
         if keysym in {"Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R"}:
             return
@@ -1546,68 +1861,46 @@ class OperaMenuApp(ctk.CTk):
 
     # ===== GERENCIAMENTO DE TEMAS =====
     def _load_initial_theme(self):
-        """Carrega o tema inicial do usuário de forma robusta."""
+        """Carrega o tema inicial do usuário."""
         try:
-            print("🔍 Buscando tema do usuário...")
-            print(f"   👤 Usuário ID: {getattr(self, 'usuario_id', 'Nenhum')}")
-            print(f"   👤 Nome: {getattr(self, 'usuario_nome', 'Nenhum')}")
+            _dprint("🔍 Buscando tema do usuário...")
 
-            # CASO 1: Modo Administrador Local (sem usuário_id)
             if not hasattr(self, 'usuario_id') or not self.usuario_id:
-                print("⚙️ Modo Administrador Local — aplicando CLÁSSICO CLARO")
+                _dprint("⚙️ Modo Administrador Local — aplicando CLÁSSICO CLARO")
                 self.current_theme_name = "CLÁSSICO CLARO"
-                self.theme_manager.apply_theme("CLÁSSICO CLARO")
+                self.theme_manager.apply_theme("CLÁSSICO CLARO", rebuild_interface=False)
                 return
 
-            # CASO 2: Tem usuário logado - carregar tema dele
-            print(f"🔍 Buscando tema para usuário ID: {self.usuario_id}")
-
-            # Verifica se user_manager está pronto
             if not hasattr(self, 'user_manager') or self.user_manager is None:
-                print("⚠️ UserManager não disponível, usando tema padrão CLÁSSICO CLARO")
+                _dprint("⚠️ UserManager não disponível, usando tema padrão")
                 self.current_theme_name = "CLÁSSICO CLARO"
-                self.theme_manager.apply_theme("CLÁSSICO CLARO")
+                self.theme_manager.apply_theme("CLÁSSICO CLARO", rebuild_interface=False)
                 return
 
-            # Carrega tema completo do usuário (nome + paleta personalizada)
             tema_nome, palette = self.user_manager.load_user_theme_completo()
-            print(f"📦 Tema carregado do banco: '{tema_nome}' (paleta: {palette is not None})")
+            _dprint(f"📦 Tema carregado: '{tema_nome}'")
 
-            # Se não encontrou tema, usar preferências recebidas do login antes do padrão local
             if not tema_nome:
                 tema_nome = self.tema_preferido_inicial
                 palette = None
-                print(
-                    "📦 Nenhum tema encontrado no banco, usando preferência recebida do login: "
-                    f"{tema_nome}"
-                )
 
-            # Define o tema atual
             self.current_theme_name = tema_nome
 
-            print(f"🎨 Aplicando tema: {tema_nome}")
-
-            # Aplica o tema (com paleta personalizada se existir)
             if palette:
-                self.theme_manager.apply_theme(tema_nome, palette)
+                self.theme_manager.apply_theme(tema_nome, palette, rebuild_interface=False)
             else:
-                self.theme_manager.apply_theme(tema_nome)
+                self.theme_manager.apply_theme(tema_nome, rebuild_interface=False)
 
-            print(f"✅ Tema '{tema_nome}' aplicado com sucesso!")
+            _dprint(f"✅ Tema '{tema_nome}' aplicado!")
 
         except Exception as e:
-            print(f"❌ Erro ao carregar tema inicial: {e}")
-            import traceback
-            traceback.print_exc()
-
-            # Fallback garantido - CLÁSSICO CLARO
-            print("🔄 Aplicando fallback para tema 'CLÁSSICO CLARO'")
+            _dprint(f"❌ Erro ao carregar tema: {e}")
             self.current_theme_name = "CLÁSSICO CLARO"
-            self.theme_manager.apply_theme("CLÁSSICO CLARO")
+            self.theme_manager.apply_theme("CLÁSSICO CLARO", rebuild_interface=False)
 
     def _load_icons(self):
         """Carrega todos os ícones do sistema."""
-        print("🔄 Carregando ícones PNG...")
+        _dprint("🔄 Carregando ícones...")
         self.icons_cache = {}
 
         for categoria, filename in self.ICON_MAPPING.items():
@@ -1618,14 +1911,10 @@ class OperaMenuApp(ctk.CTk):
                     self.icons_cache[categoria] = ctk.CTkImage(
                         light_image=image, dark_image=image, size=(24, 24)
                     )
-                else:
-                    print(f"❌ Ícone não encontrado: {filename}")
-                    self.icons_cache[categoria] = None
             except Exception as e:
-                print(f"❌ Erro ao carregar ícone {filename}: {e}")
-                self.icons_cache[categoria] = None
+                _dprint(f"❌ Erro ao carregar ícone {filename}: {e}")
 
-        print(f"✅ {sum(1 for x in self.icons_cache.values() if x is not None)} ícones carregados")
+        _dprint(f"✅ {len(self.icons_cache)} ícones carregados")
 
     def _get_submenu_icon(self, categoria: str, item: str):
         """Obtém ícone para item de submenu."""
@@ -1635,7 +1924,6 @@ class OperaMenuApp(ctk.CTk):
 
         filename = self.SUBMENU_ICON_MAPPING.get(categoria, {}).get(item, "")
         if not filename:
-            self.icons_cache[cache_key] = None
             return None
 
         try:
@@ -1646,9 +1934,8 @@ class OperaMenuApp(ctk.CTk):
                 self.icons_cache[cache_key] = icon
                 return icon
         except Exception as e:
-            print(f"❌ Erro ao carregar ícone de submenu {filename}: {e}")
+            _dprint(f"❌ Erro ao carregar ícone de submenu {filename}: {e}")
 
-        self.icons_cache[cache_key] = None
         return None
 
     # ===== CONSTRUÇÃO DA INTERFACE =====
@@ -1663,61 +1950,8 @@ class OperaMenuApp(ctk.CTk):
         # Cria o menu lateral
         self._build_sidebar()
 
-        # REMOVE BORDAS, CONTORNOS E FOCOS DOS BOTÕES DO MENU LATERAL
-        remover_foco_e_bordas_menu(self.sidebar)
-
-
         # Área principal
         self._build_main_area()
-
-        # Mostrar usuário
-        self._update_user_display()
-
-    def remover_foco_e_bordas_menu(widget):
-        """
-        Remove completamente:
-        - borda visual aplicada pelo CustomTkinter
-        - foco (highlight) que cria contorno
-        - relieves invisíveis
-
-        Aplica isso recursivamente no MENU inteiro.
-        """
-        import customtkinter as ctk
-
-        try:
-            # Lista de widgets que causam contorno ao receber foco
-            tipos = (ctk.CTkButton, ctk.CTkOptionMenu, ctk.CTkComboBox)
-
-            if isinstance(widget, tipos):
-                try:
-                    widget.configure(
-                        border_width=0,
-                        corner_radius=0,
-                        fg_color="transparent",
-                        hover_color=widget.cget("hover_color"),
-                        text_color=widget.cget("text_color")
-                    )
-
-                    # Desativa o foco completamente
-                    widget.bind("<FocusVisible>", lambda e: "break")
-                    widget.bind("<FocusIn>", lambda e: widget.configure(border_width=0))
-                    widget.bind("<FocusOut>", lambda e: widget.configure(border_width=0))
-
-                    # Remove highlight do Tkinter raiz
-                    try:
-                        widget.configure(highlightthickness=0)
-                    except:
-                        pass
-
-                except Exception as erro_ajuste:
-                    print(f"[MENU] Erro ao remover foco/borda: {erro_ajuste}")
-
-            # Processar recursivamente
-            for child in widget.winfo_children():
-                remover_foco_e_bordas_menu(child)
-
-        except Exception as e:
-            print(f"[MENU] Erro geral ao limpar bordas/foco: {e}")
 
     def _build_sidebar(self):
         """Constrói a barra lateral."""
@@ -1732,16 +1966,10 @@ class OperaMenuApp(ctk.CTk):
         self.sidebar.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
         self.sidebar.grid_propagate(False)
 
-        # ======================================================
-        #  TÍTULO COM ÍCONE DO SISTEMA (NOVO)
-        # ======================================================
-        titulo_frame = ctk.CTkFrame(
-            self.sidebar,
-            fg_color="transparent"
-        )
+        # Título com ícone
+        titulo_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         titulo_frame.pack(pady=(20, 10))
 
-        # Carregar ícone do sistema
         try:
             icon_path = os.path.join(APP_DIR, "ICONE_SISTEMA.png")
             if os.path.exists(icon_path):
@@ -1751,17 +1979,11 @@ class OperaMenuApp(ctk.CTk):
                     dark_image=img,
                     size=(self.icon_size_sidebar, self.icon_size_sidebar),
                 )
-
-                icon_label = ctk.CTkLabel(
-                    titulo_frame,
-                    image=img,
-                    text=""
-                )
+                icon_label = ctk.CTkLabel(titulo_frame, image=img, text="")
                 icon_label.pack(side="left", padx=(0, 10))
         except Exception as e:
-            print(f"⚠️ Erro ao carregar ícone do sistema no sidebar: {e}")
+            _dprint(f"⚠️ Erro ao carregar ícone no sidebar: {e}")
 
-        # Texto "OPERA"
         titulo = ctk.CTkLabel(
             titulo_frame,
             text="SISTEMA OPERA",
@@ -1770,7 +1992,6 @@ class OperaMenuApp(ctk.CTk):
         )
         titulo.pack(side="left")
 
-        # Subtítulo
         subtitulo = ctk.CTkLabel(
             self.sidebar,
             text="Menu Principal",
@@ -1785,11 +2006,6 @@ class OperaMenuApp(ctk.CTk):
 
         # Construir itens do menu
         self._build_menu_content()
-
-        # ================================
-        # 🔥 CHAMADA CERTA NO LUGAR CERTO
-        # ================================
-        remover_foco_e_bordas_menu(self.sidebar)
 
     def _build_main_area(self):
         """Constrói a área principal."""
@@ -1806,18 +2022,22 @@ class OperaMenuApp(ctk.CTk):
 
         self._build_topbar()
 
-        self.content = ctk.CTkScrollableFrame(
+        self.content_shell = ctk.CTkFrame(
             self.main,
             fg_color=self.cor_fundo,
             corner_radius=10,
             border_color=self.cor_borda,
             border_width=1,
         )
-        self.content.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.content_shell.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.content_shell.grid_columnconfigure(0, weight=1)
+        self.content_shell.grid_rowconfigure(0, weight=1)
+
+        self.content = ctk.CTkFrame(self.content_shell, fg_color=self.cor_fundo)
+        self.content.grid(row=0, column=0, sticky="nsew")
 
     def _build_topbar(self):
-        """Constrói a barra superior com altura ~30% maior."""
-        # ALTURA ORIGINAL ≈ 36  →  AUMENTADA EM ~30% (≈ 47)
+        """Constrói a barra superior."""
         self.topbar = ctk.CTkFrame(
             self.main,
             fg_color=self.cor_primaria,
@@ -1827,17 +2047,14 @@ class OperaMenuApp(ctk.CTk):
             height=self.TOPBAR_HEIGHT
         )
         self.topbar.grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 4))
-        self.topbar.grid_propagate(False)  # Impede que widgets filhos alterem o tamanho
+        self.topbar.grid_propagate(False)
 
-        # CONFIGURAÇÃO DE COLUNAS COM ESPAÇAMENTO ADEQUADO
-        self.topbar.grid_columnconfigure(0, weight=1)  # Título
-        self.topbar.grid_columnconfigure(1, weight=0)  # Botões de utilidade
-        self.topbar.grid_columnconfigure(2, weight=0)  # Espaço entre botões e tema
-        self.topbar.grid_columnconfigure(3, weight=0)  # Botão de tema
-        self.topbar.grid_columnconfigure(4, weight=0)  # Informações do usuário
+        self.topbar.grid_columnconfigure(0, weight=1)
+        self.topbar.grid_columnconfigure(1, weight=0)
+        self.topbar.grid_columnconfigure(2, weight=0)
+        self.topbar.grid_columnconfigure(3, weight=0)
+        self.topbar.grid_columnconfigure(4, weight=0)
 
-        # FONTE DO TÍTULO
-        # Se o título estava em 18, +30% ≈ 24
         self.title_label = ctk.CTkLabel(
             self.topbar,
             text="Dashboard",
@@ -1846,14 +2063,12 @@ class OperaMenuApp(ctk.CTk):
         )
         self.title_label.grid(row=0, column=0, sticky="w", padx=15, pady=4)
 
-        # Botões de utilidade, switch de tema e info do usuário
-        self._build_utility_buttons()  # ⬅️ também ajustada em ~30% (abaixo)
-        self._add_theme_switch_to_topbar()  # ⬅️ switch maior
-        self._build_user_widget()  # ⬅️ fonte do usuário maior
+        self._build_utility_buttons()
+        self._add_theme_switch_to_topbar()
+        self._build_user_widget()
 
     def _build_utility_buttons(self):
-        """Constrói os botões da topbar com hover moderno e ícones confiáveis."""
-
+        """Constrói os botões da topbar."""
         button_frame = ctk.CTkFrame(
             self.topbar,
             fg_color=self.cor_primaria,
@@ -1874,9 +2089,7 @@ class OperaMenuApp(ctk.CTk):
         def on_leave(widget):
             widget.configure(fg_color=base_bg, corner_radius=0)
 
-        # =========================
-        # ÍCONE ATUALIZAR (PNG)
-        # =========================
+        # ÍCONE ATUALIZAR
         self.icon_refresh = None
         for nome in ["ATUALIZAR.png", "REFRESH.png", "RELOAD.png", "ATUALIZAR_PAGINA.png"]:
             try:
@@ -1897,7 +2110,6 @@ class OperaMenuApp(ctk.CTk):
                 corner_radius=0
             )
         else:
-            # fallback seguro (bem mais compatível que ⟳)
             lbl_refresh = ctk.CTkLabel(
                 button_frame,
                 text="↻",
@@ -1912,9 +2124,7 @@ class OperaMenuApp(ctk.CTk):
         lbl_refresh.bind("<Enter>", lambda e, w=lbl_refresh: on_enter(w))
         lbl_refresh.bind("<Leave>", lambda e, w=lbl_refresh: on_leave(w))
 
-        # ================================
-        # ÍCONE TROCAR USUÁRIO (PNG)
-        # ================================
+        # ÍCONE TROCAR USUÁRIO
         self.icon_switch_user = None
         try:
             icon_path = os.path.join(ICONS_DIR, "TROCAR_USUARIO.png")
@@ -1922,8 +2132,7 @@ class OperaMenuApp(ctk.CTk):
                 img = Image.open(icon_path).convert("RGBA")
                 self.icon_switch_user = ctk.CTkImage(light_image=img, dark_image=img, size=(22, 22))
         except Exception as e:
-            print("Erro ao carregar TROCAR_USUARIO.png:", e)
-            self.icon_switch_user = None
+            _dprint("Erro ao carregar TROCAR_USUARIO.png:", e)
 
         lbl_user = ctk.CTkLabel(
             button_frame,
@@ -1939,23 +2148,20 @@ class OperaMenuApp(ctk.CTk):
         lbl_user.bind("<Leave>", lambda e, w=lbl_user: on_leave(w))
 
     def _add_theme_switch_to_topbar(self):
-        """Adiciona switch de tema com ~30% a mais de tamanho."""
+        """Adiciona switch de tema."""
         import customtkinter as ctk
 
-        # Remover switch antigo se existir
         if hasattr(self, "theme_switch_frame") and self.theme_switch_frame.winfo_exists():
             self.theme_switch_frame.destroy()
 
         self.theme_switch_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
         self.theme_switch_frame.grid(row=0, column=3, padx=18, sticky="e")
 
-        # Garante current_theme_name
         if not hasattr(self, 'current_theme_name') or not self.current_theme_name:
             self.current_theme_name = "CLÁSSICO CLARO"
 
         is_dark_mode = self.current_theme_name.upper() == "NOTURNO"
 
-        # ÍCONE DO TEMA – fonte maior (~30%)
         self.icon_theme = ctk.CTkLabel(
             self.theme_switch_frame,
             text="🌙" if is_dark_mode else "☀️",
@@ -1963,14 +2169,13 @@ class OperaMenuApp(ctk.CTk):
         )
         self.icon_theme.pack(side="left", padx=(0, 10))
 
-        # Switch – dimensões aumentadas em ~30%
         self.theme_switch = ctk.CTkSwitch(
             self.theme_switch_frame,
             text="",
-            width=52,  # ⬅️ era 40
-            height=26,  # ⬅️ era 20
-            switch_width=52,  # ⬅️ era 40
-            switch_height=26,  # ⬅️ era 20
+            width=52,
+            height=26,
+            switch_width=52,
+            switch_height=26,
             fg_color="#A3A3A3",
             progress_color="#3B82F6",
             button_color="#FFFFFF",
@@ -1986,49 +2191,36 @@ class OperaMenuApp(ctk.CTk):
         self.theme_switch.pack(side="left")
 
     def _toggle_theme_mode(self):
-        """Alterna entre temas respeitando a preferência do usuário."""
-
-        # Se está indo para o modo escuro, sempre usa NOTURNO
+        """Alterna entre temas."""
         if self.theme_switch.get() == 1:
             novo_tema = "NOTURNO"
             self.current_theme_name = novo_tema
 
-            # Salvar preferência apenas se tiver usuário logado
             if hasattr(self, 'usuario_id') and self.usuario_id:
                 try:
                     self.user_manager.save_user_theme(novo_tema)
                 except Exception as e:
-                    print("[Tema] Erro ao salvar tema:", e)
+                    _dprint("[Tema] Erro ao salvar tema:", e)
 
-            # Aplicar novo tema
-            self.theme_manager.apply_theme(novo_tema)
-
-        # Se está indo para o modo claro, restaura o tema do usuário ou padrão
+            self.theme_manager.apply_theme(novo_tema, rebuild_interface=False)
         else:
-            # Se tem usuário logado, carrega o tema dele
             if hasattr(self, 'usuario_id') and self.usuario_id:
                 tema_usuario, paleta_personalizada = self.user_manager.load_user_theme_completo()
-
-                # Se o usuário não tem tema definido ou é NOTURNO, usa CLÁSSICO CLARO como fallback
                 if not tema_usuario or tema_usuario.upper() == "NOTURNO":
                     tema_usuario = "CLÁSSICO CLARO"
             else:
-                # Modo Administrador Local - usar CLÁSSICO CLARO como padrão
                 tema_usuario = "CLÁSSICO CLARO"
                 paleta_personalizada = None
 
             self.current_theme_name = tema_usuario
 
-            # Aplicar o tema
             if paleta_personalizada:
-                self.theme_manager.apply_theme(tema_usuario, paleta_personalizada)
+                self.theme_manager.apply_theme(tema_usuario, paleta_personalizada, rebuild_interface=False)
             else:
-                self.theme_manager.apply_theme(tema_usuario)
+                self.theme_manager.apply_theme(tema_usuario, rebuild_interface=False)
 
-        # RECRIAR switch e ícone corretamente
         self._add_theme_switch_to_topbar()
 
-        # Reaplicar ícone correto (garantia)
         if self.current_theme_name.upper() == "NOTURNO":
             self.icon_theme.configure(text="🌙")
             self.theme_switch.select()
@@ -2037,36 +2229,32 @@ class OperaMenuApp(ctk.CTk):
             self.theme_switch.deselect()
 
     def _build_user_widget(self):
-        """Constrói widget de informações do usuário com fonte ~30% maior."""
+        """Constrói widget de informações do usuário."""
         user_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
         user_frame.grid(row=0, column=4, padx=18, sticky="e")
 
-        # FONTE ORIGINAL ≈ 11 → +30% ≈ 14
         self.user_info_label = ctk.CTkLabel(
             user_frame,
             text="Carregando...",
-            font=("Arial", 14),  # ⬅️ fonte aumentada em ~30%
+            font=("Arial", 14),
             text_color=self.cor_texto,
         )
         self.user_info_label.pack(side="right", anchor="e")
 
     def _update_user_display(self):
-        """Atualiza display do usuário na MESMA LINHA."""
-        # Atualiza imediatamente uma vez
+        """Atualiza display do usuário."""
         self._update_user_info_once()
 
-        # Inicia o relógio apenas se o label existir
         if hasattr(self, 'user_info_label'):
             self._agendar_after(1000, self._tick_clock)
 
     def _update_user_info_once(self):
-        """Atualiza as informações do usuário uma vez (sem loop)."""
+        """Atualiza as informações do usuário uma vez."""
         if not hasattr(self, 'user_info_label'):
             return
 
         now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        # Montar texto completo na mesma linha
         user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
             user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
@@ -2074,16 +2262,15 @@ class OperaMenuApp(ctk.CTk):
         try:
             self.user_info_label.configure(text=user_text)
         except Exception as e:
-            print(f"Erro ao atualizar informações do usuário: {e}")
+            _dprint(f"Erro ao atualizar informações: {e}")
 
     def _tick_clock(self):
-        """Atualiza relógio e informações do usuário na MESMA LINHA."""
+        """Atualiza relógio."""
         if not hasattr(self, 'user_info_label') or not self.winfo_exists():
             return
 
         now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        # Montar texto completo na mesma linha
         user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
             user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
@@ -2091,75 +2278,377 @@ class OperaMenuApp(ctk.CTk):
         try:
             self.user_info_label.configure(text=user_text)
         except Exception as e:
-            # Se houver erro, para o relógio
-            print(f"Erro ao atualizar relógio: {e}")
+            _dprint(f"Erro ao atualizar relógio: {e}")
             return
 
-        # Agenda próxima atualização
         self._agendar_after(1000, self._tick_clock)
 
-    # ===== GERENCIAMENTO DO MENU =====
-    def _build_menu_content(self):
-        """Constrói o conteúdo do menu lateral aplicando o tema atual."""
-        # Limpar completamente
-        for widget in self.menu_frame.winfo_children():
+    def _on_category_enter(self, categoria: str):
+        """Mouse entra na categoria."""
+        hover_bg = "#2B2B2B"
+        hover_text = "#F8FAFC"
+
+        if categoria in self.botoes_menu:
+            btn_frame = self.botoes_menu[categoria]
+            for child in btn_frame.winfo_children():
+                if isinstance(child, ctk.CTkButton):
+                    child.configure(fg_color=hover_bg, text_color=hover_text)
+
+        if categoria == "Dashboard":
+            self._hide_all_submenus()
+            return
+
+        if self._submenu_timer:
             try:
-                widget.destroy()
+                self.after_cancel(self._submenu_timer)
+            except Exception:
+                pass
+            self._submenu_timer = None
+
+        if self._active_submenu and self._active_submenu != categoria:
+            self._hide_submenu(self._active_submenu)
+
+        self._show_submenu(categoria)
+
+    def _on_category_leave(self, categoria: str):
+        """Mouse sai da categoria."""
+        # Calcula a cor normal de fundo baseada no tema
+        if hasattr(self, 'theme_manager') and self.theme_manager.current_palette:
+            pal = self.theme_manager.current_palette
+            cor_secundaria = pal.get("secundaria", "#1F2937")
+            if is_dark_color(cor_secundaria):
+                cor_padrao = self._realcar_cor(cor_secundaria, 1.06)
+            else:
+                cor_padrao = self._darker(cor_secundaria, 0.95)
+        else:
+            if is_dark_color(self.cor_secundaria):
+                cor_padrao = self._realcar_cor(self.cor_secundaria, 1.06)
+            else:
+                cor_padrao = self._darker(self.cor_secundaria, 0.95)
+
+        if categoria == "Dashboard":
+            if categoria in self.botoes_menu:
+                btn_frame = self.botoes_menu[categoria]
+                for child in btn_frame.winfo_children():
+                    if isinstance(child, ctk.CTkButton):
+                        child.configure(
+                            fg_color=cor_padrao,
+                            hover_color="#2B2B2B",
+                            text_color=self.cor_texto
+                        )
+            return
+
+        if self._active_submenu == categoria:
+            self._schedule_submenu_close(categoria)
+            return
+
+        if categoria in self.botoes_menu:
+            btn_frame = self.botoes_menu[categoria]
+            for child in btn_frame.winfo_children():
+                if isinstance(child, ctk.CTkButton):
+                    child.configure(
+                        fg_color=cor_padrao,
+                        hover_color="#2B2B2B",
+                        text_color=self.cor_texto
+                    )
+
+    def _on_submenu_enter(self, categoria: str):
+        """Mouse entra no submenu."""
+        if self._submenu_timer:
+            try:
+                self.after_cancel(self._submenu_timer)
+            except Exception:
+                pass
+            self._submenu_timer = None
+
+    def _hide_submenu(self, categoria: str):
+        """Esconde submenu e reseta os botões internos com texto sempre branco."""
+        frame = self.submenu_frames.get(categoria)
+        texto_fixo = "#F8FAFC"
+
+        if frame:
+            try:
+                base = self.cor_secundaria
+                if is_dark_color(base):
+                    btn_bg = self._realcar_cor(base, 1.06)
+                else:
+                    btn_bg = self._darker(base, 0.95)
+
+                for inner in frame.winfo_children():
+                    for child in inner.winfo_children():
+                        if isinstance(child, ctk.CTkFrame):
+                            for subchild in child.winfo_children():
+                                if isinstance(subchild, ctk.CTkButton):
+                                    subchild.configure(
+                                        fg_color=btn_bg,
+                                        hover=False,
+                                        hover_color=btn_bg,
+                                        text_color=texto_fixo,
+                                        text_color_disabled=texto_fixo,
+                                        border_width=1,
+                                        border_color=btn_bg
+                                    )
+                                    subchild._normal_bg = btn_bg
+                                    subchild._normal_fg = texto_fixo
+                                    subchild._hover_bg = "#2B2B2B"
+                                    subchild._hover_fg = texto_fixo
+                        elif isinstance(child, ctk.CTkButton):
+                            child.configure(
+                                fg_color=btn_bg,
+                                hover=False,
+                                hover_color=btn_bg,
+                                text_color=texto_fixo,
+                                text_color_disabled=texto_fixo,
+                                border_width=1,
+                                border_color=btn_bg
+                            )
+                            child._normal_bg = btn_bg
+                            child._normal_fg = texto_fixo
+                            child._hover_bg = "#2B2B2B"
+                            child._hover_fg = texto_fixo
             except Exception:
                 pass
 
-        # Limpar cache de submenus para forçar recriação com tema atual
-        for categoria, frame in list(self.submenu_frames.items()):
+            frame.place_forget()
+
+        if self._active_submenu == categoria:
+            self._active_submenu = None
+
+            if categoria in self.botoes_menu:
+                btn_frame = self.botoes_menu[categoria]
+                for child in btn_frame.winfo_children():
+                    if isinstance(child, ctk.CTkButton):
+                        if hasattr(self, "theme_manager") and self.theme_manager.current_palette:
+                            pal = self.theme_manager.current_palette
+                            cor_secundaria = pal.get("secundaria", "#1F2937")
+                            if is_dark_color(cor_secundaria):
+                                cor_padrao = self._realcar_cor(cor_secundaria, 1.06)
+                            else:
+                                cor_padrao = self._darker(cor_secundaria, 0.95)
+                        else:
+                            if is_dark_color(self.cor_secundaria):
+                                cor_padrao = self._realcar_cor(self.cor_secundaria, 1.06)
+                            else:
+                                cor_padrao = self._darker(self.cor_secundaria, 0.95)
+
+                        child.configure(
+                            fg_color=cor_padrao,
+                            hover_color="#2B2B2B",
+                            text_color=texto_fixo,
+                            text_color_disabled=texto_fixo
+                        )
+
+    def _on_submenu_leave(self, categoria: str):
+        """Mouse sai do submenu."""
+        if self._active_submenu == categoria:
+            self._schedule_submenu_close(categoria)
+
+    def _schedule_submenu_close(self, categoria: str):
+        """Agenda fechamento do submenu."""
+        if self._submenu_timer:
             try:
-                frame.destroy()
+                self.after_cancel(self._submenu_timer)
             except Exception:
                 pass
-        self.submenu_frames.clear()
 
-        # MOSTRA TODOS OS BOTÕES, independente das permissões
-        for categoria in self.MENU_ESTRUTURA.keys():
-            self._create_menu_button(categoria)
+        self._submenu_timer = self.after(
+            180,
+            lambda c=categoria: self._hide_submenu(c)
+        )
 
-        print(f"🎯 Menu construído com tema: {len(self.MENU_ESTRUTURA)} categorias visíveis")
+    def _update_menu_buttons_colors(self):
+        """Atualiza as cores dos botões do menu com texto sempre branco."""
+        try:
+            app = self.app
+            if not hasattr(app, "botoes_menu"):
+                return
 
-    def _create_menu_button(self, categoria: str):
-        """
-        Cria botão de categoria no menu lateral.
+            cor_secundaria = self.current_palette.get("secundaria", "#1F2937")
+            cor_borda = self.current_palette.get("borda", "#333333")
 
-        - Botão SEMPRE visível
-        - Hover forte usando apenas hover_color nativo do CTkButton
-        - Submenu abre ao passar o mouse
-        - Sem “rastro” de cor depois do hover
-        """
+            texto_fixo = "#F8FAFC"
+            is_dark = is_dark_color(cor_secundaria)
 
-        # Frame "card" do botão
-        btn_frame = ctk.CTkFrame(self.menu_frame, fg_color="transparent")
+            if is_dark:
+                btn_bg = self._realcar_cor(cor_secundaria, 1.06)
+                btn_hover = "#2B2B2B"
+                submenu_btn_bg = self._realcar_cor(cor_secundaria, 1.06)
+            else:
+                btn_bg = self._darker(cor_secundaria, 0.95)
+                btn_hover = self._darker(cor_secundaria, 0.85)
+                submenu_btn_bg = self._darker(cor_secundaria, 0.95)
+
+            # Botões principais
+            for categoria, btn_frame in app.botoes_menu.items():
+                if not btn_frame.winfo_exists():
+                    continue
+
+                for child in btn_frame.winfo_children():
+                    if isinstance(child, ctk.CTkButton):
+                        fg = btn_bg
+                        if categoria == app._active_submenu:
+                            fg = btn_hover
+
+                        child.configure(
+                            fg_color=fg,
+                            hover_color=btn_hover,
+                            text_color=texto_fixo,
+                            text_color_disabled=texto_fixo,
+                            border_color=cor_borda,
+                            border_width=1
+                        )
+
+            # Submenus
+            for categoria, submenu_frame in app.submenu_frames.items():
+                if not submenu_frame.winfo_exists():
+                    continue
+
+                submenu_frame.configure(
+                    fg_color=cor_secundaria,
+                    border_color=cor_borda,
+                    border_width=1
+                )
+
+                for inner_frame in submenu_frame.winfo_children():
+                    if isinstance(inner_frame, ctk.CTkFrame):
+                        for btn_container in inner_frame.winfo_children():
+                            if isinstance(btn_container, ctk.CTkFrame):
+                                for btn in btn_container.winfo_children():
+                                    if isinstance(btn, ctk.CTkButton):
+                                        btn.configure(
+                                            fg_color=submenu_btn_bg,
+                                            hover=False,
+                                            hover_color=submenu_btn_bg,
+                                            text_color=texto_fixo,
+                                            text_color_disabled=texto_fixo,
+                                            border_color=submenu_btn_bg,
+                                            border_width=1
+                                        )
+                                        btn._normal_bg = submenu_btn_bg
+                                        btn._normal_fg = texto_fixo
+                                        btn._hover_bg = "#2B2B2B"
+                                        btn._hover_fg = texto_fixo
+
+            _dprint("[Tema] Cores do menu e submenu atualizadas.")
+        except Exception as e:
+            _dprint(f"[Tema] Erro ao atualizar cores do menu: {e}")
+
+    def _hide_all_submenus(self):
+        """Esconde todos os submenus com texto sempre branco."""
+        texto_fixo = "#F8FAFC"
+
+        for frame in self.submenu_frames.values():
+            try:
+                base = self.cor_secundaria
+                if is_dark_color(base):
+                    btn_bg = self._realcar_cor(base, 1.06)
+                else:
+                    btn_bg = self._darker(base, 0.95)
+
+                for inner in frame.winfo_children():
+                    for child in inner.winfo_children():
+                        if isinstance(child, ctk.CTkFrame):
+                            for subchild in child.winfo_children():
+                                if isinstance(subchild, ctk.CTkButton):
+                                    subchild.configure(
+                                        fg_color=btn_bg,
+                                        hover=False,
+                                        hover_color=btn_bg,
+                                        text_color=texto_fixo,
+                                        text_color_disabled=texto_fixo,
+                                        border_color=btn_bg,
+                                        border_width=1
+                                    )
+                                    subchild._normal_bg = btn_bg
+                                    subchild._normal_fg = texto_fixo
+                                    subchild._hover_bg = "#2B2B2B"
+                                    subchild._hover_fg = texto_fixo
+                        elif isinstance(child, ctk.CTkButton):
+                            child.configure(
+                                fg_color=btn_bg,
+                                hover=False,
+                                hover_color=btn_bg,
+                                text_color=texto_fixo,
+                                text_color_disabled=texto_fixo,
+                                border_color=btn_bg,
+                                border_width=1
+                            )
+                            child._normal_bg = btn_bg
+                            child._normal_fg = texto_fixo
+                            child._hover_bg = "#2B2B2B"
+                            child._hover_fg = texto_fixo
+            except Exception:
+                pass
+
+            try:
+                frame.place_forget()
+            except Exception:
+                pass
+
+        if self._active_submenu:
+            categoria = self._active_submenu
+            if categoria in self.botoes_menu:
+                btn_frame = self.botoes_menu[categoria]
+                for child in btn_frame.winfo_children():
+                    if isinstance(child, ctk.CTkButton):
+                        if hasattr(self, 'theme_manager') and self.theme_manager.current_palette:
+                            pal = self.theme_manager.current_palette
+                            cor_secundaria = pal.get("secundaria", "#1F2937")
+                            if is_dark_color(cor_secundaria):
+                                cor_padrao = self._realcar_cor(cor_secundaria, 1.06)
+                            else:
+                                cor_padrao = self._darker(cor_secundaria, 0.95)
+                        else:
+                            if is_dark_color(self.cor_secundaria):
+                                cor_padrao = self._realcar_cor(self.cor_secundaria, 1.06)
+                            else:
+                                cor_padrao = self._darker(self.cor_secundaria, 0.95)
+
+                        child.configure(
+                            fg_color=cor_padrao,
+                            hover_color="#2B2B2B",
+                            text_color=texto_fixo,
+                            text_color_disabled=texto_fixo
+                        )
+
+        self._active_submenu = None
+
+        if self._submenu_timer:
+            try:
+                self.after_cancel(self._submenu_timer)
+            except Exception:
+                pass
+            self._submenu_timer = None
+
+    def _create_menu_button(self, categoria: str, posicao: int):
+        """Cria botão de categoria no menu lateral com hover padronizado."""
+        btn_frame = ctk.CTkFrame(
+            self.menu_frame,
+            fg_color="transparent",
+            width=self.SIDEBAR_WIDTH - 20,
+            height=self.ITEM_HEIGHT
+        )
+        btn_frame.pack(fill="x", padx=(10, 10), pady=max(1, int(2 * self.ui_scale)))
         btn_frame.pack_propagate(False)
-        btn_frame.configure(width=self.SIDEBAR_WIDTH - 20, height=self.ITEM_HEIGHT)
-        btn_frame.pack(fill="x", padx=(10, 10), pady=4)
 
         icon = self.icons_cache.get(categoria)
 
-        # ==============================
-        # Cores base
-        # ==============================
+        # Cores base do tema
         base = self.cor_secundaria
+        if is_dark_color(base):
+            btn_bg = self._realcar_cor(base, 1.06)
+        else:
+            btn_bg = self._darker(base, 0.95)
+        cor_texto = self.cor_texto
 
-        card_bg = self._darker(base, 0.82)  # card fixo, sempre igual
-        btn_bg = self._realcar_cor(base, 1.06)  # cor normal do botão
-        btn_hover = self._realcar_cor(base, 1.55)  # hover bem mais claro
+        # Cores fixas de hover
+        hover_bg = "#2B2B2B"
+        hover_text = "#F8FAFC"
 
-        border_color = self.cor_borda
-
-        # Card sempre visível, não mexemos mais nessa cor no hover
-        btn_frame.configure(fg_color=card_bg)
-
-        # ===============================================
-        # BTN: CORREÇÃO DO NEGRITO DO DASHBOARD 👇👇👇
-        # Antes: font=("Arial", 16, "bold") if categoria == "Dashboard" else ("Arial", 16)
-        # Agora: TODOS usam fonte normal (sem bold)
-        # ===============================================
-        font_usado = ("Arial", 16)  # ✔️ ajuste aplicado aqui
+        # Se for a categoria ativa, já inicia com hover
+        if categoria == self._active_submenu:
+            btn_bg = hover_bg
+            cor_texto = hover_text
 
         btn = ctk.CTkButton(
             btn_frame,
@@ -2168,142 +2657,185 @@ class OperaMenuApp(ctk.CTk):
             compound="left",
             anchor="w",
             fg_color=btn_bg,
-            hover_color=btn_hover,
-            text_color=self.cor_texto,
-            font=font_usado,  # ✔️ AQUI está o ajuste (antes tinha bold para Dashboard)
-            corner_radius=10,
-            border_color=border_color,
+            hover_color=hover_bg,  # hover automático usa a mesma cor fixa
+            text_color=cor_texto,
+            font=("Arial", max(11, int(14 * self.ui_scale))),
+            corner_radius=max(8, int(10 * self.ui_scale)),
+            border_color=self.cor_borda,
             border_width=1,
-            command=lambda c=categoria: self._on_category_click(c),
+            command=lambda c=categoria: self._on_category_click(c)
         )
-        btn.pack(fill="both", expand=True, padx=4)
-        self._remove_button_focus(btn)
+        btn.pack(fill="both", expand=True, padx=max(2, int(4 * self.ui_scale)))
 
-        # ==============================
-        # Eventos: só layout + submenu
-        # ==============================
-        def on_enter(_e):
-            try:
-                btn_frame.pack_configure(padx=(12, 8))
+        # Eventos de hover (reforçam a mudança de cor)
+        btn.bind("<Enter>", lambda e, c=categoria: self._on_category_enter(c))
+        btn.bind("<Leave>", lambda e, c=categoria: self._on_category_leave(c))
+        btn_frame.bind("<Enter>", lambda e, c=categoria: self._on_category_enter(c))
+        btn_frame.bind("<Leave>", lambda e, c=categoria: self._on_category_leave(c))
 
-                if categoria != "Dashboard":
-                    self._cancel_submenu_close(categoria)
-                    self._on_category_hover(categoria)
-            except Exception:
-                pass
-
-        def on_leave(_e):
-            try:
-                btn_frame.pack_configure(padx=(10, 10))
-
-                if categoria != "Dashboard":
-                    self._schedule_submenu_close(categoria)
-            except Exception:
-                pass
-
-        btn_frame.bind("<Enter>", on_enter)
-        btn_frame.bind("<Leave>", on_leave)
-        btn.bind("<Enter>", on_enter)
-        btn.bind("<Leave>", on_leave)
-
-        # Guarda referência para posicionar submenu
         self.botoes_menu[categoria] = btn_frame
+        self._create_submenu(categoria)
 
     def _create_submenu(self, categoria: str):
-        """Cria frame de submenu para uma categoria com tema aplicado."""
-        submenu_bg = self.cor_secundaria
-        submenu_border = self.cor_borda
-        # Hover forte para os itens do submenu
-        submenu_hover = self._realcar_cor(submenu_bg, 1.55)
-
-        frame = ctk.CTkFrame(
-            self,
-            fg_color=submenu_bg,
-            corner_radius=12,
-            border_color=submenu_border,
-            border_width=1,
-        )
-        frame.configure(width=self.SIDEBAR_WIDTH - 20)
-
-        frame.bind("<Enter>", lambda e, c=categoria: self._cancel_submenu_close(c))
-        frame.bind("<Leave>", lambda e, c=categoria: self._schedule_submenu_close(c))
-
+        """Cria submenu para uma categoria."""
+        # Obter itens visíveis
         itens = self.MENU_ESTRUTURA.get(categoria, [])
-        visible_items = [
+        itens_visiveis = [
             item for item in itens
             if self.user_manager.has_permission(item, "ver", categoria)
         ]
 
-        for item in visible_items:
-            self._create_submenu_item(frame, categoria, item, submenu_bg, submenu_hover)
+        if not itens_visiveis:
+            return
+
+        # MESMA COR DE FUNDO DO MENU
+        cor_fundo = self.cor_secundaria
+        cor_borda = self.cor_borda
+
+        # Apenas largura maior, sem mexer na aparência
+        escala = getattr(self, "ui_scale", 1.0)
+        maior_texto = max(len(str(item)) for item in itens_visiveis)
+        largura_texto = int(maior_texto * max(8, int(9 * escala)))
+
+        submenu_width = max(
+            300,
+            int(self.SIDEBAR_WIDTH * 1.12),
+            largura_texto + int(110 * escala)
+        )
+
+        frame = ctk.CTkFrame(
+            self,
+            width=submenu_width,
+            fg_color=cor_fundo,
+            corner_radius=10,
+            border_color=cor_borda,
+            border_width=1,
+        )
+
+        # Eventos de hover no submenu
+        frame.bind("<Enter>", lambda e, c=categoria: self._on_submenu_enter(c))
+        frame.bind("<Leave>", lambda e, c=categoria: self._on_submenu_leave(c))
+
+        # Container interno com o mesmo padding de antes
+        inner_container = ctk.CTkFrame(frame, fg_color="transparent")
+        inner_container.pack(fill="both", expand=True, padx=4, pady=6)
+
+        # Guarda a largura para os botões internos usarem
+        inner_container._submenu_width = submenu_width
+
+        # Adicionar itens
+        for item in itens_visiveis:
+            self._create_submenu_item(inner_container, categoria, item)
 
         self.submenu_frames[categoria] = frame
 
-    def _create_submenu_item(self, parent, categoria: str, item: str,
-                             submenu_bg: str, submenu_hover: str):
-        """Cria item no submenu com hover bem evidente."""
+    def _create_submenu_item(self, parent, categoria: str, item: str):
+        """Cria item no submenu com hover manual estável e texto sempre branco."""
         item_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        item_frame.pack_propagate(False)
-        item_frame.pack(fill="x", padx=(6, 6), pady=3)
-        item_frame.configure(width=self.SIDEBAR_WIDTH - 40,
-                             height=self.ITEM_HEIGHT - 6)
+        item_frame.pack(fill="x", padx=2, pady=1)
 
-        submenu_icon = self._get_submenu_icon(categoria, item)
+        icon = self._get_submenu_icon(categoria, item)
 
-        item_bg = submenu_bg
-        item_hover = submenu_hover
-        item_text_color = self.cor_texto
-        item_border = self.cor_borda
-        item_border_hover = self._realcar_cor(item_border, 1.4)
+        base = self.cor_secundaria
+        if is_dark_color(base):
+            btn_bg = self._realcar_cor(base, 1.06)
+        else:
+            btn_bg = self._darker(base, 0.95)
+
+        texto_fixo = "#F8FAFC"
+        hover_bg = "#2B2B2B"
 
         btn = ctk.CTkButton(
             item_frame,
             text=f"  {item}",
-            image=submenu_icon,
+            image=icon,
             compound="left",
             anchor="w",
-            fg_color=item_bg,
-            hover_color=item_hover,
-            text_color=item_text_color,
-            font=("Arial", 15),
-            corner_radius=8,
-            border_color=item_border,
-            border_width=1,
-            command=lambda i=item: self._on_submenu_click(categoria, i),
+            fg_color=btn_bg,
+            hover=False,
+            hover_color=btn_bg,
+            text_color=texto_fixo,
+            text_color_disabled=texto_fixo,
+            font=("Arial", max(11, int(13 * getattr(self, "ui_scale", 1.0)))),
+            height=max(32, int(36 * getattr(self, "ui_scale", 1.0))),
+            corner_radius=6,
+            border_width=0,
+            command=lambda i=item: self._on_submenu_click(categoria, i)
         )
-        btn.pack(fill="both", expand=True)
-        self._remove_button_focus(btn)
+        btn.pack(fill="x", expand=True, padx=4, pady=2)
 
-        def on_enter_sub(_e, c=categoria):
-            try:
-                item_frame.pack_configure(padx=(10, 2))
-                item_frame.configure(
-                    fg_color=self._realcar_cor(item_bg, 0.9)
+        btn._normal_bg = btn_bg
+        btn._normal_fg = texto_fixo
+        btn._hover_bg = hover_bg
+        btn._hover_fg = texto_fixo
+
+        def hover_on(event=None):
+            if btn.winfo_exists():
+                btn.configure(
+                    fg_color=btn._hover_bg,
+                    text_color=btn._hover_fg,
+                    text_color_disabled=btn._hover_fg
                 )
-                # Força hover no botão também
-                btn.configure(fg_color=item_hover, border_color=item_border_hover)
-                self._cancel_submenu_close(c)
-            except Exception:
-                pass
 
-        def on_leave_sub(_e, c=categoria):
+        def hover_off(event=None):
+            if btn.winfo_exists():
+                btn.configure(
+                    fg_color=btn._normal_bg,
+                    text_color=btn._normal_fg,
+                    text_color_disabled=btn._normal_fg
+                )
+
+        # Hover manual só no botão
+        btn.bind("<Enter>", lambda e, c=categoria: (hover_on(), self._on_submenu_enter(c)))
+        btn.bind("<Leave>", lambda e, c=categoria: (hover_off(), self._on_submenu_leave(c)))
+
+        # Frame só mantém o submenu aberto; não mexe na cor
+        item_frame.bind("<Enter>", lambda e, c=categoria: self._on_submenu_enter(c))
+        item_frame.bind("<Leave>", lambda e, c=categoria: self._on_submenu_leave(c))
+
+    # ===== GERENCIAMENTO DE MENU - VERSÃO SIMPLES E FUNCIONAL =====
+    def _build_menu_content(self):
+        """Constrói o conteúdo do menu lateral."""
+        # Limpar widgets existentes
+        for widget in self.menu_frame.winfo_children():
+            widget.destroy()
+
+        # Limpar submenus antigos
+        for frame in list(self.submenu_frames.values()):
             try:
-                item_frame.pack_configure(padx=(6, 6))
-                item_frame.configure(fg_color="transparent")
-                btn.configure(fg_color=item_bg, border_color=item_border)
-                self._schedule_submenu_close(c)
-            except Exception:
+                frame.destroy()
+            except:
                 pass
+        self.submenu_frames.clear()
+        self.botoes_menu.clear()
 
-        item_frame.bind("<Enter>", on_enter_sub)
-        item_frame.bind("<Leave>", on_leave_sub)
-        btn.bind("<Enter>", on_enter_sub)
-        btn.bind("<Leave>", on_leave_sub)
+        # Criar botões para cada categoria
+        for i, categoria in enumerate(self.MENU_ESTRUTURA.keys()):
+            self._create_menu_button(categoria, i)
 
-    # ===== GERENCIAMENTO DE SUBMENUS =====
+        _dprint(f"🎯 Menu construído com {len(self.MENU_ESTRUTURA)} categorias")
+
+    def _on_category_click(self, categoria: str):
+        """Clique em categoria."""
+        if categoria == "Dashboard":
+            self._hide_all_submenus()
+            self.open_page("Dashboard")
+            return
+
+        # Alternar submenu
+        if self._active_submenu == categoria:
+            self._hide_submenu(categoria)
+        else:
+            self._hide_all_submenus()
+            self._show_submenu(categoria)
+
+    def _on_submenu_click(self, categoria: str, item: str):
+        """Clique em item do submenu."""
+        self._hide_all_submenus()
+        self.open_page(item, categoria)
 
     def _realcar_cor(self, hex_color: str, factor: float = 1.2) -> str:
-        """Clareia uma cor hex para criar hover realçado."""
+        """Clareia uma cor hex."""
         try:
             h = hex_color.lstrip("#")
             if len(h) == 3:
@@ -2312,7 +2844,6 @@ class OperaMenuApp(ctk.CTk):
             g = int(h[2:4], 16)
             b = int(h[4:6], 16)
 
-            # Clareia a cor
             r = min(255, int(r * factor))
             g = min(255, int(g * factor))
             b = min(255, int(b * factor))
@@ -2321,497 +2852,136 @@ class OperaMenuApp(ctk.CTk):
         except Exception:
             return hex_color
 
-    # ===== GERENCIAMENTO DE SUBMENUS =====
-    def _on_category_click(self, categoria: str):
-        """Manipula clique em categoria do menu."""
-        if categoria == "Dashboard":
-            self._collapse_all_submenus()
-            self.open_page("Dashboard")
-            return
-
-        frame = self.submenu_frames.get(categoria)
-        if frame and frame.winfo_ismapped():
-            frame.place_forget()
-            self._active_submenu = None
-            return
-
-        self._collapse_all_submenus()
-        self._show_submenu(categoria)
-
-    def _on_category_hover(self, categoria: str):
-        """Manipula hover em categoria do menu."""
-        if categoria == "Dashboard" or self._active_submenu == categoria:
-            return
-
-        self._collapse_all_submenus()
-        self._show_submenu(categoria)
-
-    def _show_submenu(self, categoria: str):
-        """Mostra submenu para uma categoria."""
-        if categoria not in self.submenu_frames:
-            self._create_submenu(categoria)
-
-        frame = self.submenu_frames[categoria]
-        btn_frame = self.botoes_menu.get(categoria)
-
-        if not btn_frame:
-            return
-
-        btn_x = btn_frame.winfo_rootx()
-        btn_y = btn_frame.winfo_rooty()
-
-        self_x = self.winfo_rootx()
-        self_y = self.winfo_rooty()
-
-        rel_x = btn_x - self_x + btn_frame.winfo_width() + 5
-        rel_y = btn_y - self_y
-
-        frame.update_idletasks()
-        frame_h = frame.winfo_reqheight()
-        screen_h = self.winfo_screenheight()
-        max_y = max(10, min(self.winfo_height(), screen_h) - frame_h - 10)
-        rel_y = max(10, min(rel_y, max_y))
-
-        frame.place(x=rel_x, y=rel_y)
-        frame.lift()
-
-        self._active_submenu = categoria
-
-    def _on_submenu_click(self, categoria: str, item: str):
-        """Manipula clique em item do submenu."""
-        self._collapse_all_submenus()
-        self.open_page(item, categoria)
-
-    def _collapse_all_submenus(self):
-        """Fecha todos os submenus."""
-        for frame in self.submenu_frames.values():
-            try:
-                frame.place_forget()
-            except Exception:
-                pass
-        self._active_submenu = None
-
-    def _schedule_submenu_close(self, categoria: str):
-        """Agenda fechamento do submenu."""
-        job = self._submenu_close_jobs.get(categoria)
-        if job:
-            safe_after_cancel(self, job)
-
-        def close():
-            if self._active_submenu == categoria:
-                frame = self.submenu_frames.get(categoria)
-                if frame and frame.winfo_ismapped():
-                    try:
-                        mouse_x = self.winfo_pointerx()
-                        mouse_y = self.winfo_pointery()
-
-                        btn_frame = self.botoes_menu.get(categoria)
-                        if btn_frame:
-                            btn_x = btn_frame.winfo_rootx()
-                            btn_y = btn_frame.winfo_rooty()
-                            btn_width = btn_frame.winfo_width()
-                            btn_height = btn_frame.winfo_height()
-
-                            frame_x = frame.winfo_rootx()
-                            frame_y = frame.winfo_rooty()
-                            frame_width = frame.winfo_width()
-                            frame_height = frame.winfo_height()
-
-                            if not (btn_x <= mouse_x <= btn_x + btn_width and
-                                    btn_y <= mouse_y <= btn_y + btn_height) and \
-                                    not (frame_x <= mouse_x <= frame_x + frame_width and
-                                         frame_y <= mouse_y <= frame_y + frame_height):
-                                frame.place_forget()
-                                self._active_submenu = None
-                    except Exception:
-                        frame.place_forget()
-                        self._active_submenu = None
-
-        self._submenu_close_jobs[categoria] = self._agendar_after(300, close)
-
-    def _cancel_submenu_close(self, categoria: str):
-        """Cancela o fechamento agendado do submenu."""
-        job = self._submenu_close_jobs.get(categoria)
-        if job:
-            safe_after_cancel(self, job)
-            self._submenu_close_jobs[categoria] = None
-
-    def _load_user_permissions(self):
-        """Carrega todas as permissões do usuário logado e aplica no sistema."""
+    def _darker(self, hex_color: str, factor: float = 0.85) -> str:
+        """Escurece uma cor hex."""
         try:
-            from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import fetch_all
+            if not hex_color or hex_color == "transparent":
+                return hex_color
 
-            if not getattr(self, "usuario_id", None):
-                print("⚠️ Nenhum usuário logado — não foi possível carregar permissões.")
+            h = hex_color.lstrip("#")
+            if len(h) == 3:
+                h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
+
+            r = int(h[0:2], 16)
+            g = int(h[2:4], 16)
+            b = int(h[4:6], 16)
+
+            r = max(0, min(255, int(r * factor)))
+            g = max(0, min(255, int(g * factor)))
+            b = max(0, min(255, int(b * factor)))
+
+            return f"#{r:02X}{g:02X}{b:02X}"
+        except Exception:
+            return hex_color
+
+    # ===== GERENCIAMENTO DE PERMISSÕES =====
+    def _load_user_permissions(self):
+        """Carrega permissões do usuário."""
+        try:
+            if not hasattr(self, 'usuario_id') or not self.usuario_id:
                 self.permissoes_usuario = {}
                 return
 
-            print(f"[PERMISSÕES] 🔄 Carregando permissões para usuário ID: {self.usuario_id}")
+            if self.usuario_hierarquia and self.usuario_hierarquia.lower() in ("admin", "administrador"):
+                self.permissoes_usuario = {
+                    codigo: {"ver": True, "editar": True, "imprimir": True, "excluir": True, "administrar": True}
+                    for codigo in self.PAGE_PERMISSION_MAP.values()}
+                return
 
-            sql = """
-                SELECT codigo, pode_ver, pode_editar, pode_imprimir, pode_excluir, pode_administrar
-                FROM opera.usuario_permissoes
-                WHERE usuario_id = %s
-            """
-            permissoes = fetch_all(sql, (self.usuario_id,))
+            try:
+                from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import fetch_all
 
-            self.permissoes_usuario = {
-                p["codigo"]: {
-                    "ver": p["pode_ver"],
-                    "editar": p["pode_editar"],
-                    "imprimir": p["pode_imprimir"],
-                    "excluir": p["pode_excluir"],
-                    "administrar": p["pode_administrar"],
+                sql = """
+                    SELECT codigo, pode_ver, pode_editar, pode_imprimir, pode_excluir, pode_administrar
+                    FROM opera.usuario_permissoes
+                    WHERE usuario_id = %s
+                """
+                permissoes = fetch_all(sql, (self.usuario_id,))
+
+                self.permissoes_usuario = {
+                    p["codigo"]: {
+                        "ver": p["pode_ver"],
+                        "editar": p["pode_editar"],
+                        "imprimir": p["pode_imprimir"],
+                        "excluir": p["pode_excluir"],
+                        "administrar": p["pode_administrar"],
+                    }
+                    for p in permissoes
                 }
-                for p in permissoes
-            }
 
-            # Sincronizar com o UserManager
-            self.user_manager.permissoes = self.permissoes_usuario
-            self.user_manager.usuario_id = self.usuario_id
-            self.user_manager.usuario_nome = self.usuario_nome
-            self.user_manager.usuario_hierarquia = self.usuario_hierarquia
-
-            print(f"🔑 Permissões carregadas para {self.usuario_nome}: {len(permissoes)} registros.")
-
-            # Aplicar imediatamente as restrições no menu
-            self._apply_permissions_to_menu()
+            except Exception as e:
+                _dprint(f"⚠️ Erro ao carregar permissões: {e}")
+                self.permissoes_usuario = {}
 
         except Exception as e:
-            print(f"❌ Erro ao carregar permissões: {e}")
+            _dprint(f"❌ Erro em _load_user_permissions: {e}")
             self.permissoes_usuario = {}
-            self._build_menu_content()
 
-    def _apply_permissions_to_menu(self):
-        """Aplica as permissões carregadas ao menu lateral e submenus."""
-        if not hasattr(self, "permissoes_usuario") or not self.permissoes_usuario:
-            print("⚠️ Nenhuma permissão carregada — exibindo menu básico obrigatório.")
-            self.MENU_ESTRUTURA = {
-                "Dashboard": ["Dashboard"],
-                "CONFIGURAÇÕES": ["Temas"],
-            }
-            self._build_menu_content()
-            return
-
-        # Se o usuário for admin, não restringe nada
-        if str(self.usuario_hierarquia).lower() in ("admin", "administrador"):
-            print("👑 Usuário administrador — menu completo liberado.")
-            return
-
-        # Recriar MENU_ESTRUTURA filtrado
-        estrutura_filtrada = {}
-        total_itens_visiveis = 0
-
-        for categoria, itens in self.MENU_ESTRUTURA.items():
-            itens_visiveis = []
-            for item in itens:
-                codigo = self.PAGE_PERMISSION_MAP.get(f"{categoria}:{item}") or self.PAGE_PERMISSION_MAP.get(item)
-                if not codigo:
-                    continue
-
-                perm = self.permissoes_usuario.get(codigo)
-                if perm and perm.get("ver", False):
-                    itens_visiveis.append(item)
-
-            if itens_visiveis:
-                estrutura_filtrada[categoria] = itens_visiveis
-                total_itens_visiveis += len(itens_visiveis)
-
-        # Garantir páginas obrigatórias para todos os usuários
-        estrutura_filtrada.setdefault("Dashboard", [])
-        if "Dashboard" not in estrutura_filtrada["Dashboard"]:
-            estrutura_filtrada["Dashboard"].insert(0, "Dashboard")
-
-        estrutura_filtrada.setdefault("CONFIGURAÇÕES", [])
-        if "Temas" not in estrutura_filtrada["CONFIGURAÇÕES"]:
-            estrutura_filtrada["CONFIGURAÇÕES"].append("Temas")
-
-        # Aplicar a nova estrutura filtrada
-        if total_itens_visiveis == 0:
-            print("🚫 Usuário sem nenhuma permissão de visualização — mostrando menu básico obrigatório.")
-            self.MENU_ESTRUTURA = {
-                "Dashboard": ["Dashboard"],
-                "CONFIGURAÇÕES": ["Temas"],
-            }
-        else:
-            self.MENU_ESTRUTURA = estrutura_filtrada
-
-        # Reconstruir menu lateral
-        self._build_menu_content()
-
-        print(f"🔒 Permissões aplicadas — {total_itens_visiveis} itens visíveis no menu.")
-
-    # ===== GERENCIAMENTO DE PÁGINAS =====
-    def _open_initial_page(self):
-        """Abre página inicial após carregamento."""
-        self._agendar_after(100, self._open_dashboard_automatico)
-
-
-    # ==============================================================
-    # BACKUP AUTOMÁTICO — EXECUTA SEM MOSTRAR A PÁGINA DE BACKUP
-    # ==============================================================
-    def _ativar_backup_silencioso(self):
-        """
-        Ativa o backup automático assim que o MENU é carregado.
-        NÃO cria interface (BackupPage), apenas manipula BACKUP_AUTO global.
-        Compatível com Windows e macOS.
-
-        IMPORTANTE:
-        Usa o mesmo módulo da rota (opera_page_BACKUP) para evitar estado duplicado
-        entre imports diferentes do arquivo BACKUP.py.
-        """
-
-        try:
-            route = self.routes.get("Backup", {})
-            file_rel = route.get("file", "BACKUP.py")
-            file_path = os.path.join(APP_DIR, file_rel)
-            if not os.path.exists(file_path):
-                file_path = os.path.join(ROOT_DIR, file_rel)
-
-            module_key = "opera_page_BACKUP"
-            if module_key in sys.modules:
-                backup_module = sys.modules[module_key]
-            else:
-                spec = importlib.util.spec_from_file_location(module_key, file_path)
-                if spec is None or spec.loader is None:
-                    raise ImportError(f"Spec inválido para {file_path}")
-                backup_module = importlib.util.module_from_spec(spec)
-                sys.modules[module_key] = backup_module
-                spec.loader.exec_module(backup_module)
-
-            BACKUP_AUTO = backup_module.BACKUP_AUTO
-            BackupPage = backup_module.BackupPage
-        except Exception as e:
-            print(f"⚠️ [MENU] Não foi possível carregar módulo de backup automático: {e}")
-            return
-
-        # Já está rodando? então não reinicia.
-        if BACKUP_AUTO.get("running"):
-            print("🟢 [MENU] Backup automático já ativo — não será reiniciado.")
-            return
-
-        print("🔄 [MENU] Inicializando backup automático silencioso...")
-
-        # Definir pasta base do sistema
-        base_dir = getattr(self, "diretorio_base",
-                           os.path.dirname(os.path.abspath(__file__)))
-        pasta_backups = BackupPage.criar_pasta_backups_externo(base_dir)
-
-        # CONFIGURAR ESTADO GLOBAL
-        BACKUP_AUTO["running"] = True
-        BACKUP_AUTO["interval"] = 3600  # 1h padrão
-        BACKUP_AUTO["pasta"] = pasta_backups
-        BACKUP_AUTO["proximo"] = None
-
-        # Iniciar thread global
-        def loop():
-            import time
-
-            print("🟢 [MENU] Thread de backup automático iniciada.")
-
-            # Rodar imediatamente ao iniciar
-            BackupPage._executar_backup_auto_silencioso_static()
-
-            while BACKUP_AUTO.get("running", False):
-                intervalo = BACKUP_AUTO.get("interval", 3600)
-                time.sleep(intervalo)
-                if BACKUP_AUTO.get("running", False):
-                    BackupPage._executar_backup_auto_silencioso_static()
-
-            print("⏹ [MENU] Loop de backup automático finalizado.")
-
-        # DISPARAR THREAD
-        t = threading.Thread(target=loop, daemon=True)
-        BACKUP_AUTO["thread"] = t
-        t.start()
-
-
-
-    def _open_dashboard_automatico(self):
-        """Abre o Dashboard automaticamente."""
-        if (hasattr(self, '_preload_complete') and self._preload_complete):
-            if self.user_manager.has_permission("Dashboard", "ver"):
-                print("🚀 Abrindo Dashboard automaticamente...")
-                self.open_page("Dashboard")
-            else:
-                for pagina in self.routes.keys():
-                    if self.user_manager.has_permission(pagina, "ver"):
-                        print(f"🚀 Abrindo '{pagina}' automaticamente...")
-                        self.open_page(pagina)
-                        break
-        else:
-            self._agendar_after(500, self._open_dashboard_automatico)
-
+    # ===== GERENCIAMENTO DE PÁGINAS COM CACHE =====
     def _get_cached_page(self, page_name: str):
+        """Obtém página do cache."""
         frame = self._page_cache.get(page_name)
         if not frame:
             return None
         if not frame.winfo_exists() or frame.master != self.content:
             try:
                 frame.destroy()
-            except Exception:
+            except:
                 pass
             self._page_cache.pop(page_name, None)
             if page_name in self._page_cache_order:
                 self._page_cache_order.remove(page_name)
             return None
-        if page_name in self._page_cache_order:
-            self._page_cache_order.remove(page_name)
-        self._page_cache_order.append(page_name)
         return frame
 
     def _cache_page(self, page_name: str, frame):
+        """Adiciona página ao cache."""
         self._page_cache[page_name] = frame
         if page_name in self._page_cache_order:
             self._page_cache_order.remove(page_name)
         self._page_cache_order.append(page_name)
+
         while len(self._page_cache_order) > self._page_cache_size:
             old_page = self._page_cache_order.pop(0)
             old_frame = self._page_cache.pop(old_page, None)
             if old_frame:
                 try:
                     old_frame.destroy()
-                except Exception:
+                except:
                     pass
 
     def open_page(self, page_name: str, categoria: str | None = None):
-        """Abre uma página no conteúdo principal com verificação de permissão."""
-        # Não abre se estiver carregando outra página ou fechando o app
+        """Abre uma página."""
         if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
             return
 
-        # Ação especial: trocar usuário (mapeada no JSON via action)
         route_action = (self.routes.get(page_name) or {}).get("action")
         if page_name == "Trocar Usuário" or route_action == "trocar_usuario":
             self.trocar_usuario()
             return
 
-        # ===================== VERIFICAÇÃO DE PERMISSÃO =====================
         if not self.user_manager.has_permission(page_name, "ver", categoria):
-            messages = {
-                # PRINCIPAL
-                "Dashboard": "acessar o dashboard",
-
-                # MODELOS
-                "Cadastrar Modelo": "cadastrar novos modelos no sistema",
-                "Imprimir Ficha Técnica": "imprimir fichas técnicas",
-
-                # ORDENS DE CORTE
-                "Nova Ordem": "criar novas ordens de corte",
-
-                # REGISTRO DE CORTE
-                "Cadastrar Corte": "cadastrar ordens de corte",
-                "Consultar Ordens": "consultar ordens de corte",
-
-                # ESTOQUE
-                "Entrada de Estoque": "registrar entradas de estoque",
-                "Saída de Estoque": "registrar saídas de estoque",
-                "Relatórios": "acessar relatórios de estoque",
-
-                # PRESTADORES
-                "Cadastro de Prestadores": "cadastrar prestadores",
-                "Pesquisar Serviço": "pesquisar serviços",
-
-                # MÃO DE OBRA
-                "Controle de Mão de Obra": "controlar mão de obra",
-                # DEFEITOS
-                "Retrabalho de Defeitos": "tratar defeitos",
-
-                # PRODUÇÃO
-                "Produção": "acessar o módulo de produção",
-
-                # ACABAMENTO
-                "Registro Acabamento": "registrar acabamentos",
-                "Finalizar Corte / Acabamento": "finalizar cortes e acabamentos",
-
-                # FINANCEIRO
-                "Pagamento de Serviços": "efetuar pagamentos de serviços",
-                "Recibos de Pagamentos": "visualizar recibos de pagamentos",
-                "Custo Produto": "calcular custos de produtos",
-                "Folha Pagamento": "acessar folha de pagamento",
-                "Fechamento Mensal": "realizar fechamentos mensais",
-                "Contas a Pagar": "gerenciar contas a pagar",
-                "Adiantamento": "efetuar adiantamentos",
-                "Adiantamentos Pendentes": "consultar adiantamentos pendentes",
-
-                # RELATÓRIOS
-                "Produção": "acessar relatórios de produção",
-                "Serviços Externos": "acessar relatórios de serviços externos",
-                "Modelos Produzidos": "acessar relatórios de modelos produzidos",
-                "Acabamento": "acessar relatórios de acabamento",
-
-                # CONFIGURAÇÕES / SISTEMA
-                "Usuários": "gerenciar usuários do sistema",
-                "Temas": "personalizar temas do sistema",
-                "Atualizar Sistema": "gerenciar atualizações do sistema",
-                "Backup": "realizar backup do sistema",
-                "Gerenciar": "gerenciar banco de dados",
-            }
-
-            area_descricao = messages.get(page_name, "acessar esta área do sistema")
-            usuario_nome = getattr(self, "usuario_nome", "Usuário")
-            hierarquia = getattr(self, "usuario_hierarquia", "desconhecido")
-
-            mensagem = f"""Olá {usuario_nome}! 
-
-    Você não tem permissão para {area_descricao}.
-
-    📋 Seu perfil atual: {hierarquia}
-
-    Se você precisa acessar esta funcionalidade, entre em contato com o administrador do sistema."""
-            self._show_temporary_message(mensagem)
+            self._show_temporary_message(f"Sem permissão para acessar {page_name}")
             return
-        # ====================================================================
 
         self._page_loading = True
 
         try:
             if self._current_frame and self._current_frame.winfo_exists():
-                try:
-                    self._current_frame.pack_forget()
-                except Exception:
-                    pass
+                self._current_frame.place_forget()
 
             frame = self._get_cached_page(page_name)
             if frame is None:
-                # Carregar página diretamente via rotas (route_map.json)
                 frame = self._load_page_direct(page_name)
                 self._cache_page(page_name, frame)
 
             if frame:
-                # Exibir no container principal
-                frame.pack(fill="both", expand=True, padx=10, pady=10)
+                frame.place(x=0, y=0, relwidth=1, relheight=1)
 
-                # CORREÇÃO ESPECÍFICA PARA PÁGINA DE TEMAS
-                if page_name == "Temas":
-                    try:
-                        # Importa a correção da página de temas
-                        from PAGINAS_DO_SISTEMA.TEMAS import corrigir_labels_pagina_temas
-
-                        # Aplica correção em três momentos para garantir:
-                        # 1. Imediatamente (antes da renderização completa)
-                        corrigir_labels_pagina_temas(frame)
-
-                        # 2. Após 200ms (durante a renderização)
-                        self._agendar_after(200, lambda f=frame: corrigir_labels_pagina_temas(f))
-
-                        # 3. Após 500ms (após renderização completa)
-                        self._agendar_after(500, lambda f=frame: corrigir_labels_pagina_temas(f))
-
-                        print("🔧 Correções visuais aplicadas na página de Temas")
-
-                    except ImportError as e:
-                        print(f"⚠️ Não foi possível importar correção de Temas: {e}")
-                    except Exception as e:
-                        print(f"⚠️ Erro ao aplicar correção na página Temas: {e}")
-
-                # Atualizar título da topbar
                 if hasattr(self, "title_label"):
                     self.title_label.configure(text=page_name)
 
-                # ================== INTEGRAÇÃO COM O SISTEMA/TEMA ==================
                 try:
-                    # Referência do app dentro da página
                     if hasattr(frame, "host"):
                         frame.host = self
                     if hasattr(frame, "sistema"):
@@ -2819,171 +2989,77 @@ class OperaMenuApp(ctk.CTk):
                     if hasattr(frame, "app"):
                         frame.app = self
 
-                    # Garante que a página recém-carregada receba o tema atual
                     if hasattr(self, "theme_manager"):
                         self.theme_manager.apply_theme_to_widget(frame)
-
-                    # Se a página tiver método para atualizar o tema, chama
-                    if hasattr(frame, "atualizar_tema"):
-                        frame.atualizar_tema()
-                    elif hasattr(frame, "aplicar_tema"):
-                        frame.aplicar_tema()
-                    elif hasattr(frame, "refresh"):
-                        frame.refresh()
-
-                    if page_name == "Logs e Atividades" and hasattr(frame, "abrir_aba_logs"):
-                        frame.abrir_aba_logs()
                 except Exception as e:
-                    print(f"⚠️ Erro ao aplicar tema na página '{page_name}': {e}")
-                # ==================================================================
+                    _dprint(f"⚠️ Erro ao aplicar tema: {e}")
 
-                # Atualizar controle de página atual
                 self.current_page = page_name
                 self._current_frame = frame
 
-                # Guardar última página nas configurações
                 try:
                     self.settings["last_page"] = page_name
                     ConfigManager.save_settings(self.settings)
-                except Exception as e:
-                    print(f"⚠️ Erro ao salvar last_page nas configurações: {e}")
+                except:
+                    pass
 
-                # Registrar acesso à página nos logs
-                try:
-                    self._log_page_access(page_name)
-                except Exception as e:
-                    print(f"⚠️ Erro ao registrar log de acesso à página '{page_name}': {e}")
-
-                print(f"✅ Página '{page_name}' carregada com sucesso")
+                _dprint(f"✅ Página '{page_name}' carregada")
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao abrir {page_name}:\n{e}", parent=self)
-            print(f"❌ Erro ao abrir página '{page_name}': {e}")
-            import traceback
-            traceback.print_exc()
+            _dprint(f"❌ Erro: {e}")
         finally:
             self._page_loading = False
 
-    def _log_page_access(self, page_name: str):
-        """Registra acesso à página no sistema de logs"""
-        if not hasattr(self, 'usuario_nome'):
+    def _fit_current_page_to_content(self):
+        """Ajusta página ao conteúdo."""
+        frame = getattr(self, "_current_frame", None)
+        if not frame or not frame.winfo_exists():
+            return
+        if not hasattr(self, "content") or not self.content.winfo_exists():
             return
 
+        self.update_idletasks()
         try:
-            detalhe = f"Usuário: {self.usuario_nome} | Página: {page_name}"
-            self._log_user_activity("Navegação", detalhe, pagina=page_name)
-        except Exception:
+            frame.place_configure(x=0, y=0, relwidth=1, relheight=1)
+        except:
             pass
 
     def _show_temporary_message(self, message, duration=3000):
-        """Exibe uma mensagem temporária na área de conteúdo"""
+        """Exibe mensagem temporária."""
         try:
-            # Limpa o conteúdo atual
             for widget in self.content.winfo_children():
                 widget.destroy()
 
-            # Cria frame para a mensagem
-            message_frame = ctk.CTkFrame(
+            msg_frame = ctk.CTkFrame(
                 self.content,
                 fg_color=self.cor_secundaria,
                 corner_radius=12,
                 border_color=self.cor_borda,
                 border_width=2
             )
-            message_frame.pack(fill="both", expand=True, padx=50, pady=50)
+            msg_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-            # Ícone de alerta
-            icon_label = ctk.CTkLabel(
-                message_frame,
-                text="⚠️",
-                font=("Arial", 48),
-                text_color=self.cor_alerta
-            )
-            icon_label.pack(pady=(30, 10))
-
-            # Mensagem principal
-            message_label = ctk.CTkLabel(
-                message_frame,
+            ctk.CTkLabel(
+                msg_frame,
                 text=message,
-                font=("Arial", 16, "bold"),
+                font=("Arial", 14),
                 text_color=self.cor_texto,
-                wraplength=400,
-                justify="center"
-            )
-            message_label.pack(pady=10, padx=30)
+                wraplength=400
+            ).pack(padx=30, pady=30)
 
-            # Mensagem secundária
-            sub_label = ctk.CTkLabel(
-                message_frame,
-                text="Esta mensagem desaparecerá automaticamente",
-                font=("Arial", 12),
-                text_color=self.cor_texto_secundario
-            )
-            sub_label.pack(pady=(0, 30))
-
-            # Atualiza o título
-            self.title_label.configure(text="Acesso Restrito")
-
-            # Agenda o retorno ao Dashboard
-            self._agendar_after(duration, self._return_to_dashboard)
+            self.after(duration, self._return_to_dashboard)
 
         except Exception as e:
-            print(f"Erro ao exibir mensagem temporária: {e}")
+            _dprint(f"Erro ao exibir mensagem: {e}")
 
     def _return_to_dashboard(self):
-        """Retorna ao Dashboard após a mensagem temporária"""
+        """Retorna ao Dashboard."""
         if self.user_manager.has_permission("Dashboard", "ver"):
             self.open_page("Dashboard")
-        else:
-            # Se não tem permissão para Dashboard, procura primeira página permitida
-            for pagina in self.routes.keys():
-                if self.user_manager.has_permission(pagina, "ver"):
-                    self.open_page(pagina)
-                    return
-
-            # Se não encontrou nenhuma página permitida, mostra aviso permanente
-            self._show_no_permissions_message()
-
-    def _show_no_permissions_message(self):
-        """Mostra mensagem quando usuário não tem acesso a nenhuma página"""
-        for widget in self.content.winfo_children():
-            widget.destroy()
-
-        message_frame = ctk.CTkFrame(
-            self.content,
-            fg_color=self.cor_secundaria,
-            corner_radius=12,
-            border_color=self.cor_borda
-        )
-        message_frame.pack(fill="both", expand=True, padx=50, pady=50)
-
-        ctk.CTkLabel(
-            message_frame,
-            text="🚫",
-            font=("Arial", 64),
-            text_color=self.cor_alerta
-        ).pack(pady=(20, 10))
-
-        ctk.CTkLabel(
-            message_frame,
-            text="Acesso Restrito",
-            font=("Arial", 24, "bold"),
-            text_color=self.cor_texto
-        ).pack(pady=10)
-
-        ctk.CTkLabel(
-            message_frame,
-            text="Você não tem permissão para acessar nenhuma área do sistema.\n\nEntre em contato com o administrador para solicitar acesso.",
-            font=("Arial", 14),
-            text_color=self.cor_texto,
-            wraplength=400,
-            justify="center"
-        ).pack(pady=10)
-
-        self.title_label.configure(text="Acesso Restrito")
 
     def _load_page_direct(self, page_name: str, reload_module: bool = False):
-        """Carrega página diretamente sem cache"""
+        """Carrega página diretamente."""
         route = self.routes.get(page_name)
         if not route:
             raise ValueError(f"Rota não encontrada: {page_name}")
@@ -2994,7 +3070,6 @@ class OperaMenuApp(ctk.CTk):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
 
-        # Importa módulo
         module_name = os.path.splitext(os.path.basename(file_path))[0]
         module_key = f"opera_page_{module_name}"
 
@@ -3018,7 +3093,6 @@ class OperaMenuApp(ctk.CTk):
         except Exception as e:
             raise ImportError(f"Erro ao importar {module_name}: {e}")
 
-        # Encontra classe da página
         class_name = route.get("class")
         page_class = None
 
@@ -3026,109 +3100,124 @@ class OperaMenuApp(ctk.CTk):
             page_class = getattr(module, class_name, None)
 
         if not page_class:
-            # Busca primeira subclasse de CTkFrame
             for _, obj in inspect.getmembers(module, inspect.isclass):
                 try:
                     if (issubclass(obj, ctk.CTkFrame) and
                             obj.__module__ == module.__name__):
                         page_class = obj
                         break
-                except Exception:
+                except:
                     continue
 
         if not page_class:
             raise RuntimeError(f"Classe não encontrada em {file_path}")
 
-        # Instancia página SEMPRE nova
         try:
-            # Tenta diferentes parâmetros de inicialização
+            return page_class(master=self.content, sistema=self)
+        except:
             try:
-                return page_class(master=self.content, sistema=self)
-            except TypeError:
+                return page_class(master=self.content, app=self)
+            except:
                 try:
-                    return page_class(master=self.content, app=self)
-                except TypeError:
-                    try:
-                        return page_class(master=self.content, parent=self)
-                    except TypeError:
-                        try:
-                            return page_class(master=self.content, host=self)
-                        except TypeError:
-                            try:
-                                return page_class(master=self.content)
-                            except TypeError:
-                                try:
-                                    return page_class(self.content)
-                                except:
-                                    # Fallback: frame vazio
-                                    fallback_frame = ctk.CTkFrame(self.content)
-                                    fallback_frame.configure(fg_color=self.cor_fundo)
-                                    return fallback_frame
-        except Exception as e:
-            print(f"❌ Erro ao instanciar página {page_name}: {e}")
-            # Fallback garantido
-            fallback_frame = ctk.CTkFrame(self.content)
-            fallback_frame.configure(fg_color=self.cor_fundo)
-            return fallback_frame
+                    return page_class(master=self.content)
+                except:
+                    fallback = ctk.CTkFrame(self.content)
+                    fallback.configure(fg_color=self.cor_fundo)
+                    return fallback
 
     def reload_current_page(self):
         """Recarrega a página atual."""
         if hasattr(self, 'current_page') and self.current_page:
-            print(f"🔄 Recarregando página: {self.current_page}")
+            _dprint(f"🔄 Recarregando: {self.current_page}")
             self.open_page(self.current_page)
 
-    # ===== MENSAGENS TEMPORÁRIAS =====
+    def _ativar_backup_silencioso(self):
+        """Ativa backup automático."""
+        if getattr(self, "_backup_launch_scheduled", False):
+            self._backup_launch_scheduled = False
 
+        try:
+            if not self.winfo_exists():
+                self._backup_launch_scheduled = True
+                self.after(5000, self._ativar_backup_silencioso)
+                return
+        except:
+            pass
 
-    # ===== TROCA DE USUÁRIO =====
-    # ===== TROCA DE USUÁRIO =====
+        try:
+            route = self.routes.get("Backup", {})
+            file_rel = route.get("file", "BACKUP.py")
+            file_path = os.path.join(APP_DIR, file_rel)
+            if not os.path.exists(file_path):
+                file_path = os.path.join(ROOT_DIR, file_rel)
+
+            module_key = "opera_page_BACKUP"
+            if module_key in sys.modules:
+                backup_module = sys.modules[module_key]
+            else:
+                spec = importlib.util.spec_from_file_location(module_key, file_path)
+                if spec is None or spec.loader is None:
+                    raise ImportError(f"Spec inválido para {file_path}")
+                backup_module = importlib.util.module_from_spec(spec)
+                sys.modules[module_key] = backup_module
+                spec.loader.exec_module(backup_module)
+
+            BACKUP_AUTO = backup_module.BACKUP_AUTO
+            BackupPage = backup_module.BackupPage
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao carregar backup: {e}")
+            return
+
+        if BACKUP_AUTO.get("running"):
+            return
+
+        _dprint("🔄 Inicializando backup silencioso...")
+
+        base_dir = getattr(self, "diretorio_base", os.path.dirname(os.path.abspath(__file__)))
+        pasta_backups = BackupPage.criar_pasta_backups_externo(base_dir)
+
+        BACKUP_AUTO["running"] = True
+        BACKUP_AUTO["interval"] = 3600
+        BACKUP_AUTO["pasta"] = pasta_backups
+
+        def loop():
+            import time
+            BackupPage._executar_backup_auto_silencioso_static()
+            while BACKUP_AUTO.get("running", False):
+                time.sleep(BACKUP_AUTO.get("interval", 3600))
+                if BACKUP_AUTO.get("running", False):
+                    BackupPage._executar_backup_auto_silencioso_static()
+
+        t = threading.Thread(target=loop, daemon=True)
+        BACKUP_AUTO["thread"] = t
+        t.start()
+
     def trocar_usuario(self):
-        """Abre a janela de troca de usuário via módulo desacoplado (lazy import)."""
+        """Abre janela de troca de usuário."""
         try:
             modulo = importlib.import_module("PAGINAS_DO_SISTEMA.TROCAR_USUARIOS")
             modulo.abrir_janela_trocar_usuario(self)
         except Exception as e:
-            print(f"❌ Erro ao abrir janela de trocar usuário: {e}")
-            messagebox.showerror(
-                "Erro",
-                f"Falha ao abrir tela de login:\n{e}",
-                parent=self,
-            )
+            _dprint(f"❌ Erro ao trocar usuário: {e}")
+            messagebox.showerror("Erro", f"Falha ao abrir tela de login:\n{e}", parent=self)
 
-    def _remove_button_focus(self, button):
-        """Remove foco visual dos botões."""
+    def _agendar_after(self, ms, func):
+        """Agenda função com after."""
+        if self._closing:
+            return None
         try:
-            button.configure(border_spacing=0)
-        except Exception:
-            pass
-
-    def _darker(self, hex_color: str, factor: float = 0.85) -> str:
-        """Escurece uma cor hex."""
-        try:
-            h = hex_color.lstrip("#")
-            r = int(h[0:2], 16)
-            g = int(h[2:4], 16)
-            b = int(h[4:6], 16)
-            r = max(0, min(255, int(r * factor)))
-            g = max(0, min(255, int(g * factor)))
-            b = max(0, min(255, int(b * factor)))
-            return f"#{r:02X}{g:02X}{b:02X}"
-        except Exception:
-            return hex_color
+            return self.after(ms, func)
+        except:
+            return None
 
 
 def remover_foco_e_bordas_menu(widget_root):
-    """
-    Remove contornos, focos, highlight e bordas internas dos botões do menu lateral.
-    Funciona para CTkButton e widgets padrão do Tkinter.
-    """
-
+    """Remove contornos e bordas dos botões."""
     import customtkinter as ctk
     import tkinter as tk
 
     def limpar(widget):
         try:
-            # ============ BOTÕES CTK ============
             if isinstance(widget, ctk.CTkButton):
                 widget.configure(
                     border_width=0,
@@ -3136,22 +3225,16 @@ def remover_foco_e_bordas_menu(widget_root):
                     hover_color=widget.cget("hover_color"),
                     corner_radius=8
                 )
-
-            # ============ TKINTER BUTTON ============
             elif isinstance(widget, tk.Button):
                 widget.configure(
                     highlightthickness=0,
                     bd=0,
                     borderwidth=0,
-                    relief="flat",
-                    highlightbackground=widget.cget("bg"),
-                    activebackground=widget.cget("bg")
+                    relief="flat"
                 )
-
-        except Exception:
+        except:
             pass
 
-        # percorre filhos
         for child in widget.winfo_children():
             limpar(child)
 
@@ -3162,17 +3245,12 @@ def remover_foco_e_bordas_menu(widget_root):
 def main():
     """Função principal."""
     try:
-        print("🚀 Iniciando sistema OPERA...")
-        app = OperaMenuApp(
-            usuario_id=None,
-            usuario_nome="Admin",
-            usuario_hierarquia="Administrador"
-        )
-        print("✅ Aplicação Tkinter iniciada, entrando no mainloop...")
+        _dprint("🚀 Iniciando sistema OPERA...")
+        app = OperaMenuApp()
+        _dprint("✅ Aplicação iniciada, entrando no mainloop...")
         app.mainloop()
-        print("🔚 Mainloop finalizado - aplicação encerrada normalmente")
     except Exception as e:
-        print(f"💥 ERRO CRÍTICO: {e}")
+        _dprint(f"💥 ERRO CRÍTICO: {e}")
         import traceback
         traceback.print_exc()
         messagebox.showerror("Erro Fatal", f"Erro ao iniciar o sistema:\n{e}")
@@ -3180,6 +3258,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # fechado aqui
-
-#03/02/2025

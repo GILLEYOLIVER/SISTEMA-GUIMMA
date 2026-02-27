@@ -233,8 +233,18 @@ class DashboardPage(ctk.CTkFrame):
         self.tipo_grafico = "dashboard"
         self.modelo_selecionado = None
 
+        # Área rolável: mantém o layout original e adiciona rolagem vertical
+        self.scroll_body = ctk.CTkScrollableFrame(
+            self,
+            fg_color=self.cor_fundo,
+            corner_radius=0,
+            scrollbar_button_color=self.cor_primaria,
+            scrollbar_button_hover_color=self.cor_hover or self.cor_destaque,
+        )
+        self.scroll_body.pack(fill="both", expand=True)
+
         # Frame cards
-        self.frame_cards = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        self.frame_cards = ctk.CTkFrame(self.scroll_body, fg_color=self.cor_fundo)
         self.frame_cards.pack(fill="x", pady=(0, 2))
 
         self._criar_cards_resumo(self.frame_cards)
@@ -262,7 +272,7 @@ class DashboardPage(ctk.CTkFrame):
 
         self.frame_cards.pack(fill="x", pady=(0, 2))
 
-        duplo_section = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        duplo_section = ctk.CTkFrame(self.scroll_body, fg_color=self.cor_fundo)
         duplo_section.pack(fill="both", expand=True, padx=10, pady=(0, 4))
         duplo_section.grid_columnconfigure(0, weight=2)
         duplo_section.grid_columnconfigure(1, weight=3)
@@ -415,7 +425,7 @@ class DashboardPage(ctk.CTkFrame):
         self._carregar_ultimos_finalizados(limite=3)
 
         # PRODUÇÃO EM ANDAMENTO
-        frame_and = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        frame_and = ctk.CTkFrame(self.scroll_body, fg_color=self.cor_fundo)
         frame_and.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(frame_and, text="PRODUÇÃO EM ANDAMENTO", font=("Arial", 15, "bold"),
@@ -1284,7 +1294,7 @@ class DashboardPage(ctk.CTkFrame):
         if parent is not None:
             self.frame_ultimos = parent
         elif not hasattr(self, "frame_ultimos") or self.frame_ultimos is None:
-            self.frame_ultimos = ctk.CTkFrame(self, fg_color="transparent")
+            self.frame_ultimos = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
             self.frame_ultimos.pack(fill="x", pady=(4, 0))
 
         for w in self.frame_ultimos.winfo_children():

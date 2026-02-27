@@ -293,6 +293,14 @@ class PagamentoModernUI(ctk.CTkFrame):
         # carrega dados iniciais
         self.pesquisar_finalizados()
 
+        # evita múltiplos reencaixes visíveis na abertura
+        self._last_fit_signature = None
+        self._initial_fit_done = False
+        try:
+            self.after(30, self._apply_initial_fit_once)
+        except Exception:
+            pass
+
     # ===================== Tema / estilo =====================
     def obter_cores_por_tema(self):
         """Define cores de texto dinamicamente baseado no tema atual - MESMO PADRÃO DO CADASTRO_DE_CORTE"""
@@ -579,6 +587,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # conteúdo
         content_frame = ctk.CTkFrame(self, fg_color=self.main_bg, corner_radius=0)
+        self.content_frame = content_frame
         content_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=4, pady=(0, 6))
         content_frame.grid_columnconfigure(0, weight=1)
         content_frame.grid_columnconfigure(1, weight=2)
@@ -586,6 +595,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # painel esquerdo (lista) - MESMO ESTILO DO CADASTRO_DE_CORTE
         left_panel = ctk.CTkFrame(content_frame, fg_color=self.card_bg, corner_radius=12, border_width=1)
+        self.left_panel = left_panel
         left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=2)
         left_panel.grid_rowconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -624,13 +634,8 @@ class PagamentoModernUI(ctk.CTkFrame):
         }
         for col, h in zip(cols, headings):
             self.tree.heading(col, text=h)
-            self.tree.column(col, width=tree_widths.get(col, 80), anchor="center")
+            self.tree.column(col, width=tree_widths.get(col, 80), anchor="center", stretch=True)
         self.tree.grid(row=0, column=0, sticky="nsew")
-        vsb = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree.yview)
-        hsb = ttk.Scrollbar(tree_container, orient="horizontal", command=self.tree.xview)
-        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-        vsb.grid(row=0, column=1, sticky="ns")
-        hsb.grid(row=1, column=0, sticky="ew")
         self.tree.bind("<Double-1>", self._on_select_item)
         self.tree.bind("<Return>", self._on_select_item)
 
@@ -658,13 +663,8 @@ class PagamentoModernUI(ctk.CTkFrame):
         }
         for col, h in zip(defeitos_cols, defeitos_headings):
             self.defeitos_tree.heading(col, text=h)
-            self.defeitos_tree.column(col, width=defeitos_widths.get(col, 80), anchor="center")
+            self.defeitos_tree.column(col, width=defeitos_widths.get(col, 80), anchor="center", stretch=True)
         self.defeitos_tree.grid(row=0, column=0, sticky="nsew")
-        defeitos_vsb = ttk.Scrollbar(defeitos_container, orient="vertical", command=self.defeitos_tree.yview)
-        defeitos_hsb = ttk.Scrollbar(defeitos_container, orient="horizontal", command=self.defeitos_tree.xview)
-        self.defeitos_tree.configure(yscrollcommand=defeitos_vsb.set, xscrollcommand=defeitos_hsb.set)
-        defeitos_vsb.grid(row=0, column=1, sticky="ns")
-        defeitos_hsb.grid(row=1, column=0, sticky="ew")
         self.defeitos_tree.bind("<Double-1>", self._on_select_defeito)
         self.defeitos_tree.bind("<Return>", self._on_select_defeito)
 
@@ -694,6 +694,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # painel direito (resumo e formulários)
         right_panel = ctk.CTkFrame(content_frame, fg_color=self.main_bg, corner_radius=0)
+        self.right_panel = right_panel
         right_panel.grid(row=0, column=1, sticky="nsew")
         right_panel.grid_columnconfigure(0, weight=1)
         right_panel.grid_columnconfigure(1, weight=1)
@@ -702,6 +703,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # resumo de pagamento - MESMO ESTILO DO CADASTRO_DE_CORTE
         summary_frame = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
+        self.summary_frame = summary_frame
         summary_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=2, pady=(0, 4))
         summary_frame.grid_columnconfigure(0, weight=1)
         summary_frame.grid_columnconfigure(1, weight=1)
@@ -768,6 +770,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # seções inferiores - MESMO ESTILO DO CADASTRO_DE_CORTE
         ident_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
+        self.ident_card = ident_card
         ident_card.grid(row=1, column=0, sticky="nsew", padx=2, pady=2)
         ident_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -777,7 +780,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             text_color=self.cor_texto
         ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(4, 2))
         self._small_label(ident_card, "Serviço:", 1, 0)
-        servico_combo = ctk.CTkComboBox(
+        self.servico_combo = servico_combo = ctk.CTkComboBox(
             ident_card,
             values=SERVICE_OPTIONS,
             variable=self.tipo_servico_var,
@@ -853,6 +856,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.valor_peca_entry.grid(row=8, column=1, padx=8, pady=1, sticky="ew")
 
         ajustes_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
+        self.ajustes_card = ajustes_card
         ajustes_card.grid(row=1, column=1, sticky="nsew", padx=2, pady=2)
         ajustes_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -916,6 +920,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.bonificacao_entry.bind("<KeyRelease>", lambda ev: self.recalcular())
 
         defeito_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
+        self.defeito_card = defeito_card
         defeito_card.grid(row=1, column=2, sticky="nsew", padx=2, pady=2)
         defeito_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1046,6 +1051,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.descontar_parcela_btn.grid(row=6, column=0, columnspan=2, padx=8, pady=(2, 6))
 
         banco_card = ctk.CTkFrame(right_panel, fg_color=self.card_bg, corner_radius=12, border_width=1)
+        self.banco_card = banco_card
         banco_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=2, pady=2)
         banco_card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1105,6 +1111,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # ações - MESMO ESTILO DO CADASTRO_DE_CORTE
         actions = ctk.CTkFrame(right_panel, fg_color=self.main_bg)
+        self.actions_frame = actions
         actions.grid(row=3, column=0, columnspan=3, sticky="e", pady=(4, 2), padx=2)
         self.salvar_btn = ctk.CTkButton(
             actions,
@@ -1168,6 +1175,175 @@ class PagamentoModernUI(ctk.CTkFrame):
             "descricao": self.ident_descricao,
             "costureira": self.ident_costureira
         }
+
+    def _apply_initial_fit_once(self):
+        """Aplica um único encaixe inicial para evitar o efeito de interface se contorcendo."""
+        if getattr(self, "_initial_fit_done", False):
+            return
+        self._initial_fit_done = True
+        try:
+            self.update_idletasks()
+            top = self.winfo_toplevel()
+            width = int(top.winfo_width() or self.winfo_width() or 1320)
+            height = int(top.winfo_height() or self.winfo_height() or 720)
+            base_scale = 1.0
+            try:
+                if self._host is not None and hasattr(self._host, "ui_scale"):
+                    base_scale = float(getattr(self._host, "ui_scale", 1.0) or 1.0)
+            except Exception:
+                base_scale = 1.0
+            self.on_host_resize(width, height, base_scale)
+        except Exception:
+            pass
+
+    def on_host_resize(self, width: int, height: int, scale: float = 1.0):
+        """Mantém sempre o mesmo layout de tela grande, apenas encolhendo proporcionalmente."""
+        try:
+            width = max(760, int(width or self.winfo_width() or 760))
+        except Exception:
+            width = 760
+        try:
+            height = max(520, int(height or self.winfo_height() or 520))
+        except Exception:
+            height = 520
+
+        try:
+            local = float(scale or 1.0)
+        except Exception:
+            local = 1.0
+
+        if width <= 1200:
+            local = min(local, max(0.62, width / 1500.0))
+        elif width <= 1440:
+            local = min(local, 0.86)
+        else:
+            local = min(local, 1.0)
+        local = max(0.62, min(1.0, local))
+
+        signature = (max(1, width // 24), max(1, height // 24), round(local, 3))
+        if getattr(self, "_last_fit_signature", None) == signature:
+            return
+        self._last_fit_signature = signature
+
+        # Mantém a mesma estrutura visual da tela grande.
+        try:
+            self.grid_columnconfigure(0, weight=1)
+            self.grid_columnconfigure(1, weight=2)
+            self.grid_rowconfigure(2, weight=1)
+        except Exception:
+            pass
+
+        try:
+            self.content_frame.grid_columnconfigure(0, weight=1, minsize=max(300, int(width * 0.34)))
+            self.content_frame.grid_columnconfigure(1, weight=2, minsize=max(430, int(width * 0.56)))
+            self.left_panel.grid(row=0, column=0, columnspan=1, sticky="nsew", padx=(0, 6), pady=2)
+            self.right_panel.grid(row=0, column=1, columnspan=1, sticky="nsew")
+        except Exception:
+            pass
+
+        try:
+            self.right_panel.grid_columnconfigure(0, weight=1, minsize=max(170, int(width * 0.18)))
+            self.right_panel.grid_columnconfigure(1, weight=1, minsize=max(170, int(width * 0.18)))
+            self.right_panel.grid_columnconfigure(2, weight=1, minsize=max(170, int(width * 0.18)))
+            self.summary_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=2, pady=(0, 4))
+            self.ident_card.grid(row=1, column=0, columnspan=1, sticky="nsew", padx=2, pady=2)
+            self.ajustes_card.grid(row=1, column=1, columnspan=1, sticky="nsew", padx=2, pady=2)
+            self.defeito_card.grid(row=1, column=2, columnspan=1, sticky="nsew", padx=2, pady=2)
+            self.banco_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=2, pady=2)
+            self.actions_frame.grid(row=3, column=0, columnspan=3, sticky="e", pady=(4, 2), padx=2)
+            self.banco_card.grid_columnconfigure(1, weight=1)
+            self.banco_card.grid_columnconfigure(3, weight=1)
+        except Exception:
+            pass
+
+        # Ajuste fino dos filtros e botões, sem trocar o layout.
+        try:
+            if hasattr(self, "orig_seg") and self.orig_seg.winfo_exists():
+                self.orig_seg.configure(height=max(24, int(28 * local)))
+            if hasattr(self, "filtro_servico_combo") and self.filtro_servico_combo.winfo_exists():
+                self.filtro_servico_combo.configure(width=max(120, int(160 * local)), height=max(24, int(28 * local)))
+            if hasattr(self, "busca_entry") and self.busca_entry.winfo_exists():
+                self.busca_entry.configure(width=max(120, int(180 * local)), height=max(24, int(28 * local)))
+            if hasattr(self, "servico_combo") and self.servico_combo.winfo_exists():
+                self.servico_combo.configure(height=max(24, int(28 * local)))
+        except Exception:
+            pass
+
+        try:
+            self.configurar_treeview_theme()
+            tree_font = max(7, int(10 * local))
+            row_height = max(18, int(26 * local))
+            self.style.configure(
+                "Custom.Treeview",
+                rowheight=row_height,
+                font=('Arial', tree_font)
+            )
+            self.style.configure(
+                "Custom.Treeview.Heading",
+                font=('Arial', max(7, int(10 * local)), 'bold')
+            )
+        except Exception:
+            pass
+
+        # Colunas das grades: sempre proporcionais, mas mantendo o mesmo desenho geral.
+        try:
+            main_tree_widths = {
+                "id": 48, "tipo_servico": 86, "codigo": 68, "descricao": 180,
+                "costureira": 120, "data_envio": 86, "data_chegada": 86, "total_qtd": 58,
+            }
+            area = max(280, int(width * 0.33))
+            factor = max(0.34, min(1.0, (area / 760.0) * (0.92 + (local - 0.62) * 0.35)))
+            if hasattr(self, "tree") and self.tree.winfo_exists():
+                self.tree.configure(height=5 if height < 700 else 6 if height < 820 else 8)
+                for col, base in main_tree_widths.items():
+                    self.tree.column(col, width=max(38, int(base * factor)), stretch=True)
+        except Exception:
+            pass
+
+        try:
+            defeito_widths = {
+                "id": 48, "prestador": 110, "codigo": 66,
+                "descricao": 150, "tamanho": 54, "quantidade": 62,
+                "data_retorno": 86, "status": 76,
+            }
+            area2 = max(280, int(width * 0.33))
+            factor2 = max(0.34, min(1.0, (area2 / 760.0) * (0.92 + (local - 0.62) * 0.35)))
+            if hasattr(self, "defeitos_tree") and self.defeitos_tree.winfo_exists():
+                self.defeitos_tree.configure(height=5 if height < 700 else 6 if height < 820 else 8)
+                for col, base in defeito_widths.items():
+                    self.defeitos_tree.column(col, width=max(38, int(base * factor2)), stretch=True)
+        except Exception:
+            pass
+
+        # Botões e campos com largura fixa encolhem, mas sem trocar de posição.
+        try:
+            fixed_widgets = [
+                (getattr(self, "adiantamento_valor_atual_entry", None), max(72, int(100 * local))),
+                (getattr(self, "adiantamento_desconto_entry", None), max(72, int(100 * local))),
+                (getattr(self, "aplicar_desconto_btn", None), max(64, int(80 * local))),
+                (getattr(self, "descontar_parcela_btn", None), max(116, int(160 * local))),
+                (getattr(self, "salvar_btn", None), max(96, int(130 * local))),
+                (getattr(self, "exportar_btn", None), max(96, int(130 * local))),
+                (getattr(self, "recalcular_btn", None), max(92, int(120 * local))),
+                (getattr(self, "imprimir_btn", None), max(96, int(130 * local))),
+            ]
+            for widget, new_width in fixed_widgets:
+                if widget is not None and widget.winfo_exists():
+                    widget.configure(width=new_width, height=max(26, int(32 * local)))
+            if hasattr(self, "obs_defeito_text") and self.obs_defeito_text.winfo_exists():
+                self.obs_defeito_text.configure(height=max(48, int(60 * local)))
+        except Exception:
+            pass
+
+        # Padding mais compacto em telas menores para caber tudo sem cortar.
+        try:
+            compact = 2 if local < 0.78 else 4
+            for frame in (self.summary_frame, self.ident_card, self.ajustes_card, self.defeito_card, self.banco_card):
+                if frame is not None and frame.winfo_exists():
+                    info = frame.grid_info()
+                    frame.grid_configure(padx=compact, pady=compact)
+        except Exception:
+            pass
 
     # ===================== Lógica auxiliar =====================
     def _toggle_bonificacao(self):
@@ -3624,7 +3800,16 @@ if __name__ == "__main__":
 
     root = ctk.CTk()
     root.title("Pagamento - PostgreSQL")
-    root.geometry("1600x900")
+    root.minsize(1100, 680)
+    try:
+        root.state("zoomed")
+    except Exception:
+        try:
+            root.attributes("-zoomed", True)
+        except Exception:
+            sw = root.winfo_screenwidth()
+            sh = root.winfo_screenheight()
+            root.geometry(f"{sw}x{sh}+0+0")
 
 
     class MockSistema:
