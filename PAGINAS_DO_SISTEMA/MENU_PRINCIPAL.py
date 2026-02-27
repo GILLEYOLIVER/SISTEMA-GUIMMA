@@ -1487,6 +1487,32 @@ class OperaMenuApp(ctk.CTk):
         # Destaca o botão da categoria ativa
         self._highlight_active_category(categoria)
 
+    def _is_dark_tk_color(self, color: str) -> bool:
+        """Detecta se a cor (hex ou nome Tk) é escura."""
+        try:
+            if isinstance(color, str) and color.startswith("#") and len(color) == 7:
+                return is_dark_color(color)
+            r16, g16, b16 = self.winfo_rgb(color)
+            r, g, b = r16 / 65535.0, g16 / 65535.0, b16 / 65535.0
+            luminancia = (0.299 * r + 0.587 * g + 0.114 * b)
+            return luminancia < 0.5
+        except Exception:
+            return is_dark_color(color) if isinstance(color, str) else False
+
+    def _contrast_text_for_color(self, color: str, fallback: str = "#F8FAFC") -> str:
+        """Retorna texto de alto contraste para qualquer cor reconhecida pelo Tk."""
+        try:
+            if isinstance(color, str) and color.startswith("#") and len(color) == 7:
+                return get_contraste_texto(color)
+            r16, g16, b16 = self.winfo_rgb(color)
+            r, g, b = r16 / 65535.0, g16 / 65535.0, b16 / 65535.0
+            luminancia = (0.299 * r + 0.587 * g + 0.114 * b)
+            return "#000000" if luminancia > 0.5 else "#FFFFFF"
+        except Exception:
+            if isinstance(color, str):
+                return get_contraste_texto(color) or fallback
+            return fallback
+
     def _get_menu_style_tokens(self) -> dict:
         """Calcula cores padronizadas com contraste forte para menu e submenu."""
         pal = getattr(getattr(self, "theme_manager", None), "current_palette", None) or {}
@@ -1494,7 +1520,7 @@ class OperaMenuApp(ctk.CTk):
         cor_secundaria = pal.get("secundaria", self.cor_secundaria)
         cor_hover_base = pal.get("hover", cor_secundaria)
         cor_borda = pal.get("borda", self.cor_borda)
-        tema_escuro = is_dark_color(cor_secundaria)
+        tema_escuro = self._is_dark_tk_color(cor_secundaria)
 
         if tema_escuro:
             menu_bg = self._realcar_cor(cor_secundaria, 1.06)
@@ -1505,9 +1531,9 @@ class OperaMenuApp(ctk.CTk):
             submenu_bg = self._darker(cor_secundaria, 0.95)
             hover_bg = self._darker(cor_hover_base, 0.82)
 
-        menu_texto = get_contraste_texto(menu_bg) or self.cor_texto
-        hover_texto = get_contraste_texto(hover_bg) or menu_texto
-        submenu_texto = get_contraste_texto(submenu_bg) or menu_texto
+        menu_texto = self._contrast_text_for_color(menu_bg, fallback=self.cor_texto)
+        hover_texto = self._contrast_text_for_color(hover_bg, fallback=menu_texto)
+        submenu_texto = self._contrast_text_for_color(submenu_bg, fallback=menu_texto)
 
         # Reforço: no tema escuro NUNCA permitir texto escuro no menu/submenu.
         if tema_escuro:
