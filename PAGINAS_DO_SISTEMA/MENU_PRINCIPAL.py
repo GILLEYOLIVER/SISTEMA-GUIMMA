@@ -1576,19 +1576,25 @@ class OperaMenuApp(ctk.CTk):
 
     def _apply_submenu_button_base_style(self, btn, style: dict):
         """Aplica e memoriza estilo padrão de um botão de submenu."""
+        submenu_escuro = self._is_dark_tk_color(style["submenu_bg"])
+        hover_escuro = self._is_dark_tk_color(style["hover_bg"])
+
+        normal_fg = "#FFFFFF" if submenu_escuro else style["submenu_texto"]
+        hover_fg = "#FFFFFF" if hover_escuro else style["hover_texto"]
+
         btn.configure(
             fg_color=style["submenu_bg"],
             hover=False,
             hover_color=style["submenu_bg"],
-            text_color=style["submenu_texto"],
-            text_color_disabled=style["submenu_texto"],
+            text_color=normal_fg,
+            text_color_disabled=normal_fg,
             border_color=style["submenu_bg"],
             border_width=1,
         )
         btn._normal_bg = style["submenu_bg"]
-        btn._normal_fg = style["submenu_texto"]
+        btn._normal_fg = normal_fg
         btn._hover_bg = style["hover_bg"]
-        btn._hover_fg = style["hover_texto"]
+        btn._hover_fg = hover_fg
 
     def _highlight_active_category(self, categoria: str):
         """Destaca o botao da categoria com submenu aberto."""
@@ -2659,10 +2665,7 @@ class OperaMenuApp(ctk.CTk):
         )
         btn.pack(fill="x", expand=True, padx=4, pady=2)
 
-        btn._normal_bg = style["submenu_bg"]
-        btn._normal_fg = style["submenu_texto"]
-        btn._hover_bg = style["hover_bg"]
-        btn._hover_fg = style["hover_texto"]
+        self._apply_submenu_button_base_style(btn, style)
 
         def hover_on(event=None):
             if btn.winfo_exists():
