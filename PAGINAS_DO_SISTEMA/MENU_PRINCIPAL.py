@@ -1556,11 +1556,11 @@ class OperaMenuApp(ctk.CTk):
         submenu_escuro = self._is_dark_tk_color(submenu_bg)
         menu_escuro = self._is_dark_tk_color(menu_bg)
 
-        # Reforço: no tema escuro NUNCA permitir texto escuro no menu/submenu.
+        # Regra absoluta: em tema/fundo escuro, texto do menu/submenu é sempre branco.
         if tema_escuro or submenu_escuro or menu_escuro:
-            menu_texto = "#F8FAFC"
+            menu_texto = "#FFFFFF"
             hover_texto = "#FFFFFF"
-            submenu_texto = "#F8FAFC"
+            submenu_texto = "#FFFFFF"
 
         return {
             "menu_bg": menu_bg,
