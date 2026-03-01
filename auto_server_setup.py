@@ -4,6 +4,9 @@ import socket
 import subprocess
 import sys
 from pathlib import Path
+import tkinter as tk
+from tkinter import messagebox, ttk
+
 
 
 def run_ps_as_admin(ps1_path: Path) -> None:
@@ -246,6 +249,7 @@ def main():
     print("OK. server_info.json salvo em:", out_dir / "server_info.json")
     print("IP do servidor para os clientes:", server_ip)
     return 0
+
 
 
 if __name__ == "__main__":
