@@ -1875,27 +1875,30 @@ class TemasPage(ctk.CTkFrame):
             ).pack(side="left", padx=1)
 
     def _build_right_panel(self, parent):
-        ctk.CTkLabel(parent, text="Editor de Tema", font=("Arial", 16, "bold"),
-                     text_color=self.app.cor_texto).pack(pady=(15, 10), padx=10)
+        right_scroll = ctk.CTkScrollableFrame(parent, fg_color="transparent")
+        right_scroll.pack(fill="both", expand=True, padx=10, pady=(10, 10))
 
-        scroll_editor = ctk.CTkScrollableFrame(parent, fg_color="transparent", height=300)
-        scroll_editor.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        ctk.CTkLabel(right_scroll, text="Editor de Tema", font=("Arial", 16, "bold"),
+                     text_color=self.app.cor_texto).pack(pady=(5, 10), padx=10)
+
+        scroll_editor = ctk.CTkScrollableFrame(right_scroll, fg_color="transparent", height=300)
+        scroll_editor.pack(fill="both", expand=True, padx=0, pady=(0, 10))
 
         self._criar_campos_edicao(scroll_editor)
 
-        separator = ctk.CTkFrame(parent, fg_color=self.app.cor_borda, height=2)
-        separator.pack(fill="x", padx=10, pady=8)
+        separator = ctk.CTkFrame(right_scroll, fg_color=self.app.cor_borda, height=2)
+        separator.pack(fill="x", pady=8)
 
-        ctk.CTkLabel(parent, text="Seletor de Cores", font=("Arial", 13, "bold"),
+        ctk.CTkLabel(right_scroll, text="Seletor de Cores", font=("Arial", 13, "bold"),
                      text_color=self.app.cor_texto).pack(pady=(5, 5))
 
-        self.color_picker = ColorPickerWidget(parent, fg_color=self.app.cor_fundo, corner_radius=6,
+        self.color_picker = ColorPickerWidget(right_scroll, fg_color=self.app.cor_fundo, corner_radius=6,
                                               callback=self._on_color_selected)
-        self.color_picker.pack(fill="x", padx=10, pady=(0, 10))
+        self.color_picker.pack(fill="x", pady=(0, 10))
 
-        self._criar_campo_nome(parent)
+        self._criar_campo_nome(right_scroll)
 
-        self._criar_botoes_acao(parent)
+        self._criar_botoes_acao(right_scroll)
 
     def _criar_campos_edicao(self, parent):
         for campo in CAMPOS_PADRAO:
