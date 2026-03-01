@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import hashlib
 import time
+import subprocess
 
 import customtkinter as ctk
 
@@ -24,6 +25,63 @@ from PAGINAS_DO_SISTEMA.ui_after_guard import (
 
 from pathlib import Path
 import sys
+
+
+def _abrir_setup_banco() -> bool:
+    """Abre o SETUP_BANCO.py automaticamente quando o banco não estiver disponível."""
+    candidatos = [
+        Path(__file__).resolve().parent / "SETUP_BANCO.py",
+        Path(__file__).resolve().parent.parent / "packaging" / "SETUP_BANCO.py",
+    ]
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidatos.extend(
+            [
+                Path(meipass) / "PAGINAS_DO_SISTEMA" / "SETUP_BANCO.py",
+                Path(meipass) / "SETUP_BANCO.py",
+            ]
+        )
+
+    for script in candidatos:
+        if script.is_file():
+            try:
+                subprocess.Popen([sys.executable, str(script)])
+                return True
+            except Exception as erro:
+                print(f"⚠️ Falha ao abrir SETUP_BANCO.py ({script}): {erro}")
+                return False
+    print("⚠️ SETUP_BANCO.py não encontrado nos caminhos esperados.")
+    return False
+
+def _mostrar_erro_centralizado(parent: tk.Misc, titulo: str, mensagem: str) -> None:
+    """Exibe mensagem de erro centralizada no display principal."""
+    janela_aux = None
+    try:
+        janela_aux = tk.Toplevel(parent)
+        janela_aux.withdraw()
+        janela_aux.overrideredirect(True)
+        janela_aux.attributes("-topmost", True)
+
+        largura_tela = janela_aux.winfo_screenwidth()
+        altura_tela = janela_aux.winfo_screenheight()
+        pos_x = max((largura_tela // 2), 0)
+        pos_y = max((altura_tela // 2), 0)
+
+        janela_aux.geometry(f"1x1+{pos_x}+{pos_y}")
+        janela_aux.deiconify()
+        janela_aux.lift()
+        janela_aux.focus_force()
+
+        messagebox.showerror(titulo, mensagem, parent=janela_aux)
+    except Exception:
+        messagebox.showerror(titulo, mensagem)
+    finally:
+        if janela_aux is not None:
+            try:
+                janela_aux.destroy()
+            except Exception:
+                pass
 
 def asset_path(nome_arquivo: str) -> str:
     """
@@ -140,12 +198,13 @@ class SistemaLoginModerno:
 
         # Verifica conexão e readiness do banco (sem criar nada)
         if not banco_de_dados.ready_check():
-            messagebox.showerror(
+            _mostrar_erro_centralizado(
+                self.root,
                 "Banco não preparado",
                 "Não foi possível conectar ao banco de dados.\n"
                 "Rode os scripts SQL e configure OPERA_PG_DSN/OPERA_PG_SCHEMA.",
-                parent=self.root,
             )
+            _abrir_setup_banco()
             raise SystemExit(1)
 
         self._configurar_interface()
