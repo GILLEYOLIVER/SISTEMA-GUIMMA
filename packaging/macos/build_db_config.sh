@@ -8,14 +8,21 @@ echo "=============================================="
 echo " Build configurador de banco (macOS)"
 echo "=============================================="
 
-if ! command -v python3 >/dev/null 2>&1; then
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   echo "❌ python3 não encontrado"
   exit 1
 fi
 
-if ! python3 -c "import PyInstaller" >/dev/null 2>&1; then
+if ! "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
+  echo "❌ pip não encontrado para o Python selecionado"
+  exit 1
+fi
+
+if ! "$PYTHON_BIN" -c "import PyInstaller" >/dev/null 2>&1; then
   echo "⚠️ PyInstaller não encontrado. Instalando..."
-  python3 -m pip install pyinstaller
+  "$PYTHON_BIN" -m pip install pyinstaller
 fi
 
 ICON_PNG="icons/icon_config.png"
@@ -53,7 +60,7 @@ if [ ! -f "$ENTRYPOINT" ]; then
   exit 1
 fi
 
-python3 -m PyInstaller \
+"$PYTHON_BIN" -m PyInstaller \
   --windowed \
   --noconfirm \
   --clean \
