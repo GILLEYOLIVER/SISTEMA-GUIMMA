@@ -318,3 +318,158 @@ Fluxo recomendado:
 2. Abra `packaging/windows/SISTEMA_OPERA.iss` no Inno Setup Compiler.
 3. Compile o instalador.
 4. No assistente, informe IP/porta do banco e clique em **Testar conexão** antes de avançar.
+
+## Arquitetura de atualizacao e migracao
+
+A estrutura atual do projeto passou a separar explicitamente a atualizacao de codigo da aplicacao da atualizacao de estrutura do banco. Alem de `PAGINAS_DO_SISTEMA/`, o projeto agora considera uma pasta dedicada `SCHEMA/` na raiz para concentrar os modulos de schema e migracao.
+
+### Pasta `SCHEMA/`
+
+A pasta `SCHEMA/` deve ficar na raiz do projeto e concentrar os modulos de estrutura do banco, organizados por dominio funcional (e nao por tabela isolada). Estrutura recomendada:
+
+```text
+SISTEMA-GUIMMA/
+├── SCHEMA/
+│   ├── __init__.py
+│   ├── SCHEMA_MANAGER.py
+│   ├── schema_utils.py
+│   ├── schema_core.py
+│   ├── schema_usuarios.py
+│   ├── schema_modelos.py
+│   ├── schema_faccoes.py
+│   ├── schema_corte_producao.py
+│   ├── schema_pagamentos.py
+│   ├── schema_servicos.py
+│   ├── schema_estoque.py
+│   ├── schema_clientes_compras.py
+│   ├── schema_pcp.py
+│   ├── schema_custos.py
+│   └── schema_relatorios.py
+```
+
+Papeis principais:
+
+- `SCHEMA_MANAGER.py`: orquestra a aplicacao de migracoes e chama os modulos de schema.
+- `schema_utils.py`: helpers compartilhados (checagem de coluna, indice, SQL utilitario).
+- `schema_core.py`: estrutura base do schema e tabela de versionamento.
+- Demais `schema_*.py`: tabelas, colunas, indices e ajustes por modulo de negocio.
+
+### Conexao de banco
+
+O acesso ao PostgreSQL continua centralizado em `PAGINAS_DO_SISTEMA/BANCO_DE_DADOS_PG.py`, que ja possui a ordem de conexao por `OPERA_PG_DSN`, `config.json` e fallback por host/porta com autodeteccao. O fluxo de migracao deve reutilizar esse modulo de acesso, e nao um DSN fixo, para manter consistencia com a configuracao real do cliente. Isso se alinha com a logica atual de conexao, que prioriza `OPERA_PG_DSN`, depois `CONFIG["dsn"]`, e por fim host/porta definidos em configuracao. fileciteturn14file7turn14file15
+
+### `schema_version`
+
+A tabela `schema_version` e o registro central da versao aplicada por modulo. O `SCHEMA_MANAGER` deve garantir a existencia dessa tabela e registrar a versao de cada modulo apos a execucao da migracao. A implementacao atual ja contempla essa tabela e o controle de versao por modulo. fileciteturn14file4
+
+## Fluxo de atualizacao do sistema
+
+A tela `PAGINAS_DO_SISTEMA/ATUALIZAR_SISTEMA.py` passou a ser tratada como um atualizador hibrido, com duas origens de pacote:
+
+- **Local**: selecao de uma pasta no computador.
+- **Online**: pacote ZIP hospedado no Google Drive.
+
+### Estrutura esperada do pacote de atualizacao
+
+O pacote de atualizacao deve ser montado com a seguinte estrutura:
+
+```text
+Versao do Sistema/
+├── manifest.json
+├── PAGINAS_DO_SISTEMA/
+│   └── arquivos .py alterados
+└── SCHEMA/
+    └── arquivos .py de schema alterados
+```
+
+Observacoes:
+
+- `PAGINAS_DO_SISTEMA/` e opcional quando a atualizacao for apenas de schema.
+- `SCHEMA/` e opcional quando a atualizacao for apenas de telas/logica.
+- `manifest.json` e recomendado para informar versao, descricao, data e observacoes.
+
+### Comportamento esperado da tela de atualizacao
+
+A tela de atualizacao deve:
+
+1. Ler a fonte salva anteriormente, quando existir.
+2. Fazer a varredura automatica ao abrir a pagina.
+3. Listar os arquivos encontrados em uma visualizacao hierarquica.
+4. Informar claramente quando faltarem as pastas `PAGINAS_DO_SISTEMA` e/ou `SCHEMA`.
+5. Permitir:
+   - duplo clique em um arquivo para atualizar apenas aquele item;
+   - clique com o botao direito em uma pasta para atualizar a pasta inteira;
+   - atualizacao do pacote completo.
+
+Quando houver atualizacao de `SCHEMA/`, o sistema deve chamar `SCHEMA/SCHEMA_MANAGER.py` ao final da copia de arquivos.
+
+### Rollback automatico
+
+Se a copia de arquivos ou a migracao de banco falhar, o atualizador deve restaurar automaticamente o backup da versao anterior. Esse comportamento evita deixar o cliente com arquivos parcialmente atualizados.
+
+## Versionamento de atualizacao
+
+O versionamento do sistema deve ser controlado por dois arquivos:
+
+### `manifest.json`
+
+Fica dentro do pacote de atualizacao e representa a versao que esta chegando.
+
+Exemplo recomendado:
+
+```json
+{
+  "version": "1.0.1",
+  "description": "Correcoes visuais e ajustes de logica",
+  "created_at": "2026-03-01 17:45:00",
+  "requires_schema": false,
+  "notes": [
+    "Ajuste de layout em Faccoes",
+    "Correcao de botao em Pagamento de Servicos"
+  ]
+}
+```
+
+Campos suportados:
+
+- `version`: versao do pacote.
+- `description`: resumo da entrega.
+- `created_at`: data/hora de geracao do pacote.
+- `requires_schema`: se ha mudanca de estrutura de banco.
+- `notes`: observacoes adicionais.
+
+### `update_state.json`
+
+Fica na raiz do sistema instalado e representa a versao atualmente instalada naquela maquina.
+
+Exemplo:
+
+```json
+{
+  "current_version": "1.0.1"
+}
+```
+
+### Regra de versao
+
+A versao nao deve ser alterada pela quantidade de arquivos modificados, e sim pelo impacto da mudanca:
+
+- `1.0.x`: correcoes pequenas, ajustes visuais, textos, bugs e melhorias leves.
+- `1.1.0`, `1.2.0`, etc.: novas funcionalidades e melhorias funcionais perceptiveis.
+- `2.0.0`: mudancas grandes de arquitetura, fluxo ou compatibilidade.
+
+## Instalacao limpa e evolucao do banco
+
+Para instalacao limpa, o fluxo recomendado e:
+
+1. Instalar/configurar o PostgreSQL.
+2. Garantir que o banco e o schema existam.
+3. Rodar o `SCHEMA_MANAGER` para criar/ajustar a estrutura.
+4. Instalar o aplicativo nos clientes.
+5. Configurar conexao com o banco em rede.
+
+O app/ferramenta de instalacao de banco em `data/INSTAL_BANCO_APP/` ja trabalha com a selecao automatica dos scripts SQL `1_CRIAR_BANCO.sql`, `2_CRIAR_SCHEMA.sql` e `3_CRIAR_TABELAS.sql`, podendo servir como base para o fluxo inicial de provisionamento do banco. fileciteturn14file10turn14file11
+
+## Observacao operacional importante
+
+Trocar arquivos `.py` no disco nao recarrega automaticamente as telas que ja estao abertas em memoria. Depois de uma atualizacao concluida, o recomendado e orientar o usuario a fechar e reabrir o sistema para carregar a nova versao da interface e das rotinas alteradas.

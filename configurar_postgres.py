@@ -13,7 +13,14 @@ from datetime import datetime
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
 
-import winreg
+IS_WINDOWS = sys.platform.startswith("win")
+IS_MAC = sys.platform == "darwin"
+IS_LINUX = (not IS_WINDOWS) and (not IS_MAC)
+
+if IS_WINDOWS:
+    import winreg
+else:
+    winreg = None
 
 
 APP_TITLE = "OPERA • Configurador PostgreSQL (Servidor)"
@@ -23,19 +30,28 @@ TAG_HBA = "# --- OPERA: acesso rede (adicionado automaticamente) ---"
 DB_NAME_DEFAULT = "BANCO_OPERA"
 
 
-# ------------------ ADMIN (auto, sem mensagem) ------------------
+# ------------------ ADMIN ------------------
 
 def is_admin() -> bool:
     try:
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        if IS_WINDOWS:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        if hasattr(os, "geteuid"):
+            return os.geteuid() == 0
+        return False
     except Exception:
         return False
 
 
 def relaunch_as_admin_silent():
     """
-    Reabre o app elevado (UAC). Sem messagebox.
+    Reabre o app elevado.
+    - Windows: UAC
+    - macOS/Linux: não força relaunch automático para evitar problemas com app GUI
     """
+    if not IS_WINDOWS:
+        return
+
     try:
         params = " ".join([f'"{a}"' for a in sys.argv])
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
@@ -46,9 +62,14 @@ def relaunch_as_admin_silent():
 # ------------------ subprocess / utils ------------------
 
 def run_powershell(ps_command: str, timeout: int = 30) -> str:
+    if not IS_WINDOWS:
+        raise RuntimeError("PowerShell só está disponível no Windows.")
+
     completed = subprocess.run(
         ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_command],
-        capture_output=True, text=True, timeout=timeout
+        capture_output=True,
+        text=True,
+        timeout=timeout
     )
     if completed.returncode != 0:
         err = (completed.stderr or "").strip()
@@ -62,6 +83,11 @@ def run_cmd(cmd_list, timeout: int = 60, env=None) -> tuple[int, str, str]:
     return p.returncode, (p.stdout or ""), (p.stderr or "")
 
 
+def run_shell(command: str, timeout: int = 60, env=None) -> tuple[int, str, str]:
+    p = subprocess.run(command, capture_output=True, text=True, timeout=timeout, env=env, shell=True)
+    return p.returncode, (p.stdout or ""), (p.stderr or "")
+
+
 def now_stamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -72,16 +98,20 @@ def backup_file(path: str) -> str:
     return bak
 
 
+def which_or_empty(cmd_name: str) -> str:
+    return shutil.which(cmd_name) or ""
+
+
 # ------------------ scripts -> Desktop (blindado) ------------------
 
 def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
     """
-    Copia a pasta scripts para Desktop\scripts.
+    Copia a pasta scripts para ~/Desktop/scripts.
     Funciona em:
       - DEV (rodando .py)
       - PyInstaller --onedir (scripts ao lado do exe)
       - PyInstaller --onefile (scripts extraídos em sys._MEIPASS)
-    Retorna o caminho final Desktop\scripts.
+    Retorna o caminho final ~/Desktop/scripts.
     """
     desktop = os.path.join(os.path.expanduser("~"), "Desktop")
     dst = os.path.join(desktop, "scripts")
@@ -91,16 +121,15 @@ def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
             logger(f"Scripts já existem no Desktop: {dst}")
         return dst
 
-    # base do exe ou do .py
     if getattr(sys, "frozen", False):
         base_exe = os.path.dirname(sys.executable)
     else:
         base_exe = os.path.dirname(os.path.abspath(__file__))
 
     src_candidates = [
-        os.path.join(base_exe, "scripts"),                     # onedir
-        os.path.join(getattr(sys, "_MEIPASS", ""), "scripts"),  # onefile
-        os.path.join(os.getcwd(), "scripts"),                  # rodando pela raiz
+        os.path.join(base_exe, "scripts"),
+        os.path.join(getattr(sys, "_MEIPASS", ""), "scripts"),
+        os.path.join(os.getcwd(), "scripts"),
     ]
 
     src = ""
@@ -112,8 +141,8 @@ def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
     if not src:
         if logger:
             logger("Não achei a pasta 'scripts' (exe/_MEIPASS/cwd). Sem origem para copiar.")
-            logger(f"DEBUG frozen={getattr(sys,'frozen',False)} exe={sys.executable}")
-            logger(f"DEBUG _MEIPASS={getattr(sys,'_MEIPASS','')}")
+            logger(f"DEBUG frozen={getattr(sys, 'frozen', False)} exe={sys.executable}")
+            logger(f"DEBUG _MEIPASS={getattr(sys, '_MEIPASS', '')}")
             logger(f"DEBUG cwd={os.getcwd()}")
         return dst
 
@@ -134,6 +163,7 @@ def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
 def extrair_nome_banco_do_sql(sql_path: str) -> str:
     if not sql_path or not os.path.exists(sql_path):
         return ""
+
     with open(sql_path, "r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
 
@@ -147,6 +177,7 @@ def extrair_nome_banco_do_sql(sql_path: str) -> str:
     )
     if not m:
         return ""
+
     raw = m.group(1).strip()
     if raw.startswith('"') and raw.endswith('"'):
         raw = raw[1:-1]
@@ -156,6 +187,7 @@ def extrair_nome_banco_do_sql(sql_path: str) -> str:
 def extrair_encoding_do_sql(sql_path: str) -> str:
     if not sql_path or not os.path.exists(sql_path):
         return ""
+
     with open(sql_path, "r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
 
@@ -169,6 +201,9 @@ def extrair_encoding_do_sql(sql_path: str) -> str:
 # ------------------ PostgreSQL detection ------------------
 
 def _get_service_imagepath(service_name: str) -> str:
+    if not IS_WINDOWS or winreg is None:
+        return ""
+
     key_path = rf"SYSTEM\CurrentControlSet\Services\{service_name}"
     with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as k:
         image_path, _ = winreg.QueryValueEx(k, "ImagePath")
@@ -176,23 +211,31 @@ def _get_service_imagepath(service_name: str) -> str:
 
 
 def _extract_datadir_from_imagepath(image_path: str) -> str:
+    if not image_path:
+        return ""
+
     m = re.search(r'-D\s+"([^"]+)"', image_path)
     if m:
         return m.group(1)
+
     m2 = re.search(r"-D\s+([^\s]+)", image_path)
     if m2:
         return m2.group(1)
+
     return ""
 
 
-def detectar_postgres_service_and_datadir() -> tuple[str, str]:
+def _windows_detect_postgres_service_and_datadir() -> tuple[str, str]:
     candidates = ["postgresql-x64-18", "postgresql-18"]
     for svc in candidates:
         try:
             img = _get_service_imagepath(svc)
             datadir = _extract_datadir_from_imagepath(img)
-            return svc, datadir
+            if datadir:
+                return svc, datadir
         except FileNotFoundError:
+            continue
+        except Exception:
             continue
 
     try:
@@ -204,26 +247,104 @@ def detectar_postgres_service_and_datadir() -> tuple[str, str]:
         if out:
             img = _get_service_imagepath(out)
             datadir = _extract_datadir_from_imagepath(img)
-            return out, datadir
+            if datadir:
+                return out, datadir
     except Exception:
         pass
 
     return "", ""
 
 
+def _mac_detect_postgres_service_and_datadir() -> tuple[str, str]:
+    candidates = [
+        "/Library/PostgreSQL/18/data",
+        "/opt/homebrew/var/postgresql@18",
+        "/usr/local/var/postgresql@18",
+        "/opt/homebrew/var/postgres",
+        "/usr/local/var/postgres",
+    ]
+
+    for p in candidates:
+        conf = os.path.join(p, "postgresql.conf")
+        hba = os.path.join(p, "pg_hba.conf")
+        if os.path.isdir(p) and (os.path.exists(conf) or os.path.exists(hba)):
+            return "postgresql-18", p
+
+    for brew_name in ("postgresql@18", "postgresql"):
+        rc, out, _ = run_cmd(["brew", "services", "list"], timeout=20)
+        if rc == 0 and brew_name in out:
+            # tenta achar o data dir padrão do brew
+            if brew_name == "postgresql@18":
+                for p in ("/opt/homebrew/var/postgresql@18", "/usr/local/var/postgresql@18"):
+                    conf = os.path.join(p, "postgresql.conf")
+                    hba = os.path.join(p, "pg_hba.conf")
+                    if os.path.isdir(p) and (os.path.exists(conf) or os.path.exists(hba)):
+                        return brew_name, p
+
+    return "", ""
+
+
+def _linux_detect_postgres_service_and_datadir() -> tuple[str, str]:
+    candidates = [
+        "/etc/postgresql/18/main",
+        "/var/lib/postgresql/18/main",
+    ]
+
+    for p in candidates:
+        conf = os.path.join(p, "postgresql.conf")
+        hba = os.path.join(p, "pg_hba.conf")
+        if os.path.isdir(p) and (os.path.exists(conf) or os.path.exists(hba)):
+            return "postgresql-18", p
+
+    return "", ""
+
+
+def detectar_postgres_service_and_datadir() -> tuple[str, str]:
+    if IS_WINDOWS:
+        return _windows_detect_postgres_service_and_datadir()
+    if IS_MAC:
+        return _mac_detect_postgres_service_and_datadir()
+    return _linux_detect_postgres_service_and_datadir()
+
+
 def infer_install_root_from_datadir(datadir: str) -> str:
     if not datadir:
         return ""
     p = os.path.normpath(datadir)
-    return os.path.dirname(p)  # ...\18\data -> ...\18
+    return os.path.dirname(p)
 
 
 def find_psql_exe(datadir: str) -> str:
-    root = infer_install_root_from_datadir(datadir)
-    if not root:
-        return ""
-    psql = os.path.join(root, "bin", "psql.exe")
-    return psql if os.path.exists(psql) else ""
+    candidates = []
+
+    if IS_WINDOWS:
+        root = infer_install_root_from_datadir(datadir)
+        if root:
+            candidates.append(os.path.join(root, "bin", "psql.exe"))
+        candidates.extend([
+            r"C:\Program Files\PostgreSQL\18\bin\psql.exe",
+            r"C:\Program Files\PostgreSQL\17\bin\psql.exe",
+            which_or_empty("psql"),
+        ])
+    elif IS_MAC:
+        candidates.extend([
+            "/Library/PostgreSQL/18/bin/psql",
+            "/opt/homebrew/bin/psql",
+            "/usr/local/bin/psql",
+            which_or_empty("psql"),
+        ])
+    else:
+        candidates.extend([
+            "/usr/bin/psql",
+            "/usr/local/bin/psql",
+            which_or_empty("psql"),
+        ])
+
+    for p in candidates:
+        if p and os.path.exists(p):
+            return p
+
+    return ""
 
 
 # ------------------ Network detection ------------------
@@ -245,20 +366,31 @@ def detectar_ip() -> str:
             pass
 
 
-def detectar_rede_cidr_por_powershell(ip_alvo: str) -> str:
+def detectar_rede_cidr(ip_alvo: str) -> str:
     if not ip_alvo or ip_alvo == "Não detectado":
         return ""
-    ps = (
-        "Get-NetIPAddress -AddressFamily IPv4 | "
-        f"Where-Object {{ $_.IPAddress -eq '{ip_alvo}' }} | "
-        "Select-Object -First 1 -ExpandProperty PrefixLength"
-    )
-    out = run_powershell(ps, timeout=15).strip()
-    if not out:
+
+    if IS_WINDOWS:
+        try:
+            ps = (
+                "Get-NetIPAddress -AddressFamily IPv4 | "
+                f"Where-Object {{ $_.IPAddress -eq '{ip_alvo}' }} | "
+                "Select-Object -First 1 -ExpandProperty PrefixLength"
+            )
+            out = run_powershell(ps, timeout=15).strip()
+            if out:
+                prefix = int(out)
+                net = ipaddress.IPv4Network(f"{ip_alvo}/{prefix}", strict=False)
+                return f"{net.network_address}/{prefix}"
+        except Exception:
+            pass
+
+    # fallback simples e seguro para macOS/Linux
+    try:
+        net = ipaddress.IPv4Network(f"{ip_alvo}/24", strict=False)
+        return f"{net.network_address}/24"
+    except Exception:
         return ""
-    prefix = int(out)
-    net = ipaddress.IPv4Network(f"{ip_alvo}/{prefix}", strict=False)
-    return f"{net.network_address}/{prefix}"
 
 
 # ------------------ Postgres config changes ------------------
@@ -316,6 +448,10 @@ def ensure_pg_hba_rule(hba_path: str, network_cidr: str, logger) -> None:
 
 
 def ensure_firewall_rule(port: str, logger) -> None:
+    if not IS_WINDOWS:
+        logger("Firewall: ajuste automático ignorado neste sistema.")
+        return
+
     rule_name = f"PostgreSQL 18 (OPERA) - TCP {port}"
     try:
         out = run_powershell(
@@ -340,11 +476,58 @@ def ensure_firewall_rule(port: str, logger) -> None:
     logger(f"Firewall: regra criada (TCP {port}, Private)")
 
 
-def restart_service(service_name: str, logger) -> None:
-    run_powershell(f"Restart-Service -Name '{service_name}' -Force", timeout=60)
-    time.sleep(2)
-    status = run_powershell(f"(Get-Service -Name '{service_name}').Status", timeout=10).strip()
-    logger(f"Serviço {service_name}: {status}")
+def restart_service(service_name: str, datadir: str, logger) -> None:
+    if IS_WINDOWS:
+        run_powershell(f"Restart-Service -Name '{service_name}' -Force", timeout=60)
+        time.sleep(2)
+        status = run_powershell(f"(Get-Service -Name '{service_name}').Status", timeout=10).strip()
+        logger(f"Serviço {service_name}: {status}")
+        return
+
+    if IS_MAC:
+        # tenta Homebrew primeiro
+        for svc in ("postgresql@18", "postgresql"):
+            rc, out, err = run_cmd(["brew", "services", "restart", svc], timeout=60)
+            if rc == 0:
+                logger(f"Serviço reiniciado via brew: {svc}")
+                if out.strip():
+                    logger(out.strip())
+                return
+
+        # fallback com pg_ctl
+        pg_ctl = ""
+        for c in [
+            "/Library/PostgreSQL/18/bin/pg_ctl",
+            "/opt/homebrew/bin/pg_ctl",
+            "/usr/local/bin/pg_ctl",
+            which_or_empty("pg_ctl"),
+        ]:
+            if c and os.path.exists(c):
+                pg_ctl = c
+                break
+
+        if pg_ctl and datadir:
+            rc, out, err = run_cmd([pg_ctl, "-D", datadir, "restart"], timeout=60)
+            if rc == 0:
+                logger("Serviço reiniciado via pg_ctl.")
+                if out.strip():
+                    logger(out.strip())
+                return
+
+        logger("Não consegui reiniciar automaticamente no macOS. Reinicie o PostgreSQL manualmente.")
+        return
+
+    # Linux fallback
+    for cmd in (
+        ["systemctl", "restart", "postgresql"],
+        ["service", "postgresql", "restart"],
+    ):
+        rc, out, err = run_cmd(cmd, timeout=60)
+        if rc == 0:
+            logger(f"Serviço reiniciado: {' '.join(cmd)}")
+            return
+
+    logger("Não consegui reiniciar automaticamente no Linux. Reinicie o PostgreSQL manualmente.")
 
 
 # ------------------ SQL execution via psql ------------------
@@ -352,7 +535,7 @@ def restart_service(service_name: str, logger) -> None:
 def run_psql_file(psql_exe: str, host: str, port: str, user: str, password: str,
                   dbname: str, sql_file: str, logger) -> None:
     if not psql_exe or not os.path.exists(psql_exe):
-        raise RuntimeError("psql.exe não encontrado (não consigo executar scripts).")
+        raise RuntimeError("psql não encontrado (não consigo executar scripts).")
     if not sql_file or not os.path.exists(sql_file):
         raise RuntimeError(f"Arquivo SQL não encontrado: {sql_file}")
 
@@ -433,7 +616,6 @@ class ConfigurarPostgresApp(ctk.CTk):
 
         self.detect_all(silent=True)
 
-        # prepara scripts no Desktop e auto-preenche
         try:
             desktop_scripts = garantir_scripts_na_area_de_trabalho(logger=self.log)
 
@@ -455,7 +637,7 @@ class ConfigurarPostgresApp(ctk.CTk):
                 self._apply_auto_db_from_1()
                 self.log("Scripts detectados no Desktop e preenchidos automaticamente ✅")
             else:
-                self.log("Não encontrei scripts padrão no Desktop\\scripts (use 'Buscar pasta dos scripts').")
+                self.log("Não encontrei scripts padrão no Desktop/scripts (use 'Buscar pasta dos scripts').")
         except Exception as e:
             self.log(f"Falha ao preparar scripts no Desktop: {e}")
 
@@ -480,13 +662,13 @@ class ConfigurarPostgresApp(ctk.CTk):
 
         ctk.CTkLabel(
             title_row,
-            text="Rede + Firewall + Banco/Tabelas",
+            text="Rede + Banco/Tabelas",
             font=ctk.CTkFont(size=13)
         ).grid(row=0, column=1, sticky="e")
 
         hint = ctk.CTkLabel(
             header,
-            text="Fluxo: 1) Detectar  •  2) Configurar Rede/Firewall  •  3) Scripts  •  4) Executar (1→2→3)",
+            text="Fluxo: 1) Detectar  •  2) Configurar Rede  •  3) Scripts  •  4) Executar (1→2→3)",
             font=ctk.CTkFont(size=12)
         )
         hint.pack(anchor="w", padx=14, pady=(0, 12))
@@ -503,7 +685,6 @@ class ConfigurarPostgresApp(ctk.CTk):
         right = ctk.CTkFrame(content, corner_radius=14)
         right.grid(row=0, column=1, sticky="nsew", padx=(7, 14), pady=14)
 
-        # LOG embaixo
         log_frame = ctk.CTkFrame(wrapper, corner_radius=14)
         log_frame.pack(fill="x", padx=14, pady=(0, 14))
 
@@ -533,7 +714,7 @@ class ConfigurarPostgresApp(ctk.CTk):
         self._row_entry(det, 2, 0, "Rede (CIDR):", self.net_var)
         self._row_entry(det, 2, 1, "Serviço:", self.svc_var)
         self._row_entry(det, 4, 0, "DataDir (-D):", self.datadir_var)
-        self._row_entry(det, 4, 1, "psql.exe:", self.psql_var)
+        self._row_entry(det, 4, 1, "psql:", self.psql_var)
 
         btns = ctk.CTkFrame(left, fg_color="transparent")
         btns.pack(fill="x", padx=14, pady=(0, 14))
@@ -543,7 +724,7 @@ class ConfigurarPostgresApp(ctk.CTk):
         self.btn_detect = ctk.CTkButton(btns, text="Detectar tudo", height=44, command=self.on_detect)
         self.btn_detect.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
-        self.btn_config = ctk.CTkButton(btns, text="Configurar Rede/Firewall (REAL)", height=44, command=self.on_configure_real)
+        self.btn_config = ctk.CTkButton(btns, text="Configurar Rede (REAL)", height=44, command=self.on_configure_real)
         self.btn_config.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
         quick = ctk.CTkFrame(left, fg_color="transparent")
@@ -558,8 +739,13 @@ class ConfigurarPostgresApp(ctk.CTk):
         )
         self.btn_copy.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
-        self.btn_drop = ctk.CTkButton(quick, text="APAGAR TUDO (PERIGOSO)", height=44, fg_color="#8B0000",
-                                      command=self.on_run_drop_all)
+        self.btn_drop = ctk.CTkButton(
+            quick,
+            text="APAGAR TUDO (PERIGOSO)",
+            height=44,
+            fg_color="#8B0000",
+            command=self.on_run_drop_all
+        )
         self.btn_drop.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
         # RIGHT
@@ -576,6 +762,7 @@ class ConfigurarPostgresApp(ctk.CTk):
             scripts, text="DB alvo (auto pelo 1_CRIAR_BANCO.sql):",
             font=ctk.CTkFont(size=12, weight="bold")
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(12, 2))
+
         ctk.CTkEntry(scripts, textvariable=self.dbname_var, height=34).grid(
             row=1, column=0, sticky="ew", padx=12, pady=(0, 10)
         )
@@ -676,7 +863,7 @@ class ConfigurarPostgresApp(ctk.CTk):
         self.ip_var.set(ip)
 
         try:
-            cidr = detectar_rede_cidr_por_powershell(ip)
+            cidr = detectar_rede_cidr(ip)
         except Exception:
             cidr = ""
         self.net_var.set(cidr if cidr else "(não detectado)")
@@ -696,8 +883,11 @@ class ConfigurarPostgresApp(ctk.CTk):
         if not silent:
             messagebox.showinfo(
                 "Detecção",
-                f"IP: {self.ip_var.get()}\nRede: {self.net_var.get()}\n"
-                f"Serviço: {self.svc_var.get()}\nDataDir: {self.datadir_var.get()}\npsql: {self.psql_var.get()}"
+                f"IP: {self.ip_var.get()}\n"
+                f"Rede: {self.net_var.get()}\n"
+                f"Serviço: {self.svc_var.get()}\n"
+                f"DataDir: {self.datadir_var.get()}\n"
+                f"psql: {self.psql_var.get()}"
             )
 
     def on_detect(self):
@@ -715,9 +905,11 @@ class ConfigurarPostgresApp(ctk.CTk):
         if svc.startswith("(") or not svc:
             messagebox.showerror("Erro", "Não detectei o serviço do PostgreSQL 18.")
             return
+
         if datadir.startswith("(") or not datadir or not os.path.isdir(datadir):
-            messagebox.showerror("Erro", "Data Directory (-D) inválido. Instale o Postgres 18 e tente novamente.")
+            messagebox.showerror("Erro", "Data Directory (-D) inválido. Instale o PostgreSQL 18 e tente novamente.")
             return
+
         if cidr.startswith("(") or not cidr or "/" not in cidr:
             messagebox.showerror("Erro", "Não consegui detectar a rede (CIDR). Verifique e tente novamente.")
             return
@@ -731,15 +923,18 @@ class ConfigurarPostgresApp(ctk.CTk):
         if not messagebox.askyesno(
             "Confirmar",
             "Vou configurar o PostgreSQL para aceitar conexões na rede.\n\n"
-            f"Serviço: {svc}\nRede: {cidr}\nPorta: {port}\n\nContinuar?"
+            f"Serviço: {svc}\n"
+            f"Rede: {cidr}\n"
+            f"Porta: {port}\n\n"
+            "Continuar?"
         ):
             return
 
         def worker():
             self.set_busy(True)
-            self.set_status("configurando rede/firewall...")
+            self.set_status("configurando rede...")
             try:
-                self.log("=== CONFIGURAÇÃO REAL (REDE/FIREWALL) ===")
+                self.log("=== CONFIGURAÇÃO REAL (REDE) ===")
                 self.log(f"Serviço: {svc}")
                 self.log(f"DataDir: {datadir}")
                 self.log(f"Rede: {cidr}")
@@ -756,7 +951,7 @@ class ConfigurarPostgresApp(ctk.CTk):
                 set_listen_addresses(conf, self.log)
                 ensure_pg_hba_rule(hba, cidr, self.log)
                 ensure_firewall_rule(port, self.log)
-                restart_service(svc, self.log)
+                restart_service(svc, datadir, self.log)
 
                 self.set_status("servidor pronto ✅")
                 messagebox.showinfo("OK", "Servidor PostgreSQL pronto para rede ✅\nAgora execute os scripts (1→2→3).")
@@ -784,6 +979,7 @@ class ConfigurarPostgresApp(ctk.CTk):
             if db:
                 self.dbname_var.set(db)
                 self.log(f"Auto-detect DB pelo SQL: {db}")
+
             enc = extrair_encoding_do_sql(p_banco)
             if enc:
                 self.log(f"Encoding detectado no SQL: {enc}")
@@ -862,7 +1058,11 @@ class ConfigurarPostgresApp(ctk.CTk):
         if not messagebox.askyesno(
             "Confirmar",
             "Vou executar os scripts em sequência (1→2→3).\n\n"
-            f"DB: {dbname}\nUsuário: {user}\nHost: {host}\nPorta: {port}\n\nContinuar?"
+            f"DB: {dbname}\n"
+            f"Usuário: {user}\n"
+            f"Host: {host}\n"
+            f"Porta: {port}\n\n"
+            "Continuar?"
         ):
             return
 
@@ -956,10 +1156,10 @@ class ConfigurarPostgresApp(ctk.CTk):
         messagebox.showinfo("Copiado", f"Copiado:\n\n{text}")
 
 
-# ------------------ ENTRYPOINT (auto admin) ------------------
+# ------------------ ENTRYPOINT ------------------
 
 if __name__ == "__main__":
-    if not is_admin():
+    if IS_WINDOWS and not is_admin():
         relaunch_as_admin_silent()
         sys.exit(0)
 
