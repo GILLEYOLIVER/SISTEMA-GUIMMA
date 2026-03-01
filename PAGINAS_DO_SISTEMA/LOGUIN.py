@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import hashlib
 import time
+import subprocess
 
 import customtkinter as ctk
 
@@ -24,6 +25,34 @@ from PAGINAS_DO_SISTEMA.ui_after_guard import (
 
 from pathlib import Path
 import sys
+
+
+def _abrir_setup_banco() -> bool:
+    """Abre o SETUP_BANCO.py automaticamente quando o banco não estiver disponível."""
+    candidatos = [
+        Path(__file__).resolve().parent / "SETUP_BANCO.py",
+        Path(__file__).resolve().parent.parent / "packaging" / "SETUP_BANCO.py",
+    ]
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidatos.extend(
+            [
+                Path(meipass) / "PAGINAS_DO_SISTEMA" / "SETUP_BANCO.py",
+                Path(meipass) / "SETUP_BANCO.py",
+            ]
+        )
+
+    for script in candidatos:
+        if script.is_file():
+            try:
+                subprocess.Popen([sys.executable, str(script)])
+                return True
+            except Exception as erro:
+                print(f"⚠️ Falha ao abrir SETUP_BANCO.py ({script}): {erro}")
+                return False
+    print("⚠️ SETUP_BANCO.py não encontrado nos caminhos esperados.")
+    return False
 
 def asset_path(nome_arquivo: str) -> str:
     """
@@ -146,6 +175,7 @@ class SistemaLoginModerno:
                 "Rode os scripts SQL e configure OPERA_PG_DSN/OPERA_PG_SCHEMA.",
                 parent=self.root,
             )
+            _abrir_setup_banco()
             raise SystemExit(1)
 
         self._configurar_interface()
