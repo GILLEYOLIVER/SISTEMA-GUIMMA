@@ -4,6 +4,9 @@ import socket
 import subprocess
 import sys
 from pathlib import Path
+import tkinter as tk
+from tkinter import simpledialog, messagebox
+
 
 def run_ps_as_admin(ps1_path: Path) -> None:
     # Você pode chamar isso do seu app/instalador; aqui é simples via subprocess.
@@ -23,6 +26,81 @@ def ensure_psycopg2():
     except ImportError:
         raise RuntimeError("psycopg2 não instalado. Instale: pip install psycopg2-binary")
 
+
+
+def _coletar_parametros_setup(defaults: dict) -> dict | None:
+    """Abre interface para coletar parâmetros antes de conectar ao PostgreSQL."""
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        root.update_idletasks()
+        largura = 420
+        altura = 180
+        x = max((root.winfo_screenwidth() - largura) // 2, 0)
+        y = max((root.winfo_screenheight() - altura) // 2, 0)
+        root.geometry(f"{largura}x{altura}+{x}+{y}")
+    except Exception:
+        pass
+
+    host = simpledialog.askstring("Configuração do Servidor", "Host do PostgreSQL:", initialvalue=str(defaults["host"]), parent=root)
+    if host is None:
+        root.destroy()
+        return None
+
+    porta_txt = simpledialog.askstring("Configuração do Servidor", "Porta do PostgreSQL:", initialvalue=str(defaults["port"]), parent=root)
+    if porta_txt is None:
+        root.destroy()
+        return None
+
+    superuser = simpledialog.askstring("Configuração do Servidor", "Usuário administrador (superuser):", initialvalue=str(defaults["superuser"]), parent=root)
+    if superuser is None:
+        root.destroy()
+        return None
+
+    superpass = simpledialog.askstring("Configuração do Servidor", "Senha do usuário administrador:", initialvalue=str(defaults["superpass"]), show="*", parent=root)
+    if superpass is None:
+        root.destroy()
+        return None
+
+    app_user = simpledialog.askstring("Configuração do Servidor", "Usuário da aplicação:", initialvalue=str(defaults["app_user"]), parent=root)
+    if app_user is None:
+        root.destroy()
+        return None
+
+    app_pass = simpledialog.askstring("Configuração do Servidor", "Senha do usuário da aplicação:", initialvalue=str(defaults["app_pass"]), show="*", parent=root)
+    if app_pass is None:
+        root.destroy()
+        return None
+
+    dbname = simpledialog.askstring("Configuração do Servidor", "Nome do banco:", initialvalue=str(defaults["dbname"]), parent=root)
+    if dbname is None:
+        root.destroy()
+        return None
+
+    schema = simpledialog.askstring("Configuração do Servidor", "Schema padrão:", initialvalue=str(defaults["schema"]), parent=root)
+    if schema is None:
+        root.destroy()
+        return None
+
+    try:
+        port = int(porta_txt)
+    except Exception:
+        messagebox.showerror("Erro", f"Porta inválida: {porta_txt}", parent=root)
+        root.destroy()
+        return None
+
+    root.destroy()
+    return {
+        "host": host.strip() or defaults["host"],
+        "port": port,
+        "superuser": superuser.strip() or defaults["superuser"],
+        "superpass": superpass,
+        "app_user": app_user.strip() or defaults["app_user"],
+        "app_pass": app_pass,
+        "dbname": dbname.strip() or defaults["dbname"],
+        "schema": schema.strip() or defaults["schema"],
+    }
+
 def connect_psycopg2(dbname: str, user: str, password: str, host="localhost", port=5432):
     import psycopg2
     # Em Windows, evita dor de cabeça com encoding de mensagens
@@ -40,14 +118,30 @@ def exec_sql_file(cur, sql_path: Path):
 
 def main():
     # --- PARAMETROS PADRAO (ajuste pro seu produto) ---
-    host = "localhost"
-    port = 5432
-    superuser = "postgres"
-    superpass = os.environ.get("OPERA_PG_SUPERPASS", "admin")  # coloque via instalador/variável
-    app_user = "opera"
-    app_pass = os.environ.get("OPERA_PG_APP_PASS", "opera123")  # defina senha padrão e force trocar depois
-    dbname = "opera"
-    schema = "opera"
+    defaults = {
+        "host": "localhost",
+        "port": 5432,
+        "superuser": "postgres",
+        "superpass": os.environ.get("OPERA_PG_SUPERPASS", ""),
+        "app_user": "opera",
+        "app_pass": os.environ.get("OPERA_PG_APP_PASS", "opera123"),
+        "dbname": "opera",
+        "schema": "opera",
+    }
+
+    parametros = _coletar_parametros_setup(defaults)
+    if not parametros:
+        print("Configuração cancelada pelo usuário.")
+        return 1
+
+    host = parametros["host"]
+    port = parametros["port"]
+    superuser = parametros["superuser"]
+    superpass = parametros["superpass"]
+    app_user = parametros["app_user"]
+    app_pass = parametros["app_pass"]
+    dbname = parametros["dbname"]
+    schema = parametros["schema"]
 
     scripts_dir = Path(__file__).parent / "scripts"
     # ordem típica: criar banco, schema, tabelas (ajuste se seus nomes forem outros)
