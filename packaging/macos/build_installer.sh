@@ -574,17 +574,30 @@ if [[ -z "$USER_HOME" ]]; then
   USER_HOME="/Users/$CURRENT_USER"
 fi
 
+TARGET_LOCATION="${2:-/}"
 TARGET_VOLUME="${3:-/}"
-SYSTEM_APP_PATH="$TARGET_VOLUME/Applications/SistemaOpera.app"
+SYSTEM_APP_PATH="/Applications/SistemaOpera.app"
+SYSTEM_APP_PATH_TARGET="$TARGET_LOCATION/Applications/SistemaOpera.app"
+SYSTEM_APP_PATH_VOLUME="$TARGET_VOLUME/Applications/SistemaOpera.app"
 USER_APP_PATH="$USER_HOME/Applications/SistemaOpera.app"
 
 # Corrige instalações legadas que possam cair em /Applications/Applications
-DOUBLE_APPS_PATH="$TARGET_VOLUME/Applications/Applications/SistemaOpera.app"
+DOUBLE_APPS_PATH="/Applications/Applications/SistemaOpera.app"
 if [[ -d "$DOUBLE_APPS_PATH" ]]; then
-  mkdir -p "$TARGET_VOLUME/Applications"
+  mkdir -p "/Applications"
   rm -rf "$SYSTEM_APP_PATH"
   ditto "$DOUBLE_APPS_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$DOUBLE_APPS_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
-  rm -rf "$TARGET_VOLUME/Applications/Applications"
+  rm -rf "/Applications/Applications"
+fi
+
+# Se o payload cair em target_location/target_volume, promove para /Applications
+if [[ ! -d "$SYSTEM_APP_PATH" && -d "$SYSTEM_APP_PATH_TARGET" ]]; then
+  mkdir -p "/Applications"
+  ditto "$SYSTEM_APP_PATH_TARGET" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$SYSTEM_APP_PATH_TARGET" "$SYSTEM_APP_PATH" 2>/dev/null
+fi
+if [[ ! -d "$SYSTEM_APP_PATH" && -d "$SYSTEM_APP_PATH_VOLUME" ]]; then
+  mkdir -p "/Applications"
+  ditto "$SYSTEM_APP_PATH_VOLUME" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$SYSTEM_APP_PATH_VOLUME" "$SYSTEM_APP_PATH" 2>/dev/null
 fi
 
 write_uninstaller "/Applications/Desinstalar SistemaOpera.command"
@@ -944,8 +957,16 @@ rm -f "$RESULT_JSON" "$GUI_SCRIPT"
 
 # Garantia final: se o app não ficou em /Applications, tenta promover da pasta do usuário
 if [[ ! -d "$SYSTEM_APP_PATH" && -d "$USER_APP_PATH" ]]; then
-  mkdir -p "$TARGET_VOLUME/Applications"
+  mkdir -p "/Applications"
   ditto "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
+fi
+
+# Ajusta permissões e força refresh visual do Finder/LaunchServices
+if [[ -d "$SYSTEM_APP_PATH" ]]; then
+  chown -R root:wheel "$SYSTEM_APP_PATH" 2>/dev/null || true
+  chmod -R a+rX "$SYSTEM_APP_PATH" 2>/dev/null || true
+  touch /Applications 2>/dev/null || true
+  touch "$SYSTEM_APP_PATH" 2>/dev/null || true
 fi
 
 # Não abortar instalação por falhas tardias do postinstall
