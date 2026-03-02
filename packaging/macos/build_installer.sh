@@ -423,11 +423,11 @@ create_pkg() {
     fi
 
     rm -rf "$PKG_ROOT" "$PKG_SCRIPTS"
-    mkdir -p "$PKG_ROOT/Applications" "$PKG_SCRIPTS"
-    cp -R "$APP_PATH" "$PKG_ROOT/Applications/"
+    mkdir -p "$PKG_ROOT" "$PKG_SCRIPTS"
+    cp -R "$APP_PATH" "$PKG_ROOT/"
 
     # Desinstalador completo (remove app + configs globais e de usuários)
-    cat > "$PKG_ROOT/Applications/Desinstalar SistemaOpera.command" <<'UNINSTALLER'
+    cat > "$PKG_ROOT/Desinstalar SistemaOpera.command" <<'UNINSTALLER'
 #!/bin/bash
 set -e
 
@@ -481,7 +481,7 @@ echo "Desinstalação concluída."
 osascript -e 'display dialog "SistemaOpera removido com sucesso (app + arquivos de configuração)." buttons {"OK"} default button "OK" with icon note' 2>/dev/null || true
 exit 0
 UNINSTALLER
-    chmod +x "$PKG_ROOT/Applications/Desinstalar SistemaOpera.command"
+    chmod +x "$PKG_ROOT/Desinstalar SistemaOpera.command"
 
 cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
 #!/bin/bash
@@ -928,7 +928,7 @@ POSTINSTALL
       --scripts "$PKG_SCRIPTS" \
       --identifier "com.operafashion.sistemaopera" \
       --version "1.0.0" \
-      --install-location "/" \
+      --install-location "/Applications" \
       "$PKG_PATH"
 
     rm -rf "$PKG_ROOT" "$PKG_SCRIPTS"
