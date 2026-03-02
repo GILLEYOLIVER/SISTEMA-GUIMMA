@@ -578,6 +578,15 @@ TARGET_VOLUME="${3:-/}"
 SYSTEM_APP_PATH="$TARGET_VOLUME/Applications/SistemaOpera.app"
 USER_APP_PATH="$USER_HOME/Applications/SistemaOpera.app"
 
+# Corrige instalações legadas que possam cair em /Applications/Applications
+DOUBLE_APPS_PATH="$TARGET_VOLUME/Applications/Applications/SistemaOpera.app"
+if [[ -d "$DOUBLE_APPS_PATH" ]]; then
+  mkdir -p "$TARGET_VOLUME/Applications"
+  rm -rf "$SYSTEM_APP_PATH"
+  ditto "$DOUBLE_APPS_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$DOUBLE_APPS_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
+  rm -rf "$TARGET_VOLUME/Applications/Applications"
+fi
+
 write_uninstaller "/Applications/Desinstalar SistemaOpera.command"
 if [[ -n "$USER_HOME" && -d "$USER_HOME" ]]; then
   write_uninstaller "$USER_HOME/Applications/Desinstalar SistemaOpera.command"

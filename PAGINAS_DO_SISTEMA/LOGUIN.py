@@ -28,7 +28,27 @@ import sys
 
 
 def _abrir_setup_banco() -> bool:
-    """Abre o SETUP_BANCO.py automaticamente quando o banco não estiver disponível."""
+    """Abre o configurador de banco sem reinvocar o app principal em loop."""
+    exe_path = Path(sys.executable).resolve()
+
+    # 1) Prioriza app dedicado do configurador (macOS empacotado)
+    candidatos_apps = [
+        Path("/Applications/CONFIGURAR_BANCO.app"),
+        exe_path.parent / "CONFIGURAR_BANCO.app",
+        exe_path.parent.parent / "CONFIGURAR_BANCO.app",
+        exe_path.parent.parent.parent / "CONFIGURAR_BANCO.app",
+        Path.cwd() / "dist" / "SistemaOpera" / "CONFIGURAR_BANCO.app",
+    ]
+
+    for app_path in candidatos_apps:
+        try:
+            if app_path.is_dir():
+                subprocess.Popen(["open", str(app_path)])
+                return True
+        except Exception as erro:
+            print(f"⚠️ Falha ao abrir app do configurador ({app_path}): {erro}")
+
+    # 2) Fallback para script python (ambiente de desenvolvimento)
     candidatos = [
         Path(__file__).resolve().parent / "SETUP_BANCO.py",
         Path(__file__).resolve().parent.parent / "packaging" / "SETUP_BANCO.py",
@@ -46,6 +66,25 @@ def _abrir_setup_banco() -> bool:
     for script in candidatos:
         if script.is_file():
             try:
+                # Em app empacotado, sys.executable aponta para o próprio app.
+                # Evita abrir o SistemaOpera de novo em loop.
+                if getattr(sys, "frozen", False):
+                    py_candidates = [
+                        os.environ.get("PYTHON_BIN"),
+                        "python3",
+                        "python",
+                    ]
+                    for py in py_candidates:
+                        if not py:
+                            continue
+                        try:
+                            subprocess.Popen([py, str(script)])
+                            return True
+                        except Exception:
+                            continue
+                    print("⚠️ Python externo não encontrado para abrir SETUP_BANCO.py em modo empacotado.")
+                    return False
+
                 subprocess.Popen([sys.executable, str(script)])
                 return True
             except Exception as erro:
