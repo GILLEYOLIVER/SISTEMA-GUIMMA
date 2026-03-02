@@ -8,23 +8,30 @@ echo "=============================================="
 echo " Build configurador de banco (macOS)"
 echo "=============================================="
 
-if ! command -v python3 >/dev/null 2>&1; then
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   echo "❌ python3 não encontrado"
   exit 1
 fi
 
-if ! python3 -c "import PyInstaller" >/dev/null 2>&1; then
-  echo "⚠️ PyInstaller não encontrado. Instalando..."
-  python3 -m pip install pyinstaller
+if ! "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
+  echo "❌ pip não encontrado para o Python selecionado"
+  exit 1
 fi
 
-ICON_PNG="icons/icon_config.png"
-ICON_ICNS="build/configurador.icns"
-mkdir -p build dist/SistemaOpera
+if ! "$PYTHON_BIN" -c "import PyInstaller" >/dev/null 2>&1; then
+  echo "⚠️ PyInstaller não encontrado. Instalando..."
+  "$PYTHON_BIN" -m pip install pyinstaller
+fi
+
+ICON_PNG="$ROOT_DIR/icons/icon_config.png"
+ICON_ICNS="$ROOT_DIR/build/configurador.icns"
+mkdir -p "$ROOT_DIR/build" "$ROOT_DIR/dist/SistemaOpera"
 
 if [ -f "$ICON_PNG" ] && command -v sips >/dev/null 2>&1 && command -v iconutil >/dev/null 2>&1; then
   echo "🖼️ Gerando .icns para o configurador..."
-  ICONSET_DIR="build/configurador.iconset"
+  ICONSET_DIR="$ROOT_DIR/build/configurador.iconset"
   rm -rf "$ICONSET_DIR"
   mkdir -p "$ICONSET_DIR"
 
@@ -41,7 +48,12 @@ if [ -f "$ICON_PNG" ] && command -v sips >/dev/null 2>&1 && command -v iconutil 
 
   iconutil -c icns "$ICONSET_DIR" -o "$ICON_ICNS"
   rm -rf "$ICONSET_DIR"
-  ICON_ARG=(--icon "$ICON_ICNS")
+  if [ -f "$ICON_ICNS" ]; then
+    ICON_ARG=(--icon "$ICON_ICNS")
+  else
+    echo "⚠️ Falha ao gerar $ICON_ICNS; build seguirá sem --icon"
+    ICON_ARG=()
+  fi
 else
   echo "⚠️ Ícone customizado não gerado; build seguirá sem --icon"
   ICON_ARG=()
@@ -53,14 +65,14 @@ if [ ! -f "$ENTRYPOINT" ]; then
   exit 1
 fi
 
-python3 -m PyInstaller \
+"$PYTHON_BIN" -m PyInstaller \
   --windowed \
   --noconfirm \
   --clean \
   --name CONFIGURAR_BANCO \
-  --distpath dist/SistemaOpera \
-  --workpath build/pyi_config_mac \
-  --specpath build \
+  --distpath "$ROOT_DIR/dist/SistemaOpera" \
+  --workpath "$ROOT_DIR/build/pyi_config_mac" \
+  --specpath "$ROOT_DIR/build" \
   "${ICON_ARG[@]}" \
   --hidden-import tkinter \
   --hidden-import customtkinter \
