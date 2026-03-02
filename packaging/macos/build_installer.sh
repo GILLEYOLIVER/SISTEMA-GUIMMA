@@ -10,6 +10,8 @@ cd "$ROOT_DIR"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 PIP_BIN=()
 PYINSTALLER_BIN=()
+HAS_FITZ="no"
+HAS_PYMUPDF_PACKAGE="no"
 
 # Cores para output
 RED='\033[0;31m'
@@ -174,12 +176,29 @@ check_dependencies() {
     fi
     log_info "matplotlib: disponível"
 
-    # Verificar PyMuPDF
-    if ! "$PYTHON_BIN" -c "import fitz" &> /dev/null && ! "$PYTHON_BIN" -c "import pymupdf" &> /dev/null; then
+    # Verificar PyMuPDF (módulo pode existir como fitz e/ou pymupdf)
+    if "$PYTHON_BIN" -c "import fitz" &> /dev/null; then
+        HAS_FITZ="yes"
+    fi
+    if "$PYTHON_BIN" -c "import pymupdf" &> /dev/null; then
+        HAS_PYMUPDF_PACKAGE="yes"
+    fi
+
+    if [[ "$HAS_FITZ" == "no" && "$HAS_PYMUPDF_PACKAGE" == "no" ]]; then
         log_warning "pymupdf não instalado. Instalando..."
         "${PIP_BIN[@]}" install pymupdf
+        if "$PYTHON_BIN" -c "import fitz" &> /dev/null; then
+            HAS_FITZ="yes"
+        fi
+        if "$PYTHON_BIN" -c "import pymupdf" &> /dev/null; then
+            HAS_PYMUPDF_PACKAGE="yes"
+        fi
     fi
-    log_info "pymupdf/fitz: disponível"
+    if [[ "$HAS_FITZ" == "yes" || "$HAS_PYMUPDF_PACKAGE" == "yes" ]]; then
+        log_info "pymupdf/fitz: disponível"
+    else
+        log_warning "pymupdf/fitz não detectado; build seguirá sem coletar pacote pymupdf"
+    fi
 }
 
 # Preparar ícone para macOS
@@ -321,8 +340,11 @@ build_app() {
       --collect-all fpdf
       --collect-all reportlab
       --collect-all matplotlib
-      --collect-all pymupdf
     )
+
+    if [[ "$HAS_PYMUPDF_PACKAGE" == "yes" ]]; then
+        cmd+=(--collect-all pymupdf)
+    fi
 
     if [ -n "$ICON_ARG" ]; then
         cmd+=("$ICON_ARG")
