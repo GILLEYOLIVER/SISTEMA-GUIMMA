@@ -204,8 +204,25 @@ class SistemaLoginModerno:
                 "Não foi possível conectar ao banco de dados.\n"
                 "Rode os scripts SQL e configure OPERA_PG_DSN/OPERA_PG_SCHEMA.",
             )
-            _abrir_setup_banco()
-            raise SystemExit(1)
+            abriu_setup = _abrir_setup_banco()
+            if abriu_setup:
+                _mostrar_erro_centralizado(
+                    self.root,
+                    "Configuração necessária",
+                    "O configurador de banco foi aberto.\n"
+                    "Conclua a configuração e abra o SistemaOpera novamente.",
+                )
+            else:
+                _mostrar_erro_centralizado(
+                    self.root,
+                    "Configuração necessária",
+                    "Não foi possível abrir automaticamente o configurador de banco.\n"
+                    "Abra manualmente o SETUP_BANCO.py e tente novamente.",
+                )
+
+            # Encerra de forma limpa para evitar comportamento de 'crash/reopen loop' no macOS.
+            self.root.after(50, self.root.destroy)
+            return
 
         self._configurar_interface()
         self.root.bind("<Return>", lambda evento: self.entrar_no_sistema())
