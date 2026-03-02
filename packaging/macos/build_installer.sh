@@ -2,7 +2,16 @@
 # packaging/macos/build_installer.sh
 # Script para construir instalador macOS do Sistema Opera
 
-set -e  # Sai no primeiro erro
+set -euo pipefail  # Sai no primeiro erro e falha em variáveis não definidas
+
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+PIP_BIN=()
+PYINSTALLER_BIN=()
+HAS_FITZ="no"
+HAS_PYMUPDF_PACKAGE="no"
 
 # Cores para output
 RED='\033[0;31m'
@@ -34,15 +43,16 @@ print_header() {
     echo -e "${BLUE}========================================${NC}"
 }
 
-# Verificar se estamos no macOS
-if [[ "$OSTYPE" != "darwin"* ]]; then
-    log_error "Este script deve ser executado no macOS"
-    exit 1
-fi
-
 CREATE_DMG="yes"
 CREATE_PKG="yes"
 INTERACTIVE_MODE="no"
+
+ensure_macos() {
+    if [[ "${OSTYPE:-}" != darwin* ]]; then
+        log_error "Este script deve ser executado no macOS"
+        exit 1
+    fi
+}
 
 print_usage() {
     cat <<'USAGE'
@@ -100,67 +110,95 @@ check_dependencies() {
     print_header "VERIFICANDO DEPENDÊNCIAS"
 
     # Verificar Python
-    if ! command -v python3 &> /dev/null; then
+    if ! command -v "$PYTHON_BIN" &> /dev/null; then
         log_error "Python3 não encontrado"
         exit 1
     fi
-    log_info "Python3: $(python3 --version)"
+    log_info "Python: $($PYTHON_BIN --version 2>&1)"
 
-    # Verificar pip
-    if ! command -v pip3 &> /dev/null; then
-        log_error "pip3 não encontrado"
+    if "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
+        PIP_BIN=("$PYTHON_BIN" -m pip)
+    elif command -v pip3 >/dev/null 2>&1; then
+        PIP_BIN=(pip3)
+    else
+        log_error "pip não encontrado para o Python selecionado"
         exit 1
     fi
-    log_info "pip3: disponível"
+    log_info "pip: disponível"
 
     # Verificar PyInstaller
-    if ! python3 -c "import PyInstaller" &> /dev/null; then
+    if ! "$PYTHON_BIN" -c "import PyInstaller" &> /dev/null; then
         log_warning "PyInstaller não instalado. Instalando..."
-        pip3 install pyinstaller
+        "${PIP_BIN[@]}" install pyinstaller
+    fi
+    if "$PYTHON_BIN" -m PyInstaller --version >/dev/null 2>&1; then
+        PYINSTALLER_BIN=("$PYTHON_BIN" -m PyInstaller)
+    elif command -v pyinstaller >/dev/null 2>&1; then
+        PYINSTALLER_BIN=(pyinstaller)
+    else
+        log_error "PyInstaller não disponível"
+        exit 1
     fi
     log_info "PyInstaller: disponível"
 
     # Verificar psycopg2
-    if ! python3 -c "import psycopg2" &> /dev/null; then
+    if ! "$PYTHON_BIN" -c "import psycopg2" &> /dev/null; then
         log_warning "psycopg2 não instalado. Instalando..."
-        pip3 install psycopg2-binary
+        "${PIP_BIN[@]}" install psycopg2-binary
     fi
     log_info "psycopg2: disponível"
 
     # Verificar Pillow
-    if ! python3 -c "import PIL" &> /dev/null; then
+    if ! "$PYTHON_BIN" -c "import PIL" &> /dev/null; then
         log_warning "Pillow não instalado. Instalando..."
-        pip3 install pillow
+        "${PIP_BIN[@]}" install pillow
     fi
     log_info "Pillow: disponível"
 
     # Verificar FPDF2
-    if ! python3 -c "import fpdf" &> /dev/null; then
+    if ! "$PYTHON_BIN" -c "import fpdf" &> /dev/null; then
         log_warning "fpdf2 não instalado. Instalando..."
-        pip3 install fpdf2
+        "${PIP_BIN[@]}" install fpdf2
     fi
     log_info "fpdf/fpdf2: disponível"
 
     # Verificar ReportLab
-    if ! python3 -c "import reportlab" &> /dev/null; then
+    if ! "$PYTHON_BIN" -c "import reportlab" &> /dev/null; then
         log_warning "reportlab não instalado. Instalando..."
-        pip3 install reportlab
+        "${PIP_BIN[@]}" install reportlab
     fi
     log_info "reportlab: disponível"
 
     # Verificar Matplotlib
-    if ! python3 -c "import matplotlib" &> /dev/null; then
+    if ! "$PYTHON_BIN" -c "import matplotlib" &> /dev/null; then
         log_warning "matplotlib não instalado. Instalando..."
-        pip3 install matplotlib
+        "${PIP_BIN[@]}" install matplotlib
     fi
     log_info "matplotlib: disponível"
 
-    # Verificar PyMuPDF
-    if ! python3 -c "import pymupdf" &> /dev/null; then
-        log_warning "pymupdf não instalado. Instalando..."
-        pip3 install pymupdf
+    # Verificar PyMuPDF (módulo pode existir como fitz e/ou pymupdf)
+    if "$PYTHON_BIN" -c "import fitz" &> /dev/null; then
+        HAS_FITZ="yes"
     fi
-    log_info "pymupdf/fitz: disponível"
+    if "$PYTHON_BIN" -c "import pymupdf" &> /dev/null; then
+        HAS_PYMUPDF_PACKAGE="yes"
+    fi
+
+    if [[ "$HAS_FITZ" == "no" && "$HAS_PYMUPDF_PACKAGE" == "no" ]]; then
+        log_warning "pymupdf não instalado. Instalando..."
+        "${PIP_BIN[@]}" install pymupdf
+        if "$PYTHON_BIN" -c "import fitz" &> /dev/null; then
+            HAS_FITZ="yes"
+        fi
+        if "$PYTHON_BIN" -c "import pymupdf" &> /dev/null; then
+            HAS_PYMUPDF_PACKAGE="yes"
+        fi
+    fi
+    if [[ "$HAS_FITZ" == "yes" || "$HAS_PYMUPDF_PACKAGE" == "yes" ]]; then
+        log_info "pymupdf/fitz: disponível"
+    else
+        log_warning "pymupdf/fitz não detectado; build seguirá sem coletar pacote pymupdf"
+    fi
 }
 
 # Preparar ícone para macOS
@@ -174,21 +212,27 @@ prepare_icon() {
     if [ -f "$PNG_ICON" ]; then
         log_info "Convertendo PNG para ICNS..."
 
-        # Criar ícone .icns
-        mkdir -p "icons/ICONE_SISTEMA.iconset"
+        # Criar ícone .icns (apenas tamanhos válidos para iconutil)
+        ICONSET_DIR="icons/ICONE_SISTEMA.iconset"
+        rm -rf "$ICONSET_DIR"
+        mkdir -p "$ICONSET_DIR"
 
-        # Gerar múltiplos tamanhos
-        sizes=(16 32 64 128 256 512 1024)
-        for size in "${sizes[@]}"; do
-            sips -z $size $size "$PNG_ICON" --out "icons/ICONE_SISTEMA.iconset/icon_${size}x${size}.png" > /dev/null
-            sips -z $((size*2)) $((size*2)) "$PNG_ICON" --out "icons/ICONE_SISTEMA.iconset/icon_${size}x${size}@2x.png" > /dev/null
-        done
+        sips -z 16 16 "$PNG_ICON" --out "$ICONSET_DIR/icon_16x16.png" > /dev/null
+        sips -z 32 32 "$PNG_ICON" --out "$ICONSET_DIR/icon_16x16@2x.png" > /dev/null
+        sips -z 32 32 "$PNG_ICON" --out "$ICONSET_DIR/icon_32x32.png" > /dev/null
+        sips -z 64 64 "$PNG_ICON" --out "$ICONSET_DIR/icon_32x32@2x.png" > /dev/null
+        sips -z 128 128 "$PNG_ICON" --out "$ICONSET_DIR/icon_128x128.png" > /dev/null
+        sips -z 256 256 "$PNG_ICON" --out "$ICONSET_DIR/icon_128x128@2x.png" > /dev/null
+        sips -z 256 256 "$PNG_ICON" --out "$ICONSET_DIR/icon_256x256.png" > /dev/null
+        sips -z 512 512 "$PNG_ICON" --out "$ICONSET_DIR/icon_256x256@2x.png" > /dev/null
+        sips -z 512 512 "$PNG_ICON" --out "$ICONSET_DIR/icon_512x512.png" > /dev/null
+        cp "$PNG_ICON" "$ICONSET_DIR/icon_512x512@2x.png"
 
         # Criar .icns
-        iconutil -c icns "icons/ICONE_SISTEMA.iconset" -o "$ICNS_ICON"
+        iconutil -c icns "$ICONSET_DIR" -o "$ICNS_ICON"
 
         # Limpar pasta temporária
-        rm -rf "icons/ICONE_SISTEMA.iconset"
+        rm -rf "$ICONSET_DIR"
 
         if [ -f "$ICNS_ICON" ]; then
             log_success "Ícone ICNS criado: $ICNS_ICON"
@@ -261,45 +305,55 @@ build_app() {
         rm -rf build/*
     fi
 
-    # Comando PyInstaller
-    cmd="pyinstaller --windowed --noconsole --name SistemaOpera \
-        --add-data 'PAGINAS_DO_SISTEMA:PAGINAS_DO_SISTEMA' \
-        --add-data 'icons:icons' \
-        --add-data 'data:data' \
-        --hidden-import psycopg2 \
-        --hidden-import psycopg2.extras \
-        --hidden-import PIL \
-        --hidden-import PIL._imaging \
-        --hidden-import PIL.Image \
-        --hidden-import PIL.ImageFile \
-        --hidden-import PIL.ImageOps \
-        --hidden-import PIL.ImageDraw \
-        --hidden-import PIL.ImageFont \
-        --hidden-import PIL.ImageTk \
-        --hidden-import tkinter \
-        --hidden-import tkinter.ttk \
-        --hidden-import fpdf \
-        --hidden-import fpdf.enums \
-        --hidden-import reportlab \
-        --hidden-import reportlab.pdfgen \
-        --hidden-import reportlab.pdfbase \
-        --hidden-import reportlab.lib \
-        --hidden-import reportlab.graphics \
-        --hidden-import matplotlib \
-        --hidden-import matplotlib.pyplot \
-        --hidden-import matplotlib.backends.backend_tkagg \
-        --hidden-import numpy \
-        --hidden-import fitz \
-        --hidden-import pymupdf \
-        --collect-all fpdf \
-        --collect-all reportlab \
-        --collect-all matplotlib \
-        --collect-all pymupdf \
-        $ICON_ARG \
-        '$MAIN_SCRIPT'"
+    cmd=(
+      "${PYINSTALLER_BIN[@]}"
+      --windowed
+      --noconsole
+      --name SistemaOpera
+      --add-data "PAGINAS_DO_SISTEMA:PAGINAS_DO_SISTEMA"
+      --add-data "icons:icons"
+      --add-data "data:data"
+      --hidden-import psycopg2
+      --hidden-import psycopg2.extras
+      --hidden-import PIL
+      --hidden-import PIL._imaging
+      --hidden-import PIL.Image
+      --hidden-import PIL.ImageFile
+      --hidden-import PIL.ImageOps
+      --hidden-import PIL.ImageDraw
+      --hidden-import PIL.ImageFont
+      --hidden-import PIL.ImageTk
+      --hidden-import tkinter
+      --hidden-import tkinter.ttk
+      --hidden-import fpdf
+      --hidden-import fpdf.enums
+      --hidden-import reportlab
+      --hidden-import reportlab.pdfgen
+      --hidden-import reportlab.pdfbase
+      --hidden-import reportlab.lib
+      --hidden-import reportlab.graphics
+      --hidden-import matplotlib
+      --hidden-import matplotlib.pyplot
+      --hidden-import matplotlib.backends.backend_tkagg
+      --hidden-import numpy
+      --hidden-import fitz
+      --collect-all fpdf
+      --collect-all reportlab
+      --collect-all matplotlib
+    )
 
-    log_info "Executando: $cmd"
-    eval $cmd
+    if [[ "$HAS_PYMUPDF_PACKAGE" == "yes" ]]; then
+        cmd+=(--collect-all pymupdf)
+    fi
+
+    if [ -n "$ICON_ARG" ]; then
+        cmd+=("$ICON_ARG")
+    fi
+
+    cmd+=("$MAIN_SCRIPT")
+
+    log_info "Executando build com PyInstaller..."
+    "${cmd[@]}"
 
     # Verificar se o app foi criado
     APP_PATH="dist/SistemaOpera.app"
@@ -377,7 +431,6 @@ create_pkg() {
 
     APP_PATH="dist/SistemaOpera.app"
     PKG_PATH="dist/SistemaOpera.pkg"
-    PKG_ROOT="dist/pkg_root"
     PKG_SCRIPTS="dist/pkg_scripts"
 
     if [ ! -d "$APP_PATH" ]; then
@@ -390,66 +443,8 @@ create_pkg() {
         return 1
     fi
 
-    rm -rf "$PKG_ROOT" "$PKG_SCRIPTS"
-    mkdir -p "$PKG_ROOT/Applications" "$PKG_SCRIPTS"
-    cp -R "$APP_PATH" "$PKG_ROOT/Applications/"
-
-    # Desinstalador completo (remove app + configs globais e de usuários)
-    cat > "$PKG_ROOT/Applications/Desinstalar SistemaOpera.command" <<'UNINSTALLER'
-#!/bin/bash
-set -e
-
-if [[ "$EUID" -ne 0 ]]; then
-  echo "Solicitando permissão de administrador para desinstalar o SistemaOpera..."
-  exec sudo "$0" "$@"
-fi
-
-echo "Iniciando desinstalação completa do SistemaOpera..."
-
-# Encerra processos do app
-pkill -f "SistemaOpera" 2>/dev/null || true
-
-# Remove aplicação principal
-rm -rf "/Applications/SistemaOpera.app"
-
-# Remove dados globais
-rm -rf "/Library/Application Support/SistemaOpera"
-rm -rf "/Library/Logs/SistemaOpera"
-rm -f "/Library/Preferences/com.operafashion.sistemaopera.plist"
-
-# Remove dados de todos os usuários locais
-for home in /Users/*; do
-  user_name=$(basename "$home")
-  if [[ "$user_name" == "Shared" ]]; then
-    continue
-  fi
-  if [[ -d "$home" ]]; then
-    rm -rf "$home/Library/Application Support/SistemaOpera"
-    rm -rf "$home/Library/Caches/SistemaOpera"
-    rm -rf "$home/Library/Logs/SistemaOpera"
-    rm -f "$home/Library/Preferences/com.operafashion.sistemaopera.plist"
-    rm -rf "$home/Library/Saved Application State/com.operafashion.sistemaopera.savedState"
-  fi
-done
-
-# Remove arquivos temporários conhecidos
-rm -f /tmp/sistemaopera_db_setup_result.json /tmp/sistemaopera_db_setup_gui.py 2>/dev/null || true
-
-# Esquece receipt do pacote
-pkgutil --forget com.operafashion.sistemaopera >/dev/null 2>&1 || true
-
-# Remove este próprio desinstalador (em background para não falhar arquivo em uso)
-SCRIPT_PATH="$0"
-(
-  sleep 1
-  rm -f "$SCRIPT_PATH"
-) >/dev/null 2>&1 &
-
-echo "Desinstalação concluída."
-osascript -e 'display dialog "SistemaOpera removido com sucesso (app + arquivos de configuração)." buttons {"OK"} default button "OK" with icon note' 2>/dev/null || true
-exit 0
-UNINSTALLER
-    chmod +x "$PKG_ROOT/Applications/Desinstalar SistemaOpera.command"
+    rm -rf "$PKG_SCRIPTS"
+    mkdir -p "$PKG_SCRIPTS"
 
 cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
 #!/bin/bash
@@ -520,9 +515,31 @@ if [[ -z "$USER_HOME" ]]; then
   USER_HOME="/Users/$CURRENT_USER"
 fi
 
+TARGET_LOCATION="${2:-/}"
 TARGET_VOLUME="${3:-/}"
-SYSTEM_APP_PATH="$TARGET_VOLUME/Applications/SistemaOpera.app"
+SYSTEM_APP_PATH="/Applications/SistemaOpera.app"
+SYSTEM_APP_PATH_TARGET="$TARGET_LOCATION/Applications/SistemaOpera.app"
+SYSTEM_APP_PATH_VOLUME="$TARGET_VOLUME/Applications/SistemaOpera.app"
 USER_APP_PATH="$USER_HOME/Applications/SistemaOpera.app"
+
+# Corrige instalações legadas que possam cair em /Applications/Applications
+DOUBLE_APPS_PATH="/Applications/Applications/SistemaOpera.app"
+if [[ -d "$DOUBLE_APPS_PATH" ]]; then
+  mkdir -p "/Applications"
+  rm -rf "$SYSTEM_APP_PATH"
+  ditto "$DOUBLE_APPS_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$DOUBLE_APPS_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
+  rm -rf "/Applications/Applications"
+fi
+
+# Se o payload cair em target_location/target_volume, promove para /Applications
+if [[ ! -d "$SYSTEM_APP_PATH" && -d "$SYSTEM_APP_PATH_TARGET" ]]; then
+  mkdir -p "/Applications"
+  ditto "$SYSTEM_APP_PATH_TARGET" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$SYSTEM_APP_PATH_TARGET" "$SYSTEM_APP_PATH" 2>/dev/null
+fi
+if [[ ! -d "$SYSTEM_APP_PATH" && -d "$SYSTEM_APP_PATH_VOLUME" ]]; then
+  mkdir -p "/Applications"
+  ditto "$SYSTEM_APP_PATH_VOLUME" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$SYSTEM_APP_PATH_VOLUME" "$SYSTEM_APP_PATH" 2>/dev/null
+fi
 
 write_uninstaller "/Applications/Desinstalar SistemaOpera.command"
 if [[ -n "$USER_HOME" && -d "$USER_HOME" ]]; then
@@ -881,8 +898,16 @@ rm -f "$RESULT_JSON" "$GUI_SCRIPT"
 
 # Garantia final: se o app não ficou em /Applications, tenta promover da pasta do usuário
 if [[ ! -d "$SYSTEM_APP_PATH" && -d "$USER_APP_PATH" ]]; then
-  mkdir -p "$TARGET_VOLUME/Applications"
+  mkdir -p "/Applications"
   ditto "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
+fi
+
+# Ajusta permissões e força refresh visual do Finder/LaunchServices
+if [[ -d "$SYSTEM_APP_PATH" ]]; then
+  chown -R root:wheel "$SYSTEM_APP_PATH" 2>/dev/null || true
+  chmod -R a+rX "$SYSTEM_APP_PATH" 2>/dev/null || true
+  touch /Applications 2>/dev/null || true
+  touch "$SYSTEM_APP_PATH" 2>/dev/null || true
 fi
 
 # Não abortar instalação por falhas tardias do postinstall
@@ -892,14 +917,14 @@ POSTINSTALL
 
     log_info "Gerando PKG com instalação em /Applications + assistente de banco..."
     pkgbuild \
-      --root "$PKG_ROOT" \
+      --component "$APP_PATH" \
       --scripts "$PKG_SCRIPTS" \
       --identifier "com.operafashion.sistemaopera" \
       --version "1.0.0" \
-      --install-location "/" \
+      --install-location "/Applications" \
       "$PKG_PATH"
 
-    rm -rf "$PKG_ROOT" "$PKG_SCRIPTS"
+    rm -rf "$PKG_SCRIPTS"
 
     if [ -f "$PKG_PATH" ]; then
         PKG_SIZE=$(du -sh "$PKG_PATH" | cut -f1)
@@ -913,6 +938,7 @@ POSTINSTALL
 # Função principal
 main() {
     parse_args "$@"
+    ensure_macos
 
     print_header "SISTEMA OPERA - INSTALADOR macOS"
     log_info "Data: $(date)"
