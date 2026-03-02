@@ -431,7 +431,6 @@ create_pkg() {
 
     APP_PATH="dist/SistemaOpera.app"
     PKG_PATH="dist/SistemaOpera.pkg"
-    PKG_ROOT="dist/pkg_root"
     PKG_SCRIPTS="dist/pkg_scripts"
 
     if [ ! -d "$APP_PATH" ]; then
@@ -444,66 +443,8 @@ create_pkg() {
         return 1
     fi
 
-    rm -rf "$PKG_ROOT" "$PKG_SCRIPTS"
-    mkdir -p "$PKG_ROOT" "$PKG_SCRIPTS"
-    cp -R "$APP_PATH" "$PKG_ROOT/"
-
-    # Desinstalador completo (remove app + configs globais e de usuários)
-    cat > "$PKG_ROOT/Desinstalar SistemaOpera.command" <<'UNINSTALLER'
-#!/bin/bash
-set -e
-
-if [[ "$EUID" -ne 0 ]]; then
-  echo "Solicitando permissão de administrador para desinstalar o SistemaOpera..."
-  exec sudo "$0" "$@"
-fi
-
-echo "Iniciando desinstalação completa do SistemaOpera..."
-
-# Encerra processos do app
-pkill -f "SistemaOpera" 2>/dev/null || true
-
-# Remove aplicação principal
-rm -rf "/Applications/SistemaOpera.app"
-
-# Remove dados globais
-rm -rf "/Library/Application Support/SistemaOpera"
-rm -rf "/Library/Logs/SistemaOpera"
-rm -f "/Library/Preferences/com.operafashion.sistemaopera.plist"
-
-# Remove dados de todos os usuários locais
-for home in /Users/*; do
-  user_name=$(basename "$home")
-  if [[ "$user_name" == "Shared" ]]; then
-    continue
-  fi
-  if [[ -d "$home" ]]; then
-    rm -rf "$home/Library/Application Support/SistemaOpera"
-    rm -rf "$home/Library/Caches/SistemaOpera"
-    rm -rf "$home/Library/Logs/SistemaOpera"
-    rm -f "$home/Library/Preferences/com.operafashion.sistemaopera.plist"
-    rm -rf "$home/Library/Saved Application State/com.operafashion.sistemaopera.savedState"
-  fi
-done
-
-# Remove arquivos temporários conhecidos
-rm -f /tmp/sistemaopera_db_setup_result.json /tmp/sistemaopera_db_setup_gui.py 2>/dev/null || true
-
-# Esquece receipt do pacote
-pkgutil --forget com.operafashion.sistemaopera >/dev/null 2>&1 || true
-
-# Remove este próprio desinstalador (em background para não falhar arquivo em uso)
-SCRIPT_PATH="$0"
-(
-  sleep 1
-  rm -f "$SCRIPT_PATH"
-) >/dev/null 2>&1 &
-
-echo "Desinstalação concluída."
-osascript -e 'display dialog "SistemaOpera removido com sucesso (app + arquivos de configuração)." buttons {"OK"} default button "OK" with icon note' 2>/dev/null || true
-exit 0
-UNINSTALLER
-    chmod +x "$PKG_ROOT/Desinstalar SistemaOpera.command"
+    rm -rf "$PKG_SCRIPTS"
+    mkdir -p "$PKG_SCRIPTS"
 
 cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
 #!/bin/bash
@@ -976,14 +917,14 @@ POSTINSTALL
 
     log_info "Gerando PKG com instalação em /Applications + assistente de banco..."
     pkgbuild \
-      --root "$PKG_ROOT" \
+      --component "$APP_PATH" \
       --scripts "$PKG_SCRIPTS" \
       --identifier "com.operafashion.sistemaopera" \
       --version "1.0.0" \
       --install-location "/Applications" \
       "$PKG_PATH"
 
-    rm -rf "$PKG_ROOT" "$PKG_SCRIPTS"
+    rm -rf "$PKG_SCRIPTS"
 
     if [ -f "$PKG_PATH" ]; then
         PKG_SIZE=$(du -sh "$PKG_PATH" | cut -f1)
