@@ -50,6 +50,7 @@ def _with_search_path(cur):
     except Exception:
         pass
 
+
 def _select_all(sql: str, params=()):
     """Executa SELECT e retorna todas as linhas."""
     conn = get_conn()
@@ -70,6 +71,7 @@ def _select_all(sql: str, params=()):
         except Exception:
             pass
 
+
 def _select_one(sql: str, params=()):
     """Executa SELECT e retorna uma linha."""
     conn = get_conn()
@@ -89,6 +91,7 @@ def _select_one(sql: str, params=()):
             conn.close()
         except Exception:
             pass
+
 
 def _exec(sql: str, params=()):
     """Executa uma query (INSERT/UPDATE/DELETE)."""
@@ -116,6 +119,7 @@ def _exec(sql: str, params=()):
             conn.close()
         except Exception:
             pass
+
 
 # Nova função para gerenciar transações manuais
 def _get_connection():
@@ -185,7 +189,6 @@ def _columns_of(table: str):
            AND table_name = %s
     """, (table,))
     return {r[0] for r in rows}
-
 
 
 def _column_type(table: str, column: str):
@@ -339,7 +342,6 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.filter_bg = self.cor_secundaria
         self.card_bg = self.cor_secundaria
         self.accent_color = self.cor_primaria
-
 
     def configurar_treeview_theme(self):
         """Configura a Treeview com contraste alto (linhas + cabeçalho), independente do tema."""
@@ -681,7 +683,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             width=120
         ).pack(side="left", padx=4)
 
-
         # Configurar cores das linhas alternadas (alto contraste)
         colors = getattr(self, "_tree_colors", None) or {}
         cor_linha_par = colors.get("even", "#ffffff")
@@ -690,7 +691,6 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         self.tree.tag_configure("oddrow", background=cor_linha_impar, foreground=cor_texto)
         self.tree.tag_configure("evenrow", background=cor_linha_par, foreground=cor_texto)
-
 
         # painel direito (resumo e formulários)
         right_panel = ctk.CTkFrame(content_frame, fg_color=self.main_bg, corner_radius=0)
@@ -1177,21 +1177,64 @@ class PagamentoModernUI(ctk.CTkFrame):
         }
 
     def _apply_initial_fit_once(self):
-        """Aplica um único encaixe inicial para evitar o efeito de interface se contorcendo."""
+        """Aplica um único encaixe inicial para evitar o efeito de interface se contorcendo.
+
+        Importante: quando esta página está EMBUTIDA no MENU_PRINCIPAL (dentro do frame 'content'),
+        o tamanho correto é o do container, não o do toplevel inteiro (que inclui sidebar/topbar).
+        """
         if getattr(self, "_initial_fit_done", False):
             return
         self._initial_fit_done = True
         try:
             self.update_idletasks()
+
             top = self.winfo_toplevel()
-            width = int(top.winfo_width() or self.winfo_width() or 1320)
-            height = int(top.winfo_height() or self.winfo_height() or 720)
+
+            # Se estiver embutida num container, use o tamanho do master (mais fiel ao espaço real disponível)
+            container = None
+            try:
+                if self.master is not None and self.master.winfo_exists():
+                    container = self.master
+            except Exception:
+                container = None
+
+            def _safe_wh(widget, fallback_w, fallback_h):
+                try:
+                    widget.update_idletasks()
+                except Exception:
+                    pass
+                try:
+                    w = int(widget.winfo_width() or 0)
+                except Exception:
+                    w = 0
+                try:
+                    h = int(widget.winfo_height() or 0)
+                except Exception:
+                    h = 0
+                if w <= 1:
+                    w = int(fallback_w or 0)
+                if h <= 1:
+                    h = int(fallback_h or 0)
+                return w, h
+
+            # Ordem de preferência: container -> self -> toplevel
+            w0, h0 = 0, 0
+            if container is not None and container is not top:
+                w0, h0 = _safe_wh(container, 0, 0)
+
+            w1, h1 = _safe_wh(self, w0, h0)
+            w2, h2 = _safe_wh(top, w1, h1)
+
+            width = int(w0 or w1 or w2 or 1320)
+            height = int(h0 or h1 or h2 or 720)
+
             base_scale = 1.0
             try:
                 if self._host is not None and hasattr(self._host, "ui_scale"):
                     base_scale = float(getattr(self._host, "ui_scale", 1.0) or 1.0)
             except Exception:
                 base_scale = 1.0
+
             self.on_host_resize(width, height, base_scale)
         except Exception:
             pass
@@ -1363,7 +1406,6 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception:
             pass
 
-
     def _buscar_envio_id(self, finalizado_id: int | None = None, codigo: str | None = None):
         """Tenta obter envio_id do corte finalizado (se a coluna existir)."""
         if not _table_exists("cortes_finalizados"):
@@ -1377,7 +1419,8 @@ class PagamentoModernUI(ctk.CTkFrame):
             if finalizado_id is not None:
                 r = _select_one("SELECT envio_id FROM cortes_finalizados WHERE id = %s LIMIT 1", (finalizado_id,))
             elif codigo:
-                r = _select_one("SELECT envio_id FROM cortes_finalizados WHERE codigo = %s ORDER BY id DESC LIMIT 1", (codigo,))
+                r = _select_one("SELECT envio_id FROM cortes_finalizados WHERE codigo = %s ORDER BY id DESC LIMIT 1",
+                                (codigo,))
             else:
                 r = None
             if r and r[0] is not None:
@@ -1411,7 +1454,8 @@ class PagamentoModernUI(ctk.CTkFrame):
                     if finalizado_id is not None:
                         r = _select_one(f"SELECT {col} FROM cortes_finalizados WHERE id=%s LIMIT 1", (finalizado_id,))
                     else:
-                        r = _select_one(f"SELECT {col} FROM cortes_finalizados WHERE codigo=%s ORDER BY id DESC LIMIT 1", (codigo,))
+                        r = _select_one(
+                            f"SELECT {col} FROM cortes_finalizados WHERE codigo=%s ORDER BY id DESC LIMIT 1", (codigo,))
                     if r and r[0] is not None:
                         return float(r[0])
         except Exception:
@@ -1421,7 +1465,8 @@ class PagamentoModernUI(ctk.CTkFrame):
         envio_id = self._buscar_envio_id(finalizado_id=finalizado_id, codigo=codigo)
         if envio_id and _table_exists("envios_cortes"):
             cols_env = _columns_of("envios_cortes")
-            col_val = "valor_peca" if "valor_peca" in cols_env else ("valor_por_peca" if "valor_por_peca" in cols_env else None)
+            col_val = "valor_peca" if "valor_peca" in cols_env else (
+                "valor_por_peca" if "valor_por_peca" in cols_env else None)
             if col_val:
                 try:
                     r = _select_one(f"SELECT {col_val} FROM envios_cortes WHERE id=%s LIMIT 1", (envio_id,))
@@ -1539,11 +1584,11 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.recalcular()
 
     def _carregar_adiantamento_faccao(
-        self,
-        codigo_modelo: str,
-        corte_id: int | None,
-        envio_id: int | None = None,
-        prestador_nome: str | None = None,
+            self,
+            codigo_modelo: str,
+            corte_id: int | None,
+            envio_id: int | None = None,
+            prestador_nome: str | None = None,
     ) -> None:
         """
         Lê adiantamento_faccao. Prioriza vinculo por envio_id (quando existir),
@@ -1725,7 +1770,6 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         self._carregar_bonificacao_por_corte(codigo, finalizado_id=finalizado_id)
 
-
         # valor peça (fluxo novo -> envios_cortes; fallback no antigo)
         valor_peca = self._buscar_valor_peca(codigo=codigo, finalizado_id=finalizado_id)
         self.valor_por_peca = float(valor_peca or 0.0)
@@ -1733,7 +1777,6 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.valor_peca_entry.delete(0, "end")
         self.valor_peca_entry.insert(0, f"{self.valor_por_peca:.2f}")
         self.valor_peca_entry.configure(state="readonly")
-
 
         # último pagamento salvo
         try:
@@ -1819,11 +1862,15 @@ class PagamentoModernUI(ctk.CTkFrame):
             cols_cf = _columns_of("cortes_finalizados")
 
             # expressões compatíveis com diferentes esquemas
-            codigo_expr = "cf.codigo" if "codigo" in cols_cf else ("cf.codigo_corte" if "codigo_corte" in cols_cf else "''")
-            desc_expr = "cf.descricao" if "descricao" in cols_cf else ("cf.descricao_corte" if "descricao_corte" in cols_cf else "''")
+            codigo_expr = "cf.codigo" if "codigo" in cols_cf else (
+                "cf.codigo_corte" if "codigo_corte" in cols_cf else "''")
+            desc_expr = "cf.descricao" if "descricao" in cols_cf else (
+                "cf.descricao_corte" if "descricao_corte" in cols_cf else "''")
             cost_expr = "cf.costureira" if "costureira" in cols_cf else ("cf.destino" if "destino" in cols_cf else "''")
-            envio_expr = "cf.data_envio" if "data_envio" in cols_cf else ("cf.data_saida" if "data_saida" in cols_cf else "NULL")
-            chegada_expr = "cf.data_chegada" if "data_chegada" in cols_cf else ("cf.data_retorno" if "data_retorno" in cols_cf else "NULL")
+            envio_expr = "cf.data_envio" if "data_envio" in cols_cf else (
+                "cf.data_saida" if "data_saida" in cols_cf else "NULL")
+            chegada_expr = "cf.data_chegada" if "data_chegada" in cols_cf else (
+                "cf.data_retorno" if "data_retorno" in cols_cf else "NULL")
 
             # soma de quantidades (usa as colunas que existirem)
             def _q(col_new, col_old):
@@ -1970,13 +2017,12 @@ class PagamentoModernUI(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao registrar pagamento:\n{e}")
 
-
     def _carregar_dados_bancarios_prestador(
-        self,
-        destino: str,
-        servico: str,
-        finalizado_id: int | None = None,
-        codigo: str | None = None,
+            self,
+            destino: str,
+            servico: str,
+            finalizado_id: int | None = None,
+            codigo: str | None = None,
     ) -> None:
         """Preenche campos bancários do prestador (último pagamento -> cadastro_faccoes/envios_cortes)."""
 
@@ -2003,7 +2049,8 @@ class PagamentoModernUI(ctk.CTkFrame):
         if not _tem_algo(row) and _table_exists("envios_cortes"):
             cols_env = _columns_of("envios_cortes")
             # nomes possíveis
-            col_prest = "destino" if "destino" in cols_env else ("prestador" if "prestador" in cols_env else ("costureira" if "costureira" in cols_env else None))
+            col_prest = "destino" if "destino" in cols_env else (
+                "prestador" if "prestador" in cols_env else ("costureira" if "costureira" in cols_env else None))
             col_serv = "servico" if "servico" in cols_env else ("tipo_servico" if "tipo_servico" in cols_env else None)
             needed = ["titular_conta", "cpf", "banco", "agencia", "conta", "pix"]
             if col_prest and col_serv and all(c in cols_env for c in needed):
@@ -2076,12 +2123,18 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         vals = row if _tem_algo(row) else ("", "", "", "", "", "")
         try:
-            self.titular_entry.delete(0, "end"); self.titular_entry.insert(0, vals[0] or "")
-            self.cpf_entry.delete(0, "end"); self.cpf_entry.insert(0, vals[1] or "")
-            self.banco_entry.delete(0, "end"); self.banco_entry.insert(0, vals[2] or "")
-            self.agencia_entry.delete(0, "end"); self.agencia_entry.insert(0, vals[3] or "")
-            self.conta_entry.delete(0, "end"); self.conta_entry.insert(0, vals[4] or "")
-            self.pix_entry.delete(0, "end"); self.pix_entry.insert(0, vals[5] or "")
+            self.titular_entry.delete(0, "end");
+            self.titular_entry.insert(0, vals[0] or "")
+            self.cpf_entry.delete(0, "end");
+            self.cpf_entry.insert(0, vals[1] or "")
+            self.banco_entry.delete(0, "end");
+            self.banco_entry.insert(0, vals[2] or "")
+            self.agencia_entry.delete(0, "end");
+            self.agencia_entry.insert(0, vals[3] or "")
+            self.conta_entry.delete(0, "end");
+            self.conta_entry.insert(0, vals[4] or "")
+            self.pix_entry.delete(0, "end");
+            self.pix_entry.insert(0, vals[5] or "")
         except Exception:
             pass
 
@@ -2177,11 +2230,11 @@ class PagamentoModernUI(ctk.CTkFrame):
     # ===================== Fetchers (thread-safe: só DB, sem mexer na UI) =====================
 
     def _fetch_dados_bancarios_prestador(
-        self,
-        destino: str,
-        servico: str,
-        finalizado_id: int | None = None,
-        codigo: str | None = None,
+            self,
+            destino: str,
+            servico: str,
+            finalizado_id: int | None = None,
+            codigo: str | None = None,
     ):
         """Versão 'somente consulta' de _carregar_dados_bancarios_prestador."""
 
@@ -2207,7 +2260,8 @@ class PagamentoModernUI(ctk.CTkFrame):
         # 2) fallback: último envio (fluxo novo)
         if not _tem_algo(row) and _table_exists("envios_cortes"):
             cols_env = _columns_of("envios_cortes")
-            col_prest = "destino" if "destino" in cols_env else ("prestador" if "prestador" in cols_env else ("costureira" if "costureira" in cols_env else None))
+            col_prest = "destino" if "destino" in cols_env else (
+                "prestador" if "prestador" in cols_env else ("costureira" if "costureira" in cols_env else None))
             col_serv = "servico" if "servico" in cols_env else ("tipo_servico" if "tipo_servico" in cols_env else None)
             needed = ["titular_conta", "cpf", "banco", "agencia", "conta", "pix"]
             if col_prest and col_serv and all(c in cols_env for c in needed):
@@ -2281,11 +2335,11 @@ class PagamentoModernUI(ctk.CTkFrame):
         return row if _tem_algo(row) else ("", "", "", "", "", "")
 
     def _fetch_adiantamento_faccao_data(
-        self,
-        codigo_modelo: str,
-        corte_id: int | None,
-        envio_id: int | None = None,
-        prestador_nome: str | None = None,
+            self,
+            codigo_modelo: str,
+            corte_id: int | None,
+            envio_id: int | None = None,
+            prestador_nome: str | None = None,
     ):
         """Versão 'somente consulta' de _carregar_adiantamento_faccao."""
         if not _table_exists("adiantamento_faccao"):
@@ -2437,7 +2491,8 @@ class PagamentoModernUI(ctk.CTkFrame):
             return {"modo": "sim", "valor": float(valor_flag), "habilitado": True}
         return {"modo": "sim", "valor": 0.0, "habilitado": True}
 
-    def _fetch_defeitos_e_pagamento_data(self, codigo: str, tipo_servico: str, finalizado_id: int | None, envio_id: int | None):
+    def _fetch_defeitos_e_pagamento_data(self, codigo: str, tipo_servico: str, finalizado_id: int | None,
+                                         envio_id: int | None):
         """Versão 'somente consulta' de _carregar_defeitos_e_pagamento."""
         total_def = 0
 
@@ -2511,12 +2566,18 @@ class PagamentoModernUI(ctk.CTkFrame):
     def _apply_dados_bancarios_vals(self, vals) -> None:
         vals = vals or ("", "", "", "", "", "")
         try:
-            self.titular_entry.delete(0, "end"); self.titular_entry.insert(0, vals[0] or "")
-            self.cpf_entry.delete(0, "end"); self.cpf_entry.insert(0, vals[1] or "")
-            self.banco_entry.delete(0, "end"); self.banco_entry.insert(0, vals[2] or "")
-            self.agencia_entry.delete(0, "end"); self.agencia_entry.insert(0, vals[3] or "")
-            self.conta_entry.delete(0, "end"); self.conta_entry.insert(0, vals[4] or "")
-            self.pix_entry.delete(0, "end"); self.pix_entry.insert(0, vals[5] or "")
+            self.titular_entry.delete(0, "end");
+            self.titular_entry.insert(0, vals[0] or "")
+            self.cpf_entry.delete(0, "end");
+            self.cpf_entry.insert(0, vals[1] or "")
+            self.banco_entry.delete(0, "end");
+            self.banco_entry.insert(0, vals[2] or "")
+            self.agencia_entry.delete(0, "end");
+            self.agencia_entry.insert(0, vals[3] or "")
+            self.conta_entry.delete(0, "end");
+            self.conta_entry.insert(0, vals[4] or "")
+            self.pix_entry.delete(0, "end");
+            self.pix_entry.insert(0, vals[5] or "")
         except Exception:
             pass
 
@@ -2527,11 +2588,14 @@ class PagamentoModernUI(ctk.CTkFrame):
                 self.adiantamento_registrado_valor_lbl.configure(text="R$ 0.00")
                 self.adiantamento_registrado_parcelas_lbl.configure(text="0")
                 self.adiantamento_registrado_saldo_lbl.configure(text="R$ 0.00")
-                self.adiantamento_entry.delete(0, "end"); self.adiantamento_entry.insert(0, "0.00")
+                self.adiantamento_entry.delete(0, "end");
+                self.adiantamento_entry.insert(0, "0.00")
                 self.adiantamento_valor_atual_entry.configure(state="normal")
-                self.adiantamento_valor_atual_entry.delete(0, "end"); self.adiantamento_valor_atual_entry.insert(0, "0.00")
+                self.adiantamento_valor_atual_entry.delete(0, "end");
+                self.adiantamento_valor_atual_entry.insert(0, "0.00")
                 self.adiantamento_valor_atual_entry.configure(state="readonly")
-                self.adiantamento_desconto_entry.delete(0, "end"); self.adiantamento_desconto_entry.insert(0, "0.00")
+                self.adiantamento_desconto_entry.delete(0, "end");
+                self.adiantamento_desconto_entry.insert(0, "0.00")
                 self.recalcular()
             except Exception:
                 pass
@@ -2555,11 +2619,14 @@ class PagamentoModernUI(ctk.CTkFrame):
             self.adiantamento_registrado_valor_lbl.configure(text=f"R$ {valor:.2f}")
             self.adiantamento_registrado_parcelas_lbl.configure(text=str(parcelas))
             self.adiantamento_registrado_saldo_lbl.configure(text=f"R$ {valor:.2f}")
-            self.adiantamento_entry.delete(0, "end"); self.adiantamento_entry.insert(0, f"{valor:.2f}")
+            self.adiantamento_entry.delete(0, "end");
+            self.adiantamento_entry.insert(0, f"{valor:.2f}")
             self.adiantamento_valor_atual_entry.configure(state="normal")
-            self.adiantamento_valor_atual_entry.delete(0, "end"); self.adiantamento_valor_atual_entry.insert(0, f"{valor:.2f}")
+            self.adiantamento_valor_atual_entry.delete(0, "end");
+            self.adiantamento_valor_atual_entry.insert(0, f"{valor:.2f}")
             self.adiantamento_valor_atual_entry.configure(state="readonly")
-            self.adiantamento_desconto_entry.delete(0, "end"); self.adiantamento_desconto_entry.insert(0, f"{valor:.2f}")
+            self.adiantamento_desconto_entry.delete(0, "end");
+            self.adiantamento_desconto_entry.insert(0, f"{valor:.2f}")
             self.recalcular()
         except Exception:
             pass
@@ -2989,7 +3056,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         try:
             bonificacao = _f(self.bonificacao_entry) if (
-                        getattr(self, "bonif_var", None) and self.bonif_var.get() == "sim") else 0.0
+                    getattr(self, "bonif_var", None) and self.bonif_var.get() == "sim") else 0.0
         except Exception:
             bonificacao = 0.0
 
@@ -3438,11 +3505,11 @@ class PagamentoModernUI(ctk.CTkFrame):
         return value.replace(" ", "_")
 
     def imprimir_recibo(
-        self,
-        recibo_data: dict | None = None,
-        path: str | None = None,
-        abrir_arquivo: bool = True,
-        exibir_mensagem: bool = True,
+            self,
+            recibo_data: dict | None = None,
+            path: str | None = None,
+            abrir_arquivo: bool = True,
+            exibir_mensagem: bool = True,
     ):
         try:
             from reportlab.pdfgen import canvas as pdfcanvas
@@ -3791,6 +3858,17 @@ class PagamentoModernUI(ctk.CTkFrame):
             pass
 
     # ===================== Execução direta =====================
+
+
+class PagamentoServicosPage(PagamentoModernUI):
+    """
+    Classe compatível com o loader do MENU_PRINCIPAL.
+    O route_map.json aponta para esta classe.
+    """
+
+    def __init__(self, master, sistema=None, app=None, host=None, *args, **kwargs):
+        sistema_ref = sistema or app or host
+        super().__init__(master, host=sistema_ref, sistema=sistema_ref, *args, **kwargs)
 
 
 if __name__ == "__main__":

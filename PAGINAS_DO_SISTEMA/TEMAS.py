@@ -2134,6 +2134,39 @@ class TemasPage(ctk.CTkFrame):
                 widget.destroy()
             self._build_left_panel(self.left_panel)
 
+    def _rebuild_self_for_theme(self):
+        """Reconstrói a própria página após troca de tema para evitar widgets desalinhados."""
+        try:
+            self.tema_atual = self._get_current_theme_name()
+            self._configure_self()
+
+            for widget in list(self.winfo_children()):
+                try:
+                    widget.destroy()
+                except Exception:
+                    pass
+
+            self.left_panel = None
+            self.right_panel = None
+            self.preview_panel = None
+            self._widget_cache.clear()
+
+            self._build_interface()
+            self.after(60, self._sync_page_after_theme_apply)
+        except Exception as e:
+            if LOGGER:
+                LOGGER.error(f"Erro ao reconstruir página de temas: {e}")
+
+    def _sync_page_after_theme_apply(self):
+        """Sincroniza textos, listas e preview depois que a página foi recriada."""
+        try:
+            self.tema_atual = self._get_current_theme_name()
+            self._refresh_theme_list()
+            self._carregar_tema_no_editor(self.tema_atual)
+        except Exception as e:
+            if LOGGER:
+                LOGGER.error(f"Erro ao sincronizar página de temas: {e}")
+
     def _aplicar_e_carregar_tema(self, nome):
         self._aplicar_tema_completo(nome)
         self._carregar_tema_no_editor(nome)
@@ -2156,11 +2189,16 @@ class TemasPage(ctk.CTkFrame):
             self.tema_atual = nome_tema
             self.app.tema_atual = nome_tema
 
+            if hasattr(self.app, "current_theme_name"):
+                self.app.current_theme_name = nome_tema
+            if hasattr(self.app, "tema_preferido_inicial"):
+                self.app.tema_preferido_inicial = nome_tema
+
             is_custom = nome_tema in self.paletas.custom
             paleta_custom = self.paletas.custom.get(nome_tema) if is_custom else None
             self._persistir_preferencia_usuario(nome_tema, paleta_custom)
 
-            self._refresh_theme_list()
+            self._rebuild_self_for_theme()
 
             return True
 

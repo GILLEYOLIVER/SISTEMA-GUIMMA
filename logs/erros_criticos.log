@@ -1,0 +1,281 @@
+2026-03-04 15:15:53 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:15:53 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:15:53 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:15:53 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:15:53 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:15:53 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:07 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:07 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:07 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:07 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:07 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:07 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:18 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:18 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:18 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:18 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:18 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:18 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:47 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:47 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:47 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:47 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:47 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:16:47 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:17:12 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:17:12 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao remover bordas: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 463, in remover_bordas_botoes_tema
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:17:12 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:17:12 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar Treeviews do container: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 276, in padronizar_treeviews_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:17:12 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-04 15:17:12 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao padronizar botões: 'FechamentoMensalPage' object has no attribute '_canvas'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\TEMAS.py", line 289, in padronizar_botoes_container
+    for child in widget.winfo_children():
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-NOVO\.venv\Lib\site-packages\customtkinter\windows\widgets\ctk_frame.py", line 75, in winfo_children
+    child_widgets.remove(self._canvas)
+                         ^^^^^^^^^^^^
+AttributeError: 'FechamentoMensalPage' object has no attribute '_canvas'
+2026-03-05 19:14:31 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA.py", line 186, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 481, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 468, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]

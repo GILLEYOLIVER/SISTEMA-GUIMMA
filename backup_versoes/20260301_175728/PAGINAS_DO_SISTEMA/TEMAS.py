@@ -294,8 +294,12 @@ def padronizar_botoes_container(widget):
 
 
 def padronizar_botao(widget: ctk.CTkButton):
-    """Aplica padrão de cores a um botão baseado no texto."""
+    """Aplica padrão de cores a um botão baseado no texto, sem afetar o menu lateral."""
     try:
+        # NÃO mexer em botões do menu/submenu
+        if getattr(widget, "_opera_menu_button", False) or getattr(widget, "_opera_submenu_button", False):
+            return
+
         texto = widget.cget("text")
         if not texto:
             return

@@ -1,19 +1,19 @@
 {
   "validated_ok": true,
-  "mode": "local",
-  "host": "localhost",
+  "mode": "rede",
+  "host": "192.168.0.115",
   "port": 5432,
   "dbname": "BANCO_OPERA",
   "user": "postgres",
-  "password": "gil25802580",
+  "password": "2580",
   "schema": "opera",
   "defaults": {
     "dbname": "BANCO_OPERA",
     "user": "postgres",
-    "password": "gil25802580"
+    "password": "2580"
   },
   "hosts": [
-    "localhost"
+    "192.168.0.115"
   ],
   "ports": [
     5432

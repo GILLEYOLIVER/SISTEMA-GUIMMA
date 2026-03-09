@@ -85,7 +85,7 @@
   },
   "Pagamento de Serviços": {
     "file": "PAGAMENTO_SERVICOS.py",
-    "class": "PagamentoServicosPage"
+    "class": "PagamentoModernUI"
   },
   "Recibos de Pagamentos": {
     "file": "RECIBOS_PAGAMENTOS.py",
