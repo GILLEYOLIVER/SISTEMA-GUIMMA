@@ -29,7 +29,7 @@ function Get-PythonArch([string]$PyCmd) {
 }
 
 
-$unifiedDir = Join-Path $repoRoot ("dist\installers\unified\SISTEMA_OPERA_" + $Version + "_" + $Architecture)
+$unifiedDir = Join-Path $repoRoot ("dist\SISTEMA_OPERA_" + $Version + "_" + $Architecture)
 $buildDir = Join-Path $repoRoot "build\pyi_configurar_postgres"
 $configScript = Join-Path $repoRoot "configurar_postgres.py"
 $pgIcon = Join-Path $repoRoot "PG_ICON.ico"
@@ -119,6 +119,28 @@ if (-not $installerCopied) {
 }
 
 Copy-Item -Force $pgIcon (Join-Path $unifiedDir "PG_ICON.ico")
+
+# Include CONFIGURAR_BANCO.exe and SCRIPTS in unified root folder
+$configBancoCandidates = @(
+    (Join-Path $repoRoot "dist\SistemaOpera\CONFIGURAR_BANCO.exe"),
+    (Join-Path $repoRoot "dist\windows\CONFIGURAR_BANCO.exe")
+)
+$configBancoExe = $null
+foreach ($c in $configBancoCandidates) {
+    if (Test-Path $c) { $configBancoExe = $c; break }
+}
+if ($configBancoExe) {
+    Copy-Item -Force $configBancoExe $unifiedDir
+} else {
+    Write-Warning "CONFIGURAR_BANCO.exe not found to copy into unified folder."
+}
+
+$scriptsDir = Join-Path $repoRoot "SCRIPTS"
+if (Test-Path $scriptsDir) {
+    Copy-Item -Recurse -Force $scriptsDir (Join-Path $unifiedDir "SCRIPTS")
+} else {
+    Write-Warning "SCRIPTS folder not found to copy into unified folder."
+}
 
 Write-Host "`nBuild finished successfully." -ForegroundColor Green
 Write-Host "Output folder: $unifiedDir" -ForegroundColor Green

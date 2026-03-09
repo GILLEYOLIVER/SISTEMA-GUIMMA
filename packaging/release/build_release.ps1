@@ -53,6 +53,7 @@ if (-not $configBancoExe) { throw "CONFIGURAR_BANCO.exe not found." }
 Copy-Item -Force $configBancoExe $winDir
 
 $configPostgresExe = Resolve-FirstExisting @(
+  (Join-Path $repoRoot ("dist\SISTEMA_OPERA_" + $Version + "_" + $Architecture + "\CONFIGURAR_POSTGRES.exe")),
   (Join-Path $repoRoot ("dist\installers\unified\SISTEMA_OPERA_" + $Version + "_" + $Architecture + "\CONFIGURAR_POSTGRES.exe")),
   (Join-Path $repoRoot "dist\SistemaOpera\CONFIGURAR_POSTGRES.exe")
 )
