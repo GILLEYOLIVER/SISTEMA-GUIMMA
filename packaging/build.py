@@ -129,7 +129,7 @@ def build_windows() -> bool:
     spec_file = Path("SistemaOpera.spec")
     if spec_file.exists():
         print(f"📄 Usando arquivo .spec existente: {spec_file}")
-        cmd = [sys.executable, "-m", "PyInstaller", "--clean", str(spec_file)]
+        cmd = [sys.executable, "-m", "PyInstaller", "--clean", "--noconfirm", str(spec_file)]
     else:
         print("📄 Criando build sem arquivo .spec")
         cmd = [
@@ -137,6 +137,7 @@ def build_windows() -> bool:
             "-m",
             "PyInstaller",
             "--clean",
+            "--noconfirm",
             "--onedir",
             "--windowed",
             "--noconsole",
