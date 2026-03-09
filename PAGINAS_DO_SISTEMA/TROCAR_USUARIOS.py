@@ -2,6 +2,7 @@
 """Janela de troca de usuário desacoplada do menu principal."""
 
 import customtkinter as ctk
+import tkinter as tk
 from tkinter import messagebox
 
 
@@ -671,4 +672,3 @@ def abrir_janela_trocar_usuario(self):
             f"Falha ao abrir tela de login:\n{e}",
             parent=self,
         )
-

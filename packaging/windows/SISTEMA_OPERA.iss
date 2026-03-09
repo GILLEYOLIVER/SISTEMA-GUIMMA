@@ -5,6 +5,10 @@
 #define AppExeName "SistemaOpera.exe"
 #define ConfiguradorName "CONFIGURAR_BANCO.exe"
 
+#ifndef ARCH
+  #define ARCH "x64"
+#endif
+
 ; ============================================================
 ;  Detecta automaticamente se o build do app principal Ã©:
 ;   - onedir (pasta com _internal)  -> copia a pasta inteira
@@ -63,7 +67,15 @@ UninstallDisplayIcon={app}\ICONE_SISTEMA.ico
 Compression=lzma2/ultra
 SolidCompression=yes
 OutputDir=..\\..\\dist
-OutputBaseFilename=SistemaOpera_Setup
+#if ARCH == "x86"
+OutputBaseFilename=SistemaOpera_Setup_x86
+ArchitecturesAllowed=x86
+ArchitecturesInstallIn64BitMode=
+#else
+OutputBaseFilename=SistemaOpera_Setup_x64
+ArchitecturesAllowed=x64
+ArchitecturesInstallIn64BitMode=x64
+#endif
 SetupIconFile=..\\..\\icons\\ICONE_SISTEMA.ico
 WizardStyle=modern
 WizardResizable=yes
