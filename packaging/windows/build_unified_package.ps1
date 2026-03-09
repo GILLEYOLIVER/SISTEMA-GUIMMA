@@ -119,7 +119,6 @@ if (-not $installerCopied) {
 }
 
 Copy-Item -Force $pgIcon (Join-Path $unifiedDir "PG_ICON.ico")
-Copy-Item -Force $configScript (Join-Path $unifiedDir "configurar_postgres.py")
 
 Write-Host "`nBuild finished successfully." -ForegroundColor Green
 Write-Host "Output folder: $unifiedDir" -ForegroundColor Green

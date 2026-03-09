@@ -30,12 +30,6 @@ CONFIG_PY="$ROOT_DIR/configurar_postgres.py"
 rm -rf "$REL_DIR"
 mkdir -p "$MAC_DIR" "$WIN_DIR"
 
-# Copia o script de configuracao do PostgreSQL na raiz do pacote release
-if [[ ! -f "$CONFIG_PY" ]]; then
-  echo "❌ Arquivo nao encontrado: $CONFIG_PY"
-  exit 3
-fi
-cp -f "$CONFIG_PY" "$REL_DIR/"
 
 # Copia DMG
 cp -f "$ROOT_DIR/dist/installers/macos/SISTEMA_OPERA_${VERSION}_macOS.dmg" "$MAC_DIR/"
@@ -55,6 +49,27 @@ if [[ "$REQUIRE_WINDOWS" == "1" ]] && ! compgen -G "$WIN_DIR/*.exe" > /dev/null;
   echo "   - ou gere dist/SistemaOpera_Setup_${ARCHITECTURE}.exe"
   exit 2
 fi
+
+# Copia o executavel CONFIGURAR_POSTGRES.exe para pasta windows
+CONFIG_EXE_CANDIDATES=(
+  "$ROOT_DIR/dist/installers/unified/SISTEMA_OPERA_${VERSION}_${ARCHITECTURE}/CONFIGURAR_POSTGRES.exe"
+  "$ROOT_DIR/dist/SistemaOpera/CONFIGURAR_POSTGRES.exe"
+)
+
+CONFIG_EXE=""
+for c in "${CONFIG_EXE_CANDIDATES[@]}"; do
+  if [[ -f "$c" ]]; then
+    CONFIG_EXE="$c"
+    break
+  fi
+done
+
+if [[ -z "$CONFIG_EXE" ]]; then
+  echo "❌ CONFIGURAR_POSTGRES.exe nao encontrado. Gere antes com:"
+  echo "   powershell -ExecutionPolicy Bypass -File packaging/windows/build_unified_package.ps1 -Python python -Version ${VERSION} -Architecture ${ARCHITECTURE} -SkipInstallerBuild"
+  exit 5
+fi
+cp -f "$CONFIG_EXE" "$WIN_DIR/"
 
 # 3) Cria ZIP único
 ZIP_OUT="$ROOT_DIR/dist/SISTEMA_OPERA_${VERSION}_INSTALLER.zip"
@@ -80,4 +95,5 @@ PYZIP
 fi
 
 echo "✅ Pacote único gerado: $ZIP_OUT"
+echo "Windows inclui: instalador oficial + CONFIGURAR_POSTGRES.exe"
 echo "Comando: bash packaging/release/build_release.sh ${VERSION} ${ARCHITECTURE}"
