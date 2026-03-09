@@ -38,9 +38,9 @@ bash packaging/macos/build_db_config.sh
 
 __________________________________________________________
 
-No Windows conpilar o sistema opera
+No Windows conpilar o sistema opera oficial
 
-.\packaging\windows\build_installer.ps1
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_unified_package.ps1 -Python python -Version 1.0.0 -Architecture x64
 ___________________________________________________________
 
 comando para compilar configurador do banco
@@ -68,7 +68,7 @@ powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -
 powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python python -Version 1.0.0 -Architecture x86
 
 
-3) WINDOWS - GERAR PACOTE UNIFICADO (INSTALADOR + CONFIGURAR_POSTGRES.EXE)
+1) WINDOWS - GERAR PACOTE UNIFICADO (INSTALADOR + CONFIGURAR_POSTGRES.EXE)
 - O que faz: gera CONFIGURAR_POSTGRES.exe com icone PG_ICON.ico e junta com instalador na pasta unified.
 - Saida esperada: dist\installers\unified\SISTEMA_OPERA_1.0.0_x64\
 
