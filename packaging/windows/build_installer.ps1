@@ -3,7 +3,9 @@
 
 param(
     [string]$Python = "python",
-    [string]$Version = "1.0.0"
+    [string]$Version = "1.0.0",
+    [ValidateSet("x64", "x86")]
+    [string]$Architecture = "x64"
 )
 
 Set-StrictMode -Version Latest
@@ -16,9 +18,26 @@ try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path
 Set-Location $repoRoot
 
+
+function Get-PythonArch([string]$PyCmd) {
+    $arch = & $PyCmd -c "import struct; print('x64' if struct.calcsize('P')*8==64 else 'x86')"
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($arch)) {
+        throw "Failed to detect Python architecture from '$PyCmd'."
+    }
+    return $arch.Trim()
+}
+
+
 Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "  SISTEMA OPERA - CONSTRUTOR DE INSTALADOR" -ForegroundColor Cyan
 Write-Host ("=" * 60) -ForegroundColor Cyan
+
+$pythonArch = Get-PythonArch $Python
+Write-Host "Python architecture detected: $pythonArch" -ForegroundColor Cyan
+if ($pythonArch -ne $Architecture) {
+    throw "Requested architecture '$Architecture' but Python is '$pythonArch'. Use a matching Python interpreter."
+}
+
 
 function Run-Step([string]$title, [scriptblock]$action) {
     Write-Host ""
@@ -113,10 +132,10 @@ Run-Step "[4/4] Criando instalador..." {
     }
 
     # Apagar instalador antigo
-    $installerPath = Join-Path $repoRoot "dist\SistemaOpera_Setup.exe"
+    $installerPath = Join-Path $repoRoot ("dist\SistemaOpera_Setup_" + $Architecture + ".exe")
     Remove-Item $installerPath -ErrorAction SilentlyContinue
 
-    & $innoExe $issPath
+    & $innoExe "/DARCH=$Architecture" $issPath
     if ($LASTEXITCODE -ne 0) {
         throw "ISCC falhou. Veja a mensagem acima (arquivo faltando / caminho errado)."
     }
@@ -129,6 +148,7 @@ Run-Step "[4/4] Criando instalador..." {
     Write-Host ""
     Write-Host "INSTALADOR CRIADO COM SUCESSO!" -ForegroundColor Green
     Write-Host "Arquivo: $installerPath" -ForegroundColor Green
+    Write-Host "Arquitetura: $Architecture" -ForegroundColor Green
     Write-Host ("Tamanho: {0:N2} MB" -f $installerSize) -ForegroundColor Green
 }
 

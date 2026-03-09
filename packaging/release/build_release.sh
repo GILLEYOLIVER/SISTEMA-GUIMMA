@@ -5,10 +5,16 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 VERSION="${OPERA_VERSION:-${1:-1.0.0}}"
+ARCHITECTURE="${OPERA_ARCH:-${2:-x64}}"
 REQUIRE_WINDOWS="${OPERA_REQUIRE_WINDOWS:-0}"
 WINDOWS_EXE_PATH="${OPERA_WINDOWS_EXE:-}"
 
-if [[ "${2:-}" == "--require-windows" ]]; then
+if [[ "$ARCHITECTURE" != "x64" && "$ARCHITECTURE" != "x86" ]]; then
+  echo "❌ Arquitetura inválida: $ARCHITECTURE (use x64 ou x86)"
+  exit 4
+fi
+
+if [[ "${3:-}" == "--require-windows" ]]; then
   REQUIRE_WINDOWS="1"
 fi
 
@@ -23,12 +29,15 @@ WIN_DIR="$REL_DIR/windows"
 rm -rf "$REL_DIR"
 mkdir -p "$MAC_DIR" "$WIN_DIR"
 
+
 # Copia DMG
 cp -f "$ROOT_DIR/dist/installers/macos/SISTEMA_OPERA_${VERSION}_macOS.dmg" "$MAC_DIR/"
 
 # Copia Windows EXE (prioriza OPERA_WINDOWS_EXE)
 if [[ -n "$WINDOWS_EXE_PATH" && -f "$WINDOWS_EXE_PATH" ]]; then
   cp -f "$WINDOWS_EXE_PATH" "$WIN_DIR/"
+elif [[ -f "$ROOT_DIR/dist/SistemaOpera_Setup_${ARCHITECTURE}.exe" ]]; then
+  cp -f "$ROOT_DIR/dist/SistemaOpera_Setup_${ARCHITECTURE}.exe" "$WIN_DIR/"
 elif compgen -G "$ROOT_DIR/dist/installers/windows/*.exe" > /dev/null; then
   cp -f "$ROOT_DIR/dist/installers/windows/"*.exe "$WIN_DIR/"
 fi
@@ -36,15 +45,35 @@ fi
 if [[ "$REQUIRE_WINDOWS" == "1" ]] && ! compgen -G "$WIN_DIR/*.exe" > /dev/null; then
   echo "❌ Nenhum instalador Windows (.exe) encontrado para compor pacote completo."
   echo "   - Informe OPERA_WINDOWS_EXE=/caminho/arquivo.exe"
-  echo "   - ou coloque o .exe em dist/installers/windows/"
+  echo "   - ou gere dist/SistemaOpera_Setup_${ARCHITECTURE}.exe"
   exit 2
 fi
+
+# Copia o executavel CONFIGURAR_POSTGRES.exe para pasta windows
+CONFIG_EXE_CANDIDATES=(
+  "$ROOT_DIR/dist/installers/unified/SISTEMA_OPERA_${VERSION}_${ARCHITECTURE}/CONFIGURAR_POSTGRES.exe"
+  "$ROOT_DIR/dist/SistemaOpera/CONFIGURAR_POSTGRES.exe"
+)
+
+CONFIG_EXE=""
+for c in "${CONFIG_EXE_CANDIDATES[@]}"; do
+  if [[ -f "$c" ]]; then
+    CONFIG_EXE="$c"
+    break
+  fi
+done
+
+if [[ -z "$CONFIG_EXE" ]]; then
+  echo "❌ CONFIGURAR_POSTGRES.exe nao encontrado. Gere antes com:"
+  echo "   powershell -ExecutionPolicy Bypass -File packaging/windows/build_unified_package.ps1 -Python python -Version ${VERSION} -Architecture ${ARCHITECTURE} -SkipInstallerBuild"
+  exit 5
+fi
+cp -f "$CONFIG_EXE" "$WIN_DIR/"
 
 # 3) Cria ZIP único
 ZIP_OUT="$ROOT_DIR/dist/SISTEMA_OPERA_${VERSION}_INSTALLER.zip"
 rm -f "$ZIP_OUT"
 
-# ditto preserva recursos no mac
 if command -v ditto >/dev/null 2>&1; then
   ditto -c -k --sequesterRsrc --keepParent "$REL_DIR" "$ZIP_OUT"
 else
@@ -65,5 +94,5 @@ PYZIP
 fi
 
 echo "✅ Pacote único gerado: $ZIP_OUT"
-echo "   - DMG: dist/installers/macos/"
-echo "   - EXE: dist/installers/windows/ (ou OPERA_WINDOWS_EXE)"
+echo "Windows inclui: instalador oficial + CONFIGURAR_POSTGRES.exe"
+echo "Comando: bash packaging/release/build_release.sh ${VERSION} ${ARCHITECTURE}"

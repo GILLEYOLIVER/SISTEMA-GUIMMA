@@ -1,8 +1,8 @@
 param(
   [string]$Python = "python",
   [string]$Version = $env:OPERA_VERSION,
-  [string]$InnoPath = "",
-  [switch]$SkipAppBuild,
+  [ValidateSet("x64", "x86")]
+  [string]$Architecture = "x64",
   [switch]$SkipWindowsInstallerBuild
 )
 
@@ -16,22 +16,10 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 
 # 1) Build Windows installer (setup exe), unless user wants to reuse existing artifact
 if (-not $SkipWindowsInstallerBuild) {
-  $installerArgs = @(
-    '-ExecutionPolicy', 'Bypass',
-    '-File', 'packaging/windows/build_installer.ps1',
-    '-Python', $Python,
-    '-Version', $Version
-  )
-
-  if (-not [string]::IsNullOrWhiteSpace($InnoPath)) {
-    $installerArgs += @('-InnoPath', $InnoPath)
+  & powershell -ExecutionPolicy Bypass -File "packaging/windows/build_installer.ps1" -Python $Python -Version $Version -Architecture $Architecture
+  if ($LASTEXITCODE -ne 0) {
+    throw "Windows installer build failed."
   }
-
-  if ($SkipAppBuild) {
-    $installerArgs += '-SkipAppBuild'
-  }
-
-  & powershell @installerArgs
 } else {
   Write-Host "Skipping Windows installer build (-SkipWindowsInstallerBuild)."
 }
@@ -45,12 +33,43 @@ if (Test-Path $relDir) { Remove-Item $relDir -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $macDir | Out-Null
 New-Item -ItemType Directory -Force -Path $winDir | Out-Null
 
-# Copy Windows installer exe
-$winInstallerPattern = Join-Path $repoRoot "dist\installers\windows\*.exe"
-if (-not (Test-Path $winInstallerPattern)) {
-  throw "Windows installer not found at '$winInstallerPattern'. Build the installer and confirm output path."
+# Build/copy PostgreSQL configurator executable (CONFIGURAR_POSTGRES.exe)
+$unifiedCmd = @(
+  "-ExecutionPolicy", "Bypass",
+  "-File", "packaging/windows/build_unified_package.ps1",
+  "-Python", $Python,
+  "-Version", $Version,
+  "-Architecture", $Architecture,
+  "-SkipInstallerBuild"
+)
+& powershell @unifiedCmd
+if ($LASTEXITCODE -ne 0) {
+  throw "Failed to build CONFIGURAR_POSTGRES.exe via build_unified_package.ps1"
 }
-Copy-Item -Force $winInstallerPattern $winDir
+
+$configExeCandidates = @(
+  (Join-Path $repoRoot ("dist\installers\unified\SISTEMA_OPERA_" + $Version + "_" + $Architecture + "\CONFIGURAR_POSTGRES.exe")),
+  (Join-Path $repoRoot "dist\SistemaOpera\CONFIGURAR_POSTGRES.exe")
+)
+
+$configExe = $null
+foreach ($candidate in $configExeCandidates) {
+  if (Test-Path $candidate) { $configExe = $candidate; break }
+}
+if (-not $configExe) {
+  throw "CONFIGURAR_POSTGRES.exe not found after build."
+}
+Copy-Item -Force $configExe $winDir
+
+# Copy Windows installer exe (architecture-specific first)
+$archInstaller = Join-Path $repoRoot ("dist\SistemaOpera_Setup_" + $Architecture + ".exe")
+if (Test-Path $archInstaller) {
+  Copy-Item -Force $archInstaller $winDir
+} elseif (Test-Path (Join-Path $repoRoot "dist\installers\windows\*.exe")) {
+  Copy-Item -Force (Join-Path $repoRoot "dist\installers\windows\*.exe") $winDir
+} else {
+  throw "Windows installer not found. Expected '$archInstaller' or files in dist\installers\windows\*.exe"
+}
 
 # Copy macOS dmg if present
 $macDmg = Join-Path $repoRoot "dist\installers\macos\SISTEMA_OPERA_${Version}_macOS.dmg"
@@ -64,3 +83,5 @@ if (Test-Path $zipOut) { Remove-Item $zipOut -Force }
 
 Compress-Archive -Path $relDir -DestinationPath $zipOut -Force
 Write-Host "Package generated: $zipOut"
+Write-Host "Windows folder includes: official installer + CONFIGURAR_POSTGRES.exe"
+Write-Host "Usage: powershell -ExecutionPolicy Bypass -File packaging/release/build_release.ps1 -Python python -Version $Version -Architecture $Architecture"
