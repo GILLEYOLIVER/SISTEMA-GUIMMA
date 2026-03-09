@@ -24,6 +24,7 @@ bash packaging/macos/build_installer.sh "$VERSION"
 REL_DIR="$ROOT_DIR/dist/release/SISTEMA_OPERA_${VERSION}"
 MAC_DIR="$REL_DIR/macos"
 WIN_DIR="$REL_DIR/windows"
+CONFIG_PY="$ROOT_DIR/configurar_postgres.py"
 
 rm -rf "$REL_DIR"
 mkdir -p "$MAC_DIR" "$WIN_DIR"
