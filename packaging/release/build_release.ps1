@@ -40,10 +40,17 @@ if (-not $SkipWindowsInstallerBuild) {
 $relDir = Join-Path $repoRoot "dist\release\SISTEMA_OPERA_$Version"
 $macDir = Join-Path $relDir "macos"
 $winDir = Join-Path $relDir "windows"
+$configPy = Join-Path $repoRoot "configurar_postgres.py"
 
 if (Test-Path $relDir) { Remove-Item $relDir -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $macDir | Out-Null
 New-Item -ItemType Directory -Force -Path $winDir | Out-Null
+
+# Copy PostgreSQL configurator source script to release root
+if (-not (Test-Path $configPy)) {
+  throw "File not found: '$configPy'."
+}
+Copy-Item -Force $configPy $relDir
 
 # Copy Windows installer exe
 $winInstallerPattern = Join-Path $repoRoot "dist\installers\windows\*.exe"

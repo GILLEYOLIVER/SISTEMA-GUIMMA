@@ -19,9 +19,17 @@ bash packaging/macos/build_installer.sh "$VERSION"
 REL_DIR="$ROOT_DIR/dist/release/SISTEMA_OPERA_${VERSION}"
 MAC_DIR="$REL_DIR/macos"
 WIN_DIR="$REL_DIR/windows"
+CONFIG_PY="$ROOT_DIR/configurar_postgres.py"
 
 rm -rf "$REL_DIR"
 mkdir -p "$MAC_DIR" "$WIN_DIR"
+
+# Copia o script de configuracao do PostgreSQL na raiz do pacote release
+if [[ ! -f "$CONFIG_PY" ]]; then
+  echo "❌ Arquivo nao encontrado: $CONFIG_PY"
+  exit 3
+fi
+cp -f "$CONFIG_PY" "$REL_DIR/"
 
 # Copia DMG
 cp -f "$ROOT_DIR/dist/installers/macos/SISTEMA_OPERA_${VERSION}_macOS.dmg" "$MAC_DIR/"
