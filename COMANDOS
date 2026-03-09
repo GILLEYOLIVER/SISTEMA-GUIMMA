@@ -49,3 +49,64 @@ pyinstaller --noconfirm --clean --onefile --windowed `
   --name "OPERA_CONFIG_POSTGRES" `
   --icon "PG_ICON.ico" `
   "configurar_postgres.py"
+
+______________________________________________________________________________________________________
+COMANDOS ATUALIZADOS (BUILD COMPLETO COM SAIDA FINAL)
+
+1) WINDOWS - GERAR INSTALADOR OFICIAL DO SISTEMA (X64)
+- O que faz: compila o app principal + configurador de banco e gera o instalador oficial.
+- Saida esperada: dist\SistemaOpera_Setup_x64.exe
+
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python python -Version 1.0.0 -Architecture x64
+
+
+2) WINDOWS - GERAR INSTALADOR OFICIAL DO SISTEMA (X86 / 32 BITS)
+- O que faz: igual ao anterior, mas para 32 bits.
+- Importante: usar Python 32 bits quando Architecture = x86.
+- Saida esperada: dist\SistemaOpera_Setup_x86.exe
+
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python python -Version 1.0.0 -Architecture x86
+
+
+3) WINDOWS - GERAR PACOTE UNIFICADO (INSTALADOR + CONFIGURAR_POSTGRES.EXE)
+- O que faz: gera CONFIGURAR_POSTGRES.exe com icone PG_ICON.ico e junta com instalador na pasta unified.
+- Saida esperada: dist\installers\unified\SISTEMA_OPERA_1.0.0_x64\
+
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_unified_package.ps1 -Python python -Version 1.0.0 -Architecture x64
+
+
+4) WINDOWS - GERAR SOMENTE CONFIGURAR_POSTGRES.EXE (SEM REBUILD DO INSTALADOR)
+- O que faz: reaproveita o instalador existente e gera/atualiza apenas CONFIGURAR_POSTGRES.exe.
+
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_unified_package.ps1 -Python python -Version 1.0.0 -Architecture x64 -SkipInstallerBuild
+
+
+5) RELEASE COMPLETO (RECOMENDADO NO WINDOWS)
+- O que faz: monta a estrutura final de release.
+- Pasta windows final com:
+  SCRIPTS/
+  CONFIGURAR_BANCO.exe
+  CONFIGURAR_POSTGRES.exe
+  SistemaOpera_Setup_x64.exe (ou x86)
+- O ZIP final fica identico ao conteudo da pasta windows.
+
+powershell -ExecutionPolicy Bypass -File packaging/release/build_release.ps1 -Python python -Version 1.0.0 -Architecture x64
+
+
+6) RELEASE COMPLETO (BASH / MAC-LINUX)
+- O que faz: gera release com pastas macos/windows.
+- Para x64:
+
+bash packaging/release/build_release.sh 1.0.0 x64
+
+- Para x86:
+
+bash packaging/release/build_release.sh 1.0.0 x86
+
+
+7) DICA DE ORDEM DE EXECUCAO (WINDOWS)
+- Primeiro gere instalador oficial:
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python python -Version 1.0.0 -Architecture x64
+
+- Depois gere release completo:
+powershell -ExecutionPolicy Bypass -File packaging/release/build_release.ps1 -Python python -Version 1.0.0 -Architecture x64

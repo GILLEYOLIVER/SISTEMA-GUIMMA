@@ -10,6 +10,7 @@ import platform
 import importlib
 import importlib.util
 import inspect
+import functools
 import os
 import sys
 import threading
@@ -1173,11 +1174,12 @@ class OperaMenuApp(ctk.CTk):
         self.botoes_menu = {}
         self._submenu_close_jobs = {}
         self.icons_cache = {}
+        self._icon_size_signature = None
         self._active_submenu = None
         self._submenu_timer = None
         self._page_cache = {}
         self._page_cache_order = []
-        self._page_cache_size = 3
+        self._page_cache_size = self._resolve_page_cache_size()
         self._current_frame = None
         self._backup_launch_scheduled = False
         self.permissoes_usuario = {}
@@ -1199,6 +1201,7 @@ class OperaMenuApp(ctk.CTk):
         self.focus_force()
         self._apply_initial_layout()
         self._open_dashboard_agora()
+        self._agendar_after(1200, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
         self._agendar_after(5000, self._ativar_backup_silencioso)
         self._update_menu_buttons_colors()
@@ -1229,6 +1232,20 @@ class OperaMenuApp(ctk.CTk):
         self.font_topbar_titulo = ("Arial", max(14, int(26 * self.ui_scale)))
         self.font_topbar_icone = ("Arial", max(14, int(22 * self.ui_scale)))
         self.icon_size_sidebar = max(28, int(52 * self.ui_scale))
+
+    def _resolve_page_cache_size(self) -> int:
+        """Define cache adaptativo para equilibrar memória e velocidade."""
+        forced = os.environ.get("OPERA_PAGE_CACHE_SIZE", "").strip()
+        if forced.isdigit():
+            return max(1, min(6, int(forced)))
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        cpu = max(1, int(os.cpu_count() or 1))
+        if screen_width <= 1366 or screen_height <= 768 or cpu <= 4:
+            return 2
+        if screen_width >= 1920 and screen_height >= 1080 and cpu >= 8:
+            return 4
+        return 3
 
     def _apply_initial_layout(self):
         self._maximize_window()
@@ -1429,6 +1446,33 @@ class OperaMenuApp(ctk.CTk):
                         break
         except Exception as e:
             _dprint(f"⚠️ Erro ao abrir Dashboard: {e}")
+
+    def _smart_preload_pages(self):
+        """Pré-carrega a última página usada sem bloquear a abertura inicial."""
+        if getattr(self, "_closing", False):
+            return
+        last_page = (self.settings or {}).get("last_page")
+        if not last_page or last_page == self.current_page:
+            return
+        if last_page in self._page_cache:
+            return
+        if not self.user_manager.has_permission(last_page, "ver"):
+            return
+
+        def _do_preload():
+            try:
+                frame = self._load_page_direct(last_page)
+                if frame:
+                    try:
+                        frame.place_forget()
+                    except Exception:
+                        pass
+                    self._cache_page(last_page, frame)
+                    _dprint(f"⚡ Pré-cache da página '{last_page}' concluído")
+            except Exception as exc:
+                _dprint(f"⚠️ Pré-cache ignorado para '{last_page}': {exc}")
+
+        self._agendar_after(250, _do_preload)
 
     def _setup_window(self):
         self.title("OPERA • Sistema de Gestão")
@@ -1666,16 +1710,29 @@ class OperaMenuApp(ctk.CTk):
             self.current_theme_name = "CLÁSSICO CLARO"
             self.theme_manager.apply_theme("CLÁSSICO CLARO", rebuild_interface=False)
 
+    @functools.lru_cache(maxsize=256)
+    def _load_icon_asset(self, icon_path: str):
+        if not os.path.exists(icon_path):
+            return None
+        try:
+            return Image.open(icon_path)
+        except Exception:
+            return None
+
     def _load_icons(self):
         _dprint("🔄 Carregando ícones...")
+        requested_size = (24, 24)
+        if self._icon_size_signature == requested_size and self.icons_cache:
+            return
         self.icons_cache = {}
+        self._icon_size_signature = requested_size
         for categoria, filename in self.ICON_MAPPING.items():
             try:
                 icon_path = os.path.join(ICONS_DIR, filename)
-                if os.path.exists(icon_path):
-                    image = Image.open(icon_path)
+                image = self._load_icon_asset(icon_path)
+                if image is not None:
                     self.icons_cache[categoria] = ctk.CTkImage(
-                        light_image=image, dark_image=image, size=(24, 24)
+                        light_image=image, dark_image=image, size=requested_size
                     )
             except Exception as e:
                 _dprint(f"❌ Erro ao carregar ícone {filename}: {e}")
@@ -1690,8 +1747,8 @@ class OperaMenuApp(ctk.CTk):
             return None
         try:
             icon_path = os.path.join(ICONS_DIR, filename)
-            if os.path.exists(icon_path):
-                image = Image.open(icon_path)
+            image = self._load_icon_asset(icon_path)
+            if image is not None:
                 icon = ctk.CTkImage(light_image=image, dark_image=image, size=(20, 20))
                 self.icons_cache[cache_key] = icon
                 return icon
