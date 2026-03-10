@@ -148,7 +148,7 @@ class MRPPage(ctk.CTkFrame):
 
         self.tree_necessidades = ttk.Treeview(
             tree_frame,
-            columns=("insumo", "sku", "necessario", "estoque", "faltante", "lead", "fornecedor"),
+            columns=("insumo", "sku", "necessario", "estoque", "faltante", "lead", "fornecedor", "status"),
             show="headings",
             height=12,
         )
@@ -160,6 +160,7 @@ class MRPPage(ctk.CTkFrame):
             ("faltante", "Faltante", 90),
             ("lead", "Lead Time", 90),
             ("fornecedor", "Fornecedor", 200),
+            ("status", "Status", 90),
         ):
             self.tree_necessidades.heading(col, text=text)
             self.tree_necessidades.column(col, width=width)
