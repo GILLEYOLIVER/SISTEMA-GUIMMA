@@ -224,6 +224,68 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             with get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
+                        f"DELETE FROM {schema}.planejamento_ops"
+                    )
+                    cur.execute(
+                        f"""
+                        INSERT INTO {schema}.planejamento_ops (op, modelo, quantidade, inicio, fim, status, prioridade, data_atualizacao)
+                        SELECT CONCAT('OC-', id) AS op,
+                               COALESCE(descricao_modelo, codigo_modelo, 'Modelo sem descrição') AS modelo,
+                               COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) AS quantidade,
+                               COALESCE(data_registro::date, CURRENT_DATE) AS inicio,
+                               COALESCE(data_final, (COALESCE(data_registro::date, CURRENT_DATE) + INTERVAL '7 day')::date) AS fim,
+                               CASE
+                                   WHEN COALESCE(status, 'Em Andamento') ILIKE '%final%' THEN 'Finalizada'
+                                   WHEN COALESCE(data_final, CURRENT_DATE) < CURRENT_DATE THEN 'Atrasada'
+                                   ELSE 'Em execução'
+                               END AS status,
+                               CASE
+                                   WHEN COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) >= 1000 THEN 'Alta'
+                                   WHEN COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) >= 300 THEN 'Média'
+                                   ELSE 'Baixa'
+                               END AS prioridade,
+                               NOW()
+                          FROM {schema}.ordem_corte_ficha
+                         WHERE COALESCE(ativo, TRUE) = TRUE
+                        """
+                    )
+
+                    cur.execute(
+                        f"DELETE FROM {schema}.planejamento_capacidade"
+                    )
+                    cur.execute(
+                        f"""
+                        INSERT INTO {schema}.planejamento_capacidade (recurso, carga, capacidade, ociosidade, data_atualizacao)
+                        WITH recursos AS (
+                            SELECT UPPER(TRIM(COALESCE(cortador, ''))) AS recurso,
+                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
+                              FROM {schema}.cadastro_de_corte
+                             WHERE COALESCE(NULLIF(cortador, ''), '') <> ''
+                             GROUP BY 1
+                            UNION ALL
+                            SELECT UPPER(TRIM(COALESCE(auxiliar, ''))) AS recurso,
+                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
+                              FROM {schema}.cadastro_de_corte
+                             WHERE COALESCE(NULLIF(auxiliar, ''), '') <> ''
+                             GROUP BY 1
+                            UNION ALL
+                            SELECT UPPER(TRIM(COALESCE(ajudante, ''))) AS recurso,
+                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
+                              FROM {schema}.cadastro_de_corte
+                             WHERE COALESCE(NULLIF(ajudante, ''), '') <> ''
+                             GROUP BY 1
+                        )
+                        SELECT recurso,
+                               SUM(carga) AS carga,
+                               GREATEST(SUM(carga) * 1.20, 1) AS capacidade,
+                               GREATEST((SUM(carga) * 1.20) - SUM(carga), 0) AS ociosidade,
+                               NOW()
+                          FROM recursos
+                      GROUP BY recurso
+                        """
+                    )
+
+                    cur.execute(
                         f"""
                         UPDATE {schema}.planejamento_capacidade
                            SET ociosidade = GREATEST(COALESCE(capacidade, 0) - COALESCE(carga, 0), 0),
@@ -340,6 +402,22 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                         params,
                     )
                     ops = cur.fetchall()
+
+                    if not ops:
+                        cur.execute(
+                            f"""
+                            SELECT CONCAT('OC-', id) AS op,
+                                   COALESCE(descricao_modelo, codigo_modelo, 'Modelo sem descrição') AS modelo,
+                                   COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) AS quantidade,
+                                   COALESCE(data_registro::date, CURRENT_DATE) AS inicio,
+                                   COALESCE(data_final, (COALESCE(data_registro::date, CURRENT_DATE) + INTERVAL '7 day')::date) AS fim,
+                                   COALESCE(status, 'Em Andamento') AS status
+                              FROM {schema}.ordem_corte_ficha
+                             WHERE COALESCE(ativo, TRUE) = TRUE
+                             ORDER BY 4, 1
+                            """
+                        )
+                        ops = cur.fetchall()
 
                     cur.execute(
                         f"""

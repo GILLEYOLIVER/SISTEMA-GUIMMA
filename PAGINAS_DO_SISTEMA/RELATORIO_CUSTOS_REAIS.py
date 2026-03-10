@@ -222,18 +222,23 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         inicio = self._parse_data(self.custos_inicio_entry.get())
         fim = self._parse_data(self.custos_fim_entry.get())
         modelo = (self.filtro_modelo.get().strip() if self.filtro_modelo else "")
+        status_filtro = (self.filtro_status.get() if self.filtro_status else "Todos") or "Todos"
 
         filtros_ops = []
         params_ops = []
         if inicio:
-            filtros_ops.append("data_atualizacao::date >= %s")
+            filtros_ops.append("data_ref >= %s")
             params_ops.append(inicio)
         if fim:
-            filtros_ops.append("data_atualizacao::date <= %s")
+            filtros_ops.append("data_ref <= %s")
             params_ops.append(fim)
         if modelo:
             filtros_ops.append("modelo ILIKE %s")
             params_ops.append(f"%{modelo}%")
+        if status_filtro == "Em produção":
+            filtros_ops.append("status_ref IN ('Em Andamento', 'Em execução', 'Planejada')")
+        elif status_filtro == "Finalizado":
+            filtros_ops.append("status_ref IN ('Finalizado', 'Finalizada')")
 
         where_ops = ("WHERE " + " AND ".join(filtros_ops)) if filtros_ops else ""
 
@@ -243,8 +248,34 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
                 with conn.cursor() as cur:
                     cur.execute(
                         f"""
-                        SELECT COALESCE(categoria, ''), COALESCE(valor_planejado, 0), COALESCE(valor_real, 0), COALESCE(variacao, 0)
-                          FROM {schema}.custos_reais_categoria
+                        SELECT categoria,
+                               SUM(valor_planejado) AS valor_planejado,
+                               SUM(valor_real) AS valor_real,
+                               CASE WHEN SUM(valor_planejado) > 0
+                                    THEN ((SUM(valor_real) - SUM(valor_planejado)) / SUM(valor_planejado)) * 100
+                                    ELSE 0 END AS variacao
+                          FROM (
+                                SELECT 'Tecidos' AS categoria,
+                                       SUM(COALESCE(valor_total, 0)) AS valor_planejado,
+                                       SUM(COALESCE(valor_total, 0)) AS valor_real
+                                  FROM {schema}.cadastro_modelos_tecidos
+                                UNION ALL
+                                SELECT 'Aviamentos' AS categoria,
+                                       SUM(COALESCE(valor_total, 0)) AS valor_planejado,
+                                       SUM(COALESCE(valor_total, 0)) AS valor_real
+                                  FROM {schema}.cadastro_modelos_aviamentos
+                                UNION ALL
+                                SELECT 'Outros Insumos' AS categoria,
+                                       SUM(COALESCE(valor_total, 0)) AS valor_planejado,
+                                       SUM(COALESCE(valor_total, 0)) AS valor_real
+                                  FROM {schema}.cadastro_modelos_outros
+                                UNION ALL
+                                SELECT 'Serviços Externos' AS categoria,
+                                       SUM(COALESCE(valor_total, 0)) AS valor_planejado,
+                                       SUM(COALESCE(valor_total, 0)) AS valor_real
+                                  FROM {schema}.cadastro_modelos_outros_servicos
+                               ) x
+                         GROUP BY categoria
                          ORDER BY categoria
                         """
                     )
@@ -252,8 +283,31 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
 
                     cur.execute(
                         f"""
-                        SELECT COALESCE(op, ''), COALESCE(modelo, ''), COALESCE(valor_planejado, 0), COALESCE(valor_real, 0)
-                          FROM {schema}.custos_reais_ops
+                        SELECT op,
+                               modelo,
+                               valor_planejado,
+                               valor_real,
+                               status_ref
+                          FROM (
+                                SELECT COALESCE(op, '') AS op,
+                                       COALESCE(modelo, '') AS modelo,
+                                       COALESCE(valor_planejado, 0) AS valor_planejado,
+                                       COALESCE(valor_real, 0) AS valor_real,
+                                       'Planejada'::text AS status_ref,
+                                       data_atualizacao::date AS data_ref
+                                  FROM {schema}.custos_reais_ops
+                                UNION ALL
+                                SELECT CONCAT('OC-', o.id) AS op,
+                                       COALESCE(o.descricao_modelo, o.codigo_modelo, 'Modelo sem descrição') AS modelo,
+                                       COALESCE(m.gasto_total_por_peca, m.custo_total, 0) * COALESCE(o.quantidade_desejada, 0) AS valor_planejado,
+                                       COALESCE(m.gasto_total_por_peca, m.custo_total, 0) * COALESCE(NULLIF(o.total_pecas, 0), o.quantidade_desejada, 0) AS valor_real,
+                                       COALESCE(o.status, 'Em Andamento') AS status_ref,
+                                       COALESCE(o.data_registro::date, CURRENT_DATE) AS data_ref
+                                  FROM {schema}.ordem_corte_ficha o
+                             LEFT JOIN {schema}.cadastro_modelos_cabecalho m
+                                    ON UPPER(TRIM(COALESCE(m.codigo, ''))) = UPPER(TRIM(COALESCE(o.codigo_modelo, '')))
+                                 WHERE COALESCE(o.ativo, TRUE) = TRUE
+                               ) dados
                           {where_ops}
                          ORDER BY op
                         """,
@@ -273,7 +327,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
                     values=(categoria, f"R$ {self._to_float(planejado):,.2f}", f"R$ {self._to_float(real):,.2f}", f"{self._to_float(variacao):,.2f}%"),
                 )
 
-            for op, modelo_op, planejado, real in ops:
+            for op, modelo_op, planejado, real, _status in ops:
                 self.tree_ops.insert(
                     "",
                     "end",
@@ -293,7 +347,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
 
     def _comparar_ops(self):
         if not self.tree_ops or not self.tree_ops.get_children():
-            messagebox.showinfo("Comparar OPs", "Sem dados para comparar.")
+            messagebox.showinfo("Comparar OPs", "Sem dados para comparar.\nDica: gere uma Ordem de Corte em NOVA_ORDEM para simular custos.")
             return
 
         maior_desvio = None

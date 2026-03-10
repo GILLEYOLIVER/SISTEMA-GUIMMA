@@ -249,14 +249,106 @@ class MRPPage(ctk.CTkFrame):
                 with conn.cursor() as cur:
                     cur.execute(
                         f"""
-                        UPDATE {schema}.mrp_necessidades
-                           SET faltante = GREATEST(COALESCE(necessario, 0) - COALESCE(estoque, 0), 0),
-                               status = CASE
-                                   WHEN COALESCE(necessario, 0) - COALESCE(estoque, 0) <= 0 THEN 'OK'
-                                   WHEN COALESCE(lead_time, 0) >= 20 THEN 'Crítico'
+                        DELETE FROM {schema}.mrp_necessidades
+                        """
+                    )
+
+                    cur.execute(
+                        f"""
+                        INSERT INTO {schema}.mrp_necessidades
+                            (insumo, sku, necessario, estoque, faltante, lead_time, fornecedor, status, data_atualizacao)
+                        WITH demanda AS (
+                            SELECT o.codigo_modelo,
+                                   COALESCE(NULLIF(o.total_pecas, 0), o.quantidade_desejada, 0)::numeric AS qtde
+                              FROM {schema}.ordem_corte_ficha o
+                             WHERE COALESCE(o.ativo, TRUE) = TRUE
+                               AND COALESCE(o.status, 'Em Andamento') <> 'Cancelada'
+                        ),
+                        necessidade_tecidos AS (
+                            SELECT 'Tecido'::text AS tipo,
+                                   COALESCE(t.codigo_tecido, t.descricao, t.codigo_modelo) AS sku,
+                                   COALESCE(t.descricao, t.codigo_tecido, 'Tecido sem descrição') AS insumo,
+                                   COALESCE(t.fornecedor, '') AS fornecedor,
+                                   SUM(COALESCE(t.metros_peca, 0) * d.qtde) AS necessario
+                              FROM {schema}.cadastro_modelos_tecidos t
+                              JOIN demanda d ON d.codigo_modelo = t.codigo_modelo
+                             GROUP BY 1,2,3,4
+                        ),
+                        necessidade_aviamentos AS (
+                            SELECT 'Aviamento'::text AS tipo,
+                                   COALESCE(a.codigo_aviamento, a.descricao, a.codigo_modelo) AS sku,
+                                   COALESCE(a.descricao, a.codigo_aviamento, 'Aviamento sem descrição') AS insumo,
+                                   COALESCE(a.fornecedor, '') AS fornecedor,
+                                   SUM(COALESCE(a.quantidade, 0) * d.qtde) AS necessario
+                              FROM {schema}.cadastro_modelos_aviamentos a
+                              JOIN demanda d ON d.codigo_modelo = a.codigo_modelo
+                             GROUP BY 1,2,3,4
+                        ),
+                        necessidade_outros AS (
+                            SELECT 'Insumo'::text AS tipo,
+                                   COALESCE(o.codigo, o.descricao, o.codigo_modelo) AS sku,
+                                   COALESCE(o.descricao, o.codigo, 'Insumo sem descrição') AS insumo,
+                                   COALESCE(o.fornecedor, '') AS fornecedor,
+                                   SUM(COALESCE(o.quantidade, 0) * d.qtde) AS necessario
+                              FROM {schema}.cadastro_modelos_outros o
+                              JOIN demanda d ON d.codigo_modelo = o.codigo_modelo
+                             GROUP BY 1,2,3,4
+                        ),
+                        necessidade_total AS (
+                            SELECT * FROM necessidade_tecidos
+                            UNION ALL
+                            SELECT * FROM necessidade_aviamentos
+                            UNION ALL
+                            SELECT * FROM necessidade_outros
+                        ),
+                        estoque_total AS (
+                            SELECT 'Tecido'::text AS tipo,
+                                   COALESCE(codigo, descricao) AS sku,
+                                   COALESCE(descricao, codigo, 'Tecido sem descrição') AS insumo,
+                                   COALESCE(fornecedor, '') AS fornecedor,
+                                   SUM(COALESCE(metros, 0)) AS estoque
+                              FROM {schema}.estoque_tecidos
+                             GROUP BY 1,2,3,4
+                            UNION ALL
+                            SELECT 'Aviamento'::text AS tipo,
+                                   COALESCE(codigo, descricao) AS sku,
+                                   COALESCE(descricao, codigo, 'Aviamento sem descrição') AS insumo,
+                                   COALESCE(fornecedor, '') AS fornecedor,
+                                   SUM(COALESCE(quantidade, 0)) AS estoque
+                              FROM {schema}.estoque_aviamentos
+                             GROUP BY 1,2,3,4
+                            UNION ALL
+                            SELECT 'Insumo'::text AS tipo,
+                                   COALESCE(codigo, descricao) AS sku,
+                                   COALESCE(descricao, codigo, 'Insumo sem descrição') AS insumo,
+                                   COALESCE(fornecedor, '') AS fornecedor,
+                                   SUM(COALESCE(quantidade, 0)) AS estoque
+                              FROM {schema}.estoque_insumos
+                             GROUP BY 1,2,3,4
+                        )
+                        SELECT n.insumo,
+                               n.sku,
+                               ROUND(SUM(n.necessario), 3) AS necessario,
+                               ROUND(COALESCE(MAX(e.estoque), 0), 3) AS estoque,
+                               ROUND(GREATEST(SUM(n.necessario) - COALESCE(MAX(e.estoque), 0), 0), 3) AS faltante,
+                               COALESCE(MAX(f.prazo_medio), 0) AS lead_time,
+                               COALESCE(NULLIF(MAX(n.fornecedor), ''), NULLIF(MAX(e.fornecedor), ''), 'Fornecedor não informado') AS fornecedor,
+                               CASE
+                                   WHEN GREATEST(SUM(n.necessario) - COALESCE(MAX(e.estoque), 0), 0) <= 0 THEN 'OK'
+                                   WHEN COALESCE(MAX(f.prazo_medio), 0) >= 20 THEN 'Crítico'
                                    ELSE 'Atenção'
-                               END,
-                               data_atualizacao = NOW()
+                               END AS status,
+                               NOW()
+                          FROM necessidade_total n
+                     LEFT JOIN estoque_total e
+                            ON e.tipo = n.tipo
+                           AND (
+                                UPPER(TRIM(COALESCE(e.sku, ''))) = UPPER(TRIM(COALESCE(n.sku, '')))
+                                OR UPPER(TRIM(COALESCE(e.insumo, ''))) = UPPER(TRIM(COALESCE(n.insumo, '')))
+                           )
+                     LEFT JOIN {schema}.compras_fornecedores f
+                            ON UPPER(TRIM(COALESCE(f.nome, ''))) = UPPER(TRIM(COALESCE(n.fornecedor, e.fornecedor, '')))
+                      GROUP BY n.insumo, n.sku
                         """
                     )
 
@@ -409,21 +501,37 @@ class MRPPage(ctk.CTkFrame):
 
                     cur.execute(
                         f"""
-                        SELECT COALESCE(f.nome, 'Fornecedor não informado') AS fornecedor,
+                        WITH base_fornecedores AS (
+                            SELECT TRIM(COALESCE(fornecedor, '')) AS fornecedor, 'estoque'::text AS origem
+                              FROM {schema}.estoque_insumos
+                             WHERE TRIM(COALESCE(fornecedor, '')) <> ''
+                            UNION ALL
+                            SELECT TRIM(COALESCE(fornecedor, '')) AS fornecedor, 'estoque'::text AS origem
+                              FROM {schema}.estoque_aviamentos
+                             WHERE TRIM(COALESCE(fornecedor, '')) <> ''
+                            UNION ALL
+                            SELECT TRIM(COALESCE(fornecedor, '')) AS fornecedor, 'estoque'::text AS origem
+                              FROM {schema}.estoque_tecidos
+                             WHERE TRIM(COALESCE(fornecedor, '')) <> ''
+                            UNION ALL
+                            SELECT COALESCE(f.nome, 'Fornecedor não informado') AS fornecedor, 'compras'::text AS origem
+                              FROM {schema}.compras_pedidos p
+                         LEFT JOIN {schema}.compras_fornecedores f ON f.id = p.fornecedor_id
+                        ),
+                        atrasos AS (
+                            SELECT COALESCE(f.nome, 'Fornecedor não informado') AS fornecedor,
+                                   ROUND(AVG(GREATEST(COALESCE(r.data_recebimento, CURRENT_DATE) - COALESCE(p.entrega_prevista, p.data_pedido), 0)), 1) AS atraso_medio
+                              FROM {schema}.compras_pedidos p
+                         LEFT JOIN {schema}.compras_fornecedores f ON f.id = p.fornecedor_id
+                         LEFT JOIN {schema}.compras_recebimentos r ON r.pedido_id = p.id
+                             WHERE COALESCE(p.status, 'Em aberto') IN ('Em aberto', 'Parcial', 'Aprovado', 'Recebido')
+                          GROUP BY 1
+                        )
+                        SELECT b.fornecedor,
                                COUNT(*) AS insumos_criticos,
-                               ROUND(
-                                   AVG(
-                                       GREATEST(
-                                           COALESCE(r.data_recebimento, CURRENT_DATE) - COALESCE(p.entrega_prevista, p.data_pedido),
-                                           0
-                                       )
-                                   ),
-                                   1
-                               ) AS atraso_medio
-                          FROM {schema}.compras_pedidos p
-                     LEFT JOIN {schema}.compras_fornecedores f ON f.id = p.fornecedor_id
-                     LEFT JOIN {schema}.compras_recebimentos r ON r.pedido_id = p.id
-                         WHERE COALESCE(p.status, 'Em aberto') IN ('Em aberto', 'Parcial', 'Aprovado')
+                               COALESCE(MAX(a.atraso_medio), 0) AS atraso_medio
+                          FROM base_fornecedores b
+                     LEFT JOIN atrasos a ON UPPER(TRIM(a.fornecedor)) = UPPER(TRIM(b.fornecedor))
                       GROUP BY 1
                       ORDER BY 2 DESC, 3 DESC
                       LIMIT 20
