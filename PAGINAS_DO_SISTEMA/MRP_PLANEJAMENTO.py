@@ -10,6 +10,7 @@ from tkinter import messagebox, ttk
 
 import customtkinter as ctk
 from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
 try:
@@ -640,13 +641,7 @@ class MRPPage(ctk.CTkFrame):
         caminho = os.path.abspath(nome)
         c = canvas.Canvas(caminho, pagesize=A4)
         largura, altura = A4
-        y = altura - 40
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(40, y, "Relatório MRP")
-        y -= 24
-        c.setFont("Helvetica", 9)
-        c.drawString(40, y, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        y -= 18
+        y = self._desenhar_cabecalho_pdf(c, largura, altura, "Relatório MRP")
 
         def escrever_titulo(titulo):
             nonlocal y
@@ -694,6 +689,31 @@ class MRPPage(ctk.CTkFrame):
 
         c.save()
         return caminho
+
+    def _desenhar_cabecalho_pdf(self, c, largura, altura, titulo):
+        header_h = 64
+        c.setFillColor(colors.HexColor("#1F5FA6"))
+        c.rect(0, altura - header_h, largura, header_h, fill=1, stroke=0)
+
+        logo_path = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
+        x_text = 40
+        if os.path.exists(logo_path):
+            try:
+                c.drawImage(logo_path, 24, altura - 52, width=30, height=30, preserveAspectRatio=True, mask='auto')
+                x_text = 62
+            except Exception:
+                pass
+
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(x_text, altura - 34, titulo)
+        c.setFont("Helvetica", 9)
+        c.drawString(x_text, altura - 49, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+
+        c.setFillColor(colors.HexColor("#666666"))
+        c.setFont("Helvetica", 8)
+        c.drawString(24, 18, "SISTEMA OPERA — Impressão")
+        return altura - header_h - 12
 
     def _abrir_pdf(self, caminho):
         try:
