@@ -12,6 +12,11 @@ import customtkinter as ctk
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+try:
+    from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
+except Exception:
+    from BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
+
 
 class PlanejamentoProducaoPage(ctk.CTkFrame):
     def __init__(self, master=None, sistema=None, **kwargs):
@@ -19,7 +24,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.sistema = sistema
         self.tree_ops = None
         self.tree_capacidade = None
+        self.kpi_labels = []
+        self.filtro_setor = None
+        self.filtro_prioridade = None
         self._build()
+        self._carregar_dados_planejamento()
 
     def _build(self):
         self.configure(fg_color="transparent")
@@ -51,16 +60,16 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
         toolbar.grid_columnconfigure(5, weight=1)
 
-        ctk.CTkButton(toolbar, text="Gerar Plano").grid(row=0, column=0, padx=(0, 8))
-        ctk.CTkButton(toolbar, text="Reprogramar").grid(row=0, column=1, padx=(0, 8))
-        ctk.CTkButton(toolbar, text="Simular Capacidade").grid(row=0, column=2, padx=(0, 8))
+        ctk.CTkButton(toolbar, text="Gerar Plano", command=self._gerar_plano).grid(row=0, column=0, padx=(0, 8))
+        ctk.CTkButton(toolbar, text="Reprogramar", command=self._reprogramar).grid(row=0, column=1, padx=(0, 8))
+        ctk.CTkButton(toolbar, text="Simular Capacidade", command=self._simular_capacidade).grid(row=0, column=2, padx=(0, 8))
         ctk.CTkButton(toolbar, text="Exportar PDF", command=self._exportar_planejamento).grid(
             row=0, column=3, padx=(0, 8)
         )
         ctk.CTkButton(toolbar, text="Imprimir", command=self._imprimir_planejamento).grid(
             row=0, column=4, padx=(0, 8)
         )
-        ctk.CTkButton(toolbar, text="Gantt").grid(row=0, column=5)
+        ctk.CTkButton(toolbar, text="Gantt", command=self._abrir_gantt).grid(row=0, column=5)
 
     def _build_filters(self):
         filters = ctk.CTkFrame(self)
@@ -85,14 +94,17 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             command=lambda: self._abrir_calendario(self.plan_fim_entry),
         ).grid(row=0, column=4, padx=(0, 12), pady=8)
         ctk.CTkLabel(filters, text="Setor").grid(row=0, column=5, padx=(0, 6), pady=8)
-        ctk.CTkOptionMenu(filters, values=["Todos", "Corte", "Costura", "Acabamento"]).grid(
+        self.filtro_setor = ctk.CTkOptionMenu(filters, values=["Todos", "Corte", "Costura", "Acabamento"])
+        self.filtro_setor.grid(
             row=0, column=6, padx=(0, 12), pady=8
         )
         ctk.CTkLabel(filters, text="Prioridade").grid(row=0, column=7, padx=(0, 6), pady=8)
-        ctk.CTkOptionMenu(filters, values=["Alta", "Média", "Baixa", "Todas"]).grid(
+        self.filtro_prioridade = ctk.CTkOptionMenu(filters, values=["Alta", "Média", "Baixa", "Todas"])
+        self.filtro_prioridade.set("Todas")
+        self.filtro_prioridade.grid(
             row=0, column=8, padx=(0, 12), pady=8
         )
-        ctk.CTkButton(filters, text="Filtrar").grid(row=0, column=9, padx=(0, 12), pady=8)
+        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_dados_planejamento).grid(row=0, column=9, padx=(0, 12), pady=8)
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
@@ -109,9 +121,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         ):
             card = ctk.CTkFrame(kpis)
             card.grid(row=0, column=idx, padx=6, sticky="ew")
-            ctk.CTkLabel(card, text=text, font=ctk.CTkFont(size=12, weight="bold")).pack(
+            label = ctk.CTkLabel(card, text=text, font=ctk.CTkFont(size=12, weight="bold"))
+            label.pack(
                 pady=12
             )
+            self.kpi_labels.append(label)
 
         ordens_frame = ctk.CTkFrame(body)
         ordens_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
@@ -174,6 +188,279 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.tree_capacidade.configure(yscrollcommand=capacity_scroll.set)
         self.tree_capacidade.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
         capacity_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 16))
+
+    @staticmethod
+    def _to_float(valor):
+        try:
+            return float(valor or 0)
+        except Exception:
+            return 0.0
+
+    def _db_ready(self):
+        ok, msg = require_ready()
+        if not ok:
+            messagebox.showerror("Planejamento", msg)
+        return ok
+
+    def _parse_data(self, texto):
+        if not texto:
+            return None
+        try:
+            return datetime.strptime(texto.strip(), "%d/%m/%Y").date()
+        except Exception:
+            return None
+
+    def _limpar_tree(self, tree):
+        if tree is None:
+            return
+        for item in tree.get_children():
+            tree.delete(item)
+
+    def _gerar_plano(self):
+        if not self._db_ready():
+            return
+        try:
+            schema = get_schema()
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        f"DELETE FROM {schema}.planejamento_ops"
+                    )
+                    cur.execute(
+                        f"""
+                        INSERT INTO {schema}.planejamento_ops (op, modelo, quantidade, inicio, fim, status, prioridade, data_atualizacao)
+                        SELECT CONCAT('OC-', id) AS op,
+                               COALESCE(descricao_modelo, codigo_modelo, 'Modelo sem descrição') AS modelo,
+                               COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) AS quantidade,
+                               COALESCE(data_registro::date, CURRENT_DATE) AS inicio,
+                               COALESCE(data_final, (COALESCE(data_registro::date, CURRENT_DATE) + INTERVAL '7 day')::date) AS fim,
+                               CASE
+                                   WHEN COALESCE(status, 'Em Andamento') ILIKE '%final%' THEN 'Finalizada'
+                                   WHEN COALESCE(data_final, CURRENT_DATE) < CURRENT_DATE THEN 'Atrasada'
+                                   ELSE 'Em execução'
+                               END AS status,
+                               CASE
+                                   WHEN COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) >= 1000 THEN 'Alta'
+                                   WHEN COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) >= 300 THEN 'Média'
+                                   ELSE 'Baixa'
+                               END AS prioridade,
+                               NOW()
+                          FROM {schema}.ordem_corte_ficha
+                         WHERE COALESCE(ativo, TRUE) = TRUE
+                        """
+                    )
+
+                    cur.execute(
+                        f"DELETE FROM {schema}.planejamento_capacidade"
+                    )
+                    cur.execute(
+                        f"""
+                        INSERT INTO {schema}.planejamento_capacidade (recurso, carga, capacidade, ociosidade, data_atualizacao)
+                        WITH recursos AS (
+                            SELECT UPPER(TRIM(COALESCE(cortador, ''))) AS recurso,
+                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
+                              FROM {schema}.cadastro_de_corte
+                             WHERE COALESCE(NULLIF(cortador, ''), '') <> ''
+                             GROUP BY 1
+                            UNION ALL
+                            SELECT UPPER(TRIM(COALESCE(auxiliar, ''))) AS recurso,
+                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
+                              FROM {schema}.cadastro_de_corte
+                             WHERE COALESCE(NULLIF(auxiliar, ''), '') <> ''
+                             GROUP BY 1
+                            UNION ALL
+                            SELECT UPPER(TRIM(COALESCE(ajudante, ''))) AS recurso,
+                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
+                              FROM {schema}.cadastro_de_corte
+                             WHERE COALESCE(NULLIF(ajudante, ''), '') <> ''
+                             GROUP BY 1
+                        )
+                        SELECT recurso,
+                               SUM(carga) AS carga,
+                               GREATEST(SUM(carga) * 1.20, 1) AS capacidade,
+                               GREATEST((SUM(carga) * 1.20) - SUM(carga), 0) AS ociosidade,
+                               NOW()
+                          FROM recursos
+                      GROUP BY recurso
+                        """
+                    )
+
+                    cur.execute(
+                        f"""
+                        UPDATE {schema}.planejamento_capacidade
+                           SET ociosidade = GREATEST(COALESCE(capacidade, 0) - COALESCE(carga, 0), 0),
+                               data_atualizacao = NOW()
+                        """
+                    )
+                    cur.execute(
+                        f"""
+                        UPDATE {schema}.planejamento_ops
+                           SET status = CASE
+                               WHEN fim IS NOT NULL AND fim < CURRENT_DATE THEN 'Atrasada'
+                               WHEN inicio IS NOT NULL AND inicio <= CURRENT_DATE THEN 'Em execução'
+                               ELSE COALESCE(status, 'Planejada')
+                           END,
+                           data_atualizacao = NOW()
+                        """
+                    )
+                conn.commit()
+            self._carregar_dados_planejamento()
+            messagebox.showinfo("Planejamento", "Plano atualizado com sucesso.")
+        except Exception as exc:
+            messagebox.showerror("Planejamento", f"Erro ao gerar plano: {exc}")
+
+    def _reprogramar(self):
+        if not self._db_ready():
+            return
+        selecionado = self.tree_ops.focus() if self.tree_ops else None
+        if not selecionado:
+            messagebox.showwarning("Planejamento", "Selecione uma OP para reprogramar.")
+            return
+        valores = self.tree_ops.item(selecionado).get("values", [])
+        if not valores:
+            return
+        op = valores[0]
+        try:
+            schema = get_schema()
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        f"""
+                        UPDATE {schema}.planejamento_ops
+                           SET inicio = COALESCE(inicio, CURRENT_DATE) + INTERVAL '1 day',
+                               fim = COALESCE(fim, CURRENT_DATE) + INTERVAL '1 day',
+                               status = 'Reprogramada',
+                               data_atualizacao = NOW()
+                         WHERE op = %s
+                        """,
+                        (op,),
+                    )
+                conn.commit()
+            self._carregar_dados_planejamento()
+            messagebox.showinfo("Planejamento", f"OP {op} reprogramada para +1 dia.")
+        except Exception as exc:
+            messagebox.showerror("Planejamento", f"Erro ao reprogramar: {exc}")
+
+    def _simular_capacidade(self):
+        carga = 0.0
+        capacidade = 0.0
+        if self.tree_capacidade:
+            for item in self.tree_capacidade.get_children():
+                vals = self.tree_capacidade.item(item).get("values", [])
+                carga += self._to_float(vals[1] if len(vals) > 1 else 0)
+                capacidade += self._to_float(vals[2] if len(vals) > 2 else 0)
+        uso = (carga / capacidade * 100) if capacidade > 0 else 0
+        messagebox.showinfo("Simulação", f"Carga total: {carga:,.2f}\nCapacidade total: {capacidade:,.2f}\nUso estimado: {uso:.1f}%")
+
+    def _abrir_gantt(self):
+        if not self.tree_ops or not self.tree_ops.get_children():
+            messagebox.showinfo("Gantt", "Sem dados para visualizar o Gantt.")
+            return
+        messagebox.showinfo("Gantt", "Visualização Gantt em evolução. As OPs já estão carregadas na grade.")
+
+    def _carregar_dados_planejamento(self):
+        self._limpar_tree(self.tree_ops)
+        self._limpar_tree(self.tree_capacidade)
+        ok, _ = require_ready()
+        if not ok:
+            return
+
+        inicio = self._parse_data(self.plan_inicio_entry.get())
+        fim = self._parse_data(self.plan_fim_entry.get())
+        setor = (self.filtro_setor.get() if self.filtro_setor else "Todos") or "Todos"
+        prioridade = (self.filtro_prioridade.get() if self.filtro_prioridade else "Todas") or "Todas"
+
+        filtros = []
+        params = []
+        if inicio:
+            filtros.append("data_atualizacao::date >= %s")
+            params.append(inicio)
+        if fim:
+            filtros.append("data_atualizacao::date <= %s")
+            params.append(fim)
+        if prioridade != "Todas":
+            filtros.append("prioridade = %s")
+            params.append(prioridade)
+        if setor != "Todos":
+            filtros.append("modelo ILIKE %s")
+            params.append(f"%{setor}%")
+
+        where_ops = ("WHERE " + " AND ".join(filtros)) if filtros else ""
+
+        try:
+            schema = get_schema()
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        f"""
+                        SELECT COALESCE(op, ''), COALESCE(modelo, ''), COALESCE(quantidade, 0),
+                               inicio, fim, COALESCE(status, 'Planejada')
+                          FROM {schema}.planejamento_ops
+                          {where_ops}
+                         ORDER BY COALESCE(inicio, CURRENT_DATE), op
+                        """,
+                        params,
+                    )
+                    ops = cur.fetchall()
+
+                    if not ops:
+                        cur.execute(
+                            f"""
+                            SELECT CONCAT('OC-', id) AS op,
+                                   COALESCE(descricao_modelo, codigo_modelo, 'Modelo sem descrição') AS modelo,
+                                   COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) AS quantidade,
+                                   COALESCE(data_registro::date, CURRENT_DATE) AS inicio,
+                                   COALESCE(data_final, (COALESCE(data_registro::date, CURRENT_DATE) + INTERVAL '7 day')::date) AS fim,
+                                   COALESCE(status, 'Em Andamento') AS status
+                              FROM {schema}.ordem_corte_ficha
+                             WHERE COALESCE(ativo, TRUE) = TRUE
+                             ORDER BY 4, 1
+                            """
+                        )
+                        ops = cur.fetchall()
+
+                    cur.execute(
+                        f"""
+                        SELECT COALESCE(recurso, ''), COALESCE(carga, 0), COALESCE(capacidade, 0), COALESCE(ociosidade, 0)
+                          FROM {schema}.planejamento_capacidade
+                         ORDER BY recurso
+                        """
+                    )
+                    capacidades = cur.fetchall()
+
+            em_execucao = 0
+            atrasadas = 0
+            carga_total = 0.0
+            capacidade_total = 0.0
+
+            for op, modelo, quantidade, inicio_db, fim_db, status in ops:
+                if status == "Em execução":
+                    em_execucao += 1
+                if status == "Atrasada":
+                    atrasadas += 1
+                inicio_txt = inicio_db.strftime("%d/%m/%Y") if inicio_db else ""
+                fim_txt = fim_db.strftime("%d/%m/%Y") if fim_db else ""
+                self.tree_ops.insert("", "end", values=(op, modelo, int(self._to_float(quantidade)), inicio_txt, fim_txt, status))
+
+            for recurso, carga, capacidade, ocioso in capacidades:
+                carga_total += self._to_float(carga)
+                capacidade_total += self._to_float(capacidade)
+                self.tree_capacidade.insert(
+                    "",
+                    "end",
+                    values=(recurso, f"{self._to_float(carga):,.2f}", f"{self._to_float(capacidade):,.2f}", f"{self._to_float(ocioso):,.2f}"),
+                )
+
+            uso_pct = (carga_total / capacidade_total * 100) if capacidade_total > 0 else 0
+            ocioso_pct = max(0.0, 100 - uso_pct)
+
+            if self.kpi_labels:
+                self.kpi_labels[0].configure(text=f"OPs em execução: {em_execucao}")
+                self.kpi_labels[1].configure(text=f"Atrasos críticos: {atrasadas}")
+                self.kpi_labels[2].configure(text=f"Capacidade usada: {uso_pct:.1f}%")
+                self.kpi_labels[3].configure(text=f"Ociosidade: {ocioso_pct:.1f}%")
+        except Exception as exc:
+            messagebox.showerror("Planejamento", f"Erro ao carregar planejamento: {exc}")
 
     def _exportar_planejamento(self):
         try:

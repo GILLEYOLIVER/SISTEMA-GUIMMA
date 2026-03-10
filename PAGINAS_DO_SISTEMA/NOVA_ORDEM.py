@@ -1005,12 +1005,13 @@ class OrdemCorte(ctk.CTkFrame):
     # =================== ACESSO A DADOS ===================
     @staticmethod
     def _map_colunas(nome_tabela: str):
+        schema = get_schema()
         rows = _exec_all("""
             SELECT LOWER(column_name)
               FROM information_schema.columns
-             WHERE table_schema = current_schema()
+             WHERE table_schema = %s
                AND table_name = %s
-        """, (nome_tabela,))
+        """, (schema, nome_tabela,))
         cols = {r[0] for r in rows}
 
         def pick(*cands):
@@ -1030,14 +1031,15 @@ class OrdemCorte(ctk.CTkFrame):
         return m
 
     def _resolver_tabela_modelo(self):
+        schema = get_schema()
         for nome in ("cadastro_modelos_cabecalho", "ficha_tecnica_cabecalho"):
             row = _exec_row("""
                 SELECT 1
                   FROM information_schema.tables
-                 WHERE table_schema = current_schema()
+                 WHERE table_schema = %s
                    AND table_name = %s
                  LIMIT 1
-            """, (nome,))
+            """, (schema, nome,))
             if row:
                 return nome
         raise RuntimeError(
@@ -1046,6 +1048,7 @@ class OrdemCorte(ctk.CTkFrame):
 
     def carregar_modelos_combo(self):
         try:
+            schema = get_schema()
             nome_tabela = self._resolver_tabela_modelo()
             m = self._map_colunas(nome_tabela)
 
@@ -1058,7 +1061,7 @@ class OrdemCorte(ctk.CTkFrame):
 
             rows = _exec_all(f"""
                 SELECT {selecao}
-                  FROM {nome_tabela}
+                  FROM {schema}.{nome_tabela}
                  WHERE TRIM(COALESCE({m['codigo']}, '')) <> ''
                  ORDER BY {orderby} ASC
             """)
@@ -1093,6 +1096,7 @@ class OrdemCorte(ctk.CTkFrame):
     def preencher_modelo_por_codigo(self, codigo: str):
         """Busca pelo código e preenche código, descrição e grade_disponivel (PG)."""
         try:
+            schema = get_schema()
             nome_tabela = self._resolver_tabela_modelo()
             m = self._map_colunas(nome_tabela)
 
@@ -1111,10 +1115,10 @@ class OrdemCorte(ctk.CTkFrame):
                 # Verifica se a coluna existe na tabela
                 existe = _exec_row("""
                     SELECT 1 FROM information_schema.columns 
-                    WHERE table_schema = current_schema() 
+                    WHERE table_schema = %s 
                     AND table_name = %s 
                     AND column_name = %s
-                """, (nome_tabela, col_possivel))
+                """, (schema, nome_tabela, col_possivel))
                 if existe:
                     colunas_porcent.append(f"COALESCE({col_possivel}, 0)")
 
@@ -1125,7 +1129,7 @@ class OrdemCorte(ctk.CTkFrame):
 
             row = _exec_row(f"""
                 SELECT {selecao}
-                  FROM {nome_tabela}
+                  FROM {schema}.{nome_tabela}
                  WHERE {m['codigo']} = %s
                  LIMIT 1
             """, (codigo,))
@@ -1201,6 +1205,7 @@ class OrdemCorte(ctk.CTkFrame):
     def carregar_porcentagens_padrao_modelo(self):
         """Tenta carregar porcentagens padrão do modelo atual do banco."""
         try:
+            schema = get_schema()
             codigo = self.codigo_entry.get().strip()
             if not codigo:
                 return
@@ -1213,10 +1218,10 @@ class OrdemCorte(ctk.CTkFrame):
             for i in range(1, 9):
                 existe = _exec_row("""
                     SELECT 1 FROM information_schema.columns 
-                    WHERE table_schema = current_schema() 
+                    WHERE table_schema = %s 
                     AND table_name = %s 
                     AND column_name = %s
-                """, (nome_tabela, f"porcent_{i}"))
+                """, (schema, nome_tabela, f"porcent_{i}"))
                 if existe:
                     colunas_existentes.append(f"porcent_{i}")
 
@@ -1231,7 +1236,7 @@ class OrdemCorte(ctk.CTkFrame):
 
             row = _exec_row(f"""
                 SELECT {selecao}
-                FROM {nome_tabela}
+                FROM {schema}.{nome_tabela}
                 WHERE {m['codigo']} = %s
                 LIMIT 1
             """, (codigo,))
@@ -1255,13 +1260,14 @@ class OrdemCorte(ctk.CTkFrame):
     def carregar_porcentagens_configuracao(self):
         """Tenta carregar porcentagens de uma tabela de configuração específica."""
         try:
+            schema = get_schema()
             # Verifica se existe tabela de configurações de porcentagem
             existe_tabela = _exec_row("""
                 SELECT 1 FROM information_schema.tables 
-                WHERE table_schema = current_schema() 
-                AND table_name = 'config_porcentagem_modelo'
+                WHERE table_schema = %s 
+                AND table_name = %s
                 LIMIT 1
-            """)
+            """, (schema, "config_porcentagem_modelo"))
 
             if not existe_tabela:
                 return
@@ -1274,10 +1280,10 @@ class OrdemCorte(ctk.CTkFrame):
             row = _exec_row("""
                 SELECT porcent_1, porcent_2, porcent_3, porcent_4,
                        porcent_5, porcent_6, porcent_7, porcent_8
-                FROM config_porcentagem_modelo
+                FROM {}.config_porcentagem_modelo
                 WHERE codigo_modelo = %s
                 LIMIT 1
-            """, (codigo,))
+            """.format(schema), (codigo,))
 
             if row:
                 for i, valor in enumerate(row, start=1):
@@ -1303,6 +1309,7 @@ class OrdemCorte(ctk.CTkFrame):
             return
 
         try:
+            schema = get_schema()
             nome_tabela = self._resolver_tabela_modelo()
             m = self._map_colunas(nome_tabela)
             like = f"%{termo}%"
@@ -1312,10 +1319,10 @@ class OrdemCorte(ctk.CTkFrame):
             for i in range(1, 9):
                 existe = _exec_row("""
                     SELECT 1 FROM information_schema.columns 
-                    WHERE table_schema = current_schema() 
+                    WHERE table_schema = %s 
                     AND table_name = %s 
                     AND column_name = %s
-                """, (nome_tabela, f"porcent_{i}"))
+                """, (schema, nome_tabela, f"porcent_{i}"))
                 if existe:
                     colunas_porcent.append(f"COALESCE(porcent_{i}, 0)")
 
@@ -1340,7 +1347,7 @@ class OrdemCorte(ctk.CTkFrame):
 
             row = _exec_row(f"""
                 SELECT {selecao}
-                  FROM {nome_tabela}
+                  FROM {schema}.{nome_tabela}
                  WHERE {where}
                  ORDER BY {orderby} DESC
                  LIMIT 1
