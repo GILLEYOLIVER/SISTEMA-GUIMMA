@@ -93,6 +93,7 @@ def _abrir_setup_banco() -> bool:
     print("⚠️ SETUP_BANCO.py não encontrado nos caminhos esperados.")
     return False
 
+
 def _mostrar_erro_centralizado(parent: tk.Misc, titulo: str, mensagem: str) -> None:
     """Exibe mensagem de erro centralizada no display principal."""
     janela_aux = None
@@ -121,6 +122,7 @@ def _mostrar_erro_centralizado(parent: tk.Misc, titulo: str, mensagem: str) -> N
                 janela_aux.destroy()
             except Exception:
                 pass
+
 
 def asset_path(nome_arquivo: str) -> str:
     """
@@ -186,7 +188,6 @@ def _carregar_config_json_e_exportar_ambiente():
     return None
 
 
-
 _CONFIG_PATH_ENCONTRADO = _carregar_config_json_e_exportar_ambiente()
 
 # Importa o banco DEPOIS da configuração
@@ -227,6 +228,7 @@ class SistemaLoginModerno:
             "secondary": "#1abc9c",
             "success": "#27ae60",
             "danger": "#e74c3c",
+            "warning": "#e67e22",
             "light": "#f8f9fa",
             "dark": "#2b2d42",
         }
@@ -265,7 +267,6 @@ class SistemaLoginModerno:
 
         self._configurar_interface()
         self.root.bind("<Return>", lambda evento: self.entrar_no_sistema())
-
 
     def exibir_janela(self):
         try:
@@ -576,6 +577,50 @@ class SistemaLoginModerno:
         return banco_de_dados.execute(sql, parametros)
 
     # ----------------------
+    # Detecção de Caps Lock
+    # ----------------------
+    def _capslock_ativo_windows(self) -> bool:
+        try:
+            import ctypes
+            return bool(ctypes.windll.user32.GetKeyState(0x14) & 1)
+        except Exception:
+            return False
+
+    def _detectar_capslock_por_evento(self, evento=None):
+        """
+        Atualiza aviso de Caps Lock.
+        Prioriza leitura real no Windows e usa fallback por tecla digitada.
+        """
+        caps_ativo = False
+
+        # Método real para Windows
+        if os.name == "nt":
+            caps_ativo = self._capslock_ativo_windows()
+        else:
+            # fallback simples
+            if evento is not None:
+                tecla = getattr(evento, "keysym", "") or ""
+                caractere = getattr(evento, "char", "") or ""
+                shift_pressionado = bool(getattr(evento, "state", 0) & 0x0001)
+
+                if len(caractere) == 1 and caractere.isalpha():
+                    if caractere.isupper() and not shift_pressionado:
+                        caps_ativo = True
+                    elif caractere.islower() and shift_pressionado:
+                        caps_ativo = True
+                    else:
+                        caps_ativo = False
+
+        self._mostrar_aviso_capslock(caps_ativo)
+
+    def _mostrar_aviso_capslock(self, ativo: bool):
+        if hasattr(self, "label_capslock") and self.label_capslock:
+            if ativo:
+                self.label_capslock.configure(text="Caps Lock ativo")
+            else:
+                self.label_capslock.configure(text="")
+
+    # ----------------------
     # Interface do usuário
     # ----------------------
     def _configurar_interface(self):
@@ -719,7 +764,24 @@ class SistemaLoginModerno:
             highlightbackground="#dfe4ea",
             highlightcolor=self.cores["secondary"]
         )
-        self.entrada_senha.pack(fill="x", pady=(0, 10), ipady=8)
+        self.entrada_senha.pack(fill="x", pady=(0, 4), ipady=8)
+
+        # ============================================================
+        # Aviso de Caps Lock
+        # ============================================================
+        self.label_capslock = tk.Label(
+            formulario,
+            text="",
+            font=("Segoe UI", 11, "bold"),
+            bg="white",
+            fg=self.cores["warning"],
+            anchor="w"
+        )
+        self.label_capslock.pack(fill="x", pady=(0, 8))
+
+        self.entrada_senha.bind("<KeyRelease>", self._detectar_capslock_por_evento, add="+")
+        self.entrada_senha.bind("<FocusIn>", self._detectar_capslock_por_evento, add="+")
+        self.entrada_senha.bind("<FocusOut>", lambda evento: self._mostrar_aviso_capslock(False), add="+")
 
         # ============================================================
         # Checkbox e links
@@ -833,6 +895,7 @@ class SistemaLoginModerno:
 
     def _alternar_senha(self):
         self.entrada_senha.config(show="" if self.var_ver_senha.get() else "•")
+        self._detectar_capslock_por_evento()
 
     # ----------------------
     # Ações auxiliares
