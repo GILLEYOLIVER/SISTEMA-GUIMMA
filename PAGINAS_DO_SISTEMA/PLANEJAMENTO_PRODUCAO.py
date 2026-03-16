@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 PLANEJAMENTO_PRODUCAO.py - Planejamento de Produção
-Interface base para capacidade, carga de trabalho e cronograma.
+Nova versão focada em programação de OPs a partir dos modelos cadastrados,
+com cálculo de tecidos e aviamentos e comparação com estoque.
 """
-from datetime import datetime
+from __future__ import annotations
+
+from datetime import date, datetime, timedelta
 import os
 import webbrowser
+from decimal import Decimal
 from tkinter import messagebox, ttk
 
 import customtkinter as ctk
@@ -19,6 +23,11 @@ except Exception:
     from BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
 
 
+TAMANHOS_GRADE = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+PROGRAMACOES = ["Semanal", "Mensal", "Trimestral", "Semestral", "Coleção"]
+PRIORIDADES = ["Baixa", "Média", "Alta", "Urgente"]
+
+
 class PlanejamentoProducaoPage(ctk.CTkFrame):
     def __init__(self, master=None, sistema=None, **kwargs):
         super().__init__(master, **kwargs)
@@ -28,426 +37,406 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.tree_tecidos = None
         self.tree_aviamentos = None
         self.kpi_labels = []
-        self.filtro_setor = None
-        self.filtro_prioridade = None
-        self.filtro_programacao = None
-        self.detalhe_labels = {}
         self.ops_index = {}
-        self.combo_modelo_programacao = None
-        self.combo_grade_programacao = None
-        self.entry_qtd_programacao = None
-        self.combo_prioridade_programacao = None
-        self.combo_tipo_programacao = None
-        self.entry_programacao_inicio = None
-        self.entry_programacao_fim = None
+        self.detalhe_labels = {}
+        self.modelos_cache = []
+
+        self.cor_fundo = getattr(sistema, "cor_fundo", "#F5F5F5")
+        self.cor_primaria = getattr(sistema, "cor_primaria", "#3A7EBF")
+        self.cor_secundaria = getattr(sistema, "cor_secundaria", "#E5E7EB")
+        self.cor_texto = getattr(sistema, "cor_texto", "#111827")
+        self.cor_hover = getattr(sistema, "cor_hover", "#2E4A66")
+        self.cor_borda = getattr(sistema, "cor_borda", "#CBD5E1")
+        self.cor_sucesso = getattr(sistema, "cor_sucesso", "#16A34A")
+        self.cor_alerta = getattr(sistema, "cor_alerta", "#DC2626")
+        self.cor_destaque = getattr(sistema, "cor_destaque", "#2563EB")
+
+        self.configure(fg_color=self.cor_fundo)
         self._build()
+        self._garantir_estrutura_planejamento()
+        self._carregar_modelos_cache()
         self._carregar_dados_planejamento()
 
+    # =========================================================
+    # Construção da interface
+    # =========================================================
     def _build(self):
-        self.configure(fg_color="transparent")
-        self.grid_rowconfigure(4, weight=1)
+        self.grid_rowconfigure(3, weight=1)
         self.grid_columnconfigure(0, weight=1)
-
         self._build_header()
         self._build_toolbar()
         self._build_filters()
         self._build_body()
 
     def _build_header(self):
-        header = ctk.CTkFrame(self, fg_color="transparent")
-        header.grid(row=0, column=0, sticky="ew", padx=24, pady=(20, 10))
+        header = ctk.CTkFrame(self, fg_color=self.cor_fundo, border_color=self.cor_borda, border_width=1)
+        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 8))
         header.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(
-            header, text="Planejamento de Produção", font=ctk.CTkFont(size=22, weight="bold")
-        ).grid(row=0, column=0, sticky="w")
+            header,
+            text="Planejamento de Produção",
+            font=ctk.CTkFont(size=24, weight="bold"),
+            text_color=self.cor_texto,
+        ).grid(row=0, column=0, sticky="w", padx=14, pady=(10, 2))
         ctk.CTkLabel(
             header,
-            text="Controle de capacidade, carga de trabalho e cronograma.",
+            text="Crie OPs por período, modelo, grade e prioridade. Os materiais são calculados a partir do cadastro do modelo.",
             font=ctk.CTkFont(size=12),
-        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
-        # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
+            text_color=self.cor_texto,
+        ).grid(row=1, column=0, sticky="w", padx=14, pady=(0, 10))
 
     def _build_toolbar(self):
-        toolbar = ctk.CTkFrame(self)
-        toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
+        toolbar = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        toolbar.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 8))
         toolbar.grid_columnconfigure(5, weight=1)
 
-        ctk.CTkButton(toolbar, text="Gerar Plano", command=self._gerar_plano).grid(row=0, column=0, padx=(0, 8))
-        ctk.CTkButton(toolbar, text="Reprogramar", command=self._reprogramar).grid(row=0, column=1, padx=(0, 8))
-        ctk.CTkButton(toolbar, text="Simular Capacidade", command=self._simular_capacidade).grid(row=0, column=2, padx=(0, 8))
-        ctk.CTkButton(toolbar, text="Exportar PDF", command=self._exportar_planejamento).grid(
-            row=0, column=3, padx=(0, 8)
-        )
-        ctk.CTkButton(toolbar, text="Imprimir", command=self._imprimir_planejamento).grid(
-            row=0, column=4, padx=(0, 8)
-        )
+        ctk.CTkButton(
+            toolbar,
+            text="Nova Programação",
+            command=self._abrir_dialogo_nova_programacao,
+            fg_color=self.cor_sucesso,
+            hover_color=self._hover(self.cor_sucesso),
+            text_color="white",
+        ).grid(row=0, column=0, padx=(0, 8), pady=4)
+
+        ctk.CTkButton(
+            toolbar,
+            text="Atualizar",
+            command=self._carregar_dados_planejamento,
+            fg_color=self.cor_primaria,
+            hover_color=self._hover(self.cor_primaria),
+            text_color="white",
+        ).grid(row=0, column=1, padx=(0, 8), pady=4)
+
+        ctk.CTkButton(
+            toolbar,
+            text="Reprogramar +1 dia",
+            command=self._reprogramar,
+            fg_color=self.cor_destaque,
+            hover_color=self._hover(self.cor_destaque),
+            text_color="white",
+        ).grid(row=0, column=2, padx=(0, 8), pady=4)
+
+        ctk.CTkButton(
+            toolbar,
+            text="Exportar PDF",
+            command=self._exportar_planejamento,
+            fg_color="#EF4444",
+            hover_color=self._hover("#EF4444"),
+            text_color="white",
+        ).grid(row=0, column=3, padx=(0, 8), pady=4)
+
+        ctk.CTkButton(
+            toolbar,
+            text="Imprimir",
+            command=self._imprimir_planejamento,
+            fg_color="#F59E0B",
+            hover_color=self._hover("#F59E0B"),
+            text_color="white",
+        ).grid(row=0, column=4, padx=(0, 8), pady=4)
 
     def _build_filters(self):
-        filters = ctk.CTkFrame(self)
-        filters.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 12))
+        filters = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        filters.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 8))
         filters.grid_columnconfigure(12, weight=1)
 
-        ctk.CTkLabel(filters, text="Período").grid(row=0, column=0, padx=(12, 6), pady=8)
-        self.plan_inicio_entry = ctk.CTkEntry(filters, placeholder_text="De")
-        self.plan_inicio_entry.grid(row=0, column=1, padx=(0, 6), pady=8)
-        ctk.CTkButton(
-            filters,
-            text="📅",
-            width=32,
-            command=lambda: self._abrir_calendario(self.plan_inicio_entry),
-        ).grid(row=0, column=2, padx=(0, 6), pady=8)
-        self.plan_fim_entry = ctk.CTkEntry(filters, placeholder_text="Até")
-        self.plan_fim_entry.grid(row=0, column=3, padx=(0, 12), pady=8)
-        ctk.CTkButton(
-            filters,
-            text="📅",
-            width=32,
-            command=lambda: self._abrir_calendario(self.plan_fim_entry),
-        ).grid(row=0, column=4, padx=(0, 12), pady=8)
-        ctk.CTkLabel(filters, text="Setor").grid(row=0, column=5, padx=(0, 6), pady=8)
-        self.filtro_setor = ctk.CTkOptionMenu(filters, values=["Todos", "Corte", "Costura", "Acabamento"])
-        self.filtro_setor.grid(row=0, column=6, padx=(0, 12), pady=8)
-        ctk.CTkLabel(filters, text="Prioridade").grid(row=0, column=7, padx=(0, 6), pady=8)
-        self.filtro_prioridade = ctk.CTkOptionMenu(filters, values=["Alta", "Média", "Baixa", "Todas"])
+        ctk.CTkLabel(filters, text="Período", text_color=self.cor_texto).grid(row=0, column=0, padx=(4, 6), pady=6)
+        self.plan_inicio_entry = ctk.CTkEntry(filters, placeholder_text="De", width=135)
+        self.plan_inicio_entry.grid(row=0, column=1, padx=(0, 4), pady=6)
+        ctk.CTkButton(filters, text="📅", width=32, command=lambda: self._abrir_calendario(self.plan_inicio_entry)).grid(row=0, column=2, padx=(0, 8), pady=6)
+        self.plan_fim_entry = ctk.CTkEntry(filters, placeholder_text="Até", width=135)
+        self.plan_fim_entry.grid(row=0, column=3, padx=(0, 4), pady=6)
+        ctk.CTkButton(filters, text="📅", width=32, command=lambda: self._abrir_calendario(self.plan_fim_entry)).grid(row=0, column=4, padx=(0, 10), pady=6)
+
+        ctk.CTkLabel(filters, text="Coleção", text_color=self.cor_texto).grid(row=0, column=5, padx=(0, 6), pady=6)
+        self.filtro_colecao = ctk.CTkComboBox(filters, values=["Todas"], width=160)
+        self.filtro_colecao.set("Todas")
+        self.filtro_colecao.grid(row=0, column=6, padx=(0, 10), pady=6)
+
+        ctk.CTkLabel(filters, text="Prioridade", text_color=self.cor_texto).grid(row=0, column=7, padx=(0, 6), pady=6)
+        self.filtro_prioridade = ctk.CTkOptionMenu(filters, values=["Todas"] + PRIORIDADES, width=130)
         self.filtro_prioridade.set("Todas")
-        self.filtro_prioridade.grid(row=0, column=8, padx=(0, 12), pady=8)
-        ctk.CTkLabel(filters, text="Programação").grid(row=0, column=9, padx=(0, 6), pady=8)
-        self.filtro_programacao = ctk.CTkOptionMenu(
-            filters,
-            values=["Todas", "Semanal", "Mensal", "Trimestral", "Semestral", "Coleção"],
-        )
-        self.filtro_programacao.set("Todas")
-        self.filtro_programacao.grid(row=0, column=10, padx=(0, 12), pady=8)
-        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_dados_planejamento).grid(
-            row=0, column=12, padx=(0, 12), pady=8
-        )
+        self.filtro_prioridade.grid(row=0, column=8, padx=(0, 10), pady=6)
 
-        programacao = ctk.CTkFrame(self)
-        programacao.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 12))
-        programacao.grid_columnconfigure(13, weight=1)
-        ctk.CTkLabel(
-            programacao,
-            text="Passo a passo: Nova Programação de Produção",
-            font=ctk.CTkFont(size=13, weight="bold"),
-        ).grid(row=0, column=0, columnspan=14, sticky="w", padx=12, pady=(8, 4))
+        ctk.CTkLabel(filters, text="Programação", text_color=self.cor_texto).grid(row=0, column=9, padx=(0, 6), pady=6)
+        self.filtro_programacao = ctk.CTkOptionMenu(filters, values=["Todas"] + PROGRAMACOES, width=150)
+        self.filtro_programacao.set("Mensal")
+        self.filtro_programacao.grid(row=0, column=10, padx=(0, 10), pady=6)
 
-        ctk.CTkLabel(programacao, text="1) Período início").grid(row=1, column=0, padx=(12, 6), pady=8)
-        self.entry_programacao_inicio = ctk.CTkEntry(programacao, width=110, placeholder_text="dd/mm/aaaa")
-        self.entry_programacao_inicio.grid(row=1, column=1, padx=(0, 6), pady=8)
-        ctk.CTkButton(programacao, text="📅", width=32, command=lambda: self._abrir_calendario(self.entry_programacao_inicio)).grid(row=1, column=2, padx=(0, 8), pady=8)
-
-        ctk.CTkLabel(programacao, text="2) Período fim").grid(row=1, column=3, padx=(0, 6), pady=8)
-        self.entry_programacao_fim = ctk.CTkEntry(programacao, width=110, placeholder_text="dd/mm/aaaa")
-        self.entry_programacao_fim.grid(row=1, column=4, padx=(0, 6), pady=8)
-        ctk.CTkButton(programacao, text="📅", width=32, command=lambda: self._abrir_calendario(self.entry_programacao_fim)).grid(row=1, column=5, padx=(0, 8), pady=8)
-
-        ctk.CTkLabel(programacao, text="3) Modelo").grid(row=1, column=6, padx=(0, 6), pady=8)
-        self.combo_modelo_programacao = ctk.CTkOptionMenu(programacao, values=["Selecione"], command=self._on_modelo_programacao_change)
-        self.combo_modelo_programacao.grid(row=1, column=7, padx=(0, 8), pady=8)
-
-        ctk.CTkLabel(programacao, text="4) Quantidade").grid(row=1, column=8, padx=(0, 6), pady=8)
-        self.entry_qtd_programacao = ctk.CTkEntry(programacao, width=90, placeholder_text="Qtde")
-        self.entry_qtd_programacao.grid(row=1, column=9, padx=(0, 8), pady=8)
-
-        ctk.CTkLabel(programacao, text="5) Grade").grid(row=1, column=10, padx=(0, 6), pady=8)
-        self.combo_grade_programacao = ctk.CTkOptionMenu(programacao, values=["Padrão"])
-        self.combo_grade_programacao.grid(row=1, column=11, padx=(0, 8), pady=8)
-
-        ctk.CTkLabel(programacao, text="6) Prioridade").grid(row=1, column=12, padx=(0, 6), pady=8)
-        self.combo_prioridade_programacao = ctk.CTkOptionMenu(programacao, values=["Alta", "Média", "Baixa"])
-        self.combo_prioridade_programacao.set("Média")
-        self.combo_prioridade_programacao.grid(row=1, column=13, padx=(0, 8), pady=8)
-
-        ctk.CTkLabel(programacao, text="Programação").grid(row=2, column=0, padx=(12, 6), pady=(0, 10))
-        self.combo_tipo_programacao = ctk.CTkOptionMenu(programacao, values=["Semanal", "Mensal", "Trimestral", "Semestral", "Coleção"])
-        self.combo_tipo_programacao.set("Semanal")
-        self.combo_tipo_programacao.grid(row=2, column=1, padx=(0, 8), pady=(0, 10))
-
-        ctk.CTkButton(programacao, text="Gerar Nova Programação", command=self._gerar_nova_programacao).grid(
-            row=2, column=2, columnspan=2, padx=(0, 8), pady=(0, 10)
-        )
-        ctk.CTkButton(programacao, text="Atualizar Modelos", command=self._carregar_modelos_programacao).grid(
-            row=2, column=4, columnspan=2, padx=(0, 8), pady=(0, 10)
-        )
-
-        self._carregar_modelos_programacao()
-
-    def _carregar_modelos_programacao(self):
-        if not self.combo_modelo_programacao:
-            return
-        ok, _ = require_ready()
-        if not ok:
-            return
-        try:
-            schema = get_schema()
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        f"""
-                        SELECT COALESCE(codigo, ''), COALESCE(descricao, '')
-                          FROM {schema}.cadastro_modelos_cabecalho
-                         ORDER BY codigo
-                        """
-                    )
-                    rows = cur.fetchall()
-            valores = [f"{codigo} - {descricao}".strip(" -") for codigo, descricao in rows if str(codigo).strip()]
-            if not valores:
-                valores = ["Sem modelos cadastrados"]
-            self.combo_modelo_programacao.configure(values=valores)
-            self.combo_modelo_programacao.set(valores[0])
-            self._on_modelo_programacao_change(valores[0])
-        except Exception:
-            self.combo_modelo_programacao.configure(values=["Erro ao carregar modelos"])
-            self.combo_modelo_programacao.set("Erro ao carregar modelos")
-
-    def _on_modelo_programacao_change(self, modelo_selecionado):
-        if not self.combo_grade_programacao:
-            return
-        codigo = (modelo_selecionado or "").split(" - ")[0].strip()
-        if not codigo or codigo.startswith("Sem modelos") or codigo.startswith("Erro"):
-            self.combo_grade_programacao.configure(values=["Padrão"])
-            self.combo_grade_programacao.set("Padrão")
-            return
-        try:
-            schema = get_schema()
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        f"SELECT COALESCE(grade_disponivel, '') FROM {schema}.cadastro_modelos_cabecalho WHERE codigo = %s LIMIT 1",
-                        (codigo,),
-                    )
-                    row = cur.fetchone()
-            grade_txt = (row[0] if row else "") or ""
-            grades = [g.strip() for g in str(grade_txt).replace(";", ",").split(",") if g.strip()]
-            if not grades:
-                grades = ["Padrão"]
-            self.combo_grade_programacao.configure(values=grades)
-            self.combo_grade_programacao.set(grades[0])
-        except Exception:
-            self.combo_grade_programacao.configure(values=["Padrão"])
-            self.combo_grade_programacao.set("Padrão")
-
-    def _gerar_nova_programacao(self):
-        if not self._db_ready():
-            return
-
-        inicio = self._parse_data(self.entry_programacao_inicio.get() if self.entry_programacao_inicio else "")
-        fim = self._parse_data(self.entry_programacao_fim.get() if self.entry_programacao_fim else "")
-        modelo_info = self.combo_modelo_programacao.get() if self.combo_modelo_programacao else ""
-        codigo_modelo = (modelo_info or "").split(" - ")[0].strip()
-        descricao_modelo = (modelo_info or "").split(" - ", 1)[1].strip() if " - " in (modelo_info or "") else codigo_modelo
-        grade = self.combo_grade_programacao.get() if self.combo_grade_programacao else "Padrão"
-        prioridade = self.combo_prioridade_programacao.get() if self.combo_prioridade_programacao else "Média"
-        tipo_programacao = self.combo_tipo_programacao.get() if self.combo_tipo_programacao else "Semanal"
-
-        try:
-            quantidade = int(float((self.entry_qtd_programacao.get() if self.entry_qtd_programacao else "0").replace(",", ".")))
-        except Exception:
-            quantidade = 0
-
-        if not inicio or not fim:
-            messagebox.showwarning("Nova Programação", "Informe o período de início e fim.")
-            return
-        if not codigo_modelo or codigo_modelo.startswith("Sem modelos") or codigo_modelo.startswith("Erro"):
-            messagebox.showwarning("Nova Programação", "Selecione um modelo válido.")
-            return
-        if quantidade <= 0:
-            messagebox.showwarning("Nova Programação", "Informe uma quantidade maior que zero.")
-            return
-
-        try:
-            schema = get_schema()
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(f"SELECT COALESCE(colecao, '') FROM {schema}.cadastro_modelos_cabecalho WHERE codigo = %s", (codigo_modelo,))
-                    row = cur.fetchone()
-                    colecao = row[0] if row else ""
-
-                    cur.execute(
-                        f"""
-                        INSERT INTO {schema}.planejamento_programacao_ops
-                            (periodo_inicio, periodo_fim, codigo_modelo, modelo, colecao, quantidade, grade, prioridade, tipo_programacao, status, data_atualizacao)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'Planejada', NOW())
-                        RETURNING id
-                        """,
-                        (inicio, fim, codigo_modelo, descricao_modelo, colecao, quantidade, grade, prioridade, tipo_programacao),
-                    )
-                    novo_id = cur.fetchone()[0]
-                    op = f"PRG-{novo_id}"
-                    cur.execute(f"UPDATE {schema}.planejamento_programacao_ops SET op = %s WHERE id = %s", (op, novo_id))
-                    cur.execute(
-                        f"""
-                        INSERT INTO {schema}.planejamento_ops (op, modelo, quantidade, inicio, fim, status, prioridade, data_atualizacao)
-                        VALUES (%s, %s, %s, %s, %s, 'Planejada', %s, NOW())
-                        ON CONFLICT (op) DO UPDATE
-                           SET modelo = EXCLUDED.modelo,
-                               quantidade = EXCLUDED.quantidade,
-                               inicio = EXCLUDED.inicio,
-                               fim = EXCLUDED.fim,
-                               prioridade = EXCLUDED.prioridade,
-                               status = EXCLUDED.status,
-                               data_atualizacao = NOW()
-                        """,
-                        (op, descricao_modelo, quantidade, inicio, fim, prioridade),
-                    )
-                conn.commit()
-
-            messagebox.showinfo("Nova Programação", f"Programação {op} criada com sucesso.")
-            self._carregar_dados_planejamento()
-        except Exception as exc:
-            messagebox.showerror("Nova Programação", f"Erro ao criar programação: {exc}")
+        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_dados_planejamento, fg_color=self.cor_primaria, hover_color=self._hover(self.cor_primaria)).grid(row=0, column=12, padx=(0, 6), pady=6)
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
-        body.grid(row=4, column=0, sticky="nsew", padx=24, pady=(0, 24))
+        body.grid(row=3, column=0, sticky="nsew", padx=14, pady=(0, 14))
         body.grid_columnconfigure(0, weight=2)
         body.grid_columnconfigure(1, weight=1)
         body.grid_rowconfigure(1, weight=1)
 
         kpis = ctk.CTkFrame(body)
-        kpis.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 12))
+        kpis.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         kpis.grid_columnconfigure((0, 1, 2, 3), weight=1)
-        for idx, text in enumerate(
-            ["OPs em execução: 0", "Atrasos críticos: 0", "Capacidade usada: 0%", "Ociosidade: 0%"]
-        ):
+        for idx, text in enumerate(["OPs em execução: 0", "Atrasos críticos: 0", "Capacidade usada: 0%", "Ociosidade: 0%"]):
             card = ctk.CTkFrame(kpis)
-            card.grid(row=0, column=idx, padx=6, sticky="ew")
-            label = ctk.CTkLabel(card, text=text, font=ctk.CTkFont(size=12, weight="bold"))
-            label.pack(
-                pady=12
-            )
+            card.grid(row=0, column=idx, padx=6, pady=6, sticky="ew")
+            label = ctk.CTkLabel(card, text=text, font=ctk.CTkFont(size=13, weight="bold"), text_color=self.cor_texto)
+            label.pack(pady=12)
             self.kpi_labels.append(label)
 
         ordens_frame = ctk.CTkFrame(body)
-        ordens_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
+        ordens_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 10))
         ordens_frame.grid_columnconfigure(0, weight=1)
         ordens_frame.grid_rowconfigure(1, weight=1)
-        ctk.CTkLabel(
-            ordens_frame, text="Ordens Planejadas", font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
+        ctk.CTkLabel(ordens_frame, text="Programações / OPs", font=ctk.CTkFont(size=15, weight="bold")).grid(row=0, column=0, sticky="w", padx=14, pady=(12, 6))
 
         self.tree_ops = ttk.Treeview(
             ordens_frame,
-            columns=("op", "modelo", "quantidade", "inicio", "fim", "status", "programacao", "colecao"),
+            columns=("op", "modelo", "qtde", "inicio", "fim", "status", "programacao", "colecao"),
             show="headings",
-            height=12,
+            height=14,
         )
         for col, text, width in (
-            ("op", "OP", 90),
-            ("modelo", "Modelo", 200),
-            ("quantidade", "Qtde", 80),
-            ("inicio", "Início", 110),
-            ("fim", "Fim", 110),
-            ("status", "Status", 120),
+            ("op", "OP", 105),
+            ("modelo", "Modelo", 230),
+            ("qtde", "Qtde", 80),
+            ("inicio", "Início", 100),
+            ("fim", "Fim", 100),
+            ("status", "Status", 110),
             ("programacao", "Programação", 110),
-            ("colecao", "Coleção", 120),
+            ("colecao", "Coleção", 130),
         ):
             self.tree_ops.heading(col, text=text)
-            self.tree_ops.column(col, width=width)
-        self.tree_ops.column("quantidade", anchor="e")
-        self.tree_ops.tag_configure("grupo", background="#E8EEF6", font=("Arial", 10, "bold"))
+            self.tree_ops.column(col, width=width, anchor="center")
+        self.tree_ops.column("modelo", anchor="w")
+        self.tree_ops.tag_configure("grupo", background="#DDE8F5", font=("Arial", 10, "bold"))
         self.tree_ops.bind("<Double-1>", self._abrir_detalhe_op)
 
-        tree_scroll = ttk.Scrollbar(ordens_frame, orient="vertical", command=self.tree_ops.yview)
-        self.tree_ops.configure(yscrollcommand=tree_scroll.set)
-        self.tree_ops.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
-        tree_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 16))
+        scroll_ops = ttk.Scrollbar(ordens_frame, orient="vertical", command=self.tree_ops.yview)
+        self.tree_ops.configure(yscrollcommand=scroll_ops.set)
+        self.tree_ops.grid(row=1, column=0, sticky="nsew", padx=(14, 0), pady=(0, 14))
+        scroll_ops.grid(row=1, column=1, sticky="ns", pady=(0, 14))
 
-        capacity_frame = ctk.CTkFrame(body)
-        capacity_frame.grid(row=1, column=1, sticky="nsew")
-        capacity_frame.grid_columnconfigure(0, weight=1)
-        capacity_frame.grid_rowconfigure(1, weight=1)
-        ctk.CTkLabel(
-            capacity_frame, text="Capacidade por Recurso", font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
+        capacidade_frame = ctk.CTkFrame(body)
+        capacidade_frame.grid(row=1, column=1, sticky="nsew")
+        capacidade_frame.grid_columnconfigure(0, weight=1)
+        capacidade_frame.grid_rowconfigure(1, weight=1)
+        ctk.CTkLabel(capacidade_frame, text="Resumo de Materiais", font=ctk.CTkFont(size=15, weight="bold")).grid(row=0, column=0, sticky="w", padx=14, pady=(12, 6))
 
-        self.tree_capacidade = ttk.Treeview(
-            capacity_frame,
-            columns=("recurso", "carga", "capacidade", "ocioso"),
-            show="headings",
-            height=10,
-        )
+        self.tree_capacidade = ttk.Treeview(capacidade_frame, columns=("recurso", "carga", "capacidade", "ocioso"), show="headings", height=12)
         for col, text, width in (
-            ("recurso", "Recurso", 160),
-            ("carga", "Carga", 90),
-            ("capacidade", "Capacidade", 100),
-            ("ocioso", "Ociosidade", 90),
+            ("recurso", "Recurso", 155),
+            ("carga", "Necessário", 95),
+            ("capacidade", "Estoque", 95),
+            ("ocioso", "Saldo", 95),
         ):
             self.tree_capacidade.heading(col, text=text)
-            self.tree_capacidade.column(col, width=width)
-        self.tree_capacidade.column("carga", anchor="e")
-        self.tree_capacidade.column("capacidade", anchor="e")
-        self.tree_capacidade.column("ocioso", anchor="e")
-
-        capacity_scroll = ttk.Scrollbar(capacity_frame, orient="vertical", command=self.tree_capacidade.yview)
-        self.tree_capacidade.configure(yscrollcommand=capacity_scroll.set)
-        self.tree_capacidade.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
-        capacity_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 16))
+            self.tree_capacidade.column(col, width=width, anchor="center")
+        scroll_cap = ttk.Scrollbar(capacidade_frame, orient="vertical", command=self.tree_capacidade.yview)
+        self.tree_capacidade.configure(yscrollcommand=scroll_cap.set)
+        self.tree_capacidade.grid(row=1, column=0, sticky="nsew", padx=(14, 0), pady=(0, 14))
+        scroll_cap.grid(row=1, column=1, sticky="ns", pady=(0, 14))
 
         detalhe_frame = ctk.CTkFrame(body)
         detalhe_frame.grid(row=2, column=0, columnspan=2, sticky="nsew")
         detalhe_frame.grid_columnconfigure(0, weight=1)
         detalhe_frame.grid_columnconfigure(1, weight=1)
-        ctk.CTkLabel(
-            detalhe_frame, text="Detalhes do Corte Selecionado", font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=16, pady=(12, 8))
+        ctk.CTkLabel(detalhe_frame, text="Detalhes da OP Selecionada", font=ctk.CTkFont(size=15, weight="bold")).grid(row=0, column=0, columnspan=2, sticky="w", padx=14, pady=(12, 6))
 
         info = ctk.CTkFrame(detalhe_frame)
-        info.grid(row=1, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 10))
-        info.grid_columnconfigure((0, 1, 2), weight=1)
-        for idx, chave in enumerate(("grade", "prazo", "modelo")):
-            txt = "Grade: -" if chave == "grade" else ("Prazo início: -" if chave == "prazo" else "Modelo: -")
+        info.grid(row=1, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 8))
+        info.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        for idx, chave in enumerate(("grade", "prazo", "modelo", "prioridade")):
+            txt = {
+                "grade": "Grade: -",
+                "prazo": "Prazo início: -",
+                "modelo": "Modelo: -",
+                "prioridade": "Prioridade: -",
+            }[chave]
             lbl = ctk.CTkLabel(info, text=txt, anchor="w")
             lbl.grid(row=0, column=idx, sticky="ew", padx=8, pady=8)
             self.detalhe_labels[chave] = lbl
 
         tecidos_frame = ctk.CTkFrame(detalhe_frame)
-        tecidos_frame.grid(row=2, column=0, sticky="nsew", padx=(16, 8), pady=(0, 16))
+        tecidos_frame.grid(row=2, column=0, sticky="nsew", padx=(14, 7), pady=(0, 14))
         tecidos_frame.grid_columnconfigure(0, weight=1)
         tecidos_frame.grid_rowconfigure(1, weight=1)
-        ctk.CTkLabel(tecidos_frame, text="Tecidos necessários", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=0, column=0, sticky="w", padx=10, pady=(10, 6)
-        )
-        self.tree_tecidos = ttk.Treeview(tecidos_frame, columns=("descricao", "necessario", "estoque", "saldo", "status"), show="headings", height=6)
-        self.tree_tecidos.heading("descricao", text="Tecido")
-        self.tree_tecidos.heading("necessario", text="Necessário")
-        self.tree_tecidos.heading("estoque", text="Estoque")
-        self.tree_tecidos.heading("saldo", text="Saldo")
-        self.tree_tecidos.heading("status", text="Status")
-        self.tree_tecidos.column("descricao", width=220)
-        self.tree_tecidos.column("necessario", width=90, anchor="e")
-        self.tree_tecidos.column("estoque", width=90, anchor="e")
-        self.tree_tecidos.column("saldo", width=90, anchor="e")
-        self.tree_tecidos.column("status", width=80, anchor="center")
+        ctk.CTkLabel(tecidos_frame, text="Tecidos necessários", font=ctk.CTkFont(size=13, weight="bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 6))
+        self.tree_tecidos = ttk.Treeview(tecidos_frame, columns=("codigo", "descricao", "necessario", "estoque", "saldo", "status"), show="headings", height=6)
+        for col, text, width in (
+            ("codigo", "Código", 85),
+            ("descricao", "Tecido", 200),
+            ("necessario", "Necessário", 90),
+            ("estoque", "Estoque", 90),
+            ("saldo", "Saldo", 90),
+            ("status", "Status", 90),
+        ):
+            self.tree_tecidos.heading(col, text=text)
+            self.tree_tecidos.column(col, width=width, anchor="center")
+        self.tree_tecidos.column("descricao", anchor="w")
         self.tree_tecidos.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
         aviamentos_frame = ctk.CTkFrame(detalhe_frame)
-        aviamentos_frame.grid(row=2, column=1, sticky="nsew", padx=(8, 16), pady=(0, 16))
+        aviamentos_frame.grid(row=2, column=1, sticky="nsew", padx=(7, 14), pady=(0, 14))
         aviamentos_frame.grid_columnconfigure(0, weight=1)
         aviamentos_frame.grid_rowconfigure(1, weight=1)
-        ctk.CTkLabel(aviamentos_frame, text="Aviamentos necessários", font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=0, column=0, sticky="w", padx=10, pady=(10, 6)
-        )
-        self.tree_aviamentos = ttk.Treeview(aviamentos_frame, columns=("descricao", "qtd"), show="headings", height=6)
-        self.tree_aviamentos.heading("descricao", text="Aviamento")
-        self.tree_aviamentos.heading("qtd", text="Qtd")
-        self.tree_aviamentos.column("descricao", width=250)
-        self.tree_aviamentos.column("qtd", width=110, anchor="e")
+        ctk.CTkLabel(aviamentos_frame, text="Aviamentos necessários", font=ctk.CTkFont(size=13, weight="bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 6))
+        self.tree_aviamentos = ttk.Treeview(aviamentos_frame, columns=("codigo", "descricao", "necessario", "estoque", "saldo", "status"), show="headings", height=6)
+        for col, text, width in (
+            ("codigo", "Código", 85),
+            ("descricao", "Aviamento", 200),
+            ("necessario", "Necessário", 90),
+            ("estoque", "Estoque", 90),
+            ("saldo", "Saldo", 90),
+            ("status", "Status", 90),
+        ):
+            self.tree_aviamentos.heading(col, text=text)
+            self.tree_aviamentos.column(col, width=width, anchor="center")
+        self.tree_aviamentos.column("descricao", anchor="w")
         self.tree_aviamentos.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
-    @staticmethod
-    def _to_float(valor):
-        try:
-            return float(valor or 0)
-        except Exception:
-            return 0.0
-
+    # =========================================================
+    # Banco / estrutura
+    # =========================================================
     def _db_ready(self):
         ok, msg = require_ready()
         if not ok:
             messagebox.showerror("Planejamento", msg)
         return ok
+
+    def _garantir_estrutura_planejamento(self):
+        if not self._db_ready():
+            return
+        schema = get_schema()
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS codigo_modelo VARCHAR(100)")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS descricao_modelo TEXT")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS colecao VARCHAR(100)")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS programacao VARCHAR(30) DEFAULT 'Mensal'")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS periodo_inicio DATE")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS periodo_fim DATE")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS prazo_inicio DATE")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS observacoes TEXT")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS total_grade INTEGER DEFAULT 0")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT NOW()")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT NOW()")
+                    cur.execute(f"CREATE UNIQUE INDEX IF NOT EXISTS idx_planejamento_ops_op_uq ON {schema}.planejamento_ops(op)")
+                    cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ops_modelo ON {schema}.planejamento_ops(codigo_modelo)")
+                    cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ops_programacao ON {schema}.planejamento_ops(programacao)")
+                    cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ops_colecao ON {schema}.planejamento_ops(colecao)")
+
+                    cur.execute(
+                        f"""
+                        CREATE TABLE IF NOT EXISTS {schema}.planejamento_op_grade (
+                            id SERIAL PRIMARY KEY,
+                            planejamento_id INTEGER NOT NULL REFERENCES {schema}.planejamento_ops(id) ON DELETE CASCADE,
+                            tamanho VARCHAR(10) NOT NULL,
+                            quantidade INTEGER DEFAULT 0 NOT NULL,
+                            created_at TIMESTAMP DEFAULT NOW(),
+                            UNIQUE (planejamento_id, tamanho)
+                        )
+                        """
+                    )
+                    cur.execute(
+                        f"""
+                        CREATE TABLE IF NOT EXISTS {schema}.planejamento_op_tecidos (
+                            id SERIAL PRIMARY KEY,
+                            planejamento_id INTEGER NOT NULL REFERENCES {schema}.planejamento_ops(id) ON DELETE CASCADE,
+                            codigo_tecido VARCHAR(100),
+                            descricao TEXT,
+                            cor VARCHAR(50),
+                            fornecedor VARCHAR(100),
+                            composicao VARCHAR(100),
+                            consumo_por_peca NUMERIC(12,4) DEFAULT 0,
+                            quantidade_necessaria NUMERIC(12,4) DEFAULT 0,
+                            estoque_atual NUMERIC(12,4) DEFAULT 0,
+                            saldo_previsto NUMERIC(12,4) DEFAULT 0,
+                            status_estoque VARCHAR(20) DEFAULT 'OK',
+                            created_at TIMESTAMP DEFAULT NOW()
+                        )
+                        """
+                    )
+                    cur.execute(
+                        f"""
+                        CREATE TABLE IF NOT EXISTS {schema}.planejamento_op_aviamentos (
+                            id SERIAL PRIMARY KEY,
+                            planejamento_id INTEGER NOT NULL REFERENCES {schema}.planejamento_ops(id) ON DELETE CASCADE,
+                            codigo_aviamento VARCHAR(100),
+                            descricao TEXT,
+                            cor VARCHAR(50),
+                            fornecedor VARCHAR(100),
+                            consumo_por_peca NUMERIC(12,4) DEFAULT 0,
+                            quantidade_necessaria NUMERIC(12,4) DEFAULT 0,
+                            estoque_atual NUMERIC(12,4) DEFAULT 0,
+                            saldo_previsto NUMERIC(12,4) DEFAULT 0,
+                            status_estoque VARCHAR(20) DEFAULT 'OK',
+                            created_at TIMESTAMP DEFAULT NOW()
+                        )
+                        """
+                    )
+                conn.commit()
+        except Exception as exc:
+            messagebox.showerror("Planejamento", f"Erro ao preparar estrutura do banco: {exc}")
+
+    def _carregar_modelos_cache(self):
+        self.modelos_cache = []
+        if not self._db_ready():
+            return
+        schema = get_schema()
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        f"""
+                        SELECT codigo, COALESCE(descricao, ''), COALESCE(colecao, ''), COALESCE(grade_disponivel, '')
+                        FROM {schema}.cadastro_modelos_cabecalho
+                        ORDER BY descricao, codigo
+                        """
+                    )
+                    self.modelos_cache = cur.fetchall()
+        except Exception:
+            self.modelos_cache = []
+
+        colecoes = sorted({(row[2] or '').strip() for row in self.modelos_cache if (row[2] or '').strip()})
+        valores = ["Todas"] + colecoes if colecoes else ["Todas"]
+        if hasattr(self, "filtro_colecao") and self.filtro_colecao:
+            self.filtro_colecao.configure(values=valores)
+            self.filtro_colecao.set("Todas")
+
+    # =========================================================
+    # Utilidades
+    # =========================================================
+    @staticmethod
+    def _to_float(valor):
+        try:
+            if valor is None:
+                return 0.0
+            return float(valor)
+        except Exception:
+            try:
+                return float(str(valor).replace(".", "").replace(",", "."))
+            except Exception:
+                return 0.0
+
+    @staticmethod
+    def _fmt_num(valor, casas=3):
+        numero = PlanejamentoProducaoPage._to_float(valor)
+        txt = f"{numero:,.{casas}f}"
+        return txt.replace(",", "X").replace(".", ",").replace("X", ".")
+
+    @staticmethod
+    def _fmt_int(valor):
+        return f"{int(round(PlanejamentoProducaoPage._to_float(valor)))}"
+
+    def _hover(self, cor):
+        try:
+            cor = cor.lstrip("#")
+            r, g, b = [int(cor[i:i+2], 16) for i in (0, 2, 4)]
+            fator = 0.85
+            return f"#{int(r*fator):02x}{int(g*fator):02x}{int(b*fator):02x}"
+        except Exception:
+            return cor
 
     def _parse_data(self, texto):
         if not texto:
@@ -457,202 +446,621 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         except Exception:
             return None
 
+    def _data_txt(self, valor):
+        return valor.strftime("%d/%m/%Y") if valor else ""
+
     def _limpar_tree(self, tree):
         if tree is None:
             return
         for item in tree.get_children():
             tree.delete(item)
 
-    def _garantir_tabela_programacao(self, cur, schema):
-        cur.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {schema}.planejamento_programacao_ops (
-                id SERIAL PRIMARY KEY,
-                op VARCHAR(60) UNIQUE,
-                periodo_inicio DATE NOT NULL,
-                periodo_fim DATE NOT NULL,
-                codigo_modelo VARCHAR(100) NOT NULL,
-                modelo VARCHAR(200),
-                colecao VARCHAR(100),
-                quantidade INTEGER DEFAULT 0,
-                grade VARCHAR(200),
-                prioridade VARCHAR(20) DEFAULT 'Média',
-                tipo_programacao VARCHAR(30) DEFAULT 'Semanal',
-                status VARCHAR(30) DEFAULT 'Planejada',
-                observacoes TEXT,
-                data_atualizacao TIMESTAMP DEFAULT NOW()
-            )
-            """
-        )
-        cur.execute(
-            f"CREATE UNIQUE INDEX IF NOT EXISTS idx_planejamento_ops_op ON {schema}.planejamento_ops(op)"
-        )
-
-    def _gerar_plano(self):
-        if not self._db_ready():
-            return
-        try:
-            schema = get_schema()
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    self._garantir_tabela_programacao(cur, schema)
-                    cur.execute(f"DELETE FROM {schema}.planejamento_ops")
-                    cur.execute(
-                        f"""
-                        INSERT INTO {schema}.planejamento_ops (op, modelo, quantidade, inicio, fim, status, prioridade, data_atualizacao)
-                        SELECT CONCAT('OC-', id) AS op,
-                               COALESCE(descricao_modelo, codigo_modelo, 'Modelo sem descrição') AS modelo,
-                               COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) AS quantidade,
-                               COALESCE(data_registro::date, CURRENT_DATE) AS inicio,
-                               COALESCE(data_final, (COALESCE(data_registro::date, CURRENT_DATE) + INTERVAL '7 day')::date) AS fim,
-                               CASE
-                                   WHEN COALESCE(status, 'Em Andamento') ILIKE '%final%' THEN 'Finalizada'
-                                   WHEN COALESCE(data_final, CURRENT_DATE) < CURRENT_DATE THEN 'Atrasada'
-                                   ELSE 'Em execução'
-                               END AS status,
-                               CASE
-                                   WHEN COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) >= 1000 THEN 'Alta'
-                                   WHEN COALESCE(NULLIF(total_pecas, 0), quantidade_desejada, 0) >= 300 THEN 'Média'
-                                   ELSE 'Baixa'
-                               END AS prioridade,
-                               NOW()
-                          FROM {schema}.ordem_corte_ficha
-                         WHERE COALESCE(ativo, TRUE) = TRUE
-                        """
-                    )
-                    cur.execute(
-                        f"""
-                        INSERT INTO {schema}.planejamento_ops (op, modelo, quantidade, inicio, fim, status, prioridade, data_atualizacao)
-                        SELECT COALESCE(op, CONCAT('PRG-', id)),
-                               COALESCE(modelo, codigo_modelo),
-                               COALESCE(quantidade, 0),
-                               periodo_inicio,
-                               periodo_fim,
-                               COALESCE(status, 'Planejada'),
-                               COALESCE(prioridade, 'Média'),
-                               NOW()
-                          FROM {schema}.planejamento_programacao_ops
-                        """
-                    )
-
-                    cur.execute(f"DELETE FROM {schema}.planejamento_capacidade")
-                    cur.execute(
-                        f"""
-                        INSERT INTO {schema}.planejamento_capacidade (recurso, carga, capacidade, ociosidade, data_atualizacao)
-                        WITH recursos AS (
-                            SELECT UPPER(TRIM(COALESCE(cortador, ''))) AS recurso,
-                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
-                              FROM {schema}.cadastro_de_corte
-                             WHERE COALESCE(NULLIF(cortador, ''), '') <> ''
-                             GROUP BY 1
-                            UNION ALL
-                            SELECT UPPER(TRIM(COALESCE(auxiliar, ''))) AS recurso,
-                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
-                              FROM {schema}.cadastro_de_corte
-                             WHERE COALESCE(NULLIF(auxiliar, ''), '') <> ''
-                             GROUP BY 1
-                            UNION ALL
-                            SELECT UPPER(TRIM(COALESCE(ajudante, ''))) AS recurso,
-                                   SUM(COALESCE(total_pecas, 0))::numeric AS carga
-                              FROM {schema}.cadastro_de_corte
-                             WHERE COALESCE(NULLIF(ajudante, ''), '') <> ''
-                             GROUP BY 1
-                        )
-                        SELECT recurso,
-                               SUM(carga) AS carga,
-                               GREATEST(SUM(carga) * 1.20, 1) AS capacidade,
-                               GREATEST((SUM(carga) * 1.20) - SUM(carga), 0) AS ociosidade,
-                               NOW()
-                          FROM recursos
-                      GROUP BY recurso
-                        """
-                    )
-                conn.commit()
-            self._carregar_dados_planejamento()
-            messagebox.showinfo("Planejamento", "Plano atualizado com sucesso.")
-        except Exception as exc:
-            messagebox.showerror("Planejamento", f"Erro ao gerar plano: {exc}")
-
-    def _reprogramar(self):
-        if not self._db_ready():
-            return
-        selecionado = self.tree_ops.focus() if self.tree_ops else None
-        if not selecionado:
-            messagebox.showwarning("Planejamento", "Selecione uma OP para reprogramar.")
-            return
-        valores = self.tree_ops.item(selecionado).get("values", [])
-        if not valores:
-            return
-        op = valores[0]
-        try:
-            schema = get_schema()
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        f"""
-                        UPDATE {schema}.planejamento_ops
-                           SET inicio = COALESCE(inicio, CURRENT_DATE) + INTERVAL '1 day',
-                               fim = COALESCE(fim, CURRENT_DATE) + INTERVAL '1 day',
-                               status = 'Reprogramada',
-                               data_atualizacao = NOW()
-                         WHERE op = %s
-                        """,
-                        (op,),
-                    )
-                conn.commit()
-            self._carregar_dados_planejamento()
-            messagebox.showinfo("Planejamento", f"OP {op} reprogramada para +1 dia.")
-        except Exception as exc:
-            messagebox.showerror("Planejamento", f"Erro ao reprogramar: {exc}")
-
-    def _simular_capacidade(self):
-        carga = 0.0
-        capacidade = 0.0
-        if self.tree_capacidade:
-            for item in self.tree_capacidade.get_children():
-                vals = self.tree_capacidade.item(item).get("values", [])
-                carga += self._to_float(vals[1] if len(vals) > 1 else 0)
-                capacidade += self._to_float(vals[2] if len(vals) > 2 else 0)
-        uso = (carga / capacidade * 100) if capacidade > 0 else 0
-        messagebox.showinfo("Simulação", f"Carga total: {carga:,.2f}\nCapacidade total: {capacidade:,.2f}\nUso estimado: {uso:.1f}%")
-
-    def _abrir_gantt(self):
-        if not self.tree_ops or not self.tree_ops.get_children():
-            messagebox.showinfo("Gantt", "Sem dados para visualizar o Gantt.")
-            return
-        messagebox.showinfo("Gantt", "Visualização Gantt em evolução. As OPs já estão carregadas na grade.")
-
-    @staticmethod
-    def _classificar_programacao(data_inicio):
-        if not data_inicio:
-            return "Semanal"
-        mes = data_inicio.month
-        dia = data_inicio.day
-        if dia <= 7:
-            return "Semanal"
-        if dia <= 15:
-            return "Mensal"
-        if mes in (1, 4, 7, 10):
-            return "Trimestral"
-        if mes in (1, 7):
-            return "Semestral"
-        return "Mensal"
-
-    @staticmethod
-    def _texto_grade(grade_str):
-        bruto = str(grade_str or "").strip()
-        if not bruto:
-            return "-"
-        partes = [p.strip() for p in bruto.replace(';', ',').split(',') if p.strip()]
-        return " / ".join(partes) if partes else bruto
-
     def _limpar_detalhes(self):
-        if self.detalhe_labels:
-            self.detalhe_labels.get("grade").configure(text="Grade: -")
-            self.detalhe_labels.get("prazo").configure(text="Prazo início: -")
-            self.detalhe_labels.get("modelo").configure(text="Modelo: -")
+        for chave, texto in {
+            "grade": "Grade: -",
+            "prazo": "Prazo início: -",
+            "modelo": "Modelo: -",
+            "prioridade": "Prioridade: -",
+        }.items():
+            if chave in self.detalhe_labels:
+                self.detalhe_labels[chave].configure(text=texto)
         self._limpar_tree(self.tree_tecidos)
         self._limpar_tree(self.tree_aviamentos)
+
+    def _gerar_codigo_op(self, cur, programacao):
+        prefixo = {
+            "Semanal": "OPS",
+            "Mensal": "OPM",
+            "Trimestral": "OPT",
+            "Semestral": "OPSE",
+            "Coleção": "OPC",
+        }.get(programacao, "OP")
+        cur.execute(f"SELECT COUNT(*) FROM {get_schema()}.planejamento_ops WHERE op LIKE %s", (f"{prefixo}-%",))
+        prox = (cur.fetchone()[0] or 0) + 1
+        return f"{prefixo}-{prox:04d}"
+
+    # =========================================================
+    # Cálculo de materiais
+    # =========================================================
+    def _carregar_materiais_modelo(self, codigo_modelo, quantidade_total):
+        schema = get_schema()
+        tecidos = []
+        aviamentos = []
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT codigo_tecido, COALESCE(descricao, ''), COALESCE(cor, ''),
+                           COALESCE(fornecedor, ''), COALESCE(composicao, ''), COALESCE(metros_peca, 0)
+                      FROM {schema}.cadastro_modelos_tecidos
+                     WHERE codigo_modelo = %s
+                     ORDER BY descricao, codigo_tecido
+                    """,
+                    (codigo_modelo,),
+                )
+                for codigo, descricao, cor, fornecedor, composicao, consumo in cur.fetchall():
+                    necessario = self._to_float(consumo) * quantidade_total
+                    cur.execute(
+                        f"""
+                        SELECT COALESCE(SUM(metros), 0)
+                          FROM {schema}.estoque_tecidos
+                         WHERE codigo = %s
+                        """,
+                        (codigo,),
+                    )
+                    estoque = self._to_float(cur.fetchone()[0])
+                    saldo = estoque - necessario
+                    tecidos.append({
+                        "codigo": codigo or "",
+                        "descricao": descricao or codigo or "Tecido",
+                        "cor": cor or "",
+                        "fornecedor": fornecedor or "",
+                        "composicao": composicao or "",
+                        "consumo": self._to_float(consumo),
+                        "necessario": necessario,
+                        "estoque": estoque,
+                        "saldo": saldo,
+                        "status": "OK" if saldo >= 0 else "FALTA",
+                    })
+
+                cur.execute(
+                    f"""
+                    SELECT codigo_aviamento, COALESCE(descricao, ''), COALESCE(cor, ''),
+                           COALESCE(fornecedor, ''), COALESCE(quantidade, 0)
+                      FROM {schema}.cadastro_modelos_aviamentos
+                     WHERE codigo_modelo = %s
+                     ORDER BY descricao, codigo_aviamento
+                    """,
+                    (codigo_modelo,),
+                )
+                for codigo, descricao, cor, fornecedor, consumo in cur.fetchall():
+                    necessario = self._to_float(consumo) * quantidade_total
+                    cur.execute(
+                        f"""
+                        SELECT COALESCE(SUM(quantidade), 0)
+                          FROM {schema}.estoque_aviamentos
+                         WHERE codigo = %s
+                        """,
+                        (codigo,),
+                    )
+                    estoque = self._to_float(cur.fetchone()[0])
+                    saldo = estoque - necessario
+                    aviamentos.append({
+                        "codigo": codigo or "",
+                        "descricao": descricao or codigo or "Aviamento",
+                        "cor": cor or "",
+                        "fornecedor": fornecedor or "",
+                        "consumo": self._to_float(consumo),
+                        "necessario": necessario,
+                        "estoque": estoque,
+                        "saldo": saldo,
+                        "status": "OK" if saldo >= 0 else "FALTA",
+                    })
+        return tecidos, aviamentos
+
+    # =========================================================
+    # Nova programação
+    # =========================================================
+    def _abrir_dialogo_nova_programacao(self):
+        if not self._db_ready():
+            return
+        self._carregar_modelos_cache()
+
+        top = ctk.CTkToplevel(self)
+        top.title("Nova Programação de Produção")
+        top.geometry("980x760")
+        top.transient(self)
+        top.grab_set()
+        top.configure(fg_color=self.cor_fundo)
+        top.grid_columnconfigure(0, weight=1)
+        top.grid_rowconfigure(1, weight=1)
+
+        ctk.CTkLabel(top, text="Nova Programação", font=ctk.CTkFont(size=24, weight="bold")).grid(row=0, column=0, sticky="w", padx=18, pady=(14, 8))
+
+        body = ctk.CTkScrollableFrame(top, fg_color=self.cor_fundo)
+        body.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 12))
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_columnconfigure(1, weight=1)
+
+        # Passo 1
+        passo1 = ctk.CTkFrame(body)
+        passo1.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        passo1.grid_columnconfigure((1, 3, 5, 7), weight=1)
+        ctk.CTkLabel(passo1, text="Passo 1 - Definir período e tipo de programação", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=8, sticky="w", padx=12, pady=(10, 8))
+
+        ctk.CTkLabel(passo1, text="Período início").grid(row=1, column=0, padx=(12, 6), pady=6, sticky="w")
+        ent_inicio = ctk.CTkEntry(passo1, width=140)
+        ent_inicio.grid(row=1, column=1, padx=(0, 6), pady=6, sticky="ew")
+        ent_inicio.insert(0, date.today().strftime("%d/%m/%Y"))
+        ctk.CTkButton(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_inicio)).grid(row=1, column=2, padx=(0, 12), pady=6)
+
+        ctk.CTkLabel(passo1, text="Período fim").grid(row=1, column=3, padx=(0, 6), pady=6, sticky="w")
+        ent_fim = ctk.CTkEntry(passo1, width=140)
+        ent_fim.grid(row=1, column=4, padx=(0, 6), pady=6, sticky="ew")
+        ent_fim.insert(0, (date.today() + timedelta(days=30)).strftime("%d/%m/%Y"))
+        ctk.CTkButton(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_fim)).grid(row=1, column=5, padx=(0, 12), pady=6)
+
+        ctk.CTkLabel(passo1, text="Programação").grid(row=1, column=6, padx=(0, 6), pady=6, sticky="w")
+        cmb_programacao = ctk.CTkOptionMenu(passo1, values=PROGRAMACOES)
+        cmb_programacao.set("Mensal")
+        cmb_programacao.grid(row=1, column=7, padx=(0, 12), pady=6, sticky="ew")
+
+        ctk.CTkLabel(passo1, text="Prazo para começar").grid(row=2, column=0, padx=(12, 6), pady=(0, 10), sticky="w")
+        ent_prazo = ctk.CTkEntry(passo1, width=140)
+        ent_prazo.grid(row=2, column=1, padx=(0, 6), pady=(0, 10), sticky="ew")
+        ent_prazo.insert(0, date.today().strftime("%d/%m/%Y"))
+        ctk.CTkButton(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_prazo)).grid(row=2, column=2, padx=(0, 12), pady=(0, 10))
+
+        ctk.CTkLabel(passo1, text="Coleção").grid(row=2, column=3, padx=(0, 6), pady=(0, 10), sticky="w")
+        valores_colecao = sorted({(m[2] or '').strip() for m in self.modelos_cache if (m[2] or '').strip()}) or [""]
+        cmb_colecao = ctk.CTkComboBox(passo1, values=valores_colecao)
+        if valores_colecao:
+            cmb_colecao.set(valores_colecao[0])
+        cmb_colecao.grid(row=2, column=4, padx=(0, 12), pady=(0, 10), sticky="ew")
+
+        ctk.CTkLabel(passo1, text="Prioridade").grid(row=2, column=6, padx=(0, 6), pady=(0, 10), sticky="w")
+        cmb_prioridade = ctk.CTkOptionMenu(passo1, values=PRIORIDADES)
+        cmb_prioridade.set("Média")
+        cmb_prioridade.grid(row=2, column=7, padx=(0, 12), pady=(0, 10), sticky="ew")
+
+        # Passo 2
+        passo2 = ctk.CTkFrame(body)
+        passo2.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        passo2.grid_columnconfigure(1, weight=1)
+        passo2.grid_columnconfigure(3, weight=1)
+        ctk.CTkLabel(passo2, text="Passo 2 - Escolher modelo e quantidade", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
+
+        modelos_exibicao = [f"{m[0]} - {m[1]}" for m in self.modelos_cache] or [""]
+        ctk.CTkLabel(passo2, text="Modelo").grid(row=1, column=0, padx=(12, 6), pady=6, sticky="w")
+        cmb_modelo = ctk.CTkComboBox(passo2, values=modelos_exibicao)
+        if modelos_exibicao:
+            cmb_modelo.set(modelos_exibicao[0])
+        cmb_modelo.grid(row=1, column=1, padx=(0, 12), pady=6, sticky="ew")
+
+        ctk.CTkLabel(passo2, text="Quantidade total").grid(row=1, column=2, padx=(0, 6), pady=6, sticky="w")
+        ent_quantidade = ctk.CTkEntry(passo2)
+        ent_quantidade.insert(0, "0")
+        ent_quantidade.grid(row=1, column=3, padx=(0, 12), pady=6, sticky="ew")
+
+        lbl_grade_disp = ctk.CTkLabel(passo2, text="Grade disponível: -")
+        lbl_grade_disp.grid(row=2, column=0, columnspan=4, sticky="w", padx=12, pady=(0, 10))
+
+        # Passo 3
+        passo3 = ctk.CTkFrame(body)
+        passo3.grid(row=2, column=0, sticky="nsew", padx=(0, 8), pady=(0, 10))
+        ctk.CTkLabel(passo3, text="Passo 3 - Distribuir grade", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
+
+        grade_vars = {}
+        grade_entries = {}
+        for i, tamanho in enumerate(TAMANHOS_GRADE):
+            grade_vars[tamanho] = ctk.StringVar(value="0")
+            ctk.CTkLabel(passo3, text=tamanho).grid(row=1 + (i // 4), column=(i % 4), padx=8, pady=(0, 4), sticky="w")
+            ent = ctk.CTkEntry(passo3, width=90, textvariable=grade_vars[tamanho])
+            ent.grid(row=3 + (i // 4), column=(i % 4), padx=8, pady=(0, 10), sticky="w")
+            grade_entries[tamanho] = ent
+
+        lbl_total_grade = ctk.CTkLabel(passo3, text="Total da grade: 0")
+        lbl_total_grade.grid(row=5, column=0, columnspan=4, sticky="w", padx=12, pady=(0, 10))
+
+        # Passo 4
+        passo4 = ctk.CTkFrame(body)
+        passo4.grid(row=2, column=1, sticky="nsew", padx=(8, 0), pady=(0, 10))
+        passo4.grid_rowconfigure(2, weight=1)
+        passo4.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(passo4, text="Passo 4 - Conferir materiais", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 8))
+
+        resumo_box = ctk.CTkTextbox(passo4, height=250)
+        resumo_box.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
+        resumo_box.insert("1.0", "Selecione o modelo e informe a quantidade para calcular tecidos e aviamentos.")
+
+        obs = ctk.CTkTextbox(body, height=90)
+        obs.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        obs.insert("1.0", "")
+
+        bottom = ctk.CTkFrame(body)
+        bottom.grid(row=4, column=0, columnspan=2, sticky="ew")
+        bottom.grid_columnconfigure(0, weight=1)
+        ctk.CTkButton(bottom, text="Calcular materiais", command=lambda: recalcular_resumo(), fg_color=self.cor_primaria, hover_color=self._hover(self.cor_primaria)).pack(side="left", padx=8, pady=10)
+        ctk.CTkButton(bottom, text="Salvar programação", command=lambda: salvar_programacao(), fg_color=self.cor_sucesso, hover_color=self._hover(self.cor_sucesso)).pack(side="right", padx=8, pady=10)
+
+        def modelo_info():
+            valor = (cmb_modelo.get() or "").strip()
+            codigo = valor.split(" - ", 1)[0].strip() if valor else ""
+            for row in self.modelos_cache:
+                if row[0] == codigo:
+                    return {
+                        "codigo": row[0],
+                        "descricao": row[1] or "",
+                        "colecao": row[2] or "",
+                        "grade": row[3] or "",
+                    }
+            return None
+
+        def atualizar_modelo(*_args):
+            info = modelo_info()
+            if not info:
+                lbl_grade_disp.configure(text="Grade disponível: -")
+                return
+            grade_txt = info["grade"] or "-"
+            lbl_grade_disp.configure(text=f"Grade disponível: {grade_txt}")
+            if info["colecao"]:
+                cmb_colecao.set(info["colecao"])
+
+        def total_grade():
+            total = 0
+            for tamanho in TAMANHOS_GRADE:
+                try:
+                    total += int(float((grade_vars[tamanho].get() or "0").replace(",", ".")))
+                except Exception:
+                    pass
+            lbl_total_grade.configure(text=f"Total da grade: {total}")
+            return total
+
+        def recalcular_resumo():
+            info = modelo_info()
+            if not info:
+                resumo_box.delete("1.0", "end")
+                resumo_box.insert("1.0", "Selecione um modelo válido.")
+                return [], []
+            total = total_grade()
+            qtd_manual = int(self._to_float(ent_quantidade.get()))
+            quantidade_total = total if total > 0 else qtd_manual
+            ent_quantidade.delete(0, "end")
+            ent_quantidade.insert(0, str(quantidade_total))
+            if quantidade_total <= 0:
+                resumo_box.delete("1.0", "end")
+                resumo_box.insert("1.0", "Informe a quantidade total ou distribua a grade.")
+                return [], []
+            tecidos, aviamentos = self._carregar_materiais_modelo(info["codigo"], quantidade_total)
+            linhas = [
+                f"Modelo: {info['codigo']} - {info['descricao']}",
+                f"Quantidade: {quantidade_total}",
+                f"Programação: {cmb_programacao.get()}",
+                f"Coleção: {cmb_colecao.get()}",
+                "",
+                "TECIDOS:",
+            ]
+            if tecidos:
+                for item in tecidos:
+                    linhas.append(
+                        f"- {item['codigo']} | {item['descricao']} | necessário {self._fmt_num(item['necessario'])} m | estoque {self._fmt_num(item['estoque'])} m | {item['status']}"
+                    )
+            else:
+                linhas.append("- Modelo sem tecidos cadastrados.")
+            linhas.append("")
+            linhas.append("AVIAMENTOS:")
+            if aviamentos:
+                for item in aviamentos:
+                    linhas.append(
+                        f"- {item['codigo']} | {item['descricao']} | necessário {self._fmt_num(item['necessario'])} | estoque {self._fmt_num(item['estoque'])} | {item['status']}"
+                    )
+            else:
+                linhas.append("- Modelo sem aviamentos cadastrados.")
+            resumo_box.delete("1.0", "end")
+            resumo_box.insert("1.0", "\n".join(linhas))
+            return tecidos, aviamentos
+
+        def salvar_programacao():
+            info = modelo_info()
+            if not info:
+                messagebox.showwarning("Planejamento", "Selecione um modelo válido.", parent=top)
+                return
+
+            periodo_inicio = self._parse_data(ent_inicio.get())
+            periodo_fim = self._parse_data(ent_fim.get())
+            prazo_inicio = self._parse_data(ent_prazo.get())
+            if not periodo_inicio or not periodo_fim or not prazo_inicio:
+                messagebox.showwarning("Planejamento", "Preencha as datas corretamente no formato dd/mm/aaaa.", parent=top)
+                return
+            if periodo_fim < periodo_inicio:
+                messagebox.showwarning("Planejamento", "A data final não pode ser menor que a inicial.", parent=top)
+                return
+
+            total = total_grade()
+            qtd_manual = int(self._to_float(ent_quantidade.get()))
+            quantidade_total = total if total > 0 else qtd_manual
+            if quantidade_total <= 0:
+                messagebox.showwarning("Planejamento", "Informe uma quantidade maior que zero.", parent=top)
+                return
+
+            tecidos, aviamentos = recalcular_resumo()
+            programacao = cmb_programacao.get()
+            prioridade = cmb_prioridade.get()
+            colecao = (cmb_colecao.get() or info.get("colecao") or "").strip()
+            observacoes = obs.get("1.0", "end").strip()
+            grade_dict = {t: int(self._to_float(grade_vars[t].get())) for t in TAMANHOS_GRADE if int(self._to_float(grade_vars[t].get())) > 0}
+
+            try:
+                schema = get_schema()
+                with get_conn() as conn:
+                    with conn.cursor() as cur:
+                        op = self._gerar_codigo_op(cur, programacao)
+                        cur.execute(
+                            f"""
+                            INSERT INTO {schema}.planejamento_ops (
+                                op, modelo, quantidade, inicio, fim, status, prioridade,
+                                codigo_modelo, descricao_modelo, colecao, programacao,
+                                periodo_inicio, periodo_fim, prazo_inicio, observacoes,
+                                total_grade, data_atualizacao, criado_em, atualizado_em
+                            ) VALUES (
+                                %s, %s, %s, %s, %s, %s, %s,
+                                %s, %s, %s, %s,
+                                %s, %s, %s, %s,
+                                %s, NOW(), NOW(), NOW()
+                            ) RETURNING id
+                            """,
+                            (
+                                op,
+                                info["descricao"] or info["codigo"],
+                                quantidade_total,
+                                prazo_inicio,
+                                periodo_fim,
+                                "Planejada",
+                                prioridade,
+                                info["codigo"],
+                                info["descricao"],
+                                colecao,
+                                programacao,
+                                periodo_inicio,
+                                periodo_fim,
+                                prazo_inicio,
+                                observacoes,
+                                quantidade_total,
+                            ),
+                        )
+                        planejamento_id = cur.fetchone()[0]
+
+                        for tamanho in TAMANHOS_GRADE:
+                            qtd = int(self._to_float(grade_vars[tamanho].get()))
+                            if qtd <= 0:
+                                continue
+                            cur.execute(
+                                f"""
+                                INSERT INTO {schema}.planejamento_op_grade (planejamento_id, tamanho, quantidade)
+                                VALUES (%s, %s, %s)
+                                """,
+                                (planejamento_id, tamanho, qtd),
+                            )
+
+                        for item in tecidos:
+                            cur.execute(
+                                f"""
+                                INSERT INTO {schema}.planejamento_op_tecidos (
+                                    planejamento_id, codigo_tecido, descricao, cor, fornecedor, composicao,
+                                    consumo_por_peca, quantidade_necessaria, estoque_atual, saldo_previsto, status_estoque
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """,
+                                (
+                                    planejamento_id, item["codigo"], item["descricao"], item["cor"], item["fornecedor"], item["composicao"],
+                                    item["consumo"], item["necessario"], item["estoque"], item["saldo"], item["status"],
+                                ),
+                            )
+
+                        for item in aviamentos:
+                            cur.execute(
+                                f"""
+                                INSERT INTO {schema}.planejamento_op_aviamentos (
+                                    planejamento_id, codigo_aviamento, descricao, cor, fornecedor,
+                                    consumo_por_peca, quantidade_necessaria, estoque_atual, saldo_previsto, status_estoque
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """,
+                                (
+                                    planejamento_id, item["codigo"], item["descricao"], item["cor"], item["fornecedor"],
+                                    item["consumo"], item["necessario"], item["estoque"], item["saldo"], item["status"],
+                                ),
+                            )
+                    conn.commit()
+                self._carregar_dados_planejamento()
+                messagebox.showinfo("Planejamento", "Programação salva com sucesso.", parent=top)
+                top.destroy()
+            except Exception as exc:
+                messagebox.showerror("Planejamento", f"Erro ao salvar programação: {exc}", parent=top)
+
+        cmb_modelo.bind("<<ComboboxSelected>>", atualizar_modelo)
+        atualizar_modelo()
+        for tamanho in TAMANHOS_GRADE:
+            grade_entries[tamanho].bind("<KeyRelease>", lambda _e: total_grade())
+        ent_quantidade.bind("<KeyRelease>", lambda _e: recalcular_resumo())
+
+    # =========================================================
+    # Carregamento / detalhes
+    # =========================================================
+    def _carregar_dados_planejamento(self):
+        self._limpar_tree(self.tree_ops)
+        self._limpar_tree(self.tree_capacidade)
+        self._limpar_detalhes()
+        self.ops_index = {}
+        if not self._db_ready():
+            return
+
+        inicio = self._parse_data(self.plan_inicio_entry.get())
+        fim = self._parse_data(self.plan_fim_entry.get())
+        prioridade = (self.filtro_prioridade.get() or "Todas").strip()
+        programacao = (self.filtro_programacao.get() or "Todas").strip()
+        colecao = (self.filtro_colecao.get() or "Todas").strip()
+
+        schema = get_schema()
+        filtros = []
+        params = []
+        if inicio:
+            filtros.append("COALESCE(periodo_inicio, inicio) >= %s")
+            params.append(inicio)
+        if fim:
+            filtros.append("COALESCE(periodo_fim, fim) <= %s")
+            params.append(fim)
+        if prioridade != "Todas":
+            filtros.append("COALESCE(prioridade, 'Média') = %s")
+            params.append(prioridade)
+        if programacao != "Todas":
+            filtros.append("COALESCE(programacao, 'Mensal') = %s")
+            params.append(programacao)
+        if colecao != "Todas":
+            filtros.append("COALESCE(colecao, '') = %s")
+            params.append(colecao)
+
+        where_sql = ("WHERE " + " AND ".join(filtros)) if filtros else ""
+
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        f"""
+                        SELECT id, op, COALESCE(descricao_modelo, modelo, codigo_modelo, ''),
+                               COALESCE(quantidade, total_grade, 0),
+                               COALESCE(prazo_inicio, inicio),
+                               COALESCE(periodo_fim, fim),
+                               COALESCE(status, 'Planejada'),
+                               COALESCE(programacao, 'Mensal'),
+                               COALESCE(colecao, ''),
+                               COALESCE(prioridade, 'Média'),
+                               COALESCE(codigo_modelo, ''),
+                               COALESCE(observacoes, '')
+                          FROM {schema}.planejamento_ops
+                        {where_sql}
+                         ORDER BY COALESCE(programacao, 'Mensal'), COALESCE(prazo_inicio, inicio, CURRENT_DATE), op
+                        """,
+                        params,
+                    )
+                    rows = cur.fetchall()
+
+                    agrupado = {}
+                    em_execucao = 0
+                    atrasadas = 0
+
+                    for row in rows:
+                        (
+                            planejamento_id,
+                            op,
+                            modelo,
+                            quantidade,
+                            prazo_inicio,
+                            periodo_fim,
+                            status,
+                            programacao_op,
+                            colecao_op,
+                            prioridade_op,
+                            codigo_modelo,
+                            observacoes,
+                        ) = row
+                        if status == "Em execução":
+                            em_execucao += 1
+                        if status == "Atrasada":
+                            atrasadas += 1
+
+                        grupo = f"COLEÇÃO: {colecao_op}" if programacao == "Coleção" else f"PROGRAMAÇÃO {programacao_op}"
+                        agrupado.setdefault(grupo, []).append((
+                            op,
+                            modelo,
+                            self._fmt_int(quantidade),
+                            self._data_txt(prazo_inicio),
+                            self._data_txt(periodo_fim),
+                            status,
+                            programacao_op,
+                            colecao_op,
+                        ))
+
+                        cur.execute(
+                            f"SELECT tamanho, quantidade FROM {schema}.planejamento_op_grade WHERE planejamento_id=%s ORDER BY id",
+                            (planejamento_id,),
+                        )
+                        grade_rows = cur.fetchall()
+                        grade_txt = " / ".join([f"{tam}:{qtd}" for tam, qtd in grade_rows]) if grade_rows else "-"
+
+                        cur.execute(
+                            f"""
+                            SELECT codigo_tecido, COALESCE(descricao, ''), COALESCE(quantidade_necessaria, 0),
+                                   COALESCE(estoque_atual, 0), COALESCE(saldo_previsto, 0), COALESCE(status_estoque, 'OK')
+                              FROM {schema}.planejamento_op_tecidos
+                             WHERE planejamento_id=%s
+                             ORDER BY descricao, codigo_tecido
+                            """,
+                            (planejamento_id,),
+                        )
+                        tecidos = cur.fetchall()
+
+                        cur.execute(
+                            f"""
+                            SELECT codigo_aviamento, COALESCE(descricao, ''), COALESCE(quantidade_necessaria, 0),
+                                   COALESCE(estoque_atual, 0), COALESCE(saldo_previsto, 0), COALESCE(status_estoque, 'OK')
+                              FROM {schema}.planejamento_op_aviamentos
+                             WHERE planejamento_id=%s
+                             ORDER BY descricao, codigo_aviamento
+                            """,
+                            (planejamento_id,),
+                        )
+                        aviamentos = cur.fetchall()
+
+                        self.ops_index[op] = {
+                            "id": planejamento_id,
+                            "op": op,
+                            "modelo": modelo,
+                            "codigo_modelo": codigo_modelo,
+                            "inicio": prazo_inicio,
+                            "fim": periodo_fim,
+                            "grade": grade_txt,
+                            "prioridade": prioridade_op,
+                            "status": status,
+                            "programacao": programacao_op,
+                            "colecao": colecao_op,
+                            "observacoes": observacoes,
+                            "tecidos": tecidos,
+                            "aviamentos": aviamentos,
+                        }
+
+                    totais = {
+                        "Tecidos": [0.0, 0.0],
+                        "Aviamentos": [0.0, 0.0],
+                    }
+                    for info in self.ops_index.values():
+                        for _codigo, _desc, necessario, estoque, _saldo, _status in info["tecidos"]:
+                            totais["Tecidos"][0] += self._to_float(necessario)
+                            totais["Tecidos"][1] += self._to_float(estoque)
+                        for _codigo, _desc, necessario, estoque, _saldo, _status in info["aviamentos"]:
+                            totais["Aviamentos"][0] += self._to_float(necessario)
+                            totais["Aviamentos"][1] += self._to_float(estoque)
+
+            for grupo in agrupado:
+                self.tree_ops.insert("", "end", values=(f"GRUPO: {grupo}", "", "", "", "", "", "", ""), tags=("grupo",))
+                for linha in agrupado[grupo]:
+                    self.tree_ops.insert("", "end", values=linha)
+
+            carga_total = 0.0
+            capacidade_total = 0.0
+            for recurso, (necessario, estoque) in totais.items():
+                saldo = estoque - necessario
+                carga_total += necessario
+                capacidade_total += estoque
+                self.tree_capacidade.insert("", "end", values=(recurso, self._fmt_num(necessario), self._fmt_num(estoque), self._fmt_num(saldo)))
+
+            uso_pct = (carga_total / capacidade_total * 100) if capacidade_total > 0 else 0.0
+            ocioso_pct = max(0.0, 100.0 - uso_pct)
+            if self.kpi_labels:
+                self.kpi_labels[0].configure(text=f"OPs em execução: {em_execucao}")
+                self.kpi_labels[1].configure(text=f"Atrasos críticos: {atrasadas}")
+                self.kpi_labels[2].configure(text=f"Capacidade usada: {uso_pct:.1f}%")
+                self.kpi_labels[3].configure(text=f"Ociosidade: {ocioso_pct:.1f}%")
+        except Exception as exc:
+            messagebox.showerror("Planejamento", f"Erro ao carregar planejamento: {exc}")
 
     def _abrir_detalhe_op(self, _event=None):
         if not self.tree_ops:
@@ -672,203 +1080,60 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             self._limpar_detalhes()
             return
 
-        grade_txt = self._texto_grade(dados.get("grade"))
-        prazo = dados.get("inicio")
-        prazo_txt = prazo.strftime("%d/%m/%Y") if prazo else "-"
-        modelo = dados.get("modelo") or "-"
-        self.detalhe_labels.get("grade").configure(text=f"Grade: {grade_txt}")
-        self.detalhe_labels.get("prazo").configure(text=f"Prazo início: {prazo_txt}")
-        self.detalhe_labels.get("modelo").configure(text=f"Modelo: {modelo}")
+        self.detalhe_labels["grade"].configure(text=f"Grade: {dados.get('grade') or '-'}")
+        self.detalhe_labels["prazo"].configure(text=f"Prazo início: {self._data_txt(dados.get('inicio')) or '-'}")
+        self.detalhe_labels["modelo"].configure(text=f"Modelo: {dados.get('modelo') or '-'}")
+        self.detalhe_labels["prioridade"].configure(text=f"Prioridade: {dados.get('prioridade') or '-'}")
 
         self._limpar_tree(self.tree_tecidos)
-        for desc, necessario, estoque, saldo, status_estoque in (dados.get("tecidos") or []):
-            self.tree_tecidos.insert("", "end", values=(
-                desc,
-                f"{self._to_float(necessario):,.3f}",
-                f"{self._to_float(estoque):,.3f}",
-                f"{self._to_float(saldo):,.3f}",
-                status_estoque,
-            ))
+        for codigo, descricao, necessario, estoque, saldo, status in dados.get("tecidos", []):
+            self.tree_tecidos.insert("", "end", values=(codigo, descricao, self._fmt_num(necessario), self._fmt_num(estoque), self._fmt_num(saldo), status))
 
         self._limpar_tree(self.tree_aviamentos)
-        for desc, qtd in (dados.get("aviamentos") or []):
-            self.tree_aviamentos.insert("", "end", values=(desc, f"{self._to_float(qtd):,.3f}"))
+        for codigo, descricao, necessario, estoque, saldo, status in dados.get("aviamentos", []):
+            self.tree_aviamentos.insert("", "end", values=(codigo, descricao, self._fmt_num(necessario), self._fmt_num(estoque), self._fmt_num(saldo), status))
 
-    def _carregar_dados_planejamento(self):
-        self._limpar_tree(self.tree_ops)
-        self._limpar_tree(self.tree_capacidade)
-        self._limpar_detalhes()
-        self.ops_index = {}
-        ok, _ = require_ready()
-        if not ok:
+    # =========================================================
+    # Ações
+    # =========================================================
+    def _reprogramar(self):
+        selecionado = self.tree_ops.focus() if self.tree_ops else None
+        if not selecionado:
+            messagebox.showwarning("Planejamento", "Selecione uma OP para reprogramar.")
             return
-
-        inicio = self._parse_data(self.plan_inicio_entry.get())
-        fim = self._parse_data(self.plan_fim_entry.get())
-        setor = (self.filtro_setor.get() if self.filtro_setor else "Todos") or "Todos"
-        prioridade = (self.filtro_prioridade.get() if self.filtro_prioridade else "Todas") or "Todas"
-        programacao = (self.filtro_programacao.get() if self.filtro_programacao else "Todas") or "Todas"
-
-        filtros = []
-        params = []
-        if inicio:
-            filtros.append("COALESCE(po.inicio, ppo.periodo_inicio, oc.data_registro::date, po.data_atualizacao::date) >= %s")
-            params.append(inicio)
-        if fim:
-            filtros.append("COALESCE(po.fim, ppo.periodo_fim, oc.data_final, po.data_atualizacao::date) <= %s")
-            params.append(fim)
-        if prioridade != "Todas":
-            filtros.append("COALESCE(ppo.prioridade, po.prioridade, 'Média') = %s")
-            params.append(prioridade)
-        if setor != "Todos":
-            filtros.append("COALESCE(po.modelo, ppo.modelo, oc.descricao_modelo, '') ILIKE %s")
-            params.append(f"%{setor}%")
-
-        where_ops = ("WHERE " + " AND ".join(filtros)) if filtros else ""
-
+        valores = self.tree_ops.item(selecionado).get("values", [])
+        if not valores:
+            return
+        op = str(valores[0])
+        if op.startswith("GRUPO:"):
+            return
+        schema = get_schema()
         try:
-            schema = get_schema()
             with get_conn() as conn:
                 with conn.cursor() as cur:
-                    self._garantir_tabela_programacao(cur, schema)
                     cur.execute(
                         f"""
-                        SELECT
-                            COALESCE(po.op, ppo.op, CONCAT('OC-', oc.id)) AS op,
-                            COALESCE(po.modelo, ppo.modelo, oc.descricao_modelo, oc.codigo_modelo, 'Modelo sem descrição') AS modelo,
-                            COALESCE(po.quantidade, ppo.quantidade, NULLIF(oc.total_pecas, 0), oc.quantidade_desejada, 0) AS quantidade,
-                            COALESCE(po.inicio, ppo.periodo_inicio, oc.data_registro::date, CURRENT_DATE) AS inicio,
-                            COALESCE(po.fim, ppo.periodo_fim, oc.data_final, (COALESCE(oc.data_registro::date, CURRENT_DATE) + INTERVAL '7 day')::date) AS fim,
-                            COALESCE(po.status, ppo.status, oc.status, 'Planejada') AS status,
-                            COALESCE(ppo.prioridade, po.prioridade, 'Média') AS prioridade,
-                            COALESCE(ppo.tipo_programacao, '') AS tipo_programacao,
-                            COALESCE(cmc.colecao, ppo.colecao, '') AS colecao,
-                            COALESCE(ppo.grade, cmc.grade_disponivel, '') AS grade,
-                            COALESCE(cmc.codigo, ppo.codigo_modelo, oc.codigo_modelo, '') AS codigo_modelo
-                          FROM {schema}.planejamento_ops po
-                     LEFT JOIN {schema}.planejamento_programacao_ops ppo ON ppo.op = po.op
-                     LEFT JOIN {schema}.ordem_corte_ficha oc ON po.op = CONCAT('OC-', oc.id)
-                     LEFT JOIN {schema}.cadastro_modelos_cabecalho cmc ON cmc.codigo = COALESCE(ppo.codigo_modelo, oc.codigo_modelo)
-                        {where_ops}
-                         ORDER BY COALESCE(po.inicio, ppo.periodo_inicio, oc.data_registro::date, CURRENT_DATE), po.op
+                        UPDATE {schema}.planejamento_ops
+                           SET inicio = COALESCE(inicio, CURRENT_DATE) + INTERVAL '1 day',
+                               prazo_inicio = COALESCE(prazo_inicio, CURRENT_DATE) + INTERVAL '1 day',
+                               fim = COALESCE(fim, CURRENT_DATE) + INTERVAL '1 day',
+                               periodo_fim = COALESCE(periodo_fim, CURRENT_DATE) + INTERVAL '1 day',
+                               status = 'Reprogramada',
+                               atualizado_em = NOW(),
+                               data_atualizacao = NOW()
+                         WHERE op = %s
                         """,
-                        params,
+                        (op,),
                     )
-                    ops = cur.fetchall()
-
-                    cur.execute(
-                        f"""
-                        SELECT COALESCE(recurso, ''), COALESCE(carga, 0), COALESCE(capacidade, 0), COALESCE(ociosidade, 0)
-                          FROM {schema}.planejamento_capacidade
-                         ORDER BY recurso
-                        """
-                    )
-                    capacidades = cur.fetchall()
-
-            em_execucao = 0
-            atrasadas = 0
-            carga_total = 0.0
-            capacidade_total = 0.0
-            agrupado = {}
-
-            for op, modelo, quantidade, inicio_db, fim_db, status, _prioridade, tipo_programacao, colecao, grade, codigo_modelo in ops:
-                tipo = tipo_programacao or self._classificar_programacao(inicio_db)
-                if programacao != "Todas":
-                    if programacao == "Coleção":
-                        if not str(colecao or "").strip():
-                            continue
-                    elif tipo != programacao:
-                        continue
-
-                if str(status) == "Em execução":
-                    em_execucao += 1
-                if str(status) == "Atrasada":
-                    atrasadas += 1
-
-                inicio_txt = inicio_db.strftime("%d/%m/%Y") if inicio_db else ""
-                fim_txt = fim_db.strftime("%d/%m/%Y") if fim_db else ""
-                grupo = f"Coleção: {colecao}" if programacao == "Coleção" else f"Programação {tipo}"
-                agrupado.setdefault(grupo, []).append((op, modelo, int(self._to_float(quantidade)), inicio_txt, fim_txt, status, tipo, colecao))
-
-                self.ops_index[op] = {
-                    "modelo": modelo,
-                    "inicio": inicio_db,
-                    "grade": grade,
-                    "codigo_modelo": codigo_modelo,
-                    "quantidade": quantidade,
-                    "tecidos": [],
-                    "aviamentos": [],
-                }
-
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    for op, info in self.ops_index.items():
-                        codigo_modelo = info.get("codigo_modelo")
-                        qtd_pecas = self._to_float(info.get("quantidade"))
-                        if not codigo_modelo:
-                            continue
-
-                        cur.execute(
-                            f"""
-                            SELECT
-                                COALESCE(cmt.codigo_tecido, '') AS codigo,
-                                COALESCE(cmt.descricao, cmt.codigo_tecido, 'Tecido') AS descricao,
-                                COALESCE(cmt.metros_peca, 0) * %s AS necessario,
-                                COALESCE((
-                                    SELECT SUM(COALESCE(et.metros,0))
-                                      FROM {schema}.estoque_tecidos et
-                                     WHERE et.codigo = cmt.codigo_tecido
-                                ), 0) AS estoque
-                              FROM {schema}.cadastro_modelos_tecidos cmt
-                             WHERE cmt.codigo_modelo = %s
-                             ORDER BY 2
-                            """,
-                            (qtd_pecas, codigo_modelo),
-                        )
-                        tecidos = []
-                        for _codigo, desc, necessario, estoque in cur.fetchall():
-                            saldo = self._to_float(estoque) - self._to_float(necessario)
-                            status_estoque = "OK" if saldo >= 0 else "Falta"
-                            tecidos.append((desc, necessario, estoque, saldo, status_estoque))
-                        info["tecidos"] = tecidos
-
-                        cur.execute(
-                            f"""
-                            SELECT COALESCE(cma.descricao, cma.codigo_aviamento, 'Aviamento') AS descricao,
-                                   COALESCE(cma.quantidade, 0) * %s AS qtd
-                              FROM {schema}.cadastro_modelos_aviamentos cma
-                             WHERE cma.codigo_modelo = %s
-                             ORDER BY 1
-                            """,
-                            (qtd_pecas, codigo_modelo),
-                        )
-                        info["aviamentos"] = cur.fetchall()
-
-            for grupo in sorted(agrupado.keys()):
-                self.tree_ops.insert("", "end", values=(f"GRUPO: {grupo}", "", "", "", "", "", "", ""), tags=("grupo",))
-                for linha in agrupado[grupo]:
-                    self.tree_ops.insert("", "end", values=linha)
-
-            for recurso, carga, capacidade, ocioso in capacidades:
-                carga_total += self._to_float(carga)
-                capacidade_total += self._to_float(capacidade)
-                self.tree_capacidade.insert(
-                    "",
-                    "end",
-                    values=(recurso, f"{self._to_float(carga):,.2f}", f"{self._to_float(capacidade):,.2f}", f"{self._to_float(ocioso):,.2f}"),
-                )
-
-            uso_pct = (carga_total / capacidade_total * 100) if capacidade_total > 0 else 0
-            ocioso_pct = max(0.0, 100 - uso_pct)
-
-            if self.kpi_labels:
-                self.kpi_labels[0].configure(text=f"OPs em execução: {em_execucao}")
-                self.kpi_labels[1].configure(text=f"Atrasos críticos: {atrasadas}")
-                self.kpi_labels[2].configure(text=f"Capacidade usada: {uso_pct:.1f}%")
-                self.kpi_labels[3].configure(text=f"Ociosidade: {ocioso_pct:.1f}%")
+                conn.commit()
+            self._carregar_dados_planejamento()
+            messagebox.showinfo("Planejamento", f"OP {op} reprogramada com sucesso.")
         except Exception as exc:
-            messagebox.showerror("Planejamento", f"Erro ao carregar planejamento: {exc}")
+            messagebox.showerror("Planejamento", f"Erro ao reprogramar: {exc}")
 
+    # =========================================================
+    # PDF
+    # =========================================================
     def _exportar_planejamento(self):
         try:
             caminho = self._gerar_pdf_planejamento()
@@ -884,93 +1149,89 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             messagebox.showerror("Planejamento", f"Erro ao imprimir: {exc}")
 
     def _gerar_pdf_planejamento(self):
-        nome = f"planejamento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        nome = f"planejamento_producao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         caminho = os.path.abspath(nome)
-        c = canvas.Canvas(caminho, pagesize=A4)
+        pdf = canvas.Canvas(caminho, pagesize=A4)
         largura, altura = A4
-        y = self._desenhar_cabecalho_pdf(c, largura, altura, "Planejamento de Produção")
+        y = self._desenhar_cabecalho_pdf(pdf, largura, altura, "Planejamento de Produção")
 
-        def escrever_titulo(titulo):
+        def titulo(txt):
             nonlocal y
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(40, y, titulo)
+            pdf.setFont("Helvetica-Bold", 11)
+            pdf.drawString(36, y, txt)
             y -= 16
-            c.setFont("Helvetica", 9)
+            pdf.setFont("Helvetica", 8)
 
-        def escrever_linhas(linhas):
+        def linha(txt):
             nonlocal y
-            for linha in linhas:
-                if y < 80:
-                    c.showPage()
-                    y = altura - 60
-                c.drawString(40, y, linha)
-                y -= 12
+            if y < 60:
+                pdf.showPage()
+                y = altura - 50
+            pdf.drawString(36, y, txt)
+            y -= 11
 
-        if self.tree_ops:
-            escrever_titulo("Ordens Planejadas")
-            linhas = []
+        titulo("Programações cadastradas")
+        if self.tree_ops and self.tree_ops.get_children():
             for item in self.tree_ops.get_children():
-                vals = self.tree_ops.item(item)["values"]
-                linhas.append(f"- OP {vals[0]} | {vals[1]} | Qtde {vals[2]} | {vals[3]} -> {vals[4]} | {vals[5]}")
-            escrever_linhas(linhas or ["Sem dados."])
-            y -= 8
+                vals = self.tree_ops.item(item).get("values", [])
+                if not vals:
+                    continue
+                if str(vals[0]).startswith("GRUPO:"):
+                    pdf.setFont("Helvetica-Bold", 9)
+                    linha(str(vals[0]))
+                    pdf.setFont("Helvetica", 8)
+                else:
+                    linha(f"{vals[0]} | {vals[1]} | Qtde {vals[2]} | {vals[3]} até {vals[4]} | {vals[5]}")
+        else:
+            linha("Sem programações cadastradas.")
 
-        if self.tree_capacidade:
-            escrever_titulo("Capacidade por Recurso")
-            linhas = []
+        y -= 8
+        titulo("Resumo de materiais")
+        if self.tree_capacidade and self.tree_capacidade.get_children():
             for item in self.tree_capacidade.get_children():
-                vals = self.tree_capacidade.item(item)["values"]
-                linhas.append(f"- {vals[0]} | Carga {vals[1]} | Capacidade {vals[2]} | Ocioso {vals[3]}")
-            escrever_linhas(linhas or ["Sem dados."])
+                vals = self.tree_capacidade.item(item).get("values", [])
+                if vals:
+                    linha(f"{vals[0]} | Necessário {vals[1]} | Estoque {vals[2]} | Saldo {vals[3]}")
+        else:
+            linha("Sem resumo de materiais.")
 
-        c.save()
+        pdf.save()
         return caminho
 
-    def _desenhar_cabecalho_pdf(self, c, largura, altura, titulo):
-        header_h = 64
-        c.setFillColor(colors.HexColor("#1F5FA6"))
-        c.rect(0, altura - header_h, largura, header_h, fill=1, stroke=0)
-
-        logo_path = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
-        x_text = 40
-        if os.path.exists(logo_path):
-            try:
-                c.drawImage(logo_path, 24, altura - 52, width=30, height=30, preserveAspectRatio=True, mask='auto')
-                x_text = 62
-            except Exception:
-                pass
-
-        c.setFillColor(colors.white)
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(x_text, altura - 34, titulo)
-        c.setFont("Helvetica", 9)
-        c.drawString(x_text, altura - 49, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-
-        c.setFillColor(colors.HexColor("#666666"))
-        c.setFont("Helvetica", 8)
-        c.drawString(24, 18, "SISTEMA OPERA — Impressão")
-        return altura - header_h - 12
+    def _desenhar_cabecalho_pdf(self, pdf, largura, altura, titulo):
+        header_h = 62
+        pdf.setFillColor(colors.HexColor("#1F5FA6"))
+        pdf.rect(0, altura - header_h, largura, header_h, fill=1, stroke=0)
+        pdf.setFillColor(colors.white)
+        pdf.setFont("Helvetica-Bold", 15)
+        pdf.drawString(36, altura - 28, titulo)
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(36, altura - 43, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        return altura - header_h - 16
 
     def _abrir_pdf(self, caminho):
         try:
             webbrowser.open_new_tab("file://" + caminho)
         except Exception:
             if hasattr(os, "startfile"):
-                os.startfile(caminho)  # type: ignore[attr-defined]
+                os.startfile(caminho)
 
     def _imprimir_pdf(self, caminho):
         if hasattr(os, "startfile"):
             try:
-                os.startfile(caminho, "print")  # type: ignore[attr-defined]
+                os.startfile(caminho, "print")
                 return
             except Exception:
                 pass
         self._abrir_pdf(caminho)
-        messagebox.showinfo("Planejamento", "PDF aberto no navegador. Use Ctrl+P para imprimir.")
+        messagebox.showinfo("Planejamento", "PDF aberto. Use Ctrl+P para imprimir.")
 
+    # =========================================================
+    # Calendário
+    # =========================================================
     def _abrir_calendario(self, entry):
-        from datetime import datetime as _dt
         import calendar as _cal
+        from datetime import datetime as _dt
 
         def setar_data(d):
             entry.delete(0, "end")
@@ -988,17 +1249,14 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         ex = entry.winfo_rootx()
         ey = entry.winfo_rooty()
         eh = entry.winfo_height()
-
         x = ex
         y = ey + eh + 6
-
         sw = top.winfo_screenwidth()
         sh = top.winfo_screenheight()
         if x + W > sw:
             x = sw - W - 10
         if y + H > sh:
             y = ey - H - 6
-
         top.geometry(f"{W}x{H}+{x}+{y}")
         top.transient(self)
         top.grab_set()
@@ -1009,7 +1267,6 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
         nav = ctk.CTkFrame(top)
         nav.pack(fill="x", padx=10, pady=5)
-
         lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
         ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
@@ -1018,10 +1275,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
         frame_dias.pack(fill="both", expand=True, padx=10, pady=5)
-
         for i, dia in enumerate(dias_semana):
-            lbl = ctk.CTkLabel(frame_dias, text=dia, width=30, height=30)
-            lbl.grid(row=0, column=i, padx=2, pady=2)
+            ctk.CTkLabel(frame_dias, text=dia, width=30, height=30).grid(row=0, column=i, padx=2, pady=2)
 
         def mudar_mes(delta):
             nonlocal mes, ano
@@ -1039,28 +1294,20 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             for w in frame_dias.grid_slaves():
                 if int(w.grid_info()["row"]) > 0:
                     w.destroy()
-
             cal = _cal.monthcalendar(ano, mes)
             for i, semana in enumerate(cal):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = ctk.CTkButton(
-                        frame_dias,
-                        text=str(dia),
-                        width=30,
-                        height=30,
-                        command=lambda d=dia: setar_data(_dt(ano, mes, d)),
-                    )
-                    btn.grid(row=i + 1, column=j, padx=2, pady=2)
+                    ctk.CTkButton(frame_dias, text=str(dia), width=30, height=30, command=lambda d=dia: setar_data(_dt(ano, mes, d))).grid(row=i+1, column=j, padx=2, pady=2)
 
         desenhar_calendario()
 
 
 if __name__ == "__main__":
     app = ctk.CTk()
-    app.title("Planejamento de Produção - Teste")
-    app.geometry("1200x720")
-    page = PlanejamentoProducaoPage(master=app)
-    page.pack(fill="both", expand=True)
+    app.geometry("1500x820")
+    app.title("Planejamento de Produção")
+    pagina = PlanejamentoProducaoPage(app)
+    pagina.pack(fill="both", expand=True)
     app.mainloop()
