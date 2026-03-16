@@ -1532,10 +1532,29 @@ CREATE TABLE IF NOT EXISTS opera.planejamento_ops (
     fim DATE,
     status VARCHAR(30) DEFAULT 'Planejada',
     prioridade VARCHAR(20) DEFAULT 'Média',
+    data_atualizacao TIMESTAMP DEFAULT NOW(),
+    UNIQUE (op)
+);
+
+-- [TABELA 55] planejamento_programacao_ops - Programações criadas passo a passo
+CREATE TABLE IF NOT EXISTS opera.planejamento_programacao_ops (
+    id SERIAL PRIMARY KEY,
+    op VARCHAR(60) UNIQUE,
+    periodo_inicio DATE NOT NULL,
+    periodo_fim DATE NOT NULL,
+    codigo_modelo VARCHAR(100) NOT NULL,
+    modelo VARCHAR(200),
+    colecao VARCHAR(100),
+    quantidade INTEGER DEFAULT 0,
+    grade VARCHAR(200),
+    prioridade VARCHAR(20) DEFAULT 'Média',
+    tipo_programacao VARCHAR(30) DEFAULT 'Semanal',
+    status VARCHAR(30) DEFAULT 'Planejada',
+    observacoes TEXT,
     data_atualizacao TIMESTAMP DEFAULT NOW()
 );
 
--- [TABELA 55] planejamento_capacidade - Capacidade por recurso
+-- [TABELA 56] planejamento_capacidade - Capacidade por recurso
 CREATE TABLE IF NOT EXISTS opera.planejamento_capacidade (
     id SERIAL PRIMARY KEY,
     recurso VARCHAR(200),
@@ -1545,7 +1564,7 @@ CREATE TABLE IF NOT EXISTS opera.planejamento_capacidade (
     data_atualizacao TIMESTAMP DEFAULT NOW()
 );
 
--- [TABELA 56] custos_reais_categoria - Custos por categoria
+-- [TABELA 57] custos_reais_categoria - Custos por categoria
 CREATE TABLE IF NOT EXISTS opera.custos_reais_categoria (
     id SERIAL PRIMARY KEY,
     categoria VARCHAR(200),
@@ -1555,7 +1574,7 @@ CREATE TABLE IF NOT EXISTS opera.custos_reais_categoria (
     data_atualizacao TIMESTAMP DEFAULT NOW()
 );
 
--- [TABELA 57] custos_reais_ops - Custos por OP
+-- [TABELA 58] custos_reais_ops - Custos por OP
 CREATE TABLE IF NOT EXISTS opera.custos_reais_ops (
     id SERIAL PRIMARY KEY,
     op VARCHAR(60),
