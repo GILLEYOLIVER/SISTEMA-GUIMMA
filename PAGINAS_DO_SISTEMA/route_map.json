@@ -177,5 +177,9 @@
   },
   "Trocar Usuário": {
     "action": "trocar_usuario"
+  },
+  "Ordens Planejadas": {
+    "file": "ORDENS_PLANEJADAS.py",
+    "class": "OrdensPlanejadasPage"
   }
 }
