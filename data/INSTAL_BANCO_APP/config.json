@@ -4,7 +4,7 @@
   "defaults": {
     "dbname": "banco_opera",
     "user": "postgres",
-    "password": "gil25802580"
+    "password": "postgres"
   },
   "hosts": [
     "localhost"
