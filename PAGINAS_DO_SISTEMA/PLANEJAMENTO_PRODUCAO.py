@@ -759,11 +759,12 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         tamanhos_ativos = TAMANHOS_GRADE.copy()
         for i, tamanho in enumerate(TAMANHOS_GRADE):
             grade_vars[tamanho] = ctk.StringVar(value="0")
+            linha_base = 2 + (i // 4) * 2
             lbl_tam = ctk.CTkLabel(passo3, text=tamanho)
-            lbl_tam.grid(row=2 + (i // 4), column=(i % 4), padx=8, pady=(0, 4), sticky="w")
+            lbl_tam.grid(row=linha_base, column=(i % 4), padx=8, pady=(0, 4), sticky="w")
             grade_labels[tamanho] = lbl_tam
             ent = ctk.CTkEntry(passo3, width=90, textvariable=grade_vars[tamanho])
-            ent.grid(row=4 + (i // 4), column=(i % 4), padx=8, pady=(0, 10), sticky="w")
+            ent.grid(row=linha_base + 1, column=(i % 4), padx=8, pady=(0, 10), sticky="w")
             grade_entries[tamanho] = ent
 
         lbl_total_grade = ctk.CTkLabel(passo3, text="Total da porcentagem: 0%")
