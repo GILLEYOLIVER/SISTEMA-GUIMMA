@@ -2576,7 +2576,7 @@ class UsuariosPage(ctk.CTkFrame):
         termo = (self.busca_var.get() or "").strip()
         if not POSTGRES_AVAILABLE:
             demo_data = [
-                (1, "GIL DE OLIVEIRA", "opera@.com", "Admin", True, "2024-01-01 10:00"),
+                (1, "USUARIO DEMO", "demo@sistema.local", "Admin", True, "2024-01-01 10:00"),
                 (2, "usuario1", "user1@sistema.com", "Operador", True, "2024-01-02 09:00"),
                 (3, "usuario2", "user2@sistema.com", "Estoque", False, None),
             ]
@@ -2693,7 +2693,7 @@ class UsuariosPage(ctk.CTkFrame):
         if not POSTGRES_AVAILABLE:
             demo = {
                 "usuario": "admin",
-                "email": "admin@sistema.com",
+                "email": "admin@empresa.local",
                 "hierarquia": "Admin",
                 "ativo": True,
                 "dica_senha": "",
@@ -3609,12 +3609,12 @@ class UsuariosPage(ctk.CTkFrame):
             # Usuários reais do sistema OPERA
             from datetime import datetime, timedelta
             return [
-                ("Elías Oliveira", "elias.oliveira@opera.com", "Admin", datetime.now() - timedelta(hours=2)),
-                ("Maria Silva", "maria.silva@opera.com", "Operador", datetime.now() - timedelta(hours=5)),
-                ("João Santos", "joao.santos@opera.com", "Cortes", datetime.now() - timedelta(days=1)),
-                ("Ana Costa", "ana.costa@opera.com", "Estoque", datetime.now() - timedelta(days=2)),
-                ("Pedro Oliveira", "pedro.oliveira@opera.com", "Financeiro", datetime.now() - timedelta(days=1)),
-                ("Carla Rodrigues", "carla.rodrigues@opera.com", "Acabamento", datetime.now() - timedelta(hours=12))
+                ("Usuario A", "usuario.a@empresa.local", "Admin", datetime.now() - timedelta(hours=2)),
+                ("Usuario B", "usuario.b@empresa.local", "Operador", datetime.now() - timedelta(hours=5)),
+                ("Usuario C", "usuario.c@empresa.local", "Cortes", datetime.now() - timedelta(days=1)),
+                ("Usuario D", "usuario.d@empresa.local", "Estoque", datetime.now() - timedelta(days=2)),
+                ("Usuario E", "usuario.e@empresa.local", "Financeiro", datetime.now() - timedelta(days=1)),
+                ("Usuario F", "usuario.f@empresa.local", "Acabamento", datetime.now() - timedelta(hours=12))
             ]
 
         try:
@@ -3631,9 +3631,9 @@ class UsuariosPage(ctk.CTkFrame):
                 # Fallback para dados reais
                 from datetime import datetime, timedelta
                 return [
-                    ("Elías Oliveira", "elias@opera.com", "Admin", datetime.now()),
-                    ("Maria Silva", "maria@opera.com", "Operador", datetime.now() - timedelta(hours=3)),
-                    ("João Santos", "joao@opera.com", "Cortes", datetime.now() - timedelta(days=1))
+                    ("Usuario A", "usuario.a@empresa.local", "Admin", datetime.now()),
+                    ("Usuario B", "usuario.b@empresa.local", "Operador", datetime.now() - timedelta(hours=3)),
+                    ("Usuario C", "usuario.c@empresa.local", "Cortes", datetime.now() - timedelta(days=1))
                 ]
 
             return rows
@@ -3642,8 +3642,8 @@ class UsuariosPage(ctk.CTkFrame):
             print(f"❌ Erro ao buscar usuários ativos: {e}")
             from datetime import datetime, timedelta
             return [
-                ("Elías Oliveira", "admin@opera.com", "Admin", datetime.now()),
-                ("Operador1", "op1@opera.com", "Operador", datetime.now() - timedelta(hours=2))
+                ("Usuario A", "admin@empresa.local", "Admin", datetime.now()),
+                ("Operador1", "operador1@empresa.local", "Operador", datetime.now() - timedelta(hours=2))
             ]
 
     def _get_logins_relatorio(self):
