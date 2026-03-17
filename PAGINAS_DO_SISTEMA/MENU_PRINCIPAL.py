@@ -150,7 +150,7 @@ class ConfigManager:
     @staticmethod
     def load_settings() -> dict:
         """Carrega configurações do arquivo settings.json."""
-        default = {"theme": "Preto e Ouro", "last_page": "Dashboard"}
+        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard"}
         if os.path.exists(SETTINGS_PATH):
             try:
                 with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
@@ -221,8 +221,8 @@ class ThemeManager:
             try:
                 pal = ModuloPaletas().PADROES.get(theme_name)
                 if not pal:
-                    _dprint(f"[Tema] Tema '{theme_name}' não encontrado. Usando 'Preto e Ouro'.")
-                    pal = ModuloPaletas().PADROES.get("Preto e Ouro", {})
+                    _dprint(f"[Tema] Tema '{theme_name}' não encontrado. Usando 'CLÁSSICO CLARO'.")
+                    pal = ModuloPaletas().PADROES.get("CLÁSSICO CLARO", {})
                 else:
                     pal = dict(pal)
                     _dprint(f"[Tema] Aplicando tema padrão '{theme_name}'.")
@@ -653,7 +653,7 @@ class ThemeManager:
         from PAGINAS_DO_SISTEMA.TEMAS import TemasPage
         palette = self.current_palette or {}
         if not palette:
-            palette = TemasPage.PADROES.get(self.current_theme_name or "Preto e Ouro", {})
+            palette = TemasPage.PADROES.get(self.current_theme_name or "CLÁSSICO CLARO", {})
         if not palette:
             _dprint("[Tema] Nenhuma paleta disponível para aplicar no widget.")
             return
@@ -827,7 +827,7 @@ class UserManager:
 
     def load_user_theme_completo(self):
         import json
-        default_theme = "Preto e Ouro"
+        default_theme = "CLÁSSICO CLARO"
         try:
             if not getattr(self.app, "usuario_id", None):
                 _dprint("[UserManager][DEBUG] usuario_id não definido ao carregar tema completo; usando padrão")
@@ -1156,7 +1156,7 @@ class OperaMenuApp(ctk.CTk):
         self.settings = ConfigManager.load_settings()
         self.routes = ConfigManager.load_routes()
         ConfigManager.ensure_icons_directory()
-        self.tema_preferido_inicial = tema_preferido or self.settings.get("theme") or "Preto e Ouro"
+        self.tema_preferido_inicial = tema_preferido or self.settings.get("theme") or "CLÁSSICO CLARO"
 
         self.theme_manager = ThemeManager(self)
         self._theme_manager = self.theme_manager
@@ -1989,7 +1989,7 @@ class OperaMenuApp(ctk.CTk):
         try:
             from PAGINAS_DO_SISTEMA.TEMAS import ModuloPaletas
             paletas = ModuloPaletas()
-            paleta = paletas.PADROES.get(tema_nome) or paletas.PADROES.get("Preto e Ouro", {})
+            paleta = paletas.PADROES.get(tema_nome) or paletas.PADROES.get("CLÁSSICO CLARO", {})
 
             if hasattr(self, "theme_manager") and self.theme_manager:
                 self.theme_manager.apply_theme(tema_nome, paleta, rebuild_interface=False)
@@ -2049,7 +2049,8 @@ class OperaMenuApp(ctk.CTk):
             paleta = paletas.obter_tema(tema_nome) if hasattr(paletas, "obter_tema") else paletas.PADROES.get(tema_nome)
 
             if not paleta:
-                paleta = paletas.PADROES.get("Preto e Ouro", {})
+                tema_fallback = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
+                paleta = paletas.PADROES.get(tema_fallback, {})
 
             # Detecta se está trocando o modo (dark<->light) e força rebuild
             modo_anterior = getattr(self, "tema_modo", None)  # "dark"/"light" (se já existir)
