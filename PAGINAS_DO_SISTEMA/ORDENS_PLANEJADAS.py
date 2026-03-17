@@ -67,11 +67,8 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
 
     @staticmethod
     def _calcular_percentuais_grade(grade_rows, quantidade_total):
-        """Usa percentual salvo; se não existir, calcula a partir da quantidade."""
+        """Usa somente o percentual salvo no Planejamento (sem recalcular)."""
         tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
-        base = float(quantidade_total or 0)
-        if base <= 0:
-            base = float(sum(float((qtd or 0)) for _tam, qtd, _pct in (grade_rows or [])) or 0)
         percentuais = {tam: 0.0 for tam in tamanhos}
         for tamanho, qtd, pct_salvo in (grade_rows or []):
             tam = str(tamanho or "").strip().upper()
@@ -79,8 +76,6 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                 continue
             if pct_salvo is not None:
                 percentuais[tam] = float(pct_salvo or 0)
-            elif base > 0:
-                percentuais[tam] = round((float(qtd or 0) / base) * 100.0, 2)
         return percentuais
 
     def _carregar_ops(self):
