@@ -1235,7 +1235,7 @@ BEGIN
         'admin',
         '$2b$06$xOxt5sNynndfkGG/0Wx04exxGHV1it4WNz5fzoUbwxyOI8p5jwMJO',
         'Administrador',
-        'admin@opera.com',
+        'admin@empresa.local',
         TRUE,
         'ad',
         'AZUL_NOTURNO'
@@ -1414,7 +1414,7 @@ BEGIN
     RAISE NOTICE '   • Usuário: admin';
     RAISE NOTICE '   • Senha: admin';
     RAISE NOTICE '   • Tema: AZUL_NOTURNO aplicado automaticamente';
-    RAISE NOTICE '   • Email: admin@opera.com';
+    RAISE NOTICE '   • Email: admin@empresa.local';
     RAISE NOTICE '=======================================================';
     RAISE NOTICE '📁 MÓDULOS IMPLEMENTADOS:';
     RAISE NOTICE '   1. Usuários e Permissões (Tabelas 01-06)';
@@ -1622,7 +1622,7 @@ BEGIN
     RAISE NOTICE 'USUARIO ADMINISTRADOR CONFIGURADO:';
     RAISE NOTICE '- Nome: admin';
     RAISE NOTICE '- ID: %', usuario_admin_id;
-    RAISE NOTICE '- Email: admin@opera.com';
+    RAISE NOTICE '- Email: admin@empresa.local';
     RAISE NOTICE '- Permissoes: ACESSO TOTAL A TODOS OS MODULOS';
     RAISE NOTICE '=========================================';
     RAISE NOTICE 'MODULOS IMPLEMENTADOS:';

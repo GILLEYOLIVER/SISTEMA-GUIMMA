@@ -14,7 +14,7 @@
 2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ⚠️ Ready_check retornou False na porta 5432
 2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔄 Tentando conexão direta em localhost:5432...
 2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ✅ Conexão direta OK na porta 5432 - PostgreSQL 18.0 on x86_64-apple-darwin23.6.0
-2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Pasta de backups: /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA/backup_banco
+2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Pasta de backups: /Users/usuario_local/PycharmProjects/SISTEMA-GUIMMA/backup_banco
 2026-01-30 21:21:03 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Backup inicializada (porta=5432, senha=Sim)
 2026-01-30 22:20:21 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
 2026-01-30 22:20:21 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
