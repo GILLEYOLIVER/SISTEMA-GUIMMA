@@ -1021,7 +1021,7 @@ class OperaMenuApp(ctk.CTk):
     MENU_ESTRUTURA = {
         "Dashboard": ["Dashboard"],
         "MODELOS": ["Cadastrar Modelo", "Imprimir Ficha Técnica"],
-        "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
+        "ORDENS DE CORTE": ["Nova Ordem", "Ordens Planejadas", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
         "COMPRAS": ["Compras"],
@@ -1048,7 +1048,7 @@ class OperaMenuApp(ctk.CTk):
     SUBMENU_ICON_MAPPING = {
         "Dashboard": {"Dashboard": "DASHBORD.png"},
         "MODELOS": {"Cadastrar Modelo": "ROUPA.png", "Imprimir Ficha Técnica": "IMPRESSORA.png"},
-        "ORDENS DE CORTE": {"Nova Ordem": "NOVA_ORDEM.png", "Ordens de Corte Impressão": "IMPRESSORA.png"},
+        "ORDENS DE CORTE": {"Nova Ordem": "NOVA_ORDEM.png", "Ordens Planejadas": "RELATORIO.png", "Ordens de Corte Impressão": "IMPRESSORA.png"},
         "REGISTRO DE CORTE": {"Cadastrar Corte": "CADASTRO_CORTE.png", "Consultar Ordens": "CONSULTAR ORDENS.png"},
         "COMPRAS": {"Compras": "DINHEIRO.png"},
         "ESTOQUE": {"Entrada de Estoque": "ESTOQUE.png", "Saída de Estoque": "ESTOQUE.png", "Relatórios": "RELATORIO 2.png"},
@@ -1081,6 +1081,7 @@ class OperaMenuApp(ctk.CTk):
         "Cadastrar Modelo": "cadastro_modelos",
         "Imprimir Ficha Técnica": "ficha_tecnica",
         "Nova Ordem": "ordem_corte",
+        "Ordens Planejadas": "ordem_corte",
         "Ordens de Corte Impressão": "ordem_corte_impressao",
         "Cadastrar Corte": "cadastro_corte",
         "Consultar Ordens": "consultar_ordens",
@@ -2628,6 +2629,14 @@ class OperaMenuApp(ctk.CTk):
                     self.after(80, self._notify_current_page_resize)
                 except Exception:
                     pass
+                if page_name == "Nova Ordem" and hasattr(self, "_ordem_planejada_prefill") and self._ordem_planejada_prefill:
+                    try:
+                        if hasattr(frame, "carregar_op_planejada"):
+                            frame.carregar_op_planejada(self._ordem_planejada_prefill)
+                        self._ordem_planejada_prefill = None
+                    except Exception as _exc:
+                        _dprint(f"⚠️ Prefill de OP planejada falhou: {_exc}")
+
                 if hasattr(self, "title_label"):
                     self.title_label.configure(text=page_name)
                 try:
