@@ -1512,20 +1512,62 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         largura, altura = A4
         y = self._desenhar_cabecalho_pdf(pdf, largura, altura, "Planejamento de Produção")
 
+        periodo_txt = f"{(self.plan_inicio_entry.get() or '').strip() or '-'} até {(self.plan_fim_entry.get() or '').strip() or '-'}"
+        filtro_txt = f"Programação: {self.filtro_programacao.get()} | Prioridade: {self.filtro_prioridade.get()} | Coleção: {self.filtro_colecao.get()}"
+
+        pdf.setFillColor(colors.HexColor("#F3F4F6"))
+        pdf.roundRect(30, y - 36, largura - 60, 30, 6, fill=1, stroke=0)
+        pdf.setFillColor(colors.HexColor("#111827"))
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(38, y - 18, f"Período selecionado: {periodo_txt}")
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(38, y - 30, filtro_txt)
+        y -= 48
+
+        def nova_pagina():
+            nonlocal y
+            pdf.showPage()
+            y = self._desenhar_cabecalho_pdf(pdf, largura, altura, "Planejamento de Produção")
+
         def titulo(txt):
             nonlocal y
+            if y < 80:
+                nova_pagina()
             pdf.setFont("Helvetica-Bold", 11)
+            pdf.setFillColor(colors.HexColor("#1F5FA6"))
             pdf.drawString(36, y, txt)
-            y -= 16
-            pdf.setFont("Helvetica", 8)
+            y -= 14
 
-        def linha(txt):
+        def linha(txt, bold=False, cor="#111827", recuo=0, espacamento=11):
             nonlocal y
             if y < 60:
-                pdf.showPage()
-                y = altura - 50
-            pdf.drawString(36, y, txt)
-            y -= 11
+                nova_pagina()
+            pdf.setFillColor(colors.HexColor(cor))
+            pdf.setFont("Helvetica-Bold" if bold else "Helvetica", 8)
+            pdf.drawString(36 + recuo, y, txt)
+            y -= espacamento
+
+        def card_op(op):
+            nonlocal y
+            if y < 95:
+                nova_pagina()
+            dados = self.ops_index.get(op, {})
+            grade = dados.get("grade", "-")
+            modelo = dados.get("modelo", "-")
+            inicio = self._data_txt(dados.get("inicio")) or "-"
+            fim = self._data_txt(dados.get("fim")) or "-"
+            status = dados.get("status") or "-"
+            prioridade = dados.get("prioridade") or "-"
+            progresso = f"{dados.get('progresso', 0):.0f}%"
+
+            h = 52
+            pdf.setFillColor(colors.HexColor("#EEF2FF"))
+            pdf.roundRect(34, y - h + 6, largura - 68, h, 6, fill=1, stroke=0)
+            linha(f"{op}  |  {modelo}", bold=True, cor="#0F172A", recuo=2)
+            linha(f"Status: {status} | Progresso: {progresso} | Prioridade: {prioridade}", cor="#1F2937", recuo=2)
+            linha(f"Prazo: {inicio} até {fim}", cor="#1F2937", recuo=2)
+            linha(f"Grade: {grade}", cor="#1F2937", recuo=2)
+            y -= 4
 
         titulo("Programações cadastradas")
         if self.tree_ops and self.tree_ops.get_children():
@@ -1534,11 +1576,9 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 if not vals:
                     continue
                 if str(vals[0]).startswith("GRUPO:"):
-                    pdf.setFont("Helvetica-Bold", 9)
-                    linha(str(vals[0]))
-                    pdf.setFont("Helvetica", 8)
+                    linha(str(vals[0]), bold=True, cor="#374151", espacamento=13)
                 else:
-                    linha(f"{vals[0]} | {vals[1]} | Qtde {vals[2]} | {vals[3]} até {vals[4]} | {vals[5]}")
+                    card_op(str(vals[0]))
         else:
             linha("Sem programações cadastradas.")
 
@@ -1548,7 +1588,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             for item in self.tree_capacidade.get_children():
                 vals = self.tree_capacidade.item(item).get("values", [])
                 if vals:
-                    linha(f"{vals[0]} | Necessário {vals[1]} | Estoque {vals[2]} | Saldo {vals[3]}")
+                    linha(f"{vals[0]}  |  Necessário: {vals[1]}  |  Estoque: {vals[2]}  |  Saldo: {vals[3]}")
         else:
             linha("Sem resumo de materiais.")
 
@@ -1559,12 +1599,27 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         header_h = 62
         pdf.setFillColor(colors.HexColor("#1F5FA6"))
         pdf.rect(0, altura - header_h, largura, header_h, fill=1, stroke=0)
+        logo = self._obter_logo_pdf()
+        if logo:
+            try:
+                pdf.drawImage(logo, 14, altura - 52, width=34, height=34, preserveAspectRatio=True, mask='auto')
+            except Exception:
+                pass
         pdf.setFillColor(colors.white)
         pdf.setFont("Helvetica-Bold", 15)
-        pdf.drawString(36, altura - 28, titulo)
+        pdf.drawString(56, altura - 28, titulo)
         pdf.setFont("Helvetica", 9)
-        pdf.drawString(36, altura - 43, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        pdf.drawString(56, altura - 43, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
         return altura - header_h - 16
+
+    @staticmethod
+    def _obter_logo_pdf():
+        base = os.path.dirname(os.path.abspath(__file__))
+        for nome in ("ICONE_SISTEMA.png", "LOGO.jpg", "OPERA.jpg"):
+            p = os.path.join(base, nome)
+            if os.path.exists(p):
+                return p
+        return None
 
     def _abrir_pdf(self, caminho):
         try:
