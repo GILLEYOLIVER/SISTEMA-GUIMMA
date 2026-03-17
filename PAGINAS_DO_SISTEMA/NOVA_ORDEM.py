@@ -306,6 +306,7 @@ class OrdemCorte(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
 
         self.criar_widgets()
+        self._op_planejada_data = None
         self.after(100, self.carregar_modelos_combo)
 
     def _is_dark_color(self, hex_color):
@@ -1183,15 +1184,16 @@ class OrdemCorte(ctk.CTkFrame):
 
     def formatar_para_inteiro_se_possivel(self, valor):
         """
-        Tenta formatar um valor para inteiro se possível.
-        Ex: 34.00 → "34", 34.50 → "34.50"
+        Mantém o valor o mais fiel possível ao que foi digitado/salvo.
+        Ex: 34.00 → "34", 34.50 → "34.5", 34.1250 → "34.125"
         """
         try:
-            num = float(valor)
-            if num.is_integer():
-                return str(int(num))
-            else:
-                return f"{num:.2f}"
+            from decimal import Decimal
+            dec = Decimal(str(valor))
+            if dec == dec.to_integral():
+                return str(int(dec))
+            txt = format(dec.normalize(), 'f')
+            return txt.rstrip('0').rstrip('.') if '.' in txt else txt
         except:
             return str(valor)
 
@@ -1635,6 +1637,121 @@ class OrdemCorte(ctk.CTkFrame):
             tuple(params),
         )
 
+
+    def carregar_op_planejada(self, dados: dict):
+        if not isinstance(dados, dict):
+            return
+        self._op_planejada_data = dados
+        codigo = (dados.get("codigo_modelo") or "").strip()
+        descricao = (dados.get("descricao_modelo") or "").strip()
+        quantidade = dados.get("quantidade") or 0
+        data_final = (dados.get("data_final") or "").strip()
+        grade_percentuais = dados.get("grade_percentuais") or {}
+
+        if codigo:
+            try:
+                self.modelos_combo.set(f"{codigo} - {descricao}" if descricao else codigo)
+                self.preencher_modelo_por_codigo(codigo)
+            except Exception:
+                pass
+
+        try:
+            self.codigo_entry.delete(0, "end")
+            self.codigo_entry.insert(0, codigo)
+            self.modelo_entry.delete(0, "end")
+            self.modelo_entry.insert(0, descricao)
+            self.quantidade_entry.delete(0, "end")
+            self.quantidade_entry.insert(0, str(int(quantidade)))
+            if data_final:
+                self.data_final_entry.delete(0, "end")
+                self.data_final_entry.insert(0, data_final)
+        except Exception:
+            pass
+
+        # Percentuais vindos do Planejamento devem prevalecer na Nova Ordem
+        if isinstance(grade_percentuais, dict) and grade_percentuais:
+            try:
+                mapa_tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+                valores = [grade_percentuais.get(tam, 0) for tam in mapa_tamanhos]
+                self.preencher_porcentagens_do_banco(valores)
+            except Exception:
+                pass
+
+    def _registrar_movimento_planejamento(self, ordem_corte_id: int):
+        if not self._op_planejada_data:
+            return
+        planejamento_id = self._op_planejada_data.get("planejamento_id")
+        op = self._op_planejada_data.get("op")
+        codigo_modelo = self._op_planejada_data.get("codigo_modelo")
+        descricao_modelo = self._op_planejada_data.get("descricao_modelo")
+        quantidade = self._op_planejada_data.get("quantidade") or 0
+        if not planejamento_id:
+            return
+
+        _exec_write(
+            """
+            INSERT INTO planejamento_ordens_geradas (
+                planejamento_id, op, ordem_corte_id, codigo_modelo, descricao_modelo,
+                quantidade, status, criado_em, atualizado_em
+            ) VALUES (%s, %s, %s, %s, %s, %s, 'Em Andamento', NOW(), NOW())
+            ON CONFLICT (planejamento_id)
+            DO UPDATE SET ordem_corte_id = EXCLUDED.ordem_corte_id,
+                          quantidade = EXCLUDED.quantidade,
+                          status = 'Em Andamento',
+                          atualizado_em = NOW()
+            """,
+            (planejamento_id, op, ordem_corte_id, codigo_modelo, descricao_modelo, int(quantidade)),
+        )
+        _exec_write(
+            """
+            UPDATE ordem_corte_ficha
+               SET planejamento_op_id = %s,
+                   op_planejamento = %s,
+                   status = COALESCE(status, 'Em Andamento'),
+                   data_atualizacao = NOW()
+             WHERE id = %s
+            """,
+            (planejamento_id, op, ordem_corte_id),
+        )
+        _exec_write(
+            """
+            UPDATE planejamento_ops
+               SET status = 'Em Andamento',
+                   etapa_atual = 'Em Andamento',
+                   percentual_progresso = GREATEST(COALESCE(percentual_progresso, 0), 35),
+                   atualizado_em = NOW(),
+                   data_atualizacao = NOW()
+             WHERE id = %s
+            """,
+            (planejamento_id,),
+        )
+        _exec_write(
+            """
+            UPDATE planejamento_op_tecidos
+               SET estoque_atual = GREATEST(0, COALESCE(estoque_atual, 0) - COALESCE(quantidade_necessaria, 0)),
+                   saldo_previsto = GREATEST(0, COALESCE(saldo_previsto, 0) - COALESCE(quantidade_necessaria, 0)),
+                   status_estoque = CASE
+                        WHEN GREATEST(0, COALESCE(saldo_previsto, 0) - COALESCE(quantidade_necessaria, 0)) > 0 THEN 'OK'
+                        ELSE 'BAIXADO'
+                   END
+             WHERE planejamento_id = %s
+            """,
+            (planejamento_id,),
+        )
+        _exec_write(
+            """
+            UPDATE planejamento_op_aviamentos
+               SET estoque_atual = GREATEST(0, COALESCE(estoque_atual, 0) - COALESCE(quantidade_necessaria, 0)),
+                   saldo_previsto = GREATEST(0, COALESCE(saldo_previsto, 0) - COALESCE(quantidade_necessaria, 0)),
+                   status_estoque = CASE
+                        WHEN GREATEST(0, COALESCE(saldo_previsto, 0) - COALESCE(quantidade_necessaria, 0)) > 0 THEN 'OK'
+                        ELSE 'BAIXADO'
+                   END
+             WHERE planejamento_id = %s
+            """,
+            (planejamento_id,),
+        )
+
     def salvar_ordem(self):
         try:
             from datetime import datetime, date
@@ -1730,11 +1847,14 @@ class OrdemCorte(ctk.CTkFrame):
             if not insert_cols:
                 raise RuntimeError("Nenhuma coluna compatível encontrada para inserir ordem de corte.")
 
-            query = f"INSERT INTO ordem_corte_ficha ({', '.join(insert_cols)}) VALUES ({', '.join(placeholders)})"
-            _exec_write(query, tuple(params))
+            query = f"INSERT INTO ordem_corte_ficha ({', '.join(insert_cols)}) VALUES ({', '.join(placeholders)}) RETURNING id"
+            ordem_row = _exec_row(query, tuple(params))
+            ordem_id = int(ordem_row[0]) if ordem_row else 0
 
             log_data = {col: val for col, val in zip(insert_cols, params)}
             logger.info(f"✅ Ordem de corte salva com sucesso: {log_data}")
+            if ordem_id:
+                self._registrar_movimento_planejamento(ordem_id)
 
             messagebox.showinfo("Sucesso", "Ordem de corte salva com sucesso!")
 
