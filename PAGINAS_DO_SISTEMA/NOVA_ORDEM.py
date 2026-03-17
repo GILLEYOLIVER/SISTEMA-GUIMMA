@@ -110,6 +110,12 @@ def _exec_row(query: str, params=()):
             pass
         cur.execute(query, params)
         row = cur.fetchone()
+        # IMPORTANTE: em INSERT ... RETURNING a linha precisa ser COMMITADA
+        # antes de operações subsequentes com FK em outra conexão.
+        try:
+            conn.commit()
+        except Exception:
+            pass
         return row
     finally:
         try:
