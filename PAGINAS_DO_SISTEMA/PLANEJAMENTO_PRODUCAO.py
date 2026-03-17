@@ -600,12 +600,18 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
         top = ctk.CTkToplevel(self)
         top.title("Nova Programação de Produção")
-        top.geometry("980x760")
+        largura_janela, altura_janela = 1220, 900
+        sw = top.winfo_screenwidth()
+        sh = top.winfo_screenheight()
+        x = max(20, (sw - largura_janela) // 2)
+        y = max(20, (sh - altura_janela) // 2)
+        top.geometry(f"{largura_janela}x{altura_janela}+{x}+{y}")
         top.transient(self)
         top.grab_set()
         top.configure(fg_color=self.cor_fundo)
         top.grid_columnconfigure(0, weight=1)
         top.grid_rowconfigure(1, weight=1)
+        top.grid_rowconfigure(2, weight=0)
 
         ctk.CTkLabel(top, text="Nova Programação", font=ctk.CTkFont(size=24, weight="bold")).grid(row=0, column=0, sticky="w", padx=18, pady=(14, 8))
 
@@ -684,9 +690,13 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
         grade_vars = {}
         grade_entries = {}
+        grade_labels = {}
+        tamanhos_ativos = TAMANHOS_GRADE.copy()
         for i, tamanho in enumerate(TAMANHOS_GRADE):
             grade_vars[tamanho] = ctk.StringVar(value="0")
-            ctk.CTkLabel(passo3, text=tamanho).grid(row=1 + (i // 4), column=(i % 4), padx=8, pady=(0, 4), sticky="w")
+            lbl_tam = ctk.CTkLabel(passo3, text=tamanho)
+            lbl_tam.grid(row=1 + (i // 4), column=(i % 4), padx=8, pady=(0, 4), sticky="w")
+            grade_labels[tamanho] = lbl_tam
             ent = ctk.CTkEntry(passo3, width=90, textvariable=grade_vars[tamanho])
             ent.grid(row=3 + (i // 4), column=(i % 4), padx=8, pady=(0, 10), sticky="w")
             grade_entries[tamanho] = ent
@@ -709,11 +719,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         obs.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         obs.insert("1.0", "")
 
-        bottom = ctk.CTkFrame(body)
-        bottom.grid(row=4, column=0, columnspan=2, sticky="ew")
+        bottom = ctk.CTkFrame(top)
+        bottom.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 12))
         bottom.grid_columnconfigure(0, weight=1)
-        ctk.CTkButton(bottom, text="Calcular materiais", command=lambda: recalcular_resumo(), fg_color=self.cor_primaria, hover_color=self._hover(self.cor_primaria)).pack(side="left", padx=8, pady=10)
-        ctk.CTkButton(bottom, text="Salvar programação", command=lambda: salvar_programacao(), fg_color=self.cor_sucesso, hover_color=self._hover(self.cor_sucesso)).pack(side="right", padx=8, pady=10)
+        ctk.CTkButton(bottom, text="Calcular materiais", command=lambda: recalcular_resumo(), fg_color=self.cor_primaria, hover_color=self._hover(self.cor_primaria)).pack(side="left", padx=8, pady=8)
+        ctk.CTkButton(bottom, text="Salvar programação", command=lambda: salvar_programacao(), fg_color=self.cor_sucesso, hover_color=self._hover(self.cor_sucesso)).pack(side="right", padx=8, pady=8)
 
         def modelo_info():
             valor = (cmb_modelo.get() or "").strip()
@@ -728,6 +738,25 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                     }
             return None
 
+
+        def _parse_tamanhos_grade(grade_texto: str):
+            txt = (grade_texto or "").upper().replace("|", ",").replace("/", ",").replace(";", ",")
+            partes = [p.strip() for p in txt.split(",") if p.strip()]
+            validos = [t for t in TAMANHOS_GRADE if t in partes]
+            return validos or TAMANHOS_GRADE.copy()
+
+        def _aplicar_tamanhos_disponiveis(tamanhos):
+            nonlocal tamanhos_ativos
+            tamanhos_ativos = list(tamanhos or TAMANHOS_GRADE)
+            for tam in TAMANHOS_GRADE:
+                if tam in tamanhos_ativos:
+                    grade_labels[tam].grid()
+                    grade_entries[tam].grid()
+                else:
+                    grade_vars[tam].set("0")
+                    grade_labels[tam].grid_remove()
+                    grade_entries[tam].grid_remove()
+
         def atualizar_modelo(*_args):
             info = modelo_info()
             if not info:
@@ -735,12 +764,13 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 return
             grade_txt = info["grade"] or "-"
             lbl_grade_disp.configure(text=f"Grade disponível: {grade_txt}")
+            _aplicar_tamanhos_disponiveis(_parse_tamanhos_grade(info.get("grade") or ""))
             if info["colecao"]:
                 cmb_colecao.set(info["colecao"])
 
         def total_grade():
             total = 0
-            for tamanho in TAMANHOS_GRADE:
+            for tamanho in tamanhos_ativos:
                 try:
                     total += int(float((grade_vars[tamanho].get() or "0").replace(",", ".")))
                 except Exception:
@@ -820,7 +850,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             prioridade = cmb_prioridade.get()
             colecao = (cmb_colecao.get() or info.get("colecao") or "").strip()
             observacoes = obs.get("1.0", "end").strip()
-            grade_dict = {t: int(self._to_float(grade_vars[t].get())) for t in TAMANHOS_GRADE if int(self._to_float(grade_vars[t].get())) > 0}
+            grade_dict = {t: int(self._to_float(grade_vars[t].get())) for t in tamanhos_ativos if int(self._to_float(grade_vars[t].get())) > 0}
 
             try:
                 schema = get_schema()
@@ -862,7 +892,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                         )
                         planejamento_id = cur.fetchone()[0]
 
-                        for tamanho in TAMANHOS_GRADE:
+                        for tamanho in tamanhos_ativos:
                             qtd = int(self._to_float(grade_vars[tamanho].get()))
                             if qtd <= 0:
                                 continue
@@ -922,6 +952,33 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         etapa = "Planejada"
         progresso = 0.0
 
+        def _col_exists(tabela: str, coluna: str) -> bool:
+            cur.execute(
+                """
+                SELECT 1
+                  FROM information_schema.columns
+                 WHERE table_schema = current_schema()
+                   AND table_name = %s
+                   AND column_name = %s
+                 LIMIT 1
+                """,
+                (tabela, coluna),
+            )
+            return bool(cur.fetchone())
+
+        def _existe_por_colunas(tabela: str, colunas_alvo, valores_alvo) -> bool:
+            clausulas = []
+            params = []
+            for col in colunas_alvo:
+                if _col_exists(tabela, col):
+                    clausulas.append(f"COALESCE({col}, '') = %s")
+                    params.append(valores_alvo[col])
+            if not clausulas:
+                return False
+            sql = f"SELECT 1 FROM {schema}.{tabela} WHERE " + " OR ".join(clausulas) + " LIMIT 1"
+            cur.execute(sql, tuple(params))
+            return bool(cur.fetchone())
+
         cur.execute(f"SELECT 1 FROM {schema}.ordem_corte_ficha WHERE planejamento_op_id=%s LIMIT 1", (planejamento_id,))
         if cur.fetchone():
             etapa = "Ordem Gerada"
@@ -942,32 +999,32 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             etapa = "Em andamento"
             progresso = 65.0
 
-        cur.execute(
-            f"""
-            SELECT 1
-              FROM {schema}.controle_retorno_cortes
-             WHERE COALESCE(op_planejamento, '') = %s
-                OR COALESCE(ordem, '') = %s
-                OR COALESCE(codigo, '') = %s
-             LIMIT 1
-            """,
-            (op or "", op or "", codigo_modelo or ""),
+        existe_retorno = _existe_por_colunas(
+            "controle_retorno_cortes",
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "op_planejamento": op or "",
+                "ordem": op or "",
+                "ordem_corte": op or "",
+                "codigo": codigo_modelo or "",
+                "codigo_corte": codigo_modelo or "",
+            },
         )
-        if cur.fetchone():
+        if existe_retorno:
             etapa = "Retorno"
             progresso = 85.0
 
-        cur.execute(
-            f"""
-            SELECT 1
-              FROM {schema}.cortes_finalizados_completo
-             WHERE COALESCE(ordem, '') = %s
-                OR COALESCE(codigo, '') = %s
-             LIMIT 1
-            """,
-            (op or "", codigo_modelo or ""),
+        existe_final = _existe_por_colunas(
+            "cortes_finalizados_completo",
+            ["ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "ordem": op or "",
+                "ordem_corte": op or "",
+                "codigo": codigo_modelo or "",
+                "codigo_corte": codigo_modelo or "",
+            },
         )
-        if cur.fetchone():
+        if existe_final:
             etapa = "Pronta"
             progresso = 100.0
 
