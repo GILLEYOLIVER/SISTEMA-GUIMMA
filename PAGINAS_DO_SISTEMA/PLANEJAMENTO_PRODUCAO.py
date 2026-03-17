@@ -463,6 +463,27 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
     def _fmt_int(valor):
         return f"{int(round(PlanejamentoProducaoPage._to_float(valor)))}"
 
+    @staticmethod
+    def _sanitizar_texto_para_banco(texto):
+        """Evita erro de codec/charmap ao persistir textos com símbolos especiais."""
+        if texto is None:
+            return ""
+        txt = str(texto)
+        for origem, destino in {
+            "✅": "OK",
+            "⚠️": "ATENCAO",
+            "⚠": "ATENCAO",
+            "•": "-",
+            "═": "=",
+        }.items():
+            txt = txt.replace(origem, destino)
+        txt = txt.replace("\ufe0f", "")
+        try:
+            txt.encode("cp1252")
+            return txt
+        except Exception:
+            return txt.encode("cp1252", errors="replace").decode("cp1252")
+
     def _hover(self, cor):
         try:
             cor = cor.lstrip("#")
@@ -1034,6 +1055,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             prioridade = cmb_prioridade.get()
             colecao = (cmb_colecao.get() or info.get("colecao") or "").strip()
             observacoes = resumo_visual.get("1.0", "end").strip()
+            observacoes = self._sanitizar_texto_para_banco(observacoes)
             grade_dict, _percentuais, _soma_pct = calcular_grade_quantidades(quantidade_total)
             grade_dict = {t: q for t, q in grade_dict.items() if q > 0}
 
