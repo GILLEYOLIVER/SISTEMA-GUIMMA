@@ -191,7 +191,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
         self.tree_ops = ttk.Treeview(
             ordens_frame,
-            columns=("op", "modelo", "qtde", "inicio", "fim", "status", "programacao", "colecao"),
+            columns=("op", "modelo", "qtde", "inicio", "fim", "status", "progresso", "programacao", "colecao"),
             show="headings",
             height=14,
         )
@@ -202,6 +202,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             ("inicio", "Início", 100),
             ("fim", "Fim", 100),
             ("status", "Status", 110),
+            ("progresso", "Progresso", 90),
             ("programacao", "Programação", 110),
             ("colecao", "Coleção", 130),
         ):
@@ -321,6 +322,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                     cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS total_grade INTEGER DEFAULT 0")
                     cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT NOW()")
                     cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT NOW()")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS percentual_progresso NUMERIC(5,2) DEFAULT 0")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS etapa_atual VARCHAR(40) DEFAULT 'Planejada'")
                     cur.execute(f"CREATE UNIQUE INDEX IF NOT EXISTS idx_planejamento_ops_op_uq ON {schema}.planejamento_ops(op)")
                     cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ops_modelo ON {schema}.planejamento_ops(codigo_modelo)")
                     cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ops_programacao ON {schema}.planejamento_ops(programacao)")
@@ -356,6 +359,35 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             created_at TIMESTAMP DEFAULT NOW()
                         )
                         """
+                    )
+                    cur.execute(
+                        f"""
+                        CREATE TABLE IF NOT EXISTS {schema}.planejamento_ordens_geradas (
+                            id SERIAL PRIMARY KEY,
+                            planejamento_id INTEGER NOT NULL REFERENCES {schema}.planejamento_ops(id) ON DELETE CASCADE,
+                            op VARCHAR(60) NOT NULL,
+                            ordem_corte_id INTEGER REFERENCES {schema}.ordem_corte_ficha(id) ON DELETE SET NULL,
+                            codigo_modelo VARCHAR(100),
+                            descricao_modelo TEXT,
+                            quantidade INTEGER DEFAULT 0,
+                            status VARCHAR(30) DEFAULT 'Ordem Gerada',
+                            criado_em TIMESTAMP DEFAULT NOW(),
+                            atualizado_em TIMESTAMP DEFAULT NOW(),
+                            UNIQUE (planejamento_id)
+                        )
+                        """
+                    )
+                    cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ordens_op ON {schema}.planejamento_ordens_geradas(op)")
+                    cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ordens_ordem ON {schema}.planejamento_ordens_geradas(ordem_corte_id)")
+                    cur.execute(
+                        f"ALTER TABLE {schema}.ordem_corte_ficha ADD COLUMN IF NOT EXISTS planejamento_op_id INTEGER REFERENCES {schema}.planejamento_ops(id) ON DELETE SET NULL"
+                    )
+                    cur.execute(f"ALTER TABLE {schema}.ordem_corte_ficha ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60)")
+                    cur.execute(
+                        f"ALTER TABLE {schema}.controle_envio_cortes ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60)"
+                    )
+                    cur.execute(
+                        f"ALTER TABLE {schema}.controle_retorno_cortes ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60)"
                     )
                     cur.execute(
                         f"""
@@ -885,6 +917,102 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
     # =========================================================
     # Carregamento / detalhes
     # =========================================================
+    def _calcular_progresso_real(self, cur, planejamento_id, op, codigo_modelo):
+        schema = get_schema()
+        etapa = "Planejada"
+        progresso = 0.0
+
+        def _col_exists(tabela: str, coluna: str) -> bool:
+            cur.execute(
+                """
+                SELECT 1
+                  FROM information_schema.columns
+                 WHERE table_schema = current_schema()
+                   AND table_name = %s
+                   AND column_name = %s
+                 LIMIT 1
+                """,
+                (tabela, coluna),
+            )
+            return bool(cur.fetchone())
+
+        def _existe_por_colunas(tabela: str, colunas_alvo, valores_alvo) -> bool:
+            clausulas = []
+            params = []
+            for col in colunas_alvo:
+                if _col_exists(tabela, col):
+                    clausulas.append(f"COALESCE({col}, '') = %s")
+                    params.append(valores_alvo[col])
+            if not clausulas:
+                return False
+            sql = f"SELECT 1 FROM {schema}.{tabela} WHERE " + " OR ".join(clausulas) + " LIMIT 1"
+            cur.execute(sql, tuple(params))
+            return bool(cur.fetchone())
+
+        cur.execute(f"SELECT 1 FROM {schema}.ordem_corte_ficha WHERE planejamento_op_id=%s LIMIT 1", (planejamento_id,))
+        if cur.fetchone():
+            etapa = "Ordem Gerada"
+            progresso = 35.0
+
+        cur.execute(
+            f"""
+            SELECT 1
+              FROM {schema}.controle_envio_cortes
+             WHERE COALESCE(op_planejamento, '') = %s
+                OR COALESCE(ordem_corte, '') = %s
+                OR COALESCE(codigo_corte, '') = %s
+             LIMIT 1
+            """,
+            (op or "", op or "", codigo_modelo or ""),
+        )
+        if cur.fetchone():
+            etapa = "Em andamento"
+            progresso = 65.0
+
+        existe_retorno = _existe_por_colunas(
+            "controle_retorno_cortes",
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "op_planejamento": op or "",
+                "ordem": op or "",
+                "ordem_corte": op or "",
+                "codigo": codigo_modelo or "",
+                "codigo_corte": codigo_modelo or "",
+            },
+        )
+        if existe_retorno:
+            etapa = "Retorno"
+            progresso = 85.0
+
+        existe_final = _existe_por_colunas(
+            "cortes_finalizados_completo",
+            ["ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "ordem": op or "",
+                "ordem_corte": op or "",
+                "codigo": codigo_modelo or "",
+                "codigo_corte": codigo_modelo or "",
+            },
+        )
+        if existe_final:
+            etapa = "Pronta"
+            progresso = 100.0
+
+        status = "Pronta" if progresso >= 100 else ("Em execução" if progresso >= 65 else ("Ordem Gerada" if progresso >= 35 else "Planejada"))
+        cur.execute(
+            f"""
+            UPDATE {schema}.planejamento_ops
+               SET status=%s,
+                   etapa_atual=%s,
+                   percentual_progresso=%s,
+                   atualizado_em=NOW(),
+                   data_atualizacao=NOW()
+             WHERE id=%s
+            """,
+            (status, etapa, progresso, planejamento_id),
+        )
+        return status, etapa, progresso
+
     def _carregar_dados_planejamento(self):
         self._limpar_tree(self.tree_ops)
         self._limpar_tree(self.tree_capacidade)
@@ -934,7 +1062,9 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                                COALESCE(colecao, ''),
                                COALESCE(prioridade, 'Média'),
                                COALESCE(codigo_modelo, ''),
-                               COALESCE(observacoes, '')
+                               COALESCE(observacoes, ''),
+                               COALESCE(etapa_atual, COALESCE(status, 'Planejada')),
+                               COALESCE(percentual_progresso, 0)
                           FROM {schema}.planejamento_ops
                         {where_sql}
                          ORDER BY COALESCE(programacao, 'Mensal'), COALESCE(prazo_inicio, inicio, CURRENT_DATE), op
@@ -961,12 +1091,15 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             prioridade_op,
                             codigo_modelo,
                             observacoes,
+                            _etapa_atual_db,
+                            _percentual_db,
                         ) = row
                         if status == "Em execução":
                             em_execucao += 1
                         if status == "Atrasada":
                             atrasadas += 1
 
+                        status, etapa_atual, percentual = self._calcular_progresso_real(cur, planejamento_id, op, codigo_modelo)
                         grupo = f"COLEÇÃO: {colecao_op}" if programacao == "Coleção" else f"PROGRAMAÇÃO {programacao_op}"
                         agrupado.setdefault(grupo, []).append((
                             op,
@@ -975,6 +1108,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             self._data_txt(prazo_inicio),
                             self._data_txt(periodo_fim),
                             status,
+                            f"{percentual:.0f}%",
                             programacao_op,
                             colecao_op,
                         ))
@@ -1023,6 +1157,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             "programacao": programacao_op,
                             "colecao": colecao_op,
                             "observacoes": observacoes,
+                            "etapa_atual": etapa_atual,
+                            "progresso": percentual,
                             "tecidos": tecidos,
                             "aviamentos": aviamentos,
                         }
@@ -1040,7 +1176,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             totais["Aviamentos"][1] += self._to_float(estoque)
 
             for grupo in agrupado:
-                self.tree_ops.insert("", "end", values=(f"GRUPO: {grupo}", "", "", "", "", "", "", ""), tags=("grupo",))
+                self.tree_ops.insert("", "end", values=(f"GRUPO: {grupo}", "", "", "", "", "", "", "", ""), tags=("grupo",))
                 for linha in agrupado[grupo]:
                     self.tree_ops.insert("", "end", values=linha)
 
@@ -1083,7 +1219,9 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.detalhe_labels["grade"].configure(text=f"Grade: {dados.get('grade') or '-'}")
         self.detalhe_labels["prazo"].configure(text=f"Prazo início: {self._data_txt(dados.get('inicio')) or '-'}")
         self.detalhe_labels["modelo"].configure(text=f"Modelo: {dados.get('modelo') or '-'}")
-        self.detalhe_labels["prioridade"].configure(text=f"Prioridade: {dados.get('prioridade') or '-'}")
+        self.detalhe_labels["prioridade"].configure(
+            text=f"Prioridade: {dados.get('prioridade') or '-'} | Etapa: {dados.get('etapa_atual') or '-'} | Progresso: {dados.get('progresso', 0):.0f}%"
+        )
 
         self._limpar_tree(self.tree_tecidos)
         for codigo, descricao, necessario, estoque, saldo, status in dados.get("tecidos", []):
