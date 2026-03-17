@@ -65,6 +65,22 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         except Exception:
             return str(d)
 
+    @staticmethod
+    def _calcular_percentuais_grade(grade_rows, quantidade_total):
+        """Converte quantidades por tamanho em percentuais para prefill da Nova Ordem."""
+        tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+        base = float(quantidade_total or 0)
+        if base <= 0:
+            base = float(sum(float((qtd or 0)) for _tam, qtd in (grade_rows or [])) or 0)
+        percentuais = {tam: 0.0 for tam in tamanhos}
+        if base <= 0:
+            return percentuais
+        for tamanho, qtd in (grade_rows or []):
+            tam = str(tamanho or "").strip().upper()
+            if tam in percentuais:
+                percentuais[tam] = round((float(qtd or 0) / base) * 100.0, 2)
+        return percentuais
+
     def _carregar_ops(self):
         if not self._db_ready():
             return
@@ -90,6 +106,16 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                 )
                 for row in cur.fetchall():
                     pid, op, modelo, qtd, inicio, fim, status, progresso, codigo, prioridade = row
+                    cur.execute(
+                        f"""
+                        SELECT COALESCE(tamanho, ''), COALESCE(quantidade, 0)
+                          FROM {schema}.planejamento_op_grade
+                         WHERE planejamento_id = %s
+                        """,
+                        (pid,),
+                    )
+                    grade_rows = cur.fetchall()
+                    grade_percentuais = self._calcular_percentuais_grade(grade_rows, qtd)
                     self.ops_index[op] = {
                         "planejamento_id": pid,
                         "op": op,
@@ -99,6 +125,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                         "data_final": self._fmt_data(fim),
                         "status": status,
                         "prioridade": prioridade,
+                        "grade_percentuais": grade_percentuais,
                     }
                     self.tree.insert("", "end", values=(op, modelo, qtd, self._fmt_data(inicio), self._fmt_data(fim), status, f"{float(progresso or 0):.0f}%"))
         except Exception as exc:
@@ -116,4 +143,3 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         if self.sistema and hasattr(self.sistema, "open_page"):
             self.sistema._ordem_planejada_prefill = dados
             self.sistema.open_page("Nova Ordem")
-

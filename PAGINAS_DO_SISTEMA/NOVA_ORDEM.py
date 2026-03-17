@@ -1645,6 +1645,7 @@ class OrdemCorte(ctk.CTkFrame):
         descricao = (dados.get("descricao_modelo") or "").strip()
         quantidade = dados.get("quantidade") or 0
         data_final = (dados.get("data_final") or "").strip()
+        grade_percentuais = dados.get("grade_percentuais") or {}
 
         if codigo:
             try:
@@ -1666,6 +1667,15 @@ class OrdemCorte(ctk.CTkFrame):
         except Exception:
             pass
 
+        # Percentuais vindos do Planejamento devem prevalecer na Nova Ordem
+        if isinstance(grade_percentuais, dict) and grade_percentuais:
+            try:
+                mapa_tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
+                valores = [grade_percentuais.get(tam, 0) for tam in mapa_tamanhos]
+                self.preencher_porcentagens_do_banco(valores)
+            except Exception:
+                pass
+
     def _registrar_movimento_planejamento(self, ordem_corte_id: int):
         if not self._op_planejada_data:
             return
@@ -1682,11 +1692,11 @@ class OrdemCorte(ctk.CTkFrame):
             INSERT INTO planejamento_ordens_geradas (
                 planejamento_id, op, ordem_corte_id, codigo_modelo, descricao_modelo,
                 quantidade, status, criado_em, atualizado_em
-            ) VALUES (%s, %s, %s, %s, %s, %s, 'Ordem Gerada', NOW(), NOW())
+            ) VALUES (%s, %s, %s, %s, %s, %s, 'Em Andamento', NOW(), NOW())
             ON CONFLICT (planejamento_id)
             DO UPDATE SET ordem_corte_id = EXCLUDED.ordem_corte_id,
                           quantidade = EXCLUDED.quantidade,
-                          status = 'Ordem Gerada',
+                          status = 'Em Andamento',
                           atualizado_em = NOW()
             """,
             (planejamento_id, op, ordem_corte_id, codigo_modelo, descricao_modelo, int(quantidade)),
@@ -1705,8 +1715,8 @@ class OrdemCorte(ctk.CTkFrame):
         _exec_write(
             """
             UPDATE planejamento_ops
-               SET status = 'Ordem Gerada',
-                   etapa_atual = 'Ordem Gerada',
+               SET status = 'Em Andamento',
+                   etapa_atual = 'Em Andamento',
                    percentual_progresso = GREATEST(COALESCE(percentual_progresso, 0), 35),
                    atualizado_em = NOW(),
                    data_atualizacao = NOW()
