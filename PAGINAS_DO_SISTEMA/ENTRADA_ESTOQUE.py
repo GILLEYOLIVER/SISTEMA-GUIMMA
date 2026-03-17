@@ -34,7 +34,7 @@ class DBManager:
             except Exception:
                 cfg = {}
             self.dsn = os.getenv("OPERA_PG_DSN") or cfg.get(
-                "pg_dsn") or "postgresql://postgres:gil25802580@localhost:5433/BANCO_OPERA"
+                "pg_dsn") or "postgresql://postgres:postgres@localhost:5433/BANCO_OPERA"
             self.schema = os.getenv("OPERA_PG_SCHEMA") or cfg.get("pg_schema") or "opera"
 
     def get_connection(self):
