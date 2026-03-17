@@ -956,6 +956,35 @@ class EntradaEstoqueApp(ctk.CTkFrame):
 
         # timestamps (se existirem)
         agora = datetime.now()
+
+        def _buscar_existente_codigo_cor():
+            codigo = (dados.get("codigo") or "").strip()
+            cor = (dados.get("cor") or cor_valor or "").strip()
+            if not codigo or "codigo" not in colunas_db or "cor" not in colunas_db:
+                return None
+            try:
+                return db.fetch_one(
+                    f"SELECT * FROM {tabela_qual} WHERE codigo=%s AND COALESCE(cor,'')=COALESCE(%s,'') ORDER BY id DESC LIMIT 1",
+                    [codigo, cor],
+                )
+            except Exception:
+                return None
+        def _campos_estoque_editados():
+            campos = []
+            for c in ("quantidade", "metros", "kilos"):
+                if c in colunas_db and c in dados:
+                    campos.append(c)
+            return campos
+
+        def _mensagem_baixa_obrigatoria():
+            return "Utilize a página de Saída para baixa em estoque."
+
+        def _comparar_campos_estoque(existente_reg):
+            campos = _campos_estoque_editados()
+            atuais = {c: _to_decimal(existente_reg.get(c, 0)) for c in campos}
+            novos = {c: _to_decimal(dados.get(c, 0)) for c in campos}
+            return campos, atuais, novos
+
         if "created_at" in colunas_db and "created_at" not in dados:
             dados["created_at"] = agora
         if "updated_at" in colunas_db:
@@ -963,6 +992,58 @@ class EntradaEstoqueApp(ctk.CTkFrame):
 
         if not dados:
             messagebox.showwarning("⚠️ Aviso", "Nenhum dado válido foi informado.")
+            return
+
+        # Se item já existe (codigo+cor), atualiza os campos de estoque (quantidade/metros/kilos)
+        existente = _buscar_existente_codigo_cor()
+        if existente:
+            campos_estoque, valores_atuais, valores_novos = _comparar_campos_estoque(existente)
+
+            if campos_estoque:
+                if any(valores_novos[c] < valores_atuais[c] for c in campos_estoque):
+                    detalhes = [f"- {c}: atual {_fmt_num_br(valores_atuais[c])} | informado {_fmt_num_br(valores_novos[c])}" for c in campos_estoque]
+                    messagebox.showwarning(
+                        "Valor menor que o estoque atual",
+                        "\n".join(detalhes) + "\n\n" + _mensagem_baixa_obrigatoria()
+                    )
+                    return
+
+                if all(valores_novos[c] == valores_atuais[c] for c in campos_estoque):
+                    messagebox.showinfo("Sem alteração", "Os valores informados são iguais aos valores atuais do estoque.")
+                    return
+
+            campos_update = []
+            params_update = []
+            for campo, valor in dados.items():
+                if campo in ("id", "created_at"):
+                    continue
+                campos_update.append(f"{campo}=%s")
+                params_update.append(valor)
+            if "updated_at" in colunas_db and "updated_at" not in dados:
+                campos_update.append("updated_at=%s")
+                params_update.append(agora)
+
+            params_update.extend([existente.get("codigo"), existente.get("cor")])
+            sql_upd = f"UPDATE {tabela_qual} SET {', '.join(campos_update)} WHERE codigo=%s AND COALESCE(cor,'')=COALESCE(%s,'')"
+            db.execute(sql_upd, params_update)
+
+            linhas_campos = []
+            for c in campos_estoque:
+                linhas_campos.append(f"📦 {c.capitalize()} anterior: {_fmt_num_br(valores_atuais[c])}")
+                linhas_campos.append(f"📦 {c.capitalize()} novo: {_fmt_num_br(valores_novos[c])}")
+            if not linhas_campos:
+                linhas_campos.append("📦 Item atualizado com sucesso.")
+
+            messagebox.showinfo(
+                "✅ Estoque atualizado",
+                "Quantidade/medidas atualizadas com sucesso!\n\n"
+                f"📌 Código: {existente.get('codigo') or '-'}\n"
+                f"🎨 Cor: {existente.get('cor') or '-'}\n" + "\n".join(linhas_campos)
+            )
+            try:
+                self.carregar_dados_existente()
+            except Exception:
+                pass
             return
 
         # INSERT
@@ -1020,7 +1101,38 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                 pass
 
         except Exception as e:
+            msg_err = str(e)
+            if "viol" in msg_err.lower() and "codigo" in msg_err.lower() and "cor" in msg_err.lower():
+                existente = _buscar_existente_codigo_cor()
+                if existente:
+                    campos_estoque, valores_atuais, valores_novos = _comparar_campos_estoque(existente)
+                    if campos_estoque and any(valores_novos[c] < valores_atuais[c] for c in campos_estoque):
+                        messagebox.showwarning("Valor menor que o estoque atual", _mensagem_baixa_obrigatoria())
+                        return
+
+                    campos_update = []
+                    params_update = []
+                    for campo, valor in dados.items():
+                        if campo in ("id", "created_at"):
+                            continue
+                        campos_update.append(f"{campo}=%s")
+                        params_update.append(valor)
+                    if "updated_at" in colunas_db and "updated_at" not in dados:
+                        campos_update.append("updated_at=%s")
+                        params_update.append(agora)
+                    params_update.extend([existente.get("codigo"), existente.get("cor")])
+                    db.execute(
+                        f"UPDATE {tabela_qual} SET {', '.join(campos_update)} WHERE codigo=%s AND COALESCE(cor,'')=COALESCE(%s,'')",
+                        params_update,
+                    )
+                    messagebox.showinfo("✅ Estoque atualizado", "Item já existente atualizado com sucesso.")
+                    try:
+                        self.carregar_dados_existente()
+                    except Exception:
+                        pass
+                    return
             messagebox.showerror("Erro ao gravar no banco", f"Ocorreu um erro ao gravar no banco:\n{e}")
+
 
     def formatar_valor(self, valor, campo):
         if valor is None:
