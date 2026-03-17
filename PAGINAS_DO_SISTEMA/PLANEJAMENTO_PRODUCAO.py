@@ -196,15 +196,15 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             height=14,
         )
         for col, text, width in (
-            ("op", "OP", 105),
-            ("modelo", "Modelo", 230),
-            ("qtde", "Qtde", 80),
-            ("inicio", "Início", 100),
-            ("fim", "Fim", 100),
-            ("status", "Status", 110),
+            ("op", "OP", 115),
+            ("modelo", "Modelo", 280),
+            ("qtde", "Qtde", 70),
+            ("inicio", "Início", 90),
+            ("fim", "Fim", 90),
+            ("status", "Status", 90),
             ("progresso", "Progresso", 90),
-            ("programacao", "Programação", 110),
-            ("colecao", "Coleção", 130),
+            ("programacao", "Programação", 120),
+            ("colecao", "Coleção", 110),
         ):
             self.tree_ops.heading(col, text=text)
             self.tree_ops.column(col, width=width, anchor="center")
@@ -225,10 +225,10 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
         self.tree_capacidade = ttk.Treeview(capacidade_frame, columns=("recurso", "carga", "capacidade", "ocioso"), show="headings", height=12)
         for col, text, width in (
-            ("recurso", "Recurso", 155),
-            ("carga", "Necessário", 95),
-            ("capacidade", "Estoque", 95),
-            ("ocioso", "Saldo", 95),
+            ("recurso", "Recurso", 150),
+            ("carga", "Necessário", 125),
+            ("capacidade", "Estoque", 125),
+            ("ocioso", "Saldo", 100),
         ):
             self.tree_capacidade.heading(col, text=text)
             self.tree_capacidade.column(col, width=width, anchor="center")
