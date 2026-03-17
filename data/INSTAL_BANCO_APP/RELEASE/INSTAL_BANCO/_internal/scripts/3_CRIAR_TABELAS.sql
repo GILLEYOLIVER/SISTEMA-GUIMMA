@@ -1557,6 +1557,7 @@ CREATE TABLE IF NOT EXISTS opera.planejamento_op_grade (
     planejamento_id INTEGER NOT NULL REFERENCES opera.planejamento_ops(id) ON DELETE CASCADE,
     tamanho VARCHAR(10) NOT NULL,
     quantidade INTEGER DEFAULT 0 NOT NULL,
+    percentual NUMERIC(12,4) DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE (planejamento_id, tamanho)
 );

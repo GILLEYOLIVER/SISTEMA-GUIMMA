@@ -67,17 +67,19 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
 
     @staticmethod
     def _calcular_percentuais_grade(grade_rows, quantidade_total):
-        """Converte quantidades por tamanho em percentuais para prefill da Nova Ordem."""
+        """Usa percentual salvo; se não existir, calcula a partir da quantidade."""
         tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
         base = float(quantidade_total or 0)
         if base <= 0:
-            base = float(sum(float((qtd or 0)) for _tam, qtd in (grade_rows or [])) or 0)
+            base = float(sum(float((qtd or 0)) for _tam, qtd, _pct in (grade_rows or [])) or 0)
         percentuais = {tam: 0.0 for tam in tamanhos}
-        if base <= 0:
-            return percentuais
-        for tamanho, qtd in (grade_rows or []):
+        for tamanho, qtd, pct_salvo in (grade_rows or []):
             tam = str(tamanho or "").strip().upper()
-            if tam in percentuais:
+            if tam not in percentuais:
+                continue
+            if pct_salvo is not None:
+                percentuais[tam] = float(pct_salvo or 0)
+            elif base > 0:
                 percentuais[tam] = round((float(qtd or 0) / base) * 100.0, 2)
         return percentuais
 
@@ -108,7 +110,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                     pid, op, modelo, qtd, inicio, fim, status, progresso, codigo, prioridade = row
                     cur.execute(
                         f"""
-                        SELECT COALESCE(tamanho, ''), COALESCE(quantidade, 0)
+                        SELECT COALESCE(tamanho, ''), COALESCE(quantidade, 0), percentual
                           FROM {schema}.planejamento_op_grade
                          WHERE planejamento_id = %s
                         """,

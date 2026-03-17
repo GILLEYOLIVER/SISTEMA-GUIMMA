@@ -338,11 +338,13 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             planejamento_id INTEGER NOT NULL REFERENCES {schema}.planejamento_ops(id) ON DELETE CASCADE,
                             tamanho VARCHAR(10) NOT NULL,
                             quantidade INTEGER DEFAULT 0 NOT NULL,
+                            percentual NUMERIC(12,4) DEFAULT 0,
                             created_at TIMESTAMP DEFAULT NOW(),
                             UNIQUE (planejamento_id, tamanho)
                         )
                         """
                     )
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_op_grade ADD COLUMN IF NOT EXISTS percentual NUMERIC(12,4) DEFAULT 0")
                     cur.execute(
                         f"""
                         CREATE TABLE IF NOT EXISTS {schema}.planejamento_op_tecidos (
@@ -1056,7 +1058,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             colecao = (cmb_colecao.get() or info.get("colecao") or "").strip()
             observacoes = resumo_visual.get("1.0", "end").strip()
             observacoes = self._sanitizar_texto_para_banco(observacoes)
-            grade_dict, _percentuais, _soma_pct = calcular_grade_quantidades(quantidade_total)
+            grade_dict, percentuais_digitados, _soma_pct = calcular_grade_quantidades(quantidade_total)
             grade_dict = {t: q for t, q in grade_dict.items() if q > 0}
 
             try:
@@ -1102,12 +1104,13 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                         for tamanho, qtd in grade_dict.items():
                             if qtd <= 0:
                                 continue
+                            pct_digitado = float(percentuais_digitados.get(tamanho, 0) or 0)
                             cur.execute(
                                 f"""
-                                INSERT INTO {schema}.planejamento_op_grade (planejamento_id, tamanho, quantidade)
-                                VALUES (%s, %s, %s)
+                                INSERT INTO {schema}.planejamento_op_grade (planejamento_id, tamanho, quantidade, percentual)
+                                VALUES (%s, %s, %s, %s)
                                 """,
-                                (planejamento_id, tamanho, qtd),
+                                (planejamento_id, tamanho, qtd, pct_digitado),
                             )
 
                         for item in tecidos:

@@ -1184,15 +1184,16 @@ class OrdemCorte(ctk.CTkFrame):
 
     def formatar_para_inteiro_se_possivel(self, valor):
         """
-        Tenta formatar um valor para inteiro se possível.
-        Ex: 34.00 → "34", 34.50 → "34.50"
+        Mantém o valor o mais fiel possível ao que foi digitado/salvo.
+        Ex: 34.00 → "34", 34.50 → "34.5", 34.1250 → "34.125"
         """
         try:
-            num = float(valor)
-            if num.is_integer():
-                return str(int(num))
-            else:
-                return f"{num:.2f}"
+            from decimal import Decimal
+            dec = Decimal(str(valor))
+            if dec == dec.to_integral():
+                return str(int(dec))
+            txt = format(dec.normalize(), 'f')
+            return txt.rstrip('0').rstrip('.') if '.' in txt else txt
         except:
             return str(valor)
 
