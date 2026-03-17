@@ -51,6 +51,9 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         sc.grid(row=1, column=1, sticky="ns", pady=(0, 10))
         self.tree.bind("<Double-1>", lambda _e: self._abrir_na_nova_ordem())
 
+    def on_page_open(self):
+        self._carregar_ops()
+
     def _db_ready(self):
         ok, msg = require_ready()
         if not ok:

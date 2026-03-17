@@ -2667,6 +2667,11 @@ class OperaMenuApp(ctk.CTk):
 
                 if hasattr(self, "title_label"):
                     self.title_label.configure(text=page_name)
+                try:
+                    if hasattr(frame, "on_page_open"):
+                        frame.on_page_open()
+                except Exception as _exc:
+                    _dprint(f"⚠️ Erro ao atualizar página ao abrir '{page_name}': {_exc}")
                 self._apply_theme_to_frame_safely(frame)
                 # Reforços para widgets que são criados após o primeiro draw
                 self.after(120, lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)

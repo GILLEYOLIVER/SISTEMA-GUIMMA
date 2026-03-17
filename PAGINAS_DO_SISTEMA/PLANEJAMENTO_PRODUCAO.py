@@ -213,6 +213,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.tree_ops.tag_configure("grupo", background="#DDE8F5", font=("Arial", 10, "bold"))
         self.tree_ops.tag_configure("op_andamento", background="#DDF5E3")
         self.tree_ops.tag_configure("op_falta", background="#FADDDD")
+        self.tree_ops.tag_configure("op_concluida", background="#DDEBFF")
         self.tree_ops.bind("<Double-1>", self._abrir_detalhe_op)
 
         scroll_ops = ttk.Scrollbar(ordens_frame, orient="vertical", command=self.tree_ops.yview)
@@ -1167,8 +1168,6 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
     # =========================================================
     def _calcular_progresso_real(self, cur, planejamento_id, op, codigo_modelo):
         schema = get_schema()
-        etapa = "Planejada"
-        progresso = 0.0
 
         def _col_exists(tabela: str, coluna: str) -> bool:
             cur.execute(
@@ -1189,64 +1188,149 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             params = []
             for col in colunas_alvo:
                 if _col_exists(tabela, col):
-                    clausulas.append(f"COALESCE({col}, '') = %s")
-                    params.append(valores_alvo[col])
+                    clausulas.append(f"COALESCE({col}::text, '') = %s")
+                    params.append(str(valores_alvo[col] or ""))
             if not clausulas:
                 return False
             sql = f"SELECT 1 FROM {schema}.{tabela} WHERE " + " OR ".join(clausulas) + " LIMIT 1"
             cur.execute(sql, tuple(params))
             return bool(cur.fetchone())
 
-        cur.execute(f"SELECT 1 FROM {schema}.ordem_corte_ficha WHERE planejamento_op_id=%s LIMIT 1", (planejamento_id,))
-        if cur.fetchone():
-            etapa = "Ordem Gerada"
-            progresso = 35.0
+        etapas = [
+            "Nova Ordem",
+            "Cadastro de Corte",
+            "Controle de Mão de Obra",
+            "Registro Acabamento",
+            "Finalizar Corte/Acabamento",
+            "Pagamento de Serviços",
+        ]
+        total_etapas = len(etapas)
+        etapa_idx = -1
 
-        cur.execute(
-            f"""
-            SELECT 1
-              FROM {schema}.controle_envio_cortes
-             WHERE COALESCE(op_planejamento, '') = %s
-                OR COALESCE(ordem_corte, '') = %s
-                OR COALESCE(codigo_corte, '') = %s
-             LIMIT 1
-            """,
-            (op or "", op or "", codigo_modelo or ""),
-        )
-        if cur.fetchone():
-            etapa = "Em andamento"
-            progresso = 65.0
+        op_txt = op or ""
+        codigo_txt = codigo_modelo or ""
 
-        existe_retorno = _existe_por_colunas(
+        # Etapa 1 - Nova Ordem (salvou ordem de corte)
+        if _existe_por_colunas(
+            "ordem_corte_ficha",
+            ["planejamento_op_id", "op_planejamento", "ordem", "ordem_corte", "codigo_modelo", "codigo_corte"],
+            {
+                "planejamento_op_id": planejamento_id,
+                "op_planejamento": op_txt,
+                "ordem": op_txt,
+                "ordem_corte": op_txt,
+                "codigo_modelo": codigo_txt,
+                "codigo_corte": codigo_txt,
+            },
+        ):
+            etapa_idx = max(etapa_idx, 0)
+
+        # Etapa 2 - Cadastro de Corte
+        if _existe_por_colunas(
+            "cadastro_de_corte",
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte", "codigo_modelo"],
+            {
+                "op_planejamento": op_txt,
+                "ordem": op_txt,
+                "ordem_corte": op_txt,
+                "codigo": codigo_txt,
+                "codigo_corte": codigo_txt,
+                "codigo_modelo": codigo_txt,
+            },
+        ):
+            etapa_idx = max(etapa_idx, 1)
+
+        # Etapa 3 - Controle de Mão de Obra
+        if _existe_por_colunas(
+            "controle_envio_cortes",
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "op_planejamento": op_txt,
+                "ordem": op_txt,
+                "ordem_corte": op_txt,
+                "codigo": codigo_txt,
+                "codigo_corte": codigo_txt,
+            },
+        ) or _existe_por_colunas(
+            "envios_cortes",
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "op_planejamento": op_txt,
+                "ordem": op_txt,
+                "ordem_corte": op_txt,
+                "codigo": codigo_txt,
+                "codigo_corte": codigo_txt,
+            },
+        ):
+            etapa_idx = max(etapa_idx, 2)
+
+        # Etapa 4 - Registro Acabamento
+        if _existe_por_colunas(
             "controle_retorno_cortes",
             ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
             {
-                "op_planejamento": op or "",
-                "ordem": op or "",
-                "ordem_corte": op or "",
-                "codigo": codigo_modelo or "",
-                "codigo_corte": codigo_modelo or "",
+                "op_planejamento": op_txt,
+                "ordem": op_txt,
+                "ordem_corte": op_txt,
+                "codigo": codigo_txt,
+                "codigo_corte": codigo_txt,
             },
-        )
-        if existe_retorno:
-            etapa = "Retorno"
-            progresso = 85.0
+        ):
+            etapa_idx = max(etapa_idx, 3)
 
-        existe_final = _existe_por_colunas(
+        # Etapa 5 - Finalizar Corte/Acabamento
+        if _existe_por_colunas(
             "cortes_finalizados_completo",
-            ["ordem", "ordem_corte", "codigo", "codigo_corte"],
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
             {
-                "ordem": op or "",
-                "ordem_corte": op or "",
-                "codigo": codigo_modelo or "",
-                "codigo_corte": codigo_modelo or "",
+                "op_planejamento": op_txt,
+                "ordem": op_txt,
+                "ordem_corte": op_txt,
+                "codigo": codigo_txt,
+                "codigo_corte": codigo_txt,
             },
-        )
-        if existe_final:
-            etapa = "Pronta"
-            progresso = 100.0
+        ) or _existe_por_colunas(
+            "cortes_finalizados",
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "op_planejamento": op_txt,
+                "ordem": op_txt,
+                "ordem_corte": op_txt,
+                "codigo": codigo_txt,
+                "codigo_corte": codigo_txt,
+            },
+        ):
+            etapa_idx = max(etapa_idx, 4)
 
-        status = "Pronta" if progresso >= 100 else ("Em execução" if progresso >= 65 else ("Ordem Gerada" if progresso >= 35 else "Planejada"))
+        # Etapa 6 - Pagamento de Serviços
+        if _existe_por_colunas(
+            "pagamento_corte_acabamento",
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte", "codigo_modelo"],
+            {
+                "op_planejamento": op_txt,
+                "ordem": op_txt,
+                "ordem_corte": op_txt,
+                "codigo": codigo_txt,
+                "codigo_corte": codigo_txt,
+                "codigo_modelo": codigo_txt,
+            },
+        ):
+            etapa_idx = max(etapa_idx, 5)
+
+        if etapa_idx < 0:
+            etapa = "Planejada"
+            progresso = 0.0
+            status = "Planejada"
+        else:
+            etapa = etapas[etapa_idx]
+            progresso = round(((etapa_idx + 1) / total_etapas) * 100.0, 1)
+            if etapa_idx >= total_etapas - 1:
+                etapa = "Pagamento de Serviços"
+                progresso = 100.0
+                status = "Pronta"
+            else:
+                status = "Em execução"
+
         cur.execute(
             f"""
             UPDATE {schema}.planejamento_ops
@@ -1263,20 +1347,31 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
     def _status_eh_andamento(self, status: str, progresso: float = 0.0) -> bool:
         st = (status or "").strip().lower()
-        if st in {"em andamento", "em execução", "ordem gerada", "ordem gerac"}:
+        if st in {"em andamento", "em execução"}:
             return True
         try:
-            return float(progresso or 0) >= 35
+            p = float(progresso or 0)
+            return 0 < p < 100
         except Exception:
             return False
 
     def _tag_status_op(self, status: str, progresso: float = 0.0) -> str | None:
         st = (status or "").strip().lower()
-        if self._status_eh_andamento(status, progresso):
+        try:
+            p = float(progresso or 0)
+        except Exception:
+            p = 0.0
+        if p >= 100 or st in {"pronta", "finalizada", "concluída", "concluida"}:
+            return "op_concluida"
+        if self._status_eh_andamento(status, p):
             return "op_andamento"
-        if st in {"atrasada", "falta", "pendente", "planejada"}:
+        if st in {"atrasada", "falta", "pendente", "planejada"} or p <= 0:
             return "op_falta"
         return None
+
+    def on_page_open(self):
+        self._carregar_modelos_cache()
+        self._carregar_dados_planejamento()
 
     def _carregar_dados_planejamento(self):
         self._limpar_tree(self.tree_ops)
