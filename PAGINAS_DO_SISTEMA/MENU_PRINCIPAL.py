@@ -150,7 +150,7 @@ class ConfigManager:
     @staticmethod
     def load_settings() -> dict:
         """Carrega configurações do arquivo settings.json."""
-        default = {"theme": "Noite Urbana", "last_page": "Dashboard"}
+        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard"}
         if os.path.exists(SETTINGS_PATH):
             try:
                 with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
@@ -221,8 +221,8 @@ class ThemeManager:
             try:
                 pal = ModuloPaletas().PADROES.get(theme_name)
                 if not pal:
-                    _dprint(f"[Tema] Tema '{theme_name}' não encontrado. Usando 'Noite Urbana'.")
-                    pal = ModuloPaletas().PADROES.get("Noite Urbana", {})
+                    _dprint(f"[Tema] Tema '{theme_name}' não encontrado. Usando 'CLÁSSICO CLARO'.")
+                    pal = ModuloPaletas().PADROES.get("CLÁSSICO CLARO", {})
                 else:
                     pal = dict(pal)
                     _dprint(f"[Tema] Aplicando tema padrão '{theme_name}'.")
@@ -653,7 +653,7 @@ class ThemeManager:
         from PAGINAS_DO_SISTEMA.TEMAS import TemasPage
         palette = self.current_palette or {}
         if not palette:
-            palette = TemasPage.PADROES.get(self.current_theme_name or "Noite Urbana", {})
+            palette = TemasPage.PADROES.get(self.current_theme_name or "CLÁSSICO CLARO", {})
         if not palette:
             _dprint("[Tema] Nenhuma paleta disponível para aplicar no widget.")
             return
@@ -827,7 +827,7 @@ class UserManager:
 
     def load_user_theme_completo(self):
         import json
-        default_theme = "Noite Urbana"
+        default_theme = "CLÁSSICO CLARO"
         try:
             if not getattr(self.app, "usuario_id", None):
                 _dprint("[UserManager][DEBUG] usuario_id não definido ao carregar tema completo; usando padrão")
@@ -1021,7 +1021,7 @@ class OperaMenuApp(ctk.CTk):
     MENU_ESTRUTURA = {
         "Dashboard": ["Dashboard"],
         "MODELOS": ["Cadastrar Modelo", "Imprimir Ficha Técnica"],
-        "ORDENS DE CORTE": ["Nova Ordem", "Ordens de Corte Impressão"],
+        "ORDENS DE CORTE": ["Nova Ordem", "Ordens Planejadas", "Ordens de Corte Impressão"],
         "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
         "COMPRAS": ["Compras"],
@@ -1048,7 +1048,7 @@ class OperaMenuApp(ctk.CTk):
     SUBMENU_ICON_MAPPING = {
         "Dashboard": {"Dashboard": "DASHBORD.png"},
         "MODELOS": {"Cadastrar Modelo": "ROUPA.png", "Imprimir Ficha Técnica": "IMPRESSORA.png"},
-        "ORDENS DE CORTE": {"Nova Ordem": "NOVA_ORDEM.png", "Ordens de Corte Impressão": "IMPRESSORA.png"},
+        "ORDENS DE CORTE": {"Nova Ordem": "NOVA_ORDEM.png", "Ordens Planejadas": "RELATORIO.png", "Ordens de Corte Impressão": "IMPRESSORA.png"},
         "REGISTRO DE CORTE": {"Cadastrar Corte": "CADASTRO_CORTE.png", "Consultar Ordens": "CONSULTAR ORDENS.png"},
         "COMPRAS": {"Compras": "DINHEIRO.png"},
         "ESTOQUE": {"Entrada de Estoque": "ESTOQUE.png", "Saída de Estoque": "ESTOQUE.png", "Relatórios": "RELATORIO 2.png"},
@@ -1081,6 +1081,7 @@ class OperaMenuApp(ctk.CTk):
         "Cadastrar Modelo": "cadastro_modelos",
         "Imprimir Ficha Técnica": "ficha_tecnica",
         "Nova Ordem": "ordem_corte",
+        "Ordens Planejadas": "ordem_corte",
         "Ordens de Corte Impressão": "ordem_corte_impressao",
         "Cadastrar Corte": "cadastro_corte",
         "Consultar Ordens": "consultar_ordens",
@@ -1155,7 +1156,7 @@ class OperaMenuApp(ctk.CTk):
         self.settings = ConfigManager.load_settings()
         self.routes = ConfigManager.load_routes()
         ConfigManager.ensure_icons_directory()
-        self.tema_preferido_inicial = tema_preferido or self.settings.get("theme") or "Noite Urbana"
+        self.tema_preferido_inicial = tema_preferido or self.settings.get("theme") or "CLÁSSICO CLARO"
 
         self.theme_manager = ThemeManager(self)
         self._theme_manager = self.theme_manager
@@ -1201,6 +1202,8 @@ class OperaMenuApp(ctk.CTk):
         self.focus_force()
         self._apply_initial_layout()
         self._open_dashboard_agora()
+        self._agendar_after(180, lambda: self._apply_theme_to_frame_safely(self._current_frame))
+        self._agendar_after(420, lambda: self._apply_theme_to_frame_safely(self._current_frame))
         self._agendar_after(1200, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
         self._agendar_after(5000, self._ativar_backup_silencioso)
@@ -1929,6 +1932,13 @@ class OperaMenuApp(ctk.CTk):
         lbl_user.bind("<Enter>", lambda e, w=lbl_user: on_enter(w))
         lbl_user.bind("<Leave>", lambda e, w=lbl_user: on_leave(w))
 
+    @staticmethod
+    def _theme_mode_from_name(tema_nome: str) -> str:
+        nome = (tema_nome or "").strip().upper()
+        if nome in {"NOTURNO", "PRETO E OURO", "NOITE URBANA"}:
+            return "dark"
+        return "light"
+
     def _add_theme_switch_to_topbar(self):
         import customtkinter as ctk
 
@@ -1941,7 +1951,7 @@ class OperaMenuApp(ctk.CTk):
         if not hasattr(self, "current_theme_name") or not self.current_theme_name:
             self.current_theme_name = "CLÁSSICO CLARO"
 
-        is_dark_mode = self.current_theme_name.upper() == "NOTURNO"
+        is_dark_mode = self._theme_mode_from_name(self.current_theme_name) == "dark"
 
         self.icon_theme = ctk.CTkLabel(
             self.theme_switch_frame,
@@ -1981,7 +1991,7 @@ class OperaMenuApp(ctk.CTk):
         try:
             from PAGINAS_DO_SISTEMA.TEMAS import ModuloPaletas
             paletas = ModuloPaletas()
-            paleta = paletas.PADROES.get(tema_nome) or paletas.PADROES.get("Noite Urbana", {})
+            paleta = paletas.PADROES.get(tema_nome) or paletas.PADROES.get("CLÁSSICO CLARO", {})
 
             if hasattr(self, "theme_manager") and self.theme_manager:
                 self.theme_manager.apply_theme(tema_nome, paleta, rebuild_interface=False)
@@ -2023,7 +2033,7 @@ class OperaMenuApp(ctk.CTk):
         """Switch claro/escuro usando a mesma rotina da página TEMAS (e rebuild ao trocar modo)."""
         try:
             is_dark = bool(self.theme_switch.get())
-            tema_nome = "NOTURNO" if is_dark else "CLÁSSICO CLARO"
+            tema_nome = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
 
             # Ícone
             if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
@@ -2041,7 +2051,8 @@ class OperaMenuApp(ctk.CTk):
             paleta = paletas.obter_tema(tema_nome) if hasattr(paletas, "obter_tema") else paletas.PADROES.get(tema_nome)
 
             if not paleta:
-                paleta = paletas.PADROES.get("Noite Urbana", {})
+                tema_fallback = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
+                paleta = paletas.PADROES.get(tema_fallback, {})
 
             # Detecta se está trocando o modo (dark<->light) e força rebuild
             modo_anterior = getattr(self, "tema_modo", None)  # "dark"/"light" (se já existir)
@@ -2090,7 +2101,7 @@ class OperaMenuApp(ctk.CTk):
 
         # aqui é 100% o estado real do switch, sem inverter
         is_dark = (self.theme_switch.get() == 1)
-        tema_nome = "NOTURNO" if is_dark else "CLÁSSICO CLARO"
+        tema_nome = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
 
         # ícone acompanha o estado
         if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
@@ -2603,6 +2614,24 @@ class OperaMenuApp(ctk.CTk):
                 except:
                     pass
 
+    def _apply_theme_to_frame_safely(self, frame):
+        """Reaplica tema no frame informado (incluindo widgets criados com atraso)."""
+        if not frame or not getattr(frame, "winfo_exists", lambda: False)():
+            return
+        try:
+            if hasattr(frame, "host"):
+                frame.host = self
+            if hasattr(frame, "sistema"):
+                frame.sistema = self
+            if hasattr(frame, "app"):
+                frame.app = self
+            if hasattr(self, "theme_manager") and self.theme_manager:
+                self.theme_manager.apply_theme_to_widget(frame)
+            if hasattr(self, "_update_menu_buttons_colors"):
+                self._update_menu_buttons_colors()
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao reaplicar tema no frame: {e}")
+
     def open_page(self, page_name: str, categoria: str | None = None):
         if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
             return
@@ -2628,19 +2657,20 @@ class OperaMenuApp(ctk.CTk):
                     self.after(80, self._notify_current_page_resize)
                 except Exception:
                     pass
+                if page_name == "Nova Ordem" and hasattr(self, "_ordem_planejada_prefill") and self._ordem_planejada_prefill:
+                    try:
+                        if hasattr(frame, "carregar_op_planejada"):
+                            frame.carregar_op_planejada(self._ordem_planejada_prefill)
+                        self._ordem_planejada_prefill = None
+                    except Exception as _exc:
+                        _dprint(f"⚠️ Prefill de OP planejada falhou: {_exc}")
+
                 if hasattr(self, "title_label"):
                     self.title_label.configure(text=page_name)
-                try:
-                    if hasattr(frame, "host"):
-                        frame.host = self
-                    if hasattr(frame, "sistema"):
-                        frame.sistema = self
-                    if hasattr(frame, "app"):
-                        frame.app = self
-                    if hasattr(self, "theme_manager"):
-                        self.theme_manager.apply_theme_to_widget(frame)
-                except Exception as e:
-                    _dprint(f"⚠️ Erro ao aplicar tema: {e}")
+                self._apply_theme_to_frame_safely(frame)
+                # Reforços para widgets que são criados após o primeiro draw
+                self.after(120, lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(320, lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.current_page = page_name
                 self._current_frame = frame
                 try:

@@ -28,7 +28,7 @@ class DatabaseManager:
         self.default_config = {
             "defaults": {
                 "user": "postgres",
-                "password": "gil25802580",
+                "password": "postgres",
                 "dbname": "postgres"
             },
             "ports": [5433, 5432, 5434],
@@ -350,7 +350,7 @@ class DatabaseManager:
 
             if not password:
                 config = self.get_connection_config()
-                password = config.get("defaults", {}).get("password", "gil25802580")
+                password = config.get("defaults", {}).get("password", "postgres")
 
             print(f"🚀 Executando: {script_name} no banco {target_database} (porta {port})")
 
@@ -529,7 +529,7 @@ class DatabaseManager:
 
             if not password:
                 config = self.get_connection_config()
-                password = config.get("defaults", {}).get("password", "gil25802580")
+                password = config.get("defaults", {}).get("password", "postgres")
 
             env = os.environ.copy()
             env["PGPASSWORD"] = password
@@ -583,7 +583,7 @@ class DatabaseManager:
 
             if not password:
                 config = self.get_connection_config()
-                password = config.get("defaults", {}).get("password", "gil25802580")
+                password = config.get("defaults", {}).get("password", "postgres")
 
             print(f"🔍 Testando conexão com {database} ({user}@{host}:{port})")
 
@@ -641,7 +641,7 @@ class DatabaseManager:
 
             if not password:
                 cfg = self.get_connection_config()
-                password = cfg.get("defaults", {}).get("password", "gil25802580")
+                password = cfg.get("defaults", {}).get("password", "postgres")
 
             psql_path = self._find_psql_path()
             if not psql_path:
@@ -697,7 +697,7 @@ class DatabaseManager:
 
             if not password:
                 config = self.get_connection_config()
-                password = config.get("defaults", {}).get("password", "gil25802580")
+                password = config.get("defaults", {}).get("password", "postgres")
 
             env = os.environ.copy()
             env["PGPASSWORD"] = password
@@ -734,7 +734,7 @@ class DatabaseManager:
 
             if not password:
                 config = self.get_connection_config()
-                password = config.get("defaults", {}).get("password", "gil25802580")
+                password = config.get("defaults", {}).get("password", "postgres")
 
             env = os.environ.copy()
             env["PGPASSWORD"] = password
@@ -772,7 +772,7 @@ class DatabaseManager:
 
             if not password:
                 config = self.get_connection_config()
-                password = config.get("defaults", {}).get("password", "gil25802580")
+                password = config.get("defaults", {}).get("password", "postgres")
 
             env = os.environ.copy()
             env["PGPASSWORD"] = password
@@ -815,7 +815,7 @@ class DatabaseManager:
 
             if not password:
                 config = self.get_connection_config()
-                password = config.get("defaults", {}).get("password", "gil25802580")
+                password = config.get("defaults", {}).get("password", "postgres")
 
             env = os.environ.copy()
             env["PGPASSWORD"] = password
@@ -854,7 +854,7 @@ class DatabaseManager:
 
             if not password:
                 config = self.get_connection_config()
-                password = config.get("defaults", {}).get("password", "gil25802580")
+                password = config.get("defaults", {}).get("password", "postgres")
 
             psql_path = self._find_psql_path()
             if not psql_path:
@@ -927,7 +927,7 @@ class DatabaseManager:
 
         if not password:
             config = self.get_connection_config()
-            password = config.get("defaults", {}).get("password", "gil25802580")
+            password = config.get("defaults", {}).get("password", "postgres")
 
         env = os.environ.copy()
         env["PGPASSWORD"] = password
