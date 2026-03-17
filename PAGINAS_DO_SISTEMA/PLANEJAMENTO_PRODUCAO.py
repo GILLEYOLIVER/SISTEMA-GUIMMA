@@ -191,7 +191,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
         self.tree_ops = ttk.Treeview(
             ordens_frame,
-            columns=("op", "modelo", "qtde", "inicio", "fim", "status", "programacao", "colecao"),
+            columns=("op", "modelo", "qtde", "inicio", "fim", "status", "progresso", "programacao", "colecao"),
             show="headings",
             height=14,
         )
@@ -202,6 +202,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             ("inicio", "Início", 100),
             ("fim", "Fim", 100),
             ("status", "Status", 110),
+            ("progresso", "Progresso", 90),
             ("programacao", "Programação", 110),
             ("colecao", "Coleção", 130),
         ):
@@ -321,6 +322,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                     cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS total_grade INTEGER DEFAULT 0")
                     cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT NOW()")
                     cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT NOW()")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS percentual_progresso NUMERIC(5,2) DEFAULT 0")
+                    cur.execute(f"ALTER TABLE {schema}.planejamento_ops ADD COLUMN IF NOT EXISTS etapa_atual VARCHAR(40) DEFAULT 'Planejada'")
                     cur.execute(f"CREATE UNIQUE INDEX IF NOT EXISTS idx_planejamento_ops_op_uq ON {schema}.planejamento_ops(op)")
                     cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ops_modelo ON {schema}.planejamento_ops(codigo_modelo)")
                     cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ops_programacao ON {schema}.planejamento_ops(programacao)")
@@ -356,6 +359,35 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             created_at TIMESTAMP DEFAULT NOW()
                         )
                         """
+                    )
+                    cur.execute(
+                        f"""
+                        CREATE TABLE IF NOT EXISTS {schema}.planejamento_ordens_geradas (
+                            id SERIAL PRIMARY KEY,
+                            planejamento_id INTEGER NOT NULL REFERENCES {schema}.planejamento_ops(id) ON DELETE CASCADE,
+                            op VARCHAR(60) NOT NULL,
+                            ordem_corte_id INTEGER REFERENCES {schema}.ordem_corte_ficha(id) ON DELETE SET NULL,
+                            codigo_modelo VARCHAR(100),
+                            descricao_modelo TEXT,
+                            quantidade INTEGER DEFAULT 0,
+                            status VARCHAR(30) DEFAULT 'Ordem Gerada',
+                            criado_em TIMESTAMP DEFAULT NOW(),
+                            atualizado_em TIMESTAMP DEFAULT NOW(),
+                            UNIQUE (planejamento_id)
+                        )
+                        """
+                    )
+                    cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ordens_op ON {schema}.planejamento_ordens_geradas(op)")
+                    cur.execute(f"CREATE INDEX IF NOT EXISTS idx_planejamento_ordens_ordem ON {schema}.planejamento_ordens_geradas(ordem_corte_id)")
+                    cur.execute(
+                        f"ALTER TABLE {schema}.ordem_corte_ficha ADD COLUMN IF NOT EXISTS planejamento_op_id INTEGER REFERENCES {schema}.planejamento_ops(id) ON DELETE SET NULL"
+                    )
+                    cur.execute(f"ALTER TABLE {schema}.ordem_corte_ficha ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60)")
+                    cur.execute(
+                        f"ALTER TABLE {schema}.controle_envio_cortes ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60)"
+                    )
+                    cur.execute(
+                        f"ALTER TABLE {schema}.controle_retorno_cortes ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60)"
                     )
                     cur.execute(
                         f"""
@@ -486,6 +518,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         schema = get_schema()
         tecidos = []
         aviamentos = []
+        outros = []
+        servicos = []
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -556,7 +590,70 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                         "saldo": saldo,
                         "status": "OK" if saldo >= 0 else "FALTA",
                     })
-        return tecidos, aviamentos
+
+                cur.execute(
+                    f"""
+                    SELECT COALESCE(codigo, ''), COALESCE(descricao, ''), COALESCE(cor, ''),
+                           COALESCE(fornecedor, ''), COALESCE(unidade, ''), COALESCE(quantidade, 0)
+                      FROM {schema}.cadastro_modelos_outros
+                     WHERE codigo_modelo = %s
+                     ORDER BY descricao, codigo
+                    """,
+                    (codigo_modelo,),
+                )
+                for codigo, descricao, cor, fornecedor, unidade, consumo in cur.fetchall():
+                    necessario = self._to_float(consumo) * quantidade_total
+                    cur.execute(
+                        f"""
+                        SELECT (
+                            COALESCE((SELECT SUM(quantidade) FROM {schema}.estoque_insumos WHERE codigo = %s), 0) +
+                            COALESCE((SELECT SUM(quantidade) FROM {schema}.estoque_outros WHERE codigo = %s), 0) +
+                            COALESCE((SELECT SUM(quantidade) FROM {schema}.estoque_escritorio WHERE codigo = %s), 0) +
+                            COALESCE((SELECT SUM(quantidade) FROM {schema}.estoque_limpeza WHERE codigo = %s), 0)
+                        )
+                        """,
+                        (codigo, codigo, codigo, codigo),
+                    )
+                    estoque = self._to_float(cur.fetchone()[0])
+                    saldo = estoque - necessario
+                    outros.append({
+                        "codigo": codigo or "",
+                        "descricao": descricao or codigo or "Outro material",
+                        "cor": cor or "",
+                        "fornecedor": fornecedor or "",
+                        "unidade": unidade or "",
+                        "consumo": self._to_float(consumo),
+                        "necessario": necessario,
+                        "estoque": estoque,
+                        "saldo": saldo,
+                        "status": "OK" if saldo >= 0 else "FALTA",
+                    })
+
+                cur.execute(
+                    f"""
+                    SELECT COALESCE(codigo_servico, ''), COALESCE(descricao, ''), COALESCE(tipo_servico, ''),
+                           COALESCE(fornecedor, ''), COALESCE(unidade, ''), COALESCE(quantidade, 0),
+                           COALESCE(valor_unidade, 0)
+                      FROM {schema}.cadastro_modelos_outros_servicos
+                     WHERE codigo_modelo = %s
+                     ORDER BY descricao, codigo_servico
+                    """,
+                    (codigo_modelo,),
+                )
+                for codigo, descricao, tipo_servico, fornecedor, unidade, quantidade, valor_unidade in cur.fetchall():
+                    qtd = self._to_float(quantidade) * quantidade_total
+                    valor = self._to_float(valor_unidade) * qtd
+                    servicos.append({
+                        "codigo": codigo or "",
+                        "descricao": descricao or codigo or "Serviço",
+                        "tipo_servico": tipo_servico or "",
+                        "fornecedor": fornecedor or "",
+                        "unidade": unidade or "",
+                        "quantidade": qtd,
+                        "valor_estimado": valor,
+                        "status": "OK",
+                    })
+        return tecidos, aviamentos, outros, servicos
 
     # =========================================================
     # Nova programação
@@ -568,12 +665,18 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
         top = ctk.CTkToplevel(self)
         top.title("Nova Programação de Produção")
-        top.geometry("980x760")
+        largura_janela, altura_janela = 1220, 900
+        sw = top.winfo_screenwidth()
+        sh = top.winfo_screenheight()
+        x = max(20, (sw - largura_janela) // 2)
+        y = max(20, (sh - altura_janela) // 2)
+        top.geometry(f"{largura_janela}x{altura_janela}+{x}+{y}")
         top.transient(self)
         top.grab_set()
         top.configure(fg_color=self.cor_fundo)
         top.grid_columnconfigure(0, weight=1)
         top.grid_rowconfigure(1, weight=1)
+        top.grid_rowconfigure(2, weight=0)
 
         ctk.CTkLabel(top, text="Nova Programação", font=ctk.CTkFont(size=24, weight="bold")).grid(row=0, column=0, sticky="w", padx=18, pady=(14, 8))
 
@@ -628,7 +731,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         passo2.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         passo2.grid_columnconfigure(1, weight=1)
         passo2.grid_columnconfigure(3, weight=1)
-        ctk.CTkLabel(passo2, text="Passo 2 - Escolher modelo e quantidade", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
+        ctk.CTkLabel(passo2, text="Passo 2 - Escolher modelo", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
 
         modelos_exibicao = [f"{m[0]} - {m[1]}" for m in self.modelos_cache] or [""]
         ctk.CTkLabel(passo2, text="Modelo").grid(row=1, column=0, padx=(12, 6), pady=6, sticky="w")
@@ -637,30 +740,35 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             cmb_modelo.set(modelos_exibicao[0])
         cmb_modelo.grid(row=1, column=1, padx=(0, 12), pady=6, sticky="ew")
 
-        ctk.CTkLabel(passo2, text="Quantidade total").grid(row=1, column=2, padx=(0, 6), pady=6, sticky="w")
-        ent_quantidade = ctk.CTkEntry(passo2)
-        ent_quantidade.insert(0, "0")
-        ent_quantidade.grid(row=1, column=3, padx=(0, 12), pady=6, sticky="ew")
-
         lbl_grade_disp = ctk.CTkLabel(passo2, text="Grade disponível: -")
         lbl_grade_disp.grid(row=2, column=0, columnspan=4, sticky="w", padx=12, pady=(0, 10))
 
         # Passo 3
         passo3 = ctk.CTkFrame(body)
         passo3.grid(row=2, column=0, sticky="nsew", padx=(0, 8), pady=(0, 10))
-        ctk.CTkLabel(passo3, text="Passo 3 - Distribuir grade", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
+        ctk.CTkLabel(passo3, text="Passo 3 - Distribuir grade (porcentagem)", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
+
+        ctk.CTkLabel(passo3, text="Quantidade desejada").grid(row=1, column=0, padx=(12, 6), pady=(0, 8), sticky="w")
+        ent_quantidade = ctk.CTkEntry(passo3, width=160)
+        ent_quantidade.insert(0, "0")
+        ent_quantidade.grid(row=1, column=1, padx=(0, 12), pady=(0, 8), sticky="w")
 
         grade_vars = {}
         grade_entries = {}
+        grade_labels = {}
+        tamanhos_ativos = TAMANHOS_GRADE.copy()
         for i, tamanho in enumerate(TAMANHOS_GRADE):
             grade_vars[tamanho] = ctk.StringVar(value="0")
-            ctk.CTkLabel(passo3, text=tamanho).grid(row=1 + (i // 4), column=(i % 4), padx=8, pady=(0, 4), sticky="w")
+            linha_base = 2 + (i // 4) * 2
+            lbl_tam = ctk.CTkLabel(passo3, text=tamanho)
+            lbl_tam.grid(row=linha_base, column=(i % 4), padx=8, pady=(0, 4), sticky="w")
+            grade_labels[tamanho] = lbl_tam
             ent = ctk.CTkEntry(passo3, width=90, textvariable=grade_vars[tamanho])
-            ent.grid(row=3 + (i // 4), column=(i % 4), padx=8, pady=(0, 10), sticky="w")
+            ent.grid(row=linha_base + 1, column=(i % 4), padx=8, pady=(0, 10), sticky="w")
             grade_entries[tamanho] = ent
 
-        lbl_total_grade = ctk.CTkLabel(passo3, text="Total da grade: 0")
-        lbl_total_grade.grid(row=5, column=0, columnspan=4, sticky="w", padx=12, pady=(0, 10))
+        lbl_total_grade = ctk.CTkLabel(passo3, text="Total da porcentagem: 0%")
+        lbl_total_grade.grid(row=6, column=0, columnspan=4, sticky="w", padx=12, pady=(0, 10))
 
         # Passo 4
         passo4 = ctk.CTkFrame(body)
@@ -673,15 +781,29 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         resumo_box.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
         resumo_box.insert("1.0", "Selecione o modelo e informe a quantidade para calcular tecidos e aviamentos.")
 
-        obs = ctk.CTkTextbox(body, height=90)
-        obs.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(0, 10))
-        obs.insert("1.0", "")
+        resumo_visual = ctk.CTkTextbox(body, height=90)
+        resumo_visual.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        resumo_visual.insert("1.0", "Resumo de conferência: preencha os passos para visualizar os dados principais da programação.")
 
-        bottom = ctk.CTkFrame(body)
-        bottom.grid(row=4, column=0, columnspan=2, sticky="ew")
+        bottom = ctk.CTkFrame(top)
+        bottom.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 12))
         bottom.grid_columnconfigure(0, weight=1)
-        ctk.CTkButton(bottom, text="Calcular materiais", command=lambda: recalcular_resumo(), fg_color=self.cor_primaria, hover_color=self._hover(self.cor_primaria)).pack(side="left", padx=8, pady=10)
-        ctk.CTkButton(bottom, text="Salvar programação", command=lambda: salvar_programacao(), fg_color=self.cor_sucesso, hover_color=self._hover(self.cor_sucesso)).pack(side="right", padx=8, pady=10)
+        ctk.CTkButton(
+            bottom,
+            text="Calcular materiais",
+            command=lambda: recalcular_resumo(),
+            fg_color=self.cor_primaria,
+            hover_color=self._hover(self.cor_primaria),
+            text_color=self.cor_texto,
+        ).pack(side="left", padx=8, pady=8)
+        ctk.CTkButton(
+            bottom,
+            text="Salvar programação",
+            command=lambda: salvar_programacao(),
+            fg_color=self.cor_sucesso,
+            hover_color=self._hover(self.cor_sucesso),
+            text_color="white",
+        ).pack(side="right", padx=8, pady=8)
 
         def modelo_info():
             valor = (cmb_modelo.get() or "").strip()
@@ -696,6 +818,25 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                     }
             return None
 
+
+        def _parse_tamanhos_grade(grade_texto: str):
+            txt = (grade_texto or "").upper().replace("|", ",").replace("/", ",").replace(";", ",")
+            partes = [p.strip() for p in txt.split(",") if p.strip()]
+            validos = [t for t in TAMANHOS_GRADE if t in partes]
+            return validos or TAMANHOS_GRADE.copy()
+
+        def _aplicar_tamanhos_disponiveis(tamanhos):
+            nonlocal tamanhos_ativos
+            tamanhos_ativos = list(tamanhos or TAMANHOS_GRADE)
+            for tam in TAMANHOS_GRADE:
+                if tam in tamanhos_ativos:
+                    grade_labels[tam].grid()
+                    grade_entries[tam].grid()
+                else:
+                    grade_vars[tam].set("0")
+                    grade_labels[tam].grid_remove()
+                    grade_entries[tam].grid_remove()
+
         def atualizar_modelo(*_args):
             info = modelo_info()
             if not info:
@@ -703,18 +844,44 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 return
             grade_txt = info["grade"] or "-"
             lbl_grade_disp.configure(text=f"Grade disponível: {grade_txt}")
+            _aplicar_tamanhos_disponiveis(_parse_tamanhos_grade(info.get("grade") or ""))
             if info["colecao"]:
                 cmb_colecao.set(info["colecao"])
+            atualizar_resumo_visual()
 
         def total_grade():
-            total = 0
-            for tamanho in TAMANHOS_GRADE:
+            total = 0.0
+            for tamanho in tamanhos_ativos:
                 try:
-                    total += int(float((grade_vars[tamanho].get() or "0").replace(",", ".")))
+                    total += float((grade_vars[tamanho].get() or "0").replace(",", "."))
                 except Exception:
                     pass
-            lbl_total_grade.configure(text=f"Total da grade: {total}")
+            lbl_total_grade.configure(text=f"Total da porcentagem: {total:.2f}%")
+            atualizar_resumo_visual()
             return total
+
+        def calcular_grade_quantidades(quantidade_total: int):
+            percentuais = {}
+            soma = 0.0
+            for tamanho in tamanhos_ativos:
+                try:
+                    pct = float((grade_vars[tamanho].get() or "0").replace(",", "."))
+                except Exception:
+                    pct = 0.0
+                if pct < 0:
+                    pct = 0.0
+                percentuais[tamanho] = pct
+                soma += pct
+
+            if quantidade_total <= 0 or soma <= 0:
+                return {t: 0 for t in tamanhos_ativos}, percentuais, soma
+
+            grade_qtd = {t: int(round((percentuais[t] / soma) * quantidade_total)) for t in tamanhos_ativos}
+            diferenca = quantidade_total - sum(grade_qtd.values())
+            if diferenca != 0 and tamanhos_ativos:
+                principal = max(tamanhos_ativos, key=lambda t: percentuais.get(t, 0.0))
+                grade_qtd[principal] = max(0, grade_qtd.get(principal, 0) + diferenca)
+            return grade_qtd, percentuais, soma
 
         def recalcular_resumo():
             info = modelo_info()
@@ -722,16 +889,13 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 resumo_box.delete("1.0", "end")
                 resumo_box.insert("1.0", "Selecione um modelo válido.")
                 return [], []
-            total = total_grade()
             qtd_manual = int(self._to_float(ent_quantidade.get()))
-            quantidade_total = total if total > 0 else qtd_manual
-            ent_quantidade.delete(0, "end")
-            ent_quantidade.insert(0, str(quantidade_total))
+            quantidade_total = qtd_manual
             if quantidade_total <= 0:
                 resumo_box.delete("1.0", "end")
-                resumo_box.insert("1.0", "Informe a quantidade total ou distribua a grade.")
+                resumo_box.insert("1.0", "Informe a quantidade desejada maior que zero.")
                 return [], []
-            tecidos, aviamentos = self._carregar_materiais_modelo(info["codigo"], quantidade_total)
+            tecidos, aviamentos, outros, servicos = self._carregar_materiais_modelo(info["codigo"], quantidade_total)
             linhas = [
                 f"Modelo: {info['codigo']} - {info['descricao']}",
                 f"Quantidade: {quantidade_total}",
@@ -756,9 +920,86 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                     )
             else:
                 linhas.append("- Modelo sem aviamentos cadastrados.")
+
+            linhas.append("")
+            linhas.append("OUTROS MATERIAIS:")
+            if outros:
+                for item in outros:
+                    un = f" {item['unidade']}" if item.get("unidade") else ""
+                    linhas.append(
+                        f"- {item['codigo']} | {item['descricao']} | necessário {self._fmt_num(item['necessario'])}{un} | estoque {self._fmt_num(item['estoque'])}{un} | {item['status']}"
+                    )
+            else:
+                linhas.append("- Modelo sem outros materiais cadastrados.")
+
+            linhas.append("")
+            linhas.append("OUTROS SERVIÇOS:")
+            if servicos:
+                for item in servicos:
+                    un = f" {item['unidade']}" if item.get("unidade") else ""
+                    linhas.append(
+                        f"- {item['codigo']} | {item['descricao']} | tipo {item['tipo_servico'] or '-'} | qtd {self._fmt_num(item['quantidade'])}{un} | custo estimado R$ {self._fmt_num(item['valor_estimado'])} | {item['status']}"
+                    )
+            else:
+                linhas.append("- Modelo sem outros serviços cadastrados.")
+
+            faltas = sum(1 for x in tecidos if x.get("status") != "OK") + \
+                     sum(1 for x in aviamentos if x.get("status") != "OK") + \
+                     sum(1 for x in outros if x.get("status") != "OK")
+            linhas.append("")
+            linhas.append(f"STATUS GERAL DOS MATERIAIS: {'OK ✅' if faltas == 0 else f'FALTAS ⚠️ ({faltas} item(ns))'}")
             resumo_box.delete("1.0", "end")
             resumo_box.insert("1.0", "\n".join(linhas))
             return tecidos, aviamentos
+
+        def atualizar_resumo_visual():
+            info = modelo_info() or {"codigo": "-", "descricao": "-", "colecao": "", "grade": ""}
+            qtd = int(self._to_float(ent_quantidade.get()))
+            grade_partes = []
+            grade_detalhe = []
+            total_distribuido_pct = 0.0
+            for tam in tamanhos_ativos:
+                valor = self._to_float(grade_vars[tam].get())
+                total_distribuido_pct += valor
+                grade_detalhe.append(f"  • {tam}: {valor:.2f}%")
+                if valor > 0:
+                    grade_partes.append(f"{tam}:{valor:.2f}%")
+            grade_txt = " | ".join(grade_partes) if grade_partes else "Sem distribuição de grade"
+
+            grade_qtd, _pct, _soma_pct = calcular_grade_quantidades(qtd)
+            total_distribuido = sum(grade_qtd.values())
+
+            diferenca = qtd - total_distribuido
+            if diferenca == 0:
+                status_grade = "✅ Grade fechada com a quantidade desejada"
+            elif diferenca > 0:
+                status_grade = f"⚠️ Faltam {diferenca} peça(s)"
+            else:
+                status_grade = f"⚠️ Excedeu {abs(diferenca)} peça(s)"
+
+            linhas = [
+                "════════ RESUMO DE CONFERÊNCIA ════════",
+                f"Modelo      : {info.get('codigo') or '-'} - {info.get('descricao') or '-'}",
+                f"Coleção     : {cmb_colecao.get() or info.get('colecao') or '-'}",
+                f"Programação : {cmb_programacao.get()}    |    Prioridade: {cmb_prioridade.get()}",
+                f"Período     : {ent_inicio.get()} até {ent_fim.get()}    |    Prazo início: {ent_prazo.get()}",
+                "",
+                "Quantidade planejada",
+                f"  • Total informado : {qtd}",
+                f"  • Total % grade   : {total_distribuido_pct:.2f}%",
+                f"  • Total na grade  : {total_distribuido}",
+                f"  • Situação        : {status_grade}",
+                "",
+                "Distribuição por tamanho (percentual)",
+                *grade_detalhe,
+                "",
+                "Distribuição por tamanho (quantidade calculada)",
+                *[f"  • {tam}: {qtd_tam}" for tam, qtd_tam in grade_qtd.items()],
+                "",
+                f"Consolidado da grade: {grade_txt}",
+            ]
+            resumo_visual.delete("1.0", "end")
+            resumo_visual.insert("1.0", "\n".join(linhas))
 
         def salvar_programacao():
             info = modelo_info()
@@ -776,19 +1017,23 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 messagebox.showwarning("Planejamento", "A data final não pode ser menor que a inicial.", parent=top)
                 return
 
-            total = total_grade()
+            total_pct = total_grade()
             qtd_manual = int(self._to_float(ent_quantidade.get()))
-            quantidade_total = total if total > 0 else qtd_manual
+            quantidade_total = qtd_manual
             if quantidade_total <= 0:
                 messagebox.showwarning("Planejamento", "Informe uma quantidade maior que zero.", parent=top)
+                return
+            if total_pct <= 0:
+                messagebox.showwarning("Planejamento", "Informe os percentuais da grade por tamanho (Passo 3).", parent=top)
                 return
 
             tecidos, aviamentos = recalcular_resumo()
             programacao = cmb_programacao.get()
             prioridade = cmb_prioridade.get()
             colecao = (cmb_colecao.get() or info.get("colecao") or "").strip()
-            observacoes = obs.get("1.0", "end").strip()
-            grade_dict = {t: int(self._to_float(grade_vars[t].get())) for t in TAMANHOS_GRADE if int(self._to_float(grade_vars[t].get())) > 0}
+            observacoes = resumo_visual.get("1.0", "end").strip()
+            grade_dict, _percentuais, _soma_pct = calcular_grade_quantidades(quantidade_total)
+            grade_dict = {t: q for t, q in grade_dict.items() if q > 0}
 
             try:
                 schema = get_schema()
@@ -830,8 +1075,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                         )
                         planejamento_id = cur.fetchone()[0]
 
-                        for tamanho in TAMANHOS_GRADE:
-                            qtd = int(self._to_float(grade_vars[tamanho].get()))
+                        for tamanho, qtd in grade_dict.items():
                             if qtd <= 0:
                                 continue
                             cur.execute(
@@ -877,14 +1121,117 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 messagebox.showerror("Planejamento", f"Erro ao salvar programação: {exc}", parent=top)
 
         cmb_modelo.bind("<<ComboboxSelected>>", atualizar_modelo)
+        cmb_programacao.configure(command=lambda _v: atualizar_resumo_visual())
+        cmb_prioridade.configure(command=lambda _v: atualizar_resumo_visual())
+        cmb_colecao.bind("<KeyRelease>", lambda _e: atualizar_resumo_visual())
+        ent_inicio.bind("<KeyRelease>", lambda _e: atualizar_resumo_visual())
+        ent_fim.bind("<KeyRelease>", lambda _e: atualizar_resumo_visual())
+        ent_prazo.bind("<KeyRelease>", lambda _e: atualizar_resumo_visual())
         atualizar_modelo()
         for tamanho in TAMANHOS_GRADE:
             grade_entries[tamanho].bind("<KeyRelease>", lambda _e: total_grade())
         ent_quantidade.bind("<KeyRelease>", lambda _e: recalcular_resumo())
+        atualizar_resumo_visual()
 
     # =========================================================
     # Carregamento / detalhes
     # =========================================================
+    def _calcular_progresso_real(self, cur, planejamento_id, op, codigo_modelo):
+        schema = get_schema()
+        etapa = "Planejada"
+        progresso = 0.0
+
+        def _col_exists(tabela: str, coluna: str) -> bool:
+            cur.execute(
+                """
+                SELECT 1
+                  FROM information_schema.columns
+                 WHERE table_schema = current_schema()
+                   AND table_name = %s
+                   AND column_name = %s
+                 LIMIT 1
+                """,
+                (tabela, coluna),
+            )
+            return bool(cur.fetchone())
+
+        def _existe_por_colunas(tabela: str, colunas_alvo, valores_alvo) -> bool:
+            clausulas = []
+            params = []
+            for col in colunas_alvo:
+                if _col_exists(tabela, col):
+                    clausulas.append(f"COALESCE({col}, '') = %s")
+                    params.append(valores_alvo[col])
+            if not clausulas:
+                return False
+            sql = f"SELECT 1 FROM {schema}.{tabela} WHERE " + " OR ".join(clausulas) + " LIMIT 1"
+            cur.execute(sql, tuple(params))
+            return bool(cur.fetchone())
+
+        cur.execute(f"SELECT 1 FROM {schema}.ordem_corte_ficha WHERE planejamento_op_id=%s LIMIT 1", (planejamento_id,))
+        if cur.fetchone():
+            etapa = "Ordem Gerada"
+            progresso = 35.0
+
+        cur.execute(
+            f"""
+            SELECT 1
+              FROM {schema}.controle_envio_cortes
+             WHERE COALESCE(op_planejamento, '') = %s
+                OR COALESCE(ordem_corte, '') = %s
+                OR COALESCE(codigo_corte, '') = %s
+             LIMIT 1
+            """,
+            (op or "", op or "", codigo_modelo or ""),
+        )
+        if cur.fetchone():
+            etapa = "Em andamento"
+            progresso = 65.0
+
+        existe_retorno = _existe_por_colunas(
+            "controle_retorno_cortes",
+            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "op_planejamento": op or "",
+                "ordem": op or "",
+                "ordem_corte": op or "",
+                "codigo": codigo_modelo or "",
+                "codigo_corte": codigo_modelo or "",
+            },
+        )
+        if existe_retorno:
+            etapa = "Retorno"
+            progresso = 85.0
+
+        existe_final = _existe_por_colunas(
+            "cortes_finalizados_completo",
+            ["ordem", "ordem_corte", "codigo", "codigo_corte"],
+            {
+                "ordem": op or "",
+                "ordem_corte": op or "",
+                "codigo": codigo_modelo or "",
+                "codigo_corte": codigo_modelo or "",
+            },
+        )
+        if existe_final:
+            etapa = "Pronta"
+            progresso = 100.0
+
+        status = "Pronta" if progresso >= 100 else ("Em execução" if progresso >= 65 else ("Ordem Gerada" if progresso >= 35 else "Planejada"))
+        cur.execute(
+            f"""
+            UPDATE {schema}.planejamento_ops
+               SET status=%s,
+                   etapa_atual=%s,
+                   percentual_progresso=%s,
+                   atualizado_em=NOW(),
+                   data_atualizacao=NOW()
+             WHERE id=%s
+            """,
+            (status, etapa, progresso, planejamento_id),
+        )
+        return status, etapa, progresso
+
     def _carregar_dados_planejamento(self):
         self._limpar_tree(self.tree_ops)
         self._limpar_tree(self.tree_capacidade)
@@ -934,7 +1281,9 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                                COALESCE(colecao, ''),
                                COALESCE(prioridade, 'Média'),
                                COALESCE(codigo_modelo, ''),
-                               COALESCE(observacoes, '')
+                               COALESCE(observacoes, ''),
+                               COALESCE(etapa_atual, COALESCE(status, 'Planejada')),
+                               COALESCE(percentual_progresso, 0)
                           FROM {schema}.planejamento_ops
                         {where_sql}
                          ORDER BY COALESCE(programacao, 'Mensal'), COALESCE(prazo_inicio, inicio, CURRENT_DATE), op
@@ -961,12 +1310,15 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             prioridade_op,
                             codigo_modelo,
                             observacoes,
+                            _etapa_atual_db,
+                            _percentual_db,
                         ) = row
                         if status == "Em execução":
                             em_execucao += 1
                         if status == "Atrasada":
                             atrasadas += 1
 
+                        status, etapa_atual, percentual = self._calcular_progresso_real(cur, planejamento_id, op, codigo_modelo)
                         grupo = f"COLEÇÃO: {colecao_op}" if programacao == "Coleção" else f"PROGRAMAÇÃO {programacao_op}"
                         agrupado.setdefault(grupo, []).append((
                             op,
@@ -975,6 +1327,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             self._data_txt(prazo_inicio),
                             self._data_txt(periodo_fim),
                             status,
+                            f"{percentual:.0f}%",
                             programacao_op,
                             colecao_op,
                         ))
@@ -1023,6 +1376,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             "programacao": programacao_op,
                             "colecao": colecao_op,
                             "observacoes": observacoes,
+                            "etapa_atual": etapa_atual,
+                            "progresso": percentual,
                             "tecidos": tecidos,
                             "aviamentos": aviamentos,
                         }
@@ -1040,7 +1395,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             totais["Aviamentos"][1] += self._to_float(estoque)
 
             for grupo in agrupado:
-                self.tree_ops.insert("", "end", values=(f"GRUPO: {grupo}", "", "", "", "", "", "", ""), tags=("grupo",))
+                self.tree_ops.insert("", "end", values=(f"GRUPO: {grupo}", "", "", "", "", "", "", "", ""), tags=("grupo",))
                 for linha in agrupado[grupo]:
                     self.tree_ops.insert("", "end", values=linha)
 
@@ -1083,7 +1438,9 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.detalhe_labels["grade"].configure(text=f"Grade: {dados.get('grade') or '-'}")
         self.detalhe_labels["prazo"].configure(text=f"Prazo início: {self._data_txt(dados.get('inicio')) or '-'}")
         self.detalhe_labels["modelo"].configure(text=f"Modelo: {dados.get('modelo') or '-'}")
-        self.detalhe_labels["prioridade"].configure(text=f"Prioridade: {dados.get('prioridade') or '-'}")
+        self.detalhe_labels["prioridade"].configure(
+            text=f"Prioridade: {dados.get('prioridade') or '-'} | Etapa: {dados.get('etapa_atual') or '-'} | Progresso: {dados.get('progresso', 0):.0f}%"
+        )
 
         self._limpar_tree(self.tree_tecidos)
         for codigo, descricao, necessario, estoque, saldo, status in dados.get("tecidos", []):
@@ -1155,20 +1512,63 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         largura, altura = A4
         y = self._desenhar_cabecalho_pdf(pdf, largura, altura, "Planejamento de Produção")
 
+        periodo_txt = f"{(self.plan_inicio_entry.get() or '').strip() or '-'} até {(self.plan_fim_entry.get() or '').strip() or '-'}"
+        filtro_txt = f"Programação: {self.filtro_programacao.get()} | Prioridade: {self.filtro_prioridade.get()} | Coleção: {self.filtro_colecao.get()}"
+
+        pdf.setFillColor(colors.HexColor("#F3F4F6"))
+        pdf.roundRect(30, y - 36, largura - 60, 30, 6, fill=1, stroke=0)
+        pdf.setFillColor(colors.HexColor("#111827"))
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(38, y - 18, f"Período selecionado: {periodo_txt}")
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(38, y - 30, filtro_txt)
+        y -= 48
+
+        def nova_pagina():
+            nonlocal y
+            pdf.showPage()
+            y = self._desenhar_cabecalho_pdf(pdf, largura, altura, "Planejamento de Produção")
+            self._desenhar_rodape_pdf(pdf, largura)
+
         def titulo(txt):
             nonlocal y
+            if y < 80:
+                nova_pagina()
             pdf.setFont("Helvetica-Bold", 11)
+            pdf.setFillColor(colors.HexColor("#1F5FA6"))
             pdf.drawString(36, y, txt)
-            y -= 16
-            pdf.setFont("Helvetica", 8)
+            y -= 14
 
-        def linha(txt):
+        def linha(txt, bold=False, cor="#111827", recuo=0, espacamento=11):
             nonlocal y
             if y < 60:
-                pdf.showPage()
-                y = altura - 50
-            pdf.drawString(36, y, txt)
-            y -= 11
+                nova_pagina()
+            pdf.setFillColor(colors.HexColor(cor))
+            pdf.setFont("Helvetica-Bold" if bold else "Helvetica", 8)
+            pdf.drawString(36 + recuo, y, txt)
+            y -= espacamento
+
+        def card_op(op):
+            nonlocal y
+            if y < 95:
+                nova_pagina()
+            dados = self.ops_index.get(op, {})
+            grade = dados.get("grade", "-")
+            modelo = dados.get("modelo", "-")
+            inicio = self._data_txt(dados.get("inicio")) or "-"
+            fim = self._data_txt(dados.get("fim")) or "-"
+            status = dados.get("status") or "-"
+            prioridade = dados.get("prioridade") or "-"
+            progresso = f"{dados.get('progresso', 0):.0f}%"
+
+            h = 52
+            pdf.setFillColor(colors.HexColor("#EEF2FF"))
+            pdf.roundRect(34, y - h + 6, largura - 68, h, 6, fill=1, stroke=0)
+            linha(f"{op}  |  {modelo}", bold=True, cor="#0F172A", recuo=2)
+            linha(f"Status: {status} | Progresso: {progresso} | Prioridade: {prioridade}", cor="#1F2937", recuo=2)
+            linha(f"Prazo: {inicio} até {fim}", cor="#1F2937", recuo=2)
+            linha(f"Grade: {grade}", cor="#1F2937", recuo=2)
+            y -= 4
 
         titulo("Programações cadastradas")
         if self.tree_ops and self.tree_ops.get_children():
@@ -1177,11 +1577,9 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 if not vals:
                     continue
                 if str(vals[0]).startswith("GRUPO:"):
-                    pdf.setFont("Helvetica-Bold", 9)
-                    linha(str(vals[0]))
-                    pdf.setFont("Helvetica", 8)
+                    linha(str(vals[0]), bold=True, cor="#374151", espacamento=13)
                 else:
-                    linha(f"{vals[0]} | {vals[1]} | Qtde {vals[2]} | {vals[3]} até {vals[4]} | {vals[5]}")
+                    card_op(str(vals[0]))
         else:
             linha("Sem programações cadastradas.")
 
@@ -1191,9 +1589,16 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             for item in self.tree_capacidade.get_children():
                 vals = self.tree_capacidade.item(item).get("values", [])
                 if vals:
-                    linha(f"{vals[0]} | Necessário {vals[1]} | Estoque {vals[2]} | Saldo {vals[3]}")
+                    linha(f"{vals[0]}  |  Necessário: {vals[1]}  |  Estoque: {vals[2]}  |  Saldo: {vals[3]}")
         else:
             linha("Sem resumo de materiais.")
+
+        y -= 6
+        titulo("Observações gerais")
+        linha("• Documento gerado automaticamente com base nos filtros aplicados na tela de Planejamento de Produção.")
+        linha("• Itens com status FALTA devem ser tratados antes da liberação final das ordens planejadas.")
+
+        self._desenhar_rodape_pdf(pdf, largura)
 
         pdf.save()
         return caminho
@@ -1202,12 +1607,41 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         header_h = 62
         pdf.setFillColor(colors.HexColor("#1F5FA6"))
         pdf.rect(0, altura - header_h, largura, header_h, fill=1, stroke=0)
+        logo = self._obter_logo_pdf()
+        if logo:
+            try:
+                pdf.drawImage(logo, 14, altura - 58, width=52, height=52, preserveAspectRatio=True, mask='auto')
+            except Exception:
+                pass
         pdf.setFillColor(colors.white)
         pdf.setFont("Helvetica-Bold", 15)
-        pdf.drawString(36, altura - 28, titulo)
+        pdf.drawString(56, altura - 28, titulo)
         pdf.setFont("Helvetica", 9)
-        pdf.drawString(36, altura - 43, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        pdf.drawString(56, altura - 43, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
         return altura - header_h - 16
+
+    @staticmethod
+    def _obter_logo_pdf():
+        base = os.path.dirname(os.path.abspath(__file__))
+        # Prioriza a logomarca oficial solicitada
+        for nome in ("LOGO.jpg", "ICONE_SISTEMA.png", "OPERA.jpg"):
+            p = os.path.join(base, nome)
+            if os.path.exists(p):
+                return p
+        return None
+
+    @staticmethod
+    def _desenhar_rodape_pdf(pdf, largura):
+        try:
+            pagina = pdf.getPageNumber()
+        except Exception:
+            pagina = "-"
+        pdf.setStrokeColor(colors.HexColor("#D1D5DB"))
+        pdf.line(30, 28, largura - 30, 28)
+        pdf.setFillColor(colors.HexColor("#6B7280"))
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(36, 16, "Sistema OPERA • Planejamento de Produção")
+        pdf.drawRightString(largura - 36, 16, f"Página {pagina}")
 
     def _abrir_pdf(self, caminho):
         try:
