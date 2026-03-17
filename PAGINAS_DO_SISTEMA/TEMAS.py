@@ -1567,7 +1567,7 @@ class TemasPage(ctk.CTkFrame):
         self.paletas = ModuloPaletas()
         self.vars: Dict[str, tk.StringVar] = {}
         self.campo_selecionado: Optional[str] = None
-        self.tema_atual: str = "Noite Urbana"
+        self.tema_atual: str = "CLÁSSICO CLARO"
         self._jobs: List[str] = []
         self._widget_cache: Dict[str, Any] = {}
 
@@ -1632,7 +1632,7 @@ class TemasPage(ctk.CTkFrame):
             pass
 
         # 4. Fallback para o tema padrão
-        return "Noite Urbana"
+        return "CLÁSSICO CLARO"
 
     def _load_custom_themes_from_db(self):
         try:
@@ -2006,7 +2006,7 @@ class TemasPage(ctk.CTkFrame):
         ).pack(fill="x", pady=3)
 
     def _reset_editor_com_defaults(self):
-        base_tema = self.tema_atual if self.tema_atual in self.paletas.PADROES else "Noite Urbana"
+        base_tema = self.tema_atual if self.tema_atual in self.paletas.PADROES else "CLÁSSICO CLARO"
         nome_sugestao = f"{base_tema} Personalizado"
         self.var_nome.set(nome_sugestao)
         self._carregar_tema_no_editor(base_tema)
@@ -2427,13 +2427,13 @@ if __name__ == '__main__':
     app.title('Sistema de Temas - Opera (Modo Isolado)')
 
     app._settings = {
-        "theme": "Noite Urbana",
+        "theme": "CLÁSSICO CLARO",
         "custom_themes": {},
         "excluded_default_themes": []
     }
 
     paletas = ModuloPaletas()
-    tema_base = paletas.PADROES.get("Noite Urbana")
+    tema_base = paletas.PADROES.get("CLÁSSICO CLARO")
     if tema_base is None:
         tema_base = next(iter(paletas.PADROES.values()))
 
@@ -2441,11 +2441,11 @@ if __name__ == '__main__':
         setattr(app, f'cor_{k}', v)
 
     app.usuario_id = 1
-    app.tema_atual = "Noite Urbana"
+    app.tema_atual = "CLÁSSICO CLARO"
     app.theme_manager = None
     app.user_manager = None
-    app.tema_preferido_inicial = "Noite Urbana"
-    app.current_theme_name = "Noite Urbana"
+    app.tema_preferido_inicial = "CLÁSSICO CLARO"
+    app.current_theme_name = "CLÁSSICO CLARO"
 
     page = TemasPage(app, app=app)
     page.pack(fill='both', expand=True, padx=20, pady=20)
