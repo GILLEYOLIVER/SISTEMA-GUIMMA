@@ -142,6 +142,12 @@ def _exec_write(query: str, params=()):
             pass
 
 
+def _safe_schema_name() -> str:
+    schema = (get_schema() or "opera").strip()
+    schema = "".join(ch for ch in schema if ch.isalnum() or ch == "_")
+    return schema or "opera"
+
+
 # ============================================================
 #  PREFERÊNCIAS DE GRADE POR USUÁRIO (TABELA 48)
 # ============================================================
@@ -1686,6 +1692,7 @@ class OrdemCorte(ctk.CTkFrame):
     def _registrar_movimento_planejamento(self, ordem_corte_id: int):
         if not self._op_planejada_data:
             return
+        schema = _safe_schema_name()
         planejamento_id = self._op_planejada_data.get("planejamento_id")
         op = self._op_planejada_data.get("op")
         codigo_modelo = self._op_planejada_data.get("codigo_modelo")
@@ -1694,34 +1701,20 @@ class OrdemCorte(ctk.CTkFrame):
         if not planejamento_id:
             return
 
+        ordem_corte_fk = ordem_corte_id
+        try:
+            existe = _exec_row(
+                f"SELECT id FROM {schema}.ordem_corte_ficha WHERE id = %s LIMIT 1",
+                (ordem_corte_id,),
+            )
+            if not existe:
+                ordem_corte_fk = None
+        except Exception:
+            ordem_corte_fk = None
+
         _exec_write(
-            """
-            INSERT INTO planejamento_ordens_geradas (
-                planejamento_id, op, ordem_corte_id, codigo_modelo, descricao_modelo,
-                quantidade, status, criado_em, atualizado_em
-            ) VALUES (%s, %s, %s, %s, %s, %s, 'Em Andamento', NOW(), NOW())
-            ON CONFLICT (planejamento_id)
-            DO UPDATE SET ordem_corte_id = EXCLUDED.ordem_corte_id,
-                          quantidade = EXCLUDED.quantidade,
-                          status = 'Em Andamento',
-                          atualizado_em = NOW()
-            """,
-            (planejamento_id, op, ordem_corte_id, codigo_modelo, descricao_modelo, int(quantidade)),
-        )
-        _exec_write(
-            """
-            UPDATE ordem_corte_ficha
-               SET planejamento_op_id = %s,
-                   op_planejamento = %s,
-                   status = COALESCE(status, 'Em Andamento'),
-                   data_atualizacao = NOW()
-             WHERE id = %s
-            """,
-            (planejamento_id, op, ordem_corte_id),
-        )
-        _exec_write(
-            """
-            UPDATE planejamento_ops
+            f"""
+            UPDATE {schema}.planejamento_ops
                SET status = 'Em Andamento',
                    etapa_atual = 'Em Andamento',
                    percentual_progresso = GREATEST(COALESCE(percentual_progresso, 0), 35),
@@ -1731,9 +1724,36 @@ class OrdemCorte(ctk.CTkFrame):
             """,
             (planejamento_id,),
         )
+
         _exec_write(
-            """
-            UPDATE planejamento_op_tecidos
+            f"""
+            INSERT INTO {schema}.planejamento_ordens_geradas (
+                planejamento_id, op, ordem_corte_id, codigo_modelo, descricao_modelo,
+                quantidade, status, criado_em, atualizado_em
+            ) VALUES (%s, %s, %s, %s, %s, %s, 'Em Andamento', NOW(), NOW())
+            ON CONFLICT (planejamento_id)
+            DO UPDATE SET ordem_corte_id = EXCLUDED.ordem_corte_id,
+                          quantidade = EXCLUDED.quantidade,
+                          status = 'Em Andamento',
+                          atualizado_em = NOW()
+            """,
+            (planejamento_id, op, ordem_corte_fk, codigo_modelo, descricao_modelo, int(quantidade)),
+        )
+        if ordem_corte_fk:
+            _exec_write(
+                f"""
+                UPDATE {schema}.ordem_corte_ficha
+                   SET planejamento_op_id = %s,
+                       op_planejamento = %s,
+                       status = COALESCE(status, 'Em Andamento'),
+                       data_atualizacao = NOW()
+                 WHERE id = %s
+                """,
+                (planejamento_id, op, ordem_corte_fk),
+            )
+        _exec_write(
+            f"""
+            UPDATE {schema}.planejamento_op_tecidos
                SET estoque_atual = GREATEST(0, COALESCE(estoque_atual, 0) - COALESCE(quantidade_necessaria, 0)),
                    saldo_previsto = GREATEST(0, COALESCE(saldo_previsto, 0) - COALESCE(quantidade_necessaria, 0)),
                    status_estoque = CASE
@@ -1745,8 +1765,8 @@ class OrdemCorte(ctk.CTkFrame):
             (planejamento_id,),
         )
         _exec_write(
-            """
-            UPDATE planejamento_op_aviamentos
+            f"""
+            UPDATE {schema}.planejamento_op_aviamentos
                SET estoque_atual = GREATEST(0, COALESCE(estoque_atual, 0) - COALESCE(quantidade_necessaria, 0)),
                    saldo_previsto = GREATEST(0, COALESCE(saldo_previsto, 0) - COALESCE(quantidade_necessaria, 0)),
                    status_estoque = CASE
