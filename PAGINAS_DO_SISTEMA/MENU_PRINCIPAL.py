@@ -1202,6 +1202,8 @@ class OperaMenuApp(ctk.CTk):
         self.focus_force()
         self._apply_initial_layout()
         self._open_dashboard_agora()
+        self._agendar_after(180, lambda: self._apply_theme_to_frame_safely(self._current_frame))
+        self._agendar_after(420, lambda: self._apply_theme_to_frame_safely(self._current_frame))
         self._agendar_after(1200, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
         self._agendar_after(5000, self._ativar_backup_silencioso)
@@ -2612,6 +2614,24 @@ class OperaMenuApp(ctk.CTk):
                 except:
                     pass
 
+    def _apply_theme_to_frame_safely(self, frame):
+        """Reaplica tema no frame informado (incluindo widgets criados com atraso)."""
+        if not frame or not getattr(frame, "winfo_exists", lambda: False)():
+            return
+        try:
+            if hasattr(frame, "host"):
+                frame.host = self
+            if hasattr(frame, "sistema"):
+                frame.sistema = self
+            if hasattr(frame, "app"):
+                frame.app = self
+            if hasattr(self, "theme_manager") and self.theme_manager:
+                self.theme_manager.apply_theme_to_widget(frame)
+            if hasattr(self, "_update_menu_buttons_colors"):
+                self._update_menu_buttons_colors()
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao reaplicar tema no frame: {e}")
+
     def open_page(self, page_name: str, categoria: str | None = None):
         if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
             return
@@ -2647,17 +2667,10 @@ class OperaMenuApp(ctk.CTk):
 
                 if hasattr(self, "title_label"):
                     self.title_label.configure(text=page_name)
-                try:
-                    if hasattr(frame, "host"):
-                        frame.host = self
-                    if hasattr(frame, "sistema"):
-                        frame.sistema = self
-                    if hasattr(frame, "app"):
-                        frame.app = self
-                    if hasattr(self, "theme_manager"):
-                        self.theme_manager.apply_theme_to_widget(frame)
-                except Exception as e:
-                    _dprint(f"⚠️ Erro ao aplicar tema: {e}")
+                self._apply_theme_to_frame_safely(frame)
+                # Reforços para widgets que são criados após o primeiro draw
+                self.after(120, lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(320, lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.current_page = page_name
                 self._current_frame = frame
                 try:
