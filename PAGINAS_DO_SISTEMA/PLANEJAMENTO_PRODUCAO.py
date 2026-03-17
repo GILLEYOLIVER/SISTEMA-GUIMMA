@@ -196,19 +196,20 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             height=14,
         )
         for col, text, width in (
-            ("op", "OP", 115),
-            ("modelo", "Modelo", 280),
-            ("qtde", "Qtde", 70),
-            ("inicio", "Início", 90),
-            ("fim", "Fim", 90),
-            ("status", "Status", 90),
-            ("progresso", "Progresso", 90),
-            ("programacao", "Programação", 120),
-            ("colecao", "Coleção", 110),
+            ("op", "OP", 95),
+            ("modelo", "Modelo", 250),
+            ("qtde", "Qtde", 65),
+            ("inicio", "Início", 80),
+            ("fim", "Fim", 80),
+            ("status", "Status", 80),
+            ("progresso", "Progresso", 85),
+            ("programacao", "Programação", 110),
+            ("colecao", "Coleção", 95),
         ):
             self.tree_ops.heading(col, text=text)
             self.tree_ops.column(col, width=width, anchor="center")
         self.tree_ops.column("modelo", anchor="w")
+        self.tree_ops.column("colecao", stretch=True)
         self.tree_ops.tag_configure("grupo", background="#DDE8F5", font=("Arial", 10, "bold"))
         self.tree_ops.bind("<Double-1>", self._abrir_detalhe_op)
 
@@ -225,13 +226,14 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
 
         self.tree_capacidade = ttk.Treeview(capacidade_frame, columns=("recurso", "carga", "capacidade", "ocioso"), show="headings", height=12)
         for col, text, width in (
-            ("recurso", "Recurso", 150),
-            ("carga", "Necessário", 125),
-            ("capacidade", "Estoque", 125),
-            ("ocioso", "Saldo", 100),
+            ("recurso", "Recurso", 125),
+            ("carga", "Necessário", 100),
+            ("capacidade", "Estoque", 100),
+            ("ocioso", "Saldo", 80),
         ):
             self.tree_capacidade.heading(col, text=text)
             self.tree_capacidade.column(col, width=width, anchor="center")
+        self.tree_capacidade.column("ocioso", stretch=True)
         scroll_cap = ttk.Scrollbar(capacidade_frame, orient="vertical", command=self.tree_capacidade.yview)
         self.tree_capacidade.configure(yscrollcommand=scroll_cap.set)
         self.tree_capacidade.grid(row=1, column=0, sticky="nsew", padx=(14, 0), pady=(0, 14))
@@ -1610,14 +1612,14 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         logo = self._obter_logo_pdf()
         if logo:
             try:
-                pdf.drawImage(logo, 14, altura - 58, width=52, height=52, preserveAspectRatio=True, mask='auto')
+                pdf.drawImage(logo, 14, altura - 56, width=46, height=46, preserveAspectRatio=True, mask='auto')
             except Exception:
                 pass
         pdf.setFillColor(colors.white)
         pdf.setFont("Helvetica-Bold", 15)
-        pdf.drawString(56, altura - 28, titulo)
+        pdf.drawString(74, altura - 28, titulo)
         pdf.setFont("Helvetica", 9)
-        pdf.drawString(56, altura - 43, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        pdf.drawString(74, altura - 43, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
         return altura - header_h - 16
 
     @staticmethod
