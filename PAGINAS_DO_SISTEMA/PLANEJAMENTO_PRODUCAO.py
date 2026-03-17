@@ -211,6 +211,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.tree_ops.column("modelo", anchor="w")
         self.tree_ops.column("colecao", stretch=True)
         self.tree_ops.tag_configure("grupo", background="#DDE8F5", font=("Arial", 10, "bold"))
+        self.tree_ops.tag_configure("op_andamento", background="#DDF5E3")
+        self.tree_ops.tag_configure("op_falta", background="#FADDDD")
         self.tree_ops.bind("<Double-1>", self._abrir_detalhe_op)
 
         scroll_ops = ttk.Scrollbar(ordens_frame, orient="vertical", command=self.tree_ops.yview)
@@ -1259,6 +1261,23 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         )
         return status, etapa, progresso
 
+    def _status_eh_andamento(self, status: str, progresso: float = 0.0) -> bool:
+        st = (status or "").strip().lower()
+        if st in {"em andamento", "em execução", "ordem gerada", "ordem gerac"}:
+            return True
+        try:
+            return float(progresso or 0) >= 35
+        except Exception:
+            return False
+
+    def _tag_status_op(self, status: str, progresso: float = 0.0) -> str | None:
+        st = (status or "").strip().lower()
+        if self._status_eh_andamento(status, progresso):
+            return "op_andamento"
+        if st in {"atrasada", "falta", "pendente", "planejada"}:
+            return "op_falta"
+        return None
+
     def _carregar_dados_planejamento(self):
         self._limpar_tree(self.tree_ops)
         self._limpar_tree(self.tree_capacidade)
@@ -1340,12 +1359,12 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                             _etapa_atual_db,
                             _percentual_db,
                         ) = row
-                        if status == "Em execução":
-                            em_execucao += 1
                         if status == "Atrasada":
                             atrasadas += 1
 
                         status, etapa_atual, percentual = self._calcular_progresso_real(cur, planejamento_id, op, codigo_modelo)
+                        if self._status_eh_andamento(status, percentual):
+                            em_execucao += 1
                         grupo = f"COLEÇÃO: {colecao_op}" if programacao == "Coleção" else f"PROGRAMAÇÃO {programacao_op}"
                         agrupado.setdefault(grupo, []).append((
                             op,
@@ -1424,7 +1443,14 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             for grupo in agrupado:
                 self.tree_ops.insert("", "end", values=(f"GRUPO: {grupo}", "", "", "", "", "", "", "", ""), tags=("grupo",))
                 for linha in agrupado[grupo]:
-                    self.tree_ops.insert("", "end", values=linha)
+                    status_linha = str(linha[5]) if len(linha) > 5 else ""
+                    progresso_linha_txt = str(linha[6]).replace("%", "") if len(linha) > 6 else "0"
+                    try:
+                        progresso_linha = float(progresso_linha_txt or 0)
+                    except Exception:
+                        progresso_linha = 0.0
+                    tag_linha = self._tag_status_op(status_linha, progresso_linha)
+                    self.tree_ops.insert("", "end", values=linha, tags=(tag_linha,) if tag_linha else ())
 
             carga_total = 0.0
             capacidade_total = 0.0
