@@ -1208,19 +1208,15 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         etapa_idx = -1
 
         op_txt = op or ""
-        codigo_txt = codigo_modelo or ""
-
         # Etapa 1 - Nova Ordem (salvou ordem de corte)
         if _existe_por_colunas(
             "ordem_corte_ficha",
-            ["planejamento_op_id", "op_planejamento", "ordem", "ordem_corte", "codigo_modelo", "codigo_corte"],
+            ["planejamento_op_id", "op_planejamento", "ordem", "ordem_corte"],
             {
                 "planejamento_op_id": planejamento_id,
                 "op_planejamento": op_txt,
                 "ordem": op_txt,
                 "ordem_corte": op_txt,
-                "codigo_modelo": codigo_txt,
-                "codigo_corte": codigo_txt,
             },
         ):
             etapa_idx = max(etapa_idx, 0)
@@ -1228,14 +1224,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         # Etapa 2 - Cadastro de Corte
         if _existe_por_colunas(
             "cadastro_de_corte",
-            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte", "codigo_modelo"],
+            ["op_planejamento", "ordem", "ordem_corte"],
             {
                 "op_planejamento": op_txt,
                 "ordem": op_txt,
                 "ordem_corte": op_txt,
-                "codigo": codigo_txt,
-                "codigo_corte": codigo_txt,
-                "codigo_modelo": codigo_txt,
             },
         ):
             etapa_idx = max(etapa_idx, 1)
@@ -1243,23 +1236,19 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         # Etapa 3 - Controle de Mão de Obra
         if _existe_por_colunas(
             "controle_envio_cortes",
-            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            ["op_planejamento", "ordem", "ordem_corte"],
             {
                 "op_planejamento": op_txt,
                 "ordem": op_txt,
                 "ordem_corte": op_txt,
-                "codigo": codigo_txt,
-                "codigo_corte": codigo_txt,
             },
         ) or _existe_por_colunas(
             "envios_cortes",
-            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            ["op_planejamento", "ordem", "ordem_corte"],
             {
                 "op_planejamento": op_txt,
                 "ordem": op_txt,
                 "ordem_corte": op_txt,
-                "codigo": codigo_txt,
-                "codigo_corte": codigo_txt,
             },
         ):
             etapa_idx = max(etapa_idx, 2)
@@ -1267,13 +1256,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         # Etapa 4 - Registro Acabamento
         if _existe_por_colunas(
             "controle_retorno_cortes",
-            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            ["op_planejamento", "ordem", "ordem_corte"],
             {
                 "op_planejamento": op_txt,
                 "ordem": op_txt,
                 "ordem_corte": op_txt,
-                "codigo": codigo_txt,
-                "codigo_corte": codigo_txt,
             },
         ):
             etapa_idx = max(etapa_idx, 3)
@@ -1281,23 +1268,19 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         # Etapa 5 - Finalizar Corte/Acabamento
         if _existe_por_colunas(
             "cortes_finalizados_completo",
-            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            ["op_planejamento", "ordem", "ordem_corte"],
             {
                 "op_planejamento": op_txt,
                 "ordem": op_txt,
                 "ordem_corte": op_txt,
-                "codigo": codigo_txt,
-                "codigo_corte": codigo_txt,
             },
         ) or _existe_por_colunas(
             "cortes_finalizados",
-            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte"],
+            ["op_planejamento", "ordem", "ordem_corte"],
             {
                 "op_planejamento": op_txt,
                 "ordem": op_txt,
                 "ordem_corte": op_txt,
-                "codigo": codigo_txt,
-                "codigo_corte": codigo_txt,
             },
         ):
             etapa_idx = max(etapa_idx, 4)
@@ -1305,14 +1288,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         # Etapa 6 - Pagamento de Serviços
         if _existe_por_colunas(
             "pagamento_corte_acabamento",
-            ["op_planejamento", "ordem", "ordem_corte", "codigo", "codigo_corte", "codigo_modelo"],
+            ["op_planejamento", "ordem", "ordem_corte"],
             {
                 "op_planejamento": op_txt,
                 "ordem": op_txt,
                 "ordem_corte": op_txt,
-                "codigo": codigo_txt,
-                "codigo_corte": codigo_txt,
-                "codigo_modelo": codigo_txt,
             },
         ):
             etapa_idx = max(etapa_idx, 5)

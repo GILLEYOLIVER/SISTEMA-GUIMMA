@@ -92,16 +92,26 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             with get_conn() as conn, conn.cursor() as cur:
                 cur.execute(
                     f"""
-                    SELECT id, op, COALESCE(descricao_modelo, modelo, codigo_modelo, ''),
-                           COALESCE(quantidade, total_grade, 0),
-                           COALESCE(prazo_inicio, inicio),
-                           COALESCE(periodo_fim, fim),
-                           COALESCE(status, 'Planejada'),
-                           COALESCE(percentual_progresso, 0),
-                           COALESCE(codigo_modelo, ''),
-                           COALESCE(prioridade, 'Média')
-                      FROM {schema}.planejamento_ops
-                     ORDER BY COALESCE(prazo_inicio, inicio, CURRENT_DATE), op
+                    SELECT p.id, p.op, COALESCE(p.descricao_modelo, p.modelo, p.codigo_modelo, ''),
+                           COALESCE(p.quantidade, p.total_grade, 0),
+                           COALESCE(p.prazo_inicio, p.inicio),
+                           COALESCE(p.periodo_fim, p.fim),
+                           COALESCE(p.status, 'Planejada'),
+                           COALESCE(p.percentual_progresso, 0),
+                           COALESCE(p.codigo_modelo, ''),
+                           COALESCE(p.prioridade, 'Média')
+                      FROM {schema}.planejamento_ops p
+                     WHERE NOT EXISTS (
+                           SELECT 1
+                             FROM {schema}.planejamento_ordens_geradas pog
+                            WHERE pog.planejamento_id = p.id
+                         )
+                       AND NOT EXISTS (
+                           SELECT 1
+                             FROM {schema}.ordem_corte_ficha ocf
+                            WHERE COALESCE(ocf.planejamento_op_id, 0) = p.id
+                         )
+                     ORDER BY COALESCE(p.prazo_inicio, p.inicio, CURRENT_DATE), p.op
                     """
                 )
                 for row in cur.fetchall():
