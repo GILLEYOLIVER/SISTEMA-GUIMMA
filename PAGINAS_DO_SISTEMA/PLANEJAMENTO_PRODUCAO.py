@@ -518,6 +518,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         schema = get_schema()
         tecidos = []
         aviamentos = []
+        outros = []
+        servicos = []
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -588,7 +590,70 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                         "saldo": saldo,
                         "status": "OK" if saldo >= 0 else "FALTA",
                     })
-        return tecidos, aviamentos
+
+                cur.execute(
+                    f"""
+                    SELECT COALESCE(codigo, ''), COALESCE(descricao, ''), COALESCE(cor, ''),
+                           COALESCE(fornecedor, ''), COALESCE(unidade, ''), COALESCE(quantidade, 0)
+                      FROM {schema}.cadastro_modelos_outros
+                     WHERE codigo_modelo = %s
+                     ORDER BY descricao, codigo
+                    """,
+                    (codigo_modelo,),
+                )
+                for codigo, descricao, cor, fornecedor, unidade, consumo in cur.fetchall():
+                    necessario = self._to_float(consumo) * quantidade_total
+                    cur.execute(
+                        f"""
+                        SELECT (
+                            COALESCE((SELECT SUM(quantidade) FROM {schema}.estoque_insumos WHERE codigo = %s), 0) +
+                            COALESCE((SELECT SUM(quantidade) FROM {schema}.estoque_outros WHERE codigo = %s), 0) +
+                            COALESCE((SELECT SUM(quantidade) FROM {schema}.estoque_escritorio WHERE codigo = %s), 0) +
+                            COALESCE((SELECT SUM(quantidade) FROM {schema}.estoque_limpeza WHERE codigo = %s), 0)
+                        )
+                        """,
+                        (codigo, codigo, codigo, codigo),
+                    )
+                    estoque = self._to_float(cur.fetchone()[0])
+                    saldo = estoque - necessario
+                    outros.append({
+                        "codigo": codigo or "",
+                        "descricao": descricao or codigo or "Outro material",
+                        "cor": cor or "",
+                        "fornecedor": fornecedor or "",
+                        "unidade": unidade or "",
+                        "consumo": self._to_float(consumo),
+                        "necessario": necessario,
+                        "estoque": estoque,
+                        "saldo": saldo,
+                        "status": "OK" if saldo >= 0 else "FALTA",
+                    })
+
+                cur.execute(
+                    f"""
+                    SELECT COALESCE(codigo_servico, ''), COALESCE(descricao, ''), COALESCE(tipo_servico, ''),
+                           COALESCE(fornecedor, ''), COALESCE(unidade, ''), COALESCE(quantidade, 0),
+                           COALESCE(valor_unidade, 0)
+                      FROM {schema}.cadastro_modelos_outros_servicos
+                     WHERE codigo_modelo = %s
+                     ORDER BY descricao, codigo_servico
+                    """,
+                    (codigo_modelo,),
+                )
+                for codigo, descricao, tipo_servico, fornecedor, unidade, quantidade, valor_unidade in cur.fetchall():
+                    qtd = self._to_float(quantidade) * quantidade_total
+                    valor = self._to_float(valor_unidade) * qtd
+                    servicos.append({
+                        "codigo": codigo or "",
+                        "descricao": descricao or codigo or "Serviço",
+                        "tipo_servico": tipo_servico or "",
+                        "fornecedor": fornecedor or "",
+                        "unidade": unidade or "",
+                        "quantidade": qtd,
+                        "valor_estimado": valor,
+                        "status": "OK",
+                    })
+        return tecidos, aviamentos, outros, servicos
 
     # =========================================================
     # Nova programação
@@ -829,7 +894,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 resumo_box.delete("1.0", "end")
                 resumo_box.insert("1.0", "Informe a quantidade desejada maior que zero.")
                 return [], []
-            tecidos, aviamentos = self._carregar_materiais_modelo(info["codigo"], quantidade_total)
+            tecidos, aviamentos, outros, servicos = self._carregar_materiais_modelo(info["codigo"], quantidade_total)
             linhas = [
                 f"Modelo: {info['codigo']} - {info['descricao']}",
                 f"Quantidade: {quantidade_total}",
@@ -854,6 +919,34 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                     )
             else:
                 linhas.append("- Modelo sem aviamentos cadastrados.")
+
+            linhas.append("")
+            linhas.append("OUTROS MATERIAIS:")
+            if outros:
+                for item in outros:
+                    un = f" {item['unidade']}" if item.get("unidade") else ""
+                    linhas.append(
+                        f"- {item['codigo']} | {item['descricao']} | necessário {self._fmt_num(item['necessario'])}{un} | estoque {self._fmt_num(item['estoque'])}{un} | {item['status']}"
+                    )
+            else:
+                linhas.append("- Modelo sem outros materiais cadastrados.")
+
+            linhas.append("")
+            linhas.append("OUTROS SERVIÇOS:")
+            if servicos:
+                for item in servicos:
+                    un = f" {item['unidade']}" if item.get("unidade") else ""
+                    linhas.append(
+                        f"- {item['codigo']} | {item['descricao']} | tipo {item['tipo_servico'] or '-'} | qtd {self._fmt_num(item['quantidade'])}{un} | custo estimado R$ {self._fmt_num(item['valor_estimado'])} | {item['status']}"
+                    )
+            else:
+                linhas.append("- Modelo sem outros serviços cadastrados.")
+
+            faltas = sum(1 for x in tecidos if x.get("status") != "OK") + \
+                     sum(1 for x in aviamentos if x.get("status") != "OK") + \
+                     sum(1 for x in outros if x.get("status") != "OK")
+            linhas.append("")
+            linhas.append(f"STATUS GERAL DOS MATERIAIS: {'OK ✅' if faltas == 0 else f'FALTAS ⚠️ ({faltas} item(ns))'}")
             resumo_box.delete("1.0", "end")
             resumo_box.insert("1.0", "\n".join(linhas))
             return tecidos, aviamentos
