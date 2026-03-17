@@ -956,6 +956,19 @@ class EntradaEstoqueApp(ctk.CTkFrame):
 
         # timestamps (se existirem)
         agora = datetime.now()
+
+        def _buscar_existente_codigo_cor():
+            codigo = (dados.get("codigo") or "").strip()
+            cor = (dados.get("cor") or cor_valor or "").strip()
+            if not codigo or "codigo" not in colunas_db or "cor" not in colunas_db:
+                return None
+            try:
+                return db.fetch_one(
+                    f"SELECT * FROM {tabela_qual} WHERE codigo=%s AND COALESCE(cor,'')=COALESCE(%s,'') ORDER BY id DESC LIMIT 1",
+                    [codigo, cor],
+                )
+            except Exception:
+                return None
         if "created_at" in colunas_db and "created_at" not in dados:
             dados["created_at"] = agora
         if "updated_at" in colunas_db:
@@ -963,6 +976,54 @@ class EntradaEstoqueApp(ctk.CTkFrame):
 
         if not dados:
             messagebox.showwarning("⚠️ Aviso", "Nenhum dado válido foi informado.")
+            return
+
+        # Se item já existe (codigo+cor), atualiza quantidade total em vez de inserir duplicado
+        existente = _buscar_existente_codigo_cor()
+        if existente and "quantidade" in colunas_db and "quantidade" in dados:
+            qtd_atual = _to_decimal(existente.get("quantidade", 0))
+            qtd_nova = _to_decimal(dados.get("quantidade", 0))
+
+            if qtd_nova < qtd_atual:
+                messagebox.showwarning(
+                    "Quantidade menor que o estoque atual",
+                    f"Quantidade atual: {_fmt_num_br(qtd_atual)}\n"
+                    f"Quantidade informada: {_fmt_num_br(qtd_nova)}\n\n"
+                    "Para reduzir estoque, utilize a página de Saída para baixas."
+                )
+                return
+
+            if qtd_nova == qtd_atual:
+                messagebox.showinfo("Sem alteração", "A quantidade informada é igual à quantidade atual do estoque.")
+                return
+
+            campos_update = []
+            params_update = []
+            for campo, valor in dados.items():
+                if campo in ("id", "created_at"):
+                    continue
+                campos_update.append(f"{campo}=%s")
+                params_update.append(valor)
+            if "updated_at" in colunas_db and "updated_at" not in dados:
+                campos_update.append("updated_at=%s")
+                params_update.append(agora)
+
+            params_update.extend([existente.get("codigo"), existente.get("cor")])
+            sql_upd = f"UPDATE {tabela_qual} SET {', '.join(campos_update)} WHERE codigo=%s AND COALESCE(cor,'')=COALESCE(%s,'')"
+            db.execute(sql_upd, params_update)
+
+            messagebox.showinfo(
+                "✅ Estoque atualizado",
+                "Quantidade atualizada com sucesso!\n\n"
+                f"📌 Código: {existente.get('codigo') or '-'}\n"
+                f"🎨 Cor: {existente.get('cor') or '-'}\n"
+                f"📦 Quantidade anterior: {_fmt_num_br(qtd_atual)}\n"
+                f"📦 Nova quantidade: {_fmt_num_br(qtd_nova)}"
+            )
+            try:
+                self.carregar_dados_existente()
+            except Exception:
+                pass
             return
 
         # INSERT
@@ -1020,6 +1081,28 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                 pass
 
         except Exception as e:
+            msg_err = str(e)
+            if "viol" in msg_err.lower() and "codigo" in msg_err.lower() and "cor" in msg_err.lower() and "quantidade" in dados:
+                existente = _buscar_existente_codigo_cor()
+                if existente:
+                    qtd_atual = _to_decimal(existente.get("quantidade", 0))
+                    qtd_nova = _to_decimal(dados.get("quantidade", 0))
+                    if qtd_nova < qtd_atual:
+                        messagebox.showwarning(
+                            "Quantidade menor que o estoque atual",
+                            "Para reduzir estoque, utilize a página de Saída para baixas."
+                        )
+                        return
+                    db.execute(
+                        f"UPDATE {tabela_qual} SET quantidade=%s, updated_at=%s WHERE codigo=%s AND COALESCE(cor,'')=COALESCE(%s,'')",
+                        [qtd_nova, agora, existente.get("codigo"), existente.get("cor")],
+                    )
+                    messagebox.showinfo("✅ Estoque atualizado", "Quantidade atualizada com sucesso para o item já existente.")
+                    try:
+                        self.carregar_dados_existente()
+                    except Exception:
+                        pass
+                    return
             messagebox.showerror("Erro ao gravar no banco", f"Ocorreu um erro ao gravar no banco:\n{e}")
 
     def formatar_valor(self, valor, campo):

@@ -842,19 +842,40 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             info = modelo_info() or {"codigo": "-", "descricao": "-", "colecao": "", "grade": ""}
             qtd = int(self._to_float(ent_quantidade.get()))
             grade_partes = []
+            grade_detalhe = []
+            total_distribuido = 0
             for tam in tamanhos_ativos:
                 valor = int(self._to_float(grade_vars[tam].get()))
+                total_distribuido += valor
+                grade_detalhe.append(f"  • {tam}: {valor}")
                 if valor > 0:
                     grade_partes.append(f"{tam}:{valor}")
             grade_txt = " | ".join(grade_partes) if grade_partes else "Sem distribuição de grade"
+
+            diferenca = qtd - total_distribuido
+            if diferenca == 0:
+                status_grade = "✅ Grade fechada com a quantidade total"
+            elif diferenca > 0:
+                status_grade = f"⚠️ Faltam distribuir {diferenca} peça(s)"
+            else:
+                status_grade = f"⚠️ Grade excede em {abs(diferenca)} peça(s)"
+
             linhas = [
-                "Resumo de conferência da programação:",
-                f"- Modelo: {info.get('codigo') or '-'} - {info.get('descricao') or '-'}",
-                f"- Coleção: {cmb_colecao.get() or info.get('colecao') or '-'}",
-                f"- Programação: {cmb_programacao.get()} | Prioridade: {cmb_prioridade.get()}",
-                f"- Período: {ent_inicio.get()} até {ent_fim.get()} | Prazo início: {ent_prazo.get()}",
-                f"- Quantidade total: {qtd}",
-                f"- Grade distribuída: {grade_txt}",
+                "════════ RESUMO DE CONFERÊNCIA ════════",
+                f"Modelo      : {info.get('codigo') or '-'} - {info.get('descricao') or '-'}",
+                f"Coleção     : {cmb_colecao.get() or info.get('colecao') or '-'}",
+                f"Programação : {cmb_programacao.get()}    |    Prioridade: {cmb_prioridade.get()}",
+                f"Período     : {ent_inicio.get()} até {ent_fim.get()}    |    Prazo início: {ent_prazo.get()}",
+                "",
+                "Quantidade planejada",
+                f"  • Total informado : {qtd}",
+                f"  • Total na grade  : {total_distribuido}",
+                f"  • Situação        : {status_grade}",
+                "",
+                "Distribuição por tamanho",
+                *grade_detalhe,
+                "",
+                f"Consolidado da grade: {grade_txt}",
             ]
             resumo_visual.delete("1.0", "end")
             resumo_visual.insert("1.0", "\n".join(linhas))
