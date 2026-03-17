@@ -715,15 +715,29 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         resumo_box.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
         resumo_box.insert("1.0", "Selecione o modelo e informe a quantidade para calcular tecidos e aviamentos.")
 
-        obs = ctk.CTkTextbox(body, height=90)
-        obs.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(0, 10))
-        obs.insert("1.0", "")
+        resumo_visual = ctk.CTkTextbox(body, height=90)
+        resumo_visual.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        resumo_visual.insert("1.0", "Resumo de conferência: preencha os passos para visualizar os dados principais da programação.")
 
         bottom = ctk.CTkFrame(top)
         bottom.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 12))
         bottom.grid_columnconfigure(0, weight=1)
-        ctk.CTkButton(bottom, text="Calcular materiais", command=lambda: recalcular_resumo(), fg_color=self.cor_primaria, hover_color=self._hover(self.cor_primaria)).pack(side="left", padx=8, pady=8)
-        ctk.CTkButton(bottom, text="Salvar programação", command=lambda: salvar_programacao(), fg_color=self.cor_sucesso, hover_color=self._hover(self.cor_sucesso)).pack(side="right", padx=8, pady=8)
+        ctk.CTkButton(
+            bottom,
+            text="Calcular materiais",
+            command=lambda: recalcular_resumo(),
+            fg_color=self.cor_primaria,
+            hover_color=self._hover(self.cor_primaria),
+            text_color=self.cor_texto,
+        ).pack(side="left", padx=8, pady=8)
+        ctk.CTkButton(
+            bottom,
+            text="Salvar programação",
+            command=lambda: salvar_programacao(),
+            fg_color=self.cor_sucesso,
+            hover_color=self._hover(self.cor_sucesso),
+            text_color="white",
+        ).pack(side="right", padx=8, pady=8)
 
         def modelo_info():
             valor = (cmb_modelo.get() or "").strip()
@@ -767,6 +781,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             _aplicar_tamanhos_disponiveis(_parse_tamanhos_grade(info.get("grade") or ""))
             if info["colecao"]:
                 cmb_colecao.set(info["colecao"])
+            atualizar_resumo_visual()
 
         def total_grade():
             total = 0
@@ -776,6 +791,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 except Exception:
                     pass
             lbl_total_grade.configure(text=f"Total da grade: {total}")
+            atualizar_resumo_visual()
             return total
 
         def recalcular_resumo():
@@ -822,6 +838,27 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             resumo_box.insert("1.0", "\n".join(linhas))
             return tecidos, aviamentos
 
+        def atualizar_resumo_visual():
+            info = modelo_info() or {"codigo": "-", "descricao": "-", "colecao": "", "grade": ""}
+            qtd = int(self._to_float(ent_quantidade.get()))
+            grade_partes = []
+            for tam in tamanhos_ativos:
+                valor = int(self._to_float(grade_vars[tam].get()))
+                if valor > 0:
+                    grade_partes.append(f"{tam}:{valor}")
+            grade_txt = " | ".join(grade_partes) if grade_partes else "Sem distribuição de grade"
+            linhas = [
+                "Resumo de conferência da programação:",
+                f"- Modelo: {info.get('codigo') or '-'} - {info.get('descricao') or '-'}",
+                f"- Coleção: {cmb_colecao.get() or info.get('colecao') or '-'}",
+                f"- Programação: {cmb_programacao.get()} | Prioridade: {cmb_prioridade.get()}",
+                f"- Período: {ent_inicio.get()} até {ent_fim.get()} | Prazo início: {ent_prazo.get()}",
+                f"- Quantidade total: {qtd}",
+                f"- Grade distribuída: {grade_txt}",
+            ]
+            resumo_visual.delete("1.0", "end")
+            resumo_visual.insert("1.0", "\n".join(linhas))
+
         def salvar_programacao():
             info = modelo_info()
             if not info:
@@ -849,7 +886,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             programacao = cmb_programacao.get()
             prioridade = cmb_prioridade.get()
             colecao = (cmb_colecao.get() or info.get("colecao") or "").strip()
-            observacoes = obs.get("1.0", "end").strip()
+            observacoes = resumo_visual.get("1.0", "end").strip()
             grade_dict = {t: int(self._to_float(grade_vars[t].get())) for t in tamanhos_ativos if int(self._to_float(grade_vars[t].get())) > 0}
 
             try:
@@ -939,10 +976,17 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 messagebox.showerror("Planejamento", f"Erro ao salvar programação: {exc}", parent=top)
 
         cmb_modelo.bind("<<ComboboxSelected>>", atualizar_modelo)
+        cmb_programacao.configure(command=lambda _v: atualizar_resumo_visual())
+        cmb_prioridade.configure(command=lambda _v: atualizar_resumo_visual())
+        cmb_colecao.bind("<KeyRelease>", lambda _e: atualizar_resumo_visual())
+        ent_inicio.bind("<KeyRelease>", lambda _e: atualizar_resumo_visual())
+        ent_fim.bind("<KeyRelease>", lambda _e: atualizar_resumo_visual())
+        ent_prazo.bind("<KeyRelease>", lambda _e: atualizar_resumo_visual())
         atualizar_modelo()
         for tamanho in TAMANHOS_GRADE:
             grade_entries[tamanho].bind("<KeyRelease>", lambda _e: total_grade())
         ent_quantidade.bind("<KeyRelease>", lambda _e: recalcular_resumo())
+        atualizar_resumo_visual()
 
     # =========================================================
     # Carregamento / detalhes
