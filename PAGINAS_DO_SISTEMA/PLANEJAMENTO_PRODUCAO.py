@@ -1528,6 +1528,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             nonlocal y
             pdf.showPage()
             y = self._desenhar_cabecalho_pdf(pdf, largura, altura, "Planejamento de Produção")
+            self._desenhar_rodape_pdf(pdf, largura)
 
         def titulo(txt):
             nonlocal y
@@ -1592,6 +1593,13 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         else:
             linha("Sem resumo de materiais.")
 
+        y -= 6
+        titulo("Observações gerais")
+        linha("• Documento gerado automaticamente com base nos filtros aplicados na tela de Planejamento de Produção.")
+        linha("• Itens com status FALTA devem ser tratados antes da liberação final das ordens planejadas.")
+
+        self._desenhar_rodape_pdf(pdf, largura)
+
         pdf.save()
         return caminho
 
@@ -1615,11 +1623,25 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
     @staticmethod
     def _obter_logo_pdf():
         base = os.path.dirname(os.path.abspath(__file__))
-        for nome in ("ICONE_SISTEMA.png", "LOGO.jpg", "OPERA.jpg"):
+        # Prioriza a logomarca oficial solicitada
+        for nome in ("LOGO.jpg", "ICONE_SISTEMA.png", "OPERA.jpg"):
             p = os.path.join(base, nome)
             if os.path.exists(p):
                 return p
         return None
+
+    @staticmethod
+    def _desenhar_rodape_pdf(pdf, largura):
+        try:
+            pagina = pdf.getPageNumber()
+        except Exception:
+            pagina = "-"
+        pdf.setStrokeColor(colors.HexColor("#D1D5DB"))
+        pdf.line(30, 28, largura - 30, 28)
+        pdf.setFillColor(colors.HexColor("#6B7280"))
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(36, 16, "Sistema OPERA • Planejamento de Produção")
+        pdf.drawRightString(largura - 36, 16, f"Página {pagina}")
 
     def _abrir_pdf(self, caminho):
         try:
