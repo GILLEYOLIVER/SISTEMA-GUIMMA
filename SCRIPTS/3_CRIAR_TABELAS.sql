@@ -1533,9 +1533,91 @@ CREATE TABLE IF NOT EXISTS opera.planejamento_ops (
     status VARCHAR(30) DEFAULT 'Planejada',
     prioridade VARCHAR(20) DEFAULT 'Média',
     data_atualizacao TIMESTAMP DEFAULT NOW(),
+    codigo_modelo VARCHAR(100),
+    descricao_modelo TEXT,
+    colecao VARCHAR(100),
+    programacao VARCHAR(30) DEFAULT 'Mensal',
+    periodo_inicio DATE,
+    periodo_fim DATE,
+    prazo_inicio DATE,
+    observacoes TEXT,
+    total_grade INTEGER DEFAULT 0,
+    criado_em TIMESTAMP DEFAULT NOW(),
+    atualizado_em TIMESTAMP DEFAULT NOW(),
+    etapa_atual VARCHAR(40) DEFAULT 'Planejada',
+    percentual_progresso NUMERIC(5,2) DEFAULT 0,
     UNIQUE (op)
 );
 
+
+
+-- [TABELA 54A] planejamento_op_grade - Grade planejada por OP
+CREATE TABLE IF NOT EXISTS opera.planejamento_op_grade (
+    id SERIAL PRIMARY KEY,
+    planejamento_id INTEGER NOT NULL REFERENCES opera.planejamento_ops(id) ON DELETE CASCADE,
+    tamanho VARCHAR(10) NOT NULL,
+    quantidade INTEGER DEFAULT 0 NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (planejamento_id, tamanho)
+);
+
+-- [TABELA 54B] planejamento_op_tecidos - Materiais de tecido da OP
+CREATE TABLE IF NOT EXISTS opera.planejamento_op_tecidos (
+    id SERIAL PRIMARY KEY,
+    planejamento_id INTEGER NOT NULL REFERENCES opera.planejamento_ops(id) ON DELETE CASCADE,
+    codigo_tecido VARCHAR(100),
+    descricao TEXT,
+    cor VARCHAR(50),
+    fornecedor VARCHAR(100),
+    composicao VARCHAR(100),
+    consumo_por_peca NUMERIC(12,4) DEFAULT 0,
+    quantidade_necessaria NUMERIC(12,4) DEFAULT 0,
+    estoque_atual NUMERIC(12,4) DEFAULT 0,
+    saldo_previsto NUMERIC(12,4) DEFAULT 0,
+    status_estoque VARCHAR(20) DEFAULT 'OK',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 54C] planejamento_op_aviamentos - Aviamentos da OP
+CREATE TABLE IF NOT EXISTS opera.planejamento_op_aviamentos (
+    id SERIAL PRIMARY KEY,
+    planejamento_id INTEGER NOT NULL REFERENCES opera.planejamento_ops(id) ON DELETE CASCADE,
+    codigo_aviamento VARCHAR(100),
+    descricao TEXT,
+    cor VARCHAR(50),
+    fornecedor VARCHAR(100),
+    consumo_por_peca NUMERIC(12,4) DEFAULT 0,
+    quantidade_necessaria NUMERIC(12,4) DEFAULT 0,
+    estoque_atual NUMERIC(12,4) DEFAULT 0,
+    saldo_previsto NUMERIC(12,4) DEFAULT 0,
+    status_estoque VARCHAR(20) DEFAULT 'OK',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- [TABELA 54D] planejamento_ordens_geradas - vínculo OP planejada -> ordem de corte
+CREATE TABLE IF NOT EXISTS opera.planejamento_ordens_geradas (
+    id SERIAL PRIMARY KEY,
+    planejamento_id INTEGER NOT NULL REFERENCES opera.planejamento_ops(id) ON DELETE CASCADE,
+    op VARCHAR(60) NOT NULL,
+    ordem_corte_id INTEGER REFERENCES opera.ordem_corte_ficha(id) ON DELETE SET NULL,
+    codigo_modelo VARCHAR(100),
+    descricao_modelo TEXT,
+    quantidade INTEGER DEFAULT 0,
+    status VARCHAR(30) DEFAULT 'Ordem Gerada',
+    criado_em TIMESTAMP DEFAULT NOW(),
+    atualizado_em TIMESTAMP DEFAULT NOW(),
+    UNIQUE (planejamento_id)
+);
+
+ALTER TABLE opera.ordem_corte_ficha ADD COLUMN IF NOT EXISTS planejamento_op_id INTEGER REFERENCES opera.planejamento_ops(id) ON DELETE SET NULL;
+ALTER TABLE opera.ordem_corte_ficha ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60);
+ALTER TABLE opera.controle_envio_cortes ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60);
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60);
+
+CREATE INDEX IF NOT EXISTS idx_planejamento_ops_modelo ON opera.planejamento_ops(codigo_modelo);
+CREATE INDEX IF NOT EXISTS idx_planejamento_ops_programacao ON opera.planejamento_ops(programacao);
+CREATE INDEX IF NOT EXISTS idx_planejamento_ops_colecao ON opera.planejamento_ops(colecao);
+CREATE INDEX IF NOT EXISTS idx_planejamento_ordens_op ON opera.planejamento_ordens_geradas(op);
 -- [TABELA 55] planejamento_programacao_ops - Programações criadas passo a passo
 CREATE TABLE IF NOT EXISTS opera.planejamento_programacao_ops (
     id SERIAL PRIMARY KEY,
