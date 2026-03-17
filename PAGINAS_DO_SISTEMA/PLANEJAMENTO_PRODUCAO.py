@@ -666,7 +666,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         passo2.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         passo2.grid_columnconfigure(1, weight=1)
         passo2.grid_columnconfigure(3, weight=1)
-        ctk.CTkLabel(passo2, text="Passo 2 - Escolher modelo e quantidade", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
+        ctk.CTkLabel(passo2, text="Passo 2 - Escolher modelo", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
 
         modelos_exibicao = [f"{m[0]} - {m[1]}" for m in self.modelos_cache] or [""]
         ctk.CTkLabel(passo2, text="Modelo").grid(row=1, column=0, padx=(12, 6), pady=6, sticky="w")
@@ -675,18 +675,18 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             cmb_modelo.set(modelos_exibicao[0])
         cmb_modelo.grid(row=1, column=1, padx=(0, 12), pady=6, sticky="ew")
 
-        ctk.CTkLabel(passo2, text="Quantidade total").grid(row=1, column=2, padx=(0, 6), pady=6, sticky="w")
-        ent_quantidade = ctk.CTkEntry(passo2)
-        ent_quantidade.insert(0, "0")
-        ent_quantidade.grid(row=1, column=3, padx=(0, 12), pady=6, sticky="ew")
-
         lbl_grade_disp = ctk.CTkLabel(passo2, text="Grade disponível: -")
         lbl_grade_disp.grid(row=2, column=0, columnspan=4, sticky="w", padx=12, pady=(0, 10))
 
         # Passo 3
         passo3 = ctk.CTkFrame(body)
         passo3.grid(row=2, column=0, sticky="nsew", padx=(0, 8), pady=(0, 10))
-        ctk.CTkLabel(passo3, text="Passo 3 - Distribuir grade", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
+        ctk.CTkLabel(passo3, text="Passo 3 - Distribuir grade (porcentagem)", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 8))
+
+        ctk.CTkLabel(passo3, text="Quantidade desejada").grid(row=1, column=0, padx=(12, 6), pady=(0, 8), sticky="w")
+        ent_quantidade = ctk.CTkEntry(passo3, width=160)
+        ent_quantidade.insert(0, "0")
+        ent_quantidade.grid(row=1, column=1, padx=(0, 12), pady=(0, 8), sticky="w")
 
         grade_vars = {}
         grade_entries = {}
@@ -695,14 +695,14 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         for i, tamanho in enumerate(TAMANHOS_GRADE):
             grade_vars[tamanho] = ctk.StringVar(value="0")
             lbl_tam = ctk.CTkLabel(passo3, text=tamanho)
-            lbl_tam.grid(row=1 + (i // 4), column=(i % 4), padx=8, pady=(0, 4), sticky="w")
+            lbl_tam.grid(row=2 + (i // 4), column=(i % 4), padx=8, pady=(0, 4), sticky="w")
             grade_labels[tamanho] = lbl_tam
             ent = ctk.CTkEntry(passo3, width=90, textvariable=grade_vars[tamanho])
-            ent.grid(row=3 + (i // 4), column=(i % 4), padx=8, pady=(0, 10), sticky="w")
+            ent.grid(row=4 + (i // 4), column=(i % 4), padx=8, pady=(0, 10), sticky="w")
             grade_entries[tamanho] = ent
 
-        lbl_total_grade = ctk.CTkLabel(passo3, text="Total da grade: 0")
-        lbl_total_grade.grid(row=5, column=0, columnspan=4, sticky="w", padx=12, pady=(0, 10))
+        lbl_total_grade = ctk.CTkLabel(passo3, text="Total da porcentagem: 0%")
+        lbl_total_grade.grid(row=6, column=0, columnspan=4, sticky="w", padx=12, pady=(0, 10))
 
         # Passo 4
         passo4 = ctk.CTkFrame(body)
@@ -784,15 +784,38 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             atualizar_resumo_visual()
 
         def total_grade():
-            total = 0
+            total = 0.0
             for tamanho in tamanhos_ativos:
                 try:
-                    total += int(float((grade_vars[tamanho].get() or "0").replace(",", ".")))
+                    total += float((grade_vars[tamanho].get() or "0").replace(",", "."))
                 except Exception:
                     pass
-            lbl_total_grade.configure(text=f"Total da grade: {total}")
+            lbl_total_grade.configure(text=f"Total da porcentagem: {total:.2f}%")
             atualizar_resumo_visual()
             return total
+
+        def calcular_grade_quantidades(quantidade_total: int):
+            percentuais = {}
+            soma = 0.0
+            for tamanho in tamanhos_ativos:
+                try:
+                    pct = float((grade_vars[tamanho].get() or "0").replace(",", "."))
+                except Exception:
+                    pct = 0.0
+                if pct < 0:
+                    pct = 0.0
+                percentuais[tamanho] = pct
+                soma += pct
+
+            if quantidade_total <= 0 or soma <= 0:
+                return {t: 0 for t in tamanhos_ativos}, percentuais, soma
+
+            grade_qtd = {t: int(round((percentuais[t] / soma) * quantidade_total)) for t in tamanhos_ativos}
+            diferenca = quantidade_total - sum(grade_qtd.values())
+            if diferenca != 0 and tamanhos_ativos:
+                principal = max(tamanhos_ativos, key=lambda t: percentuais.get(t, 0.0))
+                grade_qtd[principal] = max(0, grade_qtd.get(principal, 0) + diferenca)
+            return grade_qtd, percentuais, soma
 
         def recalcular_resumo():
             info = modelo_info()
@@ -800,14 +823,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 resumo_box.delete("1.0", "end")
                 resumo_box.insert("1.0", "Selecione um modelo válido.")
                 return [], []
-            total = total_grade()
             qtd_manual = int(self._to_float(ent_quantidade.get()))
-            quantidade_total = total if total > 0 else qtd_manual
-            ent_quantidade.delete(0, "end")
-            ent_quantidade.insert(0, str(quantidade_total))
+            quantidade_total = qtd_manual
             if quantidade_total <= 0:
                 resumo_box.delete("1.0", "end")
-                resumo_box.insert("1.0", "Informe a quantidade total ou distribua a grade.")
+                resumo_box.insert("1.0", "Informe a quantidade desejada maior que zero.")
                 return [], []
             tecidos, aviamentos = self._carregar_materiais_modelo(info["codigo"], quantidade_total)
             linhas = [
@@ -843,22 +863,25 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             qtd = int(self._to_float(ent_quantidade.get()))
             grade_partes = []
             grade_detalhe = []
-            total_distribuido = 0
+            total_distribuido_pct = 0.0
             for tam in tamanhos_ativos:
-                valor = int(self._to_float(grade_vars[tam].get()))
-                total_distribuido += valor
-                grade_detalhe.append(f"  • {tam}: {valor}")
+                valor = self._to_float(grade_vars[tam].get())
+                total_distribuido_pct += valor
+                grade_detalhe.append(f"  • {tam}: {valor:.2f}%")
                 if valor > 0:
-                    grade_partes.append(f"{tam}:{valor}")
+                    grade_partes.append(f"{tam}:{valor:.2f}%")
             grade_txt = " | ".join(grade_partes) if grade_partes else "Sem distribuição de grade"
+
+            grade_qtd, _pct, _soma_pct = calcular_grade_quantidades(qtd)
+            total_distribuido = sum(grade_qtd.values())
 
             diferenca = qtd - total_distribuido
             if diferenca == 0:
-                status_grade = "✅ Grade fechada com a quantidade total"
+                status_grade = "✅ Grade fechada com a quantidade desejada"
             elif diferenca > 0:
-                status_grade = f"⚠️ Faltam distribuir {diferenca} peça(s)"
+                status_grade = f"⚠️ Faltam {diferenca} peça(s)"
             else:
-                status_grade = f"⚠️ Grade excede em {abs(diferenca)} peça(s)"
+                status_grade = f"⚠️ Excedeu {abs(diferenca)} peça(s)"
 
             linhas = [
                 "════════ RESUMO DE CONFERÊNCIA ════════",
@@ -869,11 +892,15 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 "",
                 "Quantidade planejada",
                 f"  • Total informado : {qtd}",
+                f"  • Total % grade   : {total_distribuido_pct:.2f}%",
                 f"  • Total na grade  : {total_distribuido}",
                 f"  • Situação        : {status_grade}",
                 "",
-                "Distribuição por tamanho",
+                "Distribuição por tamanho (percentual)",
                 *grade_detalhe,
+                "",
+                "Distribuição por tamanho (quantidade calculada)",
+                *[f"  • {tam}: {qtd_tam}" for tam, qtd_tam in grade_qtd.items()],
                 "",
                 f"Consolidado da grade: {grade_txt}",
             ]
@@ -896,11 +923,14 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                 messagebox.showwarning("Planejamento", "A data final não pode ser menor que a inicial.", parent=top)
                 return
 
-            total = total_grade()
+            total_pct = total_grade()
             qtd_manual = int(self._to_float(ent_quantidade.get()))
-            quantidade_total = total if total > 0 else qtd_manual
+            quantidade_total = qtd_manual
             if quantidade_total <= 0:
                 messagebox.showwarning("Planejamento", "Informe uma quantidade maior que zero.", parent=top)
+                return
+            if total_pct <= 0:
+                messagebox.showwarning("Planejamento", "Informe os percentuais da grade por tamanho (Passo 3).", parent=top)
                 return
 
             tecidos, aviamentos = recalcular_resumo()
@@ -908,7 +938,8 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             prioridade = cmb_prioridade.get()
             colecao = (cmb_colecao.get() or info.get("colecao") or "").strip()
             observacoes = resumo_visual.get("1.0", "end").strip()
-            grade_dict = {t: int(self._to_float(grade_vars[t].get())) for t in tamanhos_ativos if int(self._to_float(grade_vars[t].get())) > 0}
+            grade_dict, _percentuais, _soma_pct = calcular_grade_quantidades(quantidade_total)
+            grade_dict = {t: q for t, q in grade_dict.items() if q > 0}
 
             try:
                 schema = get_schema()
@@ -950,8 +981,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
                         )
                         planejamento_id = cur.fetchone()[0]
 
-                        for tamanho in tamanhos_ativos:
-                            qtd = int(self._to_float(grade_vars[tamanho].get()))
+                        for tamanho, qtd in grade_dict.items():
                             if qtd <= 0:
                                 continue
                             cur.execute(
