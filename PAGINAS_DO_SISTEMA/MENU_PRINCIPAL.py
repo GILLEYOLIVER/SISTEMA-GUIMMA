@@ -2130,15 +2130,40 @@ class OperaMenuApp(ctk.CTk):
         frame = getattr(self, "_current_frame", None)
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
             return
+        idioma = getattr(self, "idioma_atual", "pt_BR")
+
+        def _aplicar_idioma(widget):
+            try:
+                if hasattr(widget, "sistema"):
+                    widget.sistema = self
+                if hasattr(widget, "app"):
+                    widget.app = self
+                if hasattr(widget, "idioma_atual"):
+                    widget.idioma_atual = idioma
+            except Exception:
+                pass
+
+            for metodo in ("set_idioma", "on_language_changed", "refresh_texts"):
+                try:
+                    if not hasattr(widget, metodo):
+                        continue
+                    fn = getattr(widget, metodo)
+                    if not callable(fn):
+                        continue
+                    if metodo in ("set_idioma", "on_language_changed"):
+                        fn(idioma)
+                    else:
+                        fn()
+                except Exception as err:
+                    _dprint(f"⚠️ {widget.__class__.__name__}.{metodo} falhou: {err}")
+            try:
+                for child in widget.winfo_children():
+                    _aplicar_idioma(child)
+            except Exception:
+                pass
+
         try:
-            if hasattr(frame, "sistema"):
-                frame.sistema = self
-            if hasattr(frame, "app"):
-                frame.app = self
-            if hasattr(frame, "refresh_texts"):
-                frame.refresh_texts()
-            elif hasattr(frame, "on_language_changed"):
-                frame.on_language_changed(self.idioma_atual)
+            _aplicar_idioma(frame)
         except Exception as e:
             _dprint(f"⚠️ Erro ao atualizar idioma da página atual: {e}")
 
@@ -3209,7 +3234,7 @@ class OperaMenuApp(ctk.CTk):
             pass
         try:
             route = self.routes.get("Backup", {})
-            file_rel = route.get("file", "BACKUP.py")
+            file_rel = route.get("file", "BACKUP_usa-es-pt.py")
             file_path = os.path.join(APP_DIR, file_rel)
             if not os.path.exists(file_path):
                 file_path = os.path.join(ROOT_DIR, file_rel)

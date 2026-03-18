@@ -1,14 +1,14 @@
 {
   "Dashboard": {
-    "file": "DASHBOARD.py",
+    "file": "DASHBOARD_usa-es-pt.py",
     "class": "DashboardPage"
   },
   "Entrada de Estoque": {
-    "file": "ENTRADA_ESTOQUE_es-pt.py",
+    "file": "ENTRADA_ESTOQUE_usa-es-pt.py",
     "class": "EntradaEstoqueApp"
   },
   "Saída de Estoque": {
-    "file": "SAIDA_ESTOQUE_es-pt.py",
+    "file": "SAIDA_ESTOQUE_usa-es-pt.py",
     "class": "SaidaEstoquePage"
   },
   "Relatórios": {
@@ -16,11 +16,11 @@
     "class": "AdvancedStockReport"
   },
   "Cadastrar Modelo": {
-    "file": "CADASTRAR_MODELO.py",
+    "file": "CADASTRAR_MODELO_usa-es-pt.py",
     "class": "CadastrarModeloPage"
   },
   "Imprimir Ficha Técnica": {
-    "file": "IMPRIMIR_FICHAS_TECNICAS.py",
+    "file": "IMPRIMIR_FICHAS_TECNICAS_usa-es-pt.py",
     "class": "FichaTecnicaApp"
   },
   "Nova Ordem": {
@@ -32,27 +32,27 @@
     "class": "OrdensCorteImpressao"
   },
   "Cadastrar Corte": {
-    "file": "CADASTRO_DE_CORTE.py",
+    "file": "CADASTRO_DE_CORTE_usa-es-pt.py",
     "class": "CadastroOrdemCorte"
   },
   "Consultar Ordens": {
-    "file": "CONSULTAR_ORDENS.py",
+    "file": "CONSULTAR_ORDENS_usa-es-pt.py",
     "class": "ConsultarOrdensPage"
   },
   "Compras": {
-    "file": "COMPRAS.py",
+    "file": "COMPRAS_usa-es-pt.py",
     "class": "ComprasPage"
   },
   "Cadastro de Prestadores": {
-    "file": "CADASTRO_FACCOES.py",
+    "file": "CADASTRO_FACCOES_usa-es-pt.py",
     "class": "CadastroFaccoesView"
   },
   "Pesquisar Serviço": {
-    "file": "CONSULTAR_SERVICOS.py",
+    "file": "CONSULTAR_SERVICOS_usa-es-pt.py",
     "class": "PesquisaServicosPage"
   },
   "Clientes": {
-    "file": "CADASTRO_CLIENTES.py",
+    "file": "CADASTRO_CLIENTES_usa-es-pt.py",
     "class": "ClientesPage"
   },
   "Retrabalho de Defeitos": {
@@ -60,7 +60,7 @@
     "class": "RetrabalhoDefeitosPage"
   },
   "Controle de Mão de Obra": {
-    "file": "CONTROLE_ENVIO_CORTES.py",
+    "file": "CONTROLE_ENVIO_CORTES_usa-es-pt.py",
     "class": "EnvioCortes"
   },
   "MRP": {
@@ -76,11 +76,11 @@
     "class": "RelatorioCustosReaisPage"
   },
   "Registro Acabamento": {
-    "file": "CONTROLE_RETORNO_CORTE.py",
+    "file": "CONTROLE_RETORNO_CORTE_usa-es-pt.py",
     "class": "RetornoCorteControlPage"
   },
   "Finalizar Corte / Acabamento": {
-    "file": "FINALIZAR_CORTE_ACABAMENTO.py",
+    "file": "FINALIZAR_CORTE_ACABAMENTO_usa-es-pt.py",
     "class": "FinalizacaoCortes"
   },
   "Pagamento de Serviços": {
@@ -96,15 +96,15 @@
     "class": "PrecificacaoProdutoPage"
   },
   "Folha Pagamento": {
-    "file": "FOLHA_PAGAMENTO_SERVICOS.py",
+    "file": "FOLHA_PAGAMENTO_SERVICOS_usa-es-pt.py",
     "class": "FolhaPagamentoServicosPage"
   },
   "Fechamento Mensal": {
-    "file": "FECHAMENTO_MENSAL.py",
+    "file": "FECHAMENTO_MENSAL_usa-es-pt.py",
     "class": "FechamentoMensalPage"
   },
   "Contas a Pagar": {
-    "file": "CONTAS_A_PAGAR.py",
+    "file": "CONTAS_A_PAGAR_usa-es-pt.py",
     "class": "ContasAPagarPage"
   },
   "Adiantamento": {
@@ -140,7 +140,7 @@
     "class": "UsuariosPage"
   },
   "Backup": {
-    "file": "BACKUP.py",
+    "file": "BACKUP_usa-es-pt.py",
     "class": "BackupPage"
   },
   "Temas": {
@@ -148,7 +148,7 @@
     "class": "TemasPage"
   },
   "Atualizar Sistema": {
-    "file": "ATUALIZAR_SISTEMA.py",
+    "file": "ATUALIZAR_SISTEMA_usa-es-pt.py",
     "class": "AtualizarSistemaPage"
   },
   "Interna": {
@@ -168,7 +168,7 @@
     "class": "ProducaoFinalizadosPage"
   },
   "Gerenciar": {
-    "file": "BANCO_DADOS_FABRICA.py",
+    "file": "BANCO_DADOS_FABRICA_usa-es-pt.py",
     "class": "BancoDadosFabricaApp"
   },
   "RELATORIOS": {
