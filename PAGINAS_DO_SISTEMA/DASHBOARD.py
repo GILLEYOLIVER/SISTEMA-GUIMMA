@@ -185,6 +185,41 @@ def _to_datetime_any(v):
 
 # ===================== DASHBOARD UI =====================
 class DashboardPage(ctk.CTkFrame):
+    TRANSLATIONS = {
+        "pt_BR": {"stock":"ESTOQUE","type":"Tipo:","fabrics":"Tecidos","supplies":"Aviamentos","inputs":"Insumos","office":"Escritorio","cleaning":"Limpeza","others":"Outros","production_panel":"Painel de produção (indicadores visuais)","all":"Todos","cut_order":"Ordem Corte","cut_ready":"Corte Pronto","sent":"Enviado","conference":"Conferência","pending":"Pendente","paid":"Pago","days_7":"7 dias","days_15":"15 dias","days_30":"30 dias","bars":"Barras","line":"Linha","donut":"Rosca","in_progress_orders":"Ordens em andamento"},
+        "en_US": {"stock":"STOCK","type":"Type:","fabrics":"Fabrics","supplies":"Trims","inputs":"Inputs","office":"Office","cleaning":"Cleaning","others":"Others","production_panel":"Production panel (visual indicators)","all":"All","cut_order":"Cut Order","cut_ready":"Cut Ready","sent":"Sent","conference":"Conference","pending":"Pending","paid":"Paid","days_7":"7 days","days_15":"15 days","days_30":"30 days","bars":"Bars","line":"Line","donut":"Donut","in_progress_orders":"Orders in progress"},
+        "es_ES": {"stock":"INVENTARIO","type":"Tipo:","fabrics":"Tejidos","supplies":"Avíos","inputs":"Insumos","office":"Oficina","cleaning":"Limpieza","others":"Otros","production_panel":"Panel de producción (indicadores visuales)","all":"Todos","cut_order":"Orden de Corte","cut_ready":"Corte Listo","sent":"Enviado","conference":"Conferencia","pending":"Pendiente","paid":"Pagado","days_7":"7 días","days_15":"15 días","days_30":"30 días","bars":"Barras","line":"Línea","donut":"Rosca","in_progress_orders":"Órdenes en progreso"}
+    }
+
+    def _get_idioma_atual(self):
+        origem = getattr(self, 'sistema', None) or getattr(self, 'master', None)
+        return getattr(origem, 'idioma_atual', 'pt_BR') if origem else 'pt_BR'
+
+    def _get_text(self, chave, default=None):
+        idioma = self._get_idioma_atual()
+        base = self.TRANSLATIONS.get('pt_BR', {})
+        return self.TRANSLATIONS.get(idioma, {}).get(chave, base.get(chave, default if default is not None else chave))
+
+    def refresh_texts(self):
+        try:
+            self.tipos_estoque = [self._get_text('fabrics'), self._get_text('supplies'), self._get_text('inputs'), self._get_text('office'), self._get_text('cleaning'), self._get_text('others')]
+            if getattr(self,'_ui_refs',None):
+                for k,v in {"stock_title":"stock","lbl_type":"type","production_panel":"production_panel"}.items():
+                    w=self._ui_refs.get(k)
+                    if w:
+                        w.configure(text=self._get_text(v))
+                for cb_key, vals in {
+                    'combo_tipo_estoque':['fabrics','supplies','inputs','office','cleaning','others'],
+                    'combo_painel_setor':['all','cut_order','cut_ready','sent','conference','pending','paid'],
+                    'combo_painel_periodo':['days_7','days_15','days_30'],
+                    'combo_painel_grafico':['bars','line','donut'],
+                }.items():
+                    cb=getattr(self, cb_key, None)
+                    if cb:
+                        cb.configure(values=[self._get_text(x) for x in vals])
+        except Exception:
+            pass
+
     def __init__(self, master, sistema):
         super().__init__(master, fg_color=sistema.cor_fundo)
         self.sistema = sistema
@@ -219,9 +254,9 @@ class DashboardPage(ctk.CTkFrame):
         self.departamentos = getattr(sistema, "departamentos",
                                      ["Corte", "Facção", "Bordado", "Caseador", "Botões", "Estamparia", "Tingimento",
                                       "Acabamento"])
-        self.selected_depart = ctk.StringVar(value="Todos")
-        self.painel_prod_periodo_var = ctk.StringVar(value="7 dias")
-        self.painel_prod_grafico_var = ctk.StringVar(value="Barras")
+        self.selected_depart = ctk.StringVar(value=self._get_text("all"))
+        self.painel_prod_periodo_var = ctk.StringVar(value=self._get_text("days_7"))
+        self.painel_prod_grafico_var = ctk.StringVar(value=self._get_text("bars"))
         self.painel_prod_setor_var = ctk.StringVar(value="Todos")
         self.ui_scale = float(getattr(sistema, "ui_scale", 1.0) or 1.0)
 
@@ -247,8 +282,10 @@ class DashboardPage(ctk.CTkFrame):
         self.frame_cards = ctk.CTkFrame(self.scroll_body, fg_color=self.cor_fundo)
         self.frame_cards.pack(fill="x", pady=(0, 2))
 
+        self._ui_refs = {}
         self._criar_cards_resumo(self.frame_cards)
         self._construir()
+        self.refresh_texts()
 
         self.atualizar_dashboard()
         self.bind("<Map>", lambda e: self._refresh_debounced())
@@ -267,7 +304,7 @@ class DashboardPage(ctk.CTkFrame):
         area_extra_h = max(150, int(190 * scale))
         chart_h = max(64, int(80 * scale))
 
-        self.tipos_estoque = ["Tecidos", "Aviamentos", "Insumos", "Escritorio", "Limpeza", "Outros"]
+        self.tipos_estoque = [self._get_text("fabrics"), self._get_text("supplies"), self._get_text("inputs"), self._get_text("office"), self._get_text("cleaning"), self._get_text("others")]
         self.cols_estoque = ("ID", "Número Item", "Descrição", "Código", "Data Entrada", "Quantidade")
 
         self.frame_cards.pack(fill="x", pady=(0, 2))
@@ -285,15 +322,17 @@ class DashboardPage(ctk.CTkFrame):
         frame_est.grid_rowconfigure(3, weight=0)
         frame_est.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(frame_est, text="ESTOQUE", font=("Arial", 14, "bold"),
-                     text_color="#2C3E50").grid(row=0, column=0, pady=(4, 2), sticky="w", padx=10)
+        self._ui_refs["stock_title"] = ctk.CTkLabel(frame_est, text=self._get_text("stock"), font=("Arial", 14, "bold"),
+                     text_color="#2C3E50")
+        self._ui_refs["stock_title"].grid(row=0, column=0, pady=(4, 2), sticky="w", padx=10)
 
         filtro_est = ctk.CTkFrame(frame_est, fg_color="#F8F9FA")
         filtro_est.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 4))
         filtro_est.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(filtro_est, text="Tipo:", font=("Arial", 12),
-                     text_color="#2C3E50").grid(row=0, column=0, padx=(0, 6))
+        self._ui_refs["lbl_type"] = ctk.CTkLabel(filtro_est, text=self._get_text("type"), font=("Arial", 12),
+                     text_color="#2C3E50")
+        self._ui_refs["lbl_type"].grid(row=0, column=0, padx=(0, 6))
 
         self.combo_tipo_estoque = ctk.CTkComboBox(
             filtro_est, values=self.tipos_estoque,
@@ -328,19 +367,20 @@ class DashboardPage(ctk.CTkFrame):
         cabecalho_painel.grid(row=0, column=0, sticky="ew", padx=8, pady=(6, 2))
         cabecalho_painel.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(
+        self._ui_refs["production_panel"] = ctk.CTkLabel(
             cabecalho_painel,
-            text="Painel de produção (indicadores visuais)",
+            text=self._get_text("production_panel"),
             font=("Arial", 12, "bold"),
             text_color="#2C3E50",
-        ).grid(row=0, column=0, sticky="w")
+        )
+        self._ui_refs["production_panel"].grid(row=0, column=0, sticky="w")
 
         filtros_painel = ctk.CTkFrame(cabecalho_painel, fg_color="transparent")
         filtros_painel.grid(row=0, column=1, sticky="e")
 
         self.combo_painel_setor = ctk.CTkComboBox(
             filtros_painel,
-            values=["Todos", "Ordem Corte", "Corte Pronto", "Enviado", "Conferência", "Pendente", "Pago"],
+            values=[self._get_text("all"), self._get_text("cut_order"), self._get_text("cut_ready"), self._get_text("sent"), self._get_text("conference"), self._get_text("pending"), self._get_text("paid")],
             variable=self.painel_prod_setor_var,
             command=lambda _: self._atualizar_painel_producao(),
             width=combo_setor_w,
@@ -350,7 +390,7 @@ class DashboardPage(ctk.CTkFrame):
 
         self.combo_painel_periodo = ctk.CTkComboBox(
             filtros_painel,
-            values=["7 dias", "15 dias", "30 dias"],
+            values=[self._get_text("days_7"), self._get_text("days_15"), self._get_text("days_30")],
             variable=self.painel_prod_periodo_var,
             command=lambda _: self._atualizar_painel_producao(),
             width=combo_small_w,
@@ -360,7 +400,7 @@ class DashboardPage(ctk.CTkFrame):
 
         self.combo_painel_grafico = ctk.CTkComboBox(
             filtros_painel,
-            values=["Barras", "Linha", "Rosca"],
+            values=[self._get_text("bars"), self._get_text("line"), self._get_text("donut")],
             variable=self.painel_prod_grafico_var,
             command=lambda _: self._atualizar_painel_producao(),
             width=combo_small_w,

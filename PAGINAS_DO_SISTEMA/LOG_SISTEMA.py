@@ -18,6 +18,24 @@ class SistemaLogger:
     Classe principal para gerenciamento de logs do sistema OPERA
     """
 
+    TRANSLATIONS = {
+        "pt_BR": {
+            "critical_dir_error": "ERRO CRÍTICO: Não foi possível criar diretórios de log: {erro}",
+            "critical_logging_error": "ERRO CRÍTICO: Falha na configuração do logging: {erro}",
+            "write_log_failure": "FALHA AO ESCREVER LOG: {erro}",
+        },
+        "en_US": {
+            "critical_dir_error": "CRITICAL ERROR: Could not create log directories: {erro}",
+            "critical_logging_error": "CRITICAL ERROR: Failed to configure logging: {erro}",
+            "write_log_failure": "FAILED TO WRITE LOG: {erro}",
+        },
+        "es_ES": {
+            "critical_dir_error": "ERROR CRÍTICO: No fue posible crear directorios de log: {erro}",
+            "critical_logging_error": "ERROR CRÍTICO: Falló la configuración del logging: {erro}",
+            "write_log_failure": "FALLO AL ESCRIBIR LOG: {erro}",
+        },
+    }
+
     # Níveis de log
     NIVEL_DEBUG = "DEBUG"
     NIVEL_INFO = "INFO"
@@ -47,8 +65,20 @@ class SistemaLogger:
         self._setup_diretorios()
         self._configurar_logging()
         self.usuario_atual = "Sistema"
+        self.idioma_atual = "pt_BR"
         self.pagina_atual = "MenuPrincipal"
         self.hierarquia_usuario = ""
+
+    def set_idioma(self, idioma: str = "pt_BR"):
+        self.idioma_atual = idioma or "pt_BR"
+
+    def _get_text(self, chave: str, **kwargs) -> str:
+        idioma = getattr(self, "idioma_atual", "pt_BR")
+        texto = self.TRANSLATIONS.get(idioma, {}).get(chave, self.TRANSLATIONS["pt_BR"].get(chave, chave))
+        try:
+            return texto.format(**kwargs)
+        except Exception:
+            return texto
 
     def _setup_diretorios(self):
         """Cria a estrutura de diretórios para logs"""
@@ -65,7 +95,7 @@ class SistemaLogger:
                 os.makedirs(os.path.join(self.logs_dir, categoria), exist_ok=True)
 
         except Exception as e:
-            print(f"ERRO CRÍTICO: Não foi possível criar diretórios de log: {e}")
+            print(self._get_text("critical_dir_error", erro=e))
 
     def _configurar_logging(self):
         """Configura o sistema de logging do Python"""
@@ -106,7 +136,7 @@ class SistemaLogger:
             self.logger.addHandler(console_handler)
 
         except Exception as e:
-            print(f"ERRO CRÍTICO: Falha na configuração do logging: {e}")
+            print(self._get_text("critical_logging_error", erro=e))
 
     def _is_development(self) -> bool:
         """Verifica se está em ambiente de desenvolvimento"""
@@ -165,7 +195,7 @@ class SistemaLogger:
                 f.write(json.dumps(log_entry, ensure_ascii=False) + '\n')
 
         except Exception as e:
-            print(f"FALHA AO ESCREVER LOG: {e}")
+            print(self._get_text("write_log_failure", erro=e))
 
     def debug(self, mensagem: str, categoria: str = CATEGORIA_SISTEMA,
               detalhes: Dict[str, Any] = None):

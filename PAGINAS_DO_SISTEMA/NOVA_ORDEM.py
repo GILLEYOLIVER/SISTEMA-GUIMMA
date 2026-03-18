@@ -320,6 +320,11 @@ class OrdemCorte(ctk.CTkFrame):
         self.criar_widgets()
         self._op_planejada_data = None
         self.after(100, self.carregar_modelos_combo)
+        try:
+            self.after(150, self.refresh_texts)
+        except Exception:
+            pass
+
 
     def _is_dark_color(self, hex_color):
         try:
@@ -2001,6 +2006,112 @@ class OrdemCorte(ctk.CTkFrame):
         except Exception:
             pass
 
+
+    _I18N_MAP = {'en_US': {'ORDEM DE CORTE': 'CUTTING ORDER', 'DATA ': 'DATE ', 'Buscar Modelo:': 'Search Model:', 'Código ou descrição...': 'Code or description...', 'Buscar': 'Search', 'CÓDIGO:': 'CODE:', 'MODELO:': 'MODEL:', 'CORTADOR:': 'CUTTER:', 'AUXILIAR:': 'ASSISTANT:', 'FINALIZAÇÃO:': 'FINISHING:', 'Imprimir Pré-visualização': 'Print Preview', 'Salvar Ordem': 'Save Order', 'GRADE DE CORTE': 'SIZE SET', 'Preferência de grade:': 'Size set preference:', 'Salvar grade como preferência': 'Save size set as preference', 'Excluir preferência': 'Delete preference', 'PORCENTAGEM': 'PERCENTAGE', 'QUANTIDADE DESEJADA:': 'DESIRED QUANTITY:', 'Ex: 500': 'Ex: 500', 'DIAS ESTIMADOS:': 'ESTIMATED DAYS:', 'Ex: 3': 'Ex: 3', 'HORAS ESTIMADAS:': 'ESTIMATED HOURS:', 'Ex: 6': 'Ex: 6', 'Informe um nome para esta preferência de grade:': 'Enter a name for this size set preference:', 'LARGURA/MTS': 'WIDTH/METERS', 'Ordem de Corte': 'Cutting Order', 'Banco de Dados': 'Database', 'Aviso': 'Warning', 'Erro': 'Error'}, 'es_ES': {'ORDEM DE CORTE': 'ORDEN DE CORTE', 'DATA ': 'FECHA ', 'Buscar Modelo:': 'Buscar Modelo:', 'Código ou descrição...': 'Código o descripción...', 'Buscar': 'Buscar', 'CÓDIGO:': 'CÓDIGO:', 'MODELO:': 'MODELO:', 'CORTADOR:': 'CORTADOR:', 'AUXILIAR:': 'AUXILIAR:', 'FINALIZAÇÃO:': 'FINALIZACIÓN:', 'Imprimir Pré-visualização': 'Imprimir Vista previa', 'Salvar Ordem': 'Guardar Orden', 'GRADE DE CORTE': 'TALLAS DE CORTE', 'Preferência de grade:': 'Preferencia de tallas:', 'Salvar grade como preferência': 'Guardar tallas como preferencia', 'Excluir preferência': 'Eliminar preferencia', 'PORCENTAGEM': 'PORCENTAJE', 'QUANTIDADE DESEJADA:': 'CANTIDAD DESEADA:', 'Ex: 500': 'Ej: 500', 'DIAS ESTIMADOS:': 'DÍAS ESTIMADOS:', 'Ex: 3': 'Ej: 3', 'HORAS ESTIMADAS:': 'HORAS ESTIMADAS:', 'Ex: 6': 'Ej: 6', 'Informe um nome para esta preferência de grade:': 'Ingrese un nombre para esta preferencia de tallas:', 'LARGURA/MTS': 'ANCHO/MTS', 'Ordem de Corte': 'Orden de Corte', 'Banco de Dados': 'Base de Datos', 'Aviso': 'Aviso', 'Erro': 'Error'}}
+
+    def _get_idioma_atual(self):
+        try:
+            if getattr(self, "sistema", None) is not None:
+                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
+        except Exception:
+            pass
+        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
+
+    def _canonical_i18n_text(self, text):
+        if text is None:
+            return text
+        s = str(text)
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        if s in maps.get("pt_BR", {}):
+            return s
+        for _lang, table in maps.items():
+            for pt_key, translated in table.items():
+                if s == translated:
+                    return pt_key
+        return s
+
+    def _translate_i18n_text(self, text):
+        if text is None:
+            return text
+        idioma = self._get_idioma_atual()
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        canonical = self._canonical_i18n_text(text)
+        return maps.get(idioma, {}).get(canonical, canonical)
+
+    def _translate_i18n_values(self, values):
+        if not isinstance(values, (list, tuple)):
+            return values
+        return [self._translate_i18n_text(v) for v in values]
+
+    def _refresh_widget_i18n(self, widget):
+        try:
+            if hasattr(widget, "cget"):
+                try:
+                    text = widget.cget("text")
+                    if isinstance(text, str) and text:
+                        new_text = self._translate_i18n_text(text)
+                        if new_text != text:
+                            widget.configure(text=new_text)
+                except Exception:
+                    pass
+
+                try:
+                    placeholder = widget.cget("placeholder_text")
+                    if isinstance(placeholder, str) and placeholder:
+                        new_placeholder = self._translate_i18n_text(placeholder)
+                        if new_placeholder != placeholder:
+                            widget.configure(placeholder_text=new_placeholder)
+                except Exception:
+                    pass
+
+                try:
+                    values = widget.cget("values")
+                    if isinstance(values, (list, tuple)) and values:
+                        current = None
+                        try:
+                            current = widget.get()
+                        except Exception:
+                            current = None
+                        translated_values = self._translate_i18n_values(list(values))
+                        widget.configure(values=translated_values)
+                        if current:
+                            widget.set(self._translate_i18n_text(current))
+                except Exception:
+                    pass
+
+            if isinstance(widget, ttk.Treeview):
+                try:
+                    for col in widget["columns"]:
+                        info = widget.heading(col)
+                        heading_text = info.get("text", "")
+                        if heading_text:
+                            widget.heading(col, text=self._translate_i18n_text(heading_text))
+                except Exception:
+                    pass
+
+            for child in widget.winfo_children():
+                self._refresh_widget_i18n(child)
+        except Exception:
+            pass
+
+    def refresh_texts(self):
+        try:
+            target = getattr(self, "root", None) or self
+            self._refresh_widget_i18n(target)
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "root") and self.root:
+                self.root.title(self._translate_i18n_text(self.root.title()))
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "PAGE_TITLE"):
+                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     try:

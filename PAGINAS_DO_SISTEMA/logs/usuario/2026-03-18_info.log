@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-18 13:45:17.360", "nivel": "INFO", "categoria": "USUARIO", "usuario": "Sistema", "hierarquia": "", "pagina": "MenuPrincipal", "mensagem": "Ação do usuário: Teste de usuário", "detalhes": {"acao": "login", "ip": "127.0.0.1"}}

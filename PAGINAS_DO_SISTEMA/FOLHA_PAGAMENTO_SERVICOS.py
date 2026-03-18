@@ -94,6 +94,40 @@ def _normalize_date_sql(col: str) -> str:
 #                               PÁGINA
 # =====================================================================
 class FolhaPagamentoServicosPage(ctk.CTkFrame):
+    TRANSLATIONS = {
+     "pt_BR":{"page_title":"Folha de Pagamento - Serviços","from":"De:","to":"Até:","service":"Serviço:","search_label":"Buscar:","search_placeholder":"Costureira/código/descrição","include_reversed":"Incluir estornados","search":"🔍 Buscar","all":"Todos","faction":"Facção","embroidery":"Bordado","buttonhole":"Caseador","buttons":"Botões","printing":"Estamparia","dyeing":"Tingimento","other_jobs":"Outros Trabalhos","kpi_total":"Total a Pagar (R$)","kpi_base":"Base (R$)","kpi_discounts":"Descontos (R$)","kpi_help":"Ajuda/Bonificação (R$)","col_provider":"Prestador","col_cpf":"CPF","col_services":"Serviços","col_qty":"Qtd","col_base":"Base","col_discounts":"Descontos","col_help":"Ajuda/Bonif.","col_total":"Total","export_csv":"📤 Exportar CSV","report_html":"🖨️ Relatório HTML"},
+     "en_US":{"page_title":"Payroll - Services","from":"From:","to":"To:","service":"Service:","search_label":"Search:","search_placeholder":"Seamstress/code/description","include_reversed":"Include reversed entries","search":"🔍 Search","all":"All","faction":"Outsource","embroidery":"Embroidery","buttonhole":"Buttonhole","buttons":"Buttons","printing":"Printing","dyeing":"Dyeing","other_jobs":"Other Jobs","kpi_total":"Total to Pay (R$)","kpi_base":"Base (R$)","kpi_discounts":"Discounts (R$)","kpi_help":"Help/Bonus (R$)","col_provider":"Provider","col_cpf":"Tax ID","col_services":"Services","col_qty":"Qty","col_base":"Base","col_discounts":"Discounts","col_help":"Help/Bonus","col_total":"Total","export_csv":"📤 Export CSV","report_html":"🖨️ HTML Report"},
+     "es_ES":{"page_title":"Nómina - Servicios","from":"Desde:","to":"Hasta:","service":"Servicio:","search_label":"Buscar:","search_placeholder":"Costurera/código/descripción","include_reversed":"Incluir estornados","search":"🔍 Buscar","all":"Todos","faction":"Facción","embroidery":"Bordado","buttonhole":"Caseador","buttons":"Botones","printing":"Estampado","dyeing":"Teñido","other_jobs":"Otros Trabajos","kpi_total":"Total a Pagar (R$)","kpi_base":"Base (R$)","kpi_discounts":"Descuentos (R$)","kpi_help":"Ayuda/Bonificación (R$)","col_provider":"Prestador","col_cpf":"CPF","col_services":"Servicios","col_qty":"Cant.","col_base":"Base","col_discounts":"Descuentos","col_help":"Ayuda/Bonif.","col_total":"Total","export_csv":"📤 Exportar CSV","report_html":"🖨️ Reporte HTML"}
+    }
+    def _init_i18n(self):
+        self.idioma_atual = getattr(self.sistema, "idioma_atual", getattr(self._host, "idioma_atual", "pt_BR"))
+    def _get_text(self, key, default=None):
+        lang = getattr(self, "idioma_atual", "pt_BR")
+        return self.TRANSLATIONS.get(lang, {}).get(key, self.TRANSLATIONS["pt_BR"].get(key, default if default is not None else key))
+    def _service_options_i18n(self):
+        return [self._get_text(k) for k in ("all","faction","embroidery","buttonhole","buttons","printing","dyeing","other_jobs")]
+    def refresh_texts(self):
+        try: self.lbl_title.configure(text=self._get_text("page_title"))
+        except Exception: pass
+        for n,k in [("lbl_de","from"),("lbl_ate","to"),("lbl_servico","service"),("lbl_busca","search_label"),("est_chk","include_reversed"),("buscar_btn","search"),("btn_export_csv","export_csv"),("btn_report_html","report_html")]:
+            try: getattr(self,n).configure(text=self._get_text(k))
+            except Exception: pass
+        for n in ("ini_entry","fim_entry"):
+            try: getattr(self,n).configure(placeholder_text="YYYY-MM-DD" if self.idioma_atual=="en_US" else "AAAA-MM-DD")
+            except Exception: pass
+        try: self.busca_entry.configure(placeholder_text=self._get_text("search_placeholder"))
+        except Exception: pass
+        try:
+            vals=self._service_options_i18n()
+            current=self.servico_var.get()
+            rev={"Todos":"all","Facção":"faction","Bordado":"embroidery","Caseador":"buttonhole","Botões":"buttons","Estamparia":"printing","Tingimento":"dyeing","Outros Trabalhos":"other_jobs","All":"all","Outsource":"faction","Embroidery":"embroidery","Buttonhole":"buttonhole","Buttons":"buttons","Printing":"printing","Dyeing":"dyeing","Other Jobs":"other_jobs","Facción":"faction","Estampado":"printing","Teñido":"dyeing"}
+            self.serv_combo.configure(values=vals)
+            self.servico_var.set(self._get_text(rev.get(current,"all")))
+        except Exception: pass
+        try:
+            for col,key in [("prestador","col_provider"),("cpf","col_cpf"),("servicos","col_services"),("qtd","col_qty"),("base","col_base"),("descontos","col_discounts"),("ajudas","col_help"),("total","col_total")]:
+                self.tree.heading(col, text=self._get_text(key))
+        except Exception: pass
     PAGE_TITLE = "Folha de Pagamento - Serviços"
 
     def __init__(self, parent, host=None, sistema=None, *args, **kwargs):
@@ -132,7 +166,9 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         self.agrupar_por_servico = ctk.BooleanVar(value=True)
 
         # Monta UI e sincroniza tema
+        self._init_i18n()
         self._build_ui()
+        self.refresh_texts()
         self._conectar_sinal_tema()
         self._sync_theme()
 
@@ -215,7 +251,7 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         # Topbar
         top = ctk.CTkFrame(self, fg_color=self.topbar_bg, corner_radius=0)
         top.grid(row=0, column=0, sticky="ew")
-        ctk.CTkLabel(top, text=self.PAGE_TITLE,
+        self.lbl_title = ctk.CTkLabel(top, text=self.PAGE_TITLE,
                      font=ctk.CTkFont(size=16, weight="bold"),
                      text_color="white").grid(row=0, column=0, sticky="w", padx=20, pady=8)
 
@@ -225,19 +261,19 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         for i in range(10): filt.grid_columnconfigure(i, weight=0)
         filt.grid_columnconfigure(9, weight=1)
 
-        ctk.CTkLabel(filt, text="De:").grid(row=0, column=0, padx=(10,4), pady=8, sticky="e")
+        self.lbl_de = ctk.CTkLabel(filt, text="De:"); self.lbl_de.grid(row=0, column=0, padx=(10,4), pady=8, sticky="e")
         self.ini_entry = ctk.CTkEntry(filt, width=120, textvariable=self.ini_var, placeholder_text="AAAA-MM-DD")
         self.ini_entry.grid(row=0, column=1, padx=4, pady=8)
 
-        ctk.CTkLabel(filt, text="Até:").grid(row=0, column=2, padx=(12,4), pady=8, sticky="e")
+        self.lbl_ate = ctk.CTkLabel(filt, text="Até:"); self.lbl_ate.grid(row=0, column=2, padx=(12,4), pady=8, sticky="e")
         self.fim_entry = ctk.CTkEntry(filt, width=120, textvariable=self.fim_var, placeholder_text="AAAA-MM-DD")
         self.fim_entry.grid(row=0, column=3, padx=4, pady=8)
 
-        ctk.CTkLabel(filt, text="Serviço:").grid(row=0, column=4, padx=(12,4), pady=8, sticky="e")
-        self.serv_combo = ctk.CTkComboBox(filt, values=SERVICE_FILTER_OPTIONS, width=160, variable=self.servico_var)
+        self.lbl_servico = ctk.CTkLabel(filt, text="Serviço:"); self.lbl_servico.grid(row=0, column=4, padx=(12,4), pady=8, sticky="e")
+        self.serv_combo = ctk.CTkComboBox(filt, values=self._service_options_i18n(), width=160, variable=self.servico_var)
         self.serv_combo.grid(row=0, column=5, padx=4, pady=8)
 
-        ctk.CTkLabel(filt, text="Buscar:").grid(row=0, column=6, padx=(12,4), pady=8, sticky="e")
+        self.lbl_busca = ctk.CTkLabel(filt, text="Buscar:"); self.lbl_busca.grid(row=0, column=6, padx=(12,4), pady=8, sticky="e")
         self.busca_entry = ctk.CTkEntry(filt, width=180, textvariable=self.busca_var, placeholder_text="Costureira/código/descrição")
         self.busca_entry.grid(row=0, column=7, padx=4, pady=8)
         self.busca_entry.bind("<Return>", lambda e: self._search())
@@ -259,10 +295,10 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         kpis = ctk.CTkFrame(content, fg_color=self.card_bg, corner_radius=12)
         kpis.grid(row=0, column=0, sticky="ew", padx=4, pady=6)
         kpis.grid_columnconfigure((0,1,2,3), weight=1)
-        self.kpi_total = self._kpi(kpis, 0, "Total a Pagar (R$)", "0,00")
-        self.kpi_base = self._kpi(kpis, 1, "Base (R$)", "0,00")
-        self.kpi_desc = self._kpi(kpis, 2, "Descontos (R$)", "0,00")
-        self.kpi_ajuda = self._kpi(kpis, 3, "Ajuda/Bonificação (R$)", "0,00")
+        self.kpi_total = self._kpi(kpis, 0, self._get_text("kpi_total"), "0,00")
+        self.kpi_base = self._kpi(kpis, 1, self._get_text("kpi_base"), "0,00")
+        self.kpi_desc = self._kpi(kpis, 2, self._get_text("kpi_discounts"), "0,00")
+        self.kpi_ajuda = self._kpi(kpis, 3, self._get_text("kpi_help"), "0,00")
 
         # Tabela
         table_wrap = ctk.CTkFrame(content, fg_color=self.card_bg, corner_radius=12)

@@ -4,6 +4,17 @@ DATABASE_LOGGER.py - Sistema de Logs Automático para OPERA
 """
 
 import functools
+
+DEFAULT_LOGGER_TEXTS = {
+    "pt_BR": {"system": "Sistema"},
+    "en_US": {"system": "System"},
+    "es_ES": {"system": "Sistema"},
+}
+
+def _logger_text(chave, idioma="pt_BR"):
+    base = DEFAULT_LOGGER_TEXTS.get("pt_BR", {})
+    return DEFAULT_LOGGER_TEXTS.get(idioma, {}).get(chave, base.get(chave, chave))
+
 from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn_cursor
 
 
@@ -37,7 +48,7 @@ def log_action(acao: str, pagina: str, detalhe_template: str = None):
 
                 # Se não encontrou usuário, usa 'Sistema'
                 if not usuario:
-                    usuario = 'Sistema'
+                    usuario = _logger_text('system')
 
                 # Monta detalhe dinâmico
                 detalhe = detalhe_template

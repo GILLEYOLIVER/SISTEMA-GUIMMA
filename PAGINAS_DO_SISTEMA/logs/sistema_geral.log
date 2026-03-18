@@ -392,3 +392,10 @@ NoneType: None
 2026-02-26 16:07:29 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
 2026-02-26 16:07:29 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
 2026-02-26 16:58:07 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 13:45:17 | INFO     | OPERA_SYSTEM | [SISTEMA] Módulo de log inicializado com sucesso!
+2026-03-18 13:45:17 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Teste de usuário
+2026-03-18 13:45:17 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro durante teste
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\LOG_SISTEMA.py", line 469, in <module>
+    raise ValueError("Este é um erro de teste")
+ValueError: Este é um erro de teste

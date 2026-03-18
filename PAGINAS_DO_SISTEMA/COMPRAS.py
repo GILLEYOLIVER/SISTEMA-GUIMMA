@@ -26,6 +26,69 @@ except Exception:
 
 
 class ComprasPage(ctk.CTkFrame):
+
+    TRANSLATIONS = {
+        "pt_BR": {
+            "title": "Módulo de Compras",
+            "subtitle": "Gestão de fornecedores, pedidos e recebimentos.",
+            "new_order": "Novo Pedido", "save": "Salvar", "approve": "Aprovar", "receive": "Receber",
+            "export_pdf": "Exportar PDF", "print": "Imprimir",
+            "period": "Período", "from": "De", "to": "Até", "status": "Status", "supplier_or_item": "Fornecedor ou item",
+            "filter": "Filtrar", "new": "Novo", "cancel": "Cancelar", "register_receipt": "Registrar Recebimento",
+            "new_supplier": "Novo Fornecedor", "deactivate": "Inativar", "search_supplier": "Buscar fornecedor",
+            "tabs": ["Pedidos de Compra", "Recebimentos", "Fornecedores"],
+            "open": "Em aberto", "approved": "Aprovado", "received": "Recebido", "cancelled": "Cancelado"
+        },
+        "en_US": {
+            "title": "Purchasing Module",
+            "subtitle": "Supplier, purchase order and receipt management.",
+            "new_order": "New Order", "save": "Save", "approve": "Approve", "receive": "Receive",
+            "export_pdf": "Export PDF", "print": "Print",
+            "period": "Period", "from": "From", "to": "To", "status": "Status", "supplier_or_item": "Supplier or item",
+            "filter": "Filter", "new": "New", "cancel": "Cancel", "register_receipt": "Register Receipt",
+            "new_supplier": "New Supplier", "deactivate": "Deactivate", "search_supplier": "Search supplier",
+            "tabs": ["Purchase Orders", "Receipts", "Suppliers"],
+            "open": "Open", "approved": "Approved", "received": "Received", "cancelled": "Cancelled"
+        },
+        "es_ES": {
+            "title": "Módulo de Compras",
+            "subtitle": "Gestión de proveedores, pedidos y recepciones.",
+            "new_order": "Nuevo Pedido", "save": "Guardar", "approve": "Aprobar", "receive": "Recibir",
+            "export_pdf": "Exportar PDF", "print": "Imprimir",
+            "period": "Período", "from": "De", "to": "Hasta", "status": "Estado", "supplier_or_item": "Proveedor o ítem",
+            "filter": "Filtrar", "new": "Nuevo", "cancel": "Cancelar", "register_receipt": "Registrar Recepción",
+            "new_supplier": "Nuevo Proveedor", "deactivate": "Inactivar", "search_supplier": "Buscar proveedor",
+            "tabs": ["Pedidos de Compra", "Recepciones", "Proveedores"],
+            "open": "Abierto", "approved": "Aprobado", "received": "Recibido", "cancelled": "Cancelado"
+        },
+    }
+    def _get_idioma_atual(self):
+        origem = getattr(self, "sistema", None) or getattr(self, "master", None)
+        return getattr(origem, "idioma_atual", "pt_BR") if origem else "pt_BR"
+    def _get_text(self, chave, default=None):
+        idioma = self._get_idioma_atual()
+        base = self.TRANSLATIONS["pt_BR"]
+        return self.TRANSLATIONS.get(idioma, {}).get(chave, base.get(chave, default if default is not None else chave))
+    def refresh_texts(self):
+        try:
+            if hasattr(self, "_ui_refs"):
+                for key in ("title","subtitle","btn_new_order","btn_save","btn_approve","btn_receive","btn_export_pdf","btn_print",
+                            "lbl_period","lbl_status","btn_filter","btn_new","btn_cancel","btn_register_receipt","btn_new_supplier","btn_deactivate","btn_filter_sup"):
+                    widget = self._ui_refs.get(key)
+                    if widget:
+                        widget.configure(text=self._get_text({
+                            "title":"title","subtitle":"subtitle","btn_new_order":"new_order","btn_save":"save","btn_approve":"approve",
+                            "btn_receive":"receive","btn_export_pdf":"export_pdf","btn_print":"print","lbl_period":"period","lbl_status":"status",
+                            "btn_filter":"filter","btn_new":"new","btn_cancel":"cancel","btn_register_receipt":"register_receipt",
+                            "btn_new_supplier":"new_supplier","btn_deactivate":"deactivate","btn_filter_sup":"filter"
+                        }[key]))
+                if self._ui_refs.get("entry_supplier_or_item"):
+                    self._ui_refs["entry_supplier_or_item"].configure(placeholder_text=self._get_text("supplier_or_item"))
+                if self._ui_refs.get("search_supplier"):
+                    self._ui_refs["search_supplier"].configure(placeholder_text=self._get_text("search_supplier"))
+        except Exception:
+            pass
+
     def __init__(self, master=None, sistema=None, **kwargs):
         super().__init__(master, **kwargs)
         self.sistema = sistema
@@ -38,6 +101,7 @@ class ComprasPage(ctk.CTkFrame):
         self.tree_pedidos = None
         self.tree_recebimentos = None
         self.tree_fornecedores = None
+        self._ui_refs = {}
         self._build()
         self._verificar_conexao()
         self.after(200, self._carregar_inicial)
@@ -56,46 +120,50 @@ class ComprasPage(ctk.CTkFrame):
         header.grid(row=0, column=0, sticky="ew", padx=24, pady=(20, 8))
         header.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(
-            header, text="Módulo de Compras", font=ctk.CTkFont(size=22, weight="bold")
-        ).grid(row=0, column=0, sticky="w")
-        ctk.CTkLabel(
+        title_lbl = ctk.CTkLabel(
+            header, text=self._get_text("title"), font=ctk.CTkFont(size=22, weight="bold")
+        )
+        title_lbl.grid(row=0, column=0, sticky="w")
+        self._ui_refs["title"] = title_lbl
+        subtitle_lbl = ctk.CTkLabel(
             header,
-            text="Gestão de fornecedores, pedidos e recebimentos.",
+            text=self._get_text("subtitle"),
             font=ctk.CTkFont(size=12),
-        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+        )
+        subtitle_lbl.grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self._ui_refs["subtitle"] = subtitle_lbl
 
     def _build_toolbar(self):
         toolbar = ctk.CTkFrame(self)
         toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
         toolbar.grid_columnconfigure(5, weight=1)
 
-        ctk.CTkButton(toolbar, text="Novo Pedido", command=self._novo_pedido).grid(
-            row=0, column=0, padx=(0, 8)
-        )
-        ctk.CTkButton(toolbar, text="Salvar", command=self._salvar_pedido).grid(
-            row=0, column=1, padx=(0, 8)
-        )
-        ctk.CTkButton(toolbar, text="Aprovar", command=self._aprovar_pedido).grid(
-            row=0, column=2, padx=(0, 8)
-        )
-        ctk.CTkButton(toolbar, text="Receber", command=self._marcar_recebido).grid(
-            row=0, column=3, padx=(0, 8)
-        )
-        ctk.CTkButton(toolbar, text="Exportar PDF", command=self._exportar_compras).grid(
-            row=0, column=4
-        )
-        ctk.CTkButton(toolbar, text="Imprimir", command=self._imprimir_compras).grid(
-            row=0, column=5
-        )
+        btn = ctk.CTkButton(toolbar, text=self._get_text("new_order"), command=self._novo_pedido)
+        btn.grid(row=0, column=0, padx=(0, 8))
+        self._ui_refs["btn_new_order"] = btn
+        btn = ctk.CTkButton(toolbar, text=self._get_text("save"), command=self._salvar_pedido)
+        btn.grid(row=0, column=1, padx=(0, 8))
+        self._ui_refs["btn_save"] = btn
+        btn = ctk.CTkButton(toolbar, text=self._get_text("approve"), command=self._aprovar_pedido)
+        btn.grid(row=0, column=2, padx=(0, 8))
+        self._ui_refs["btn_approve"] = btn
+        btn = ctk.CTkButton(toolbar, text=self._get_text("receive"), command=self._marcar_recebido)
+        btn.grid(row=0, column=3, padx=(0, 8))
+        self._ui_refs["btn_receive"] = btn
+        btn = ctk.CTkButton(toolbar, text=self._get_text("export_pdf"), command=self._exportar_compras)
+        btn.grid(row=0, column=4)
+        self._ui_refs["btn_export_pdf"] = btn
+        btn = ctk.CTkButton(toolbar, text=self._get_text("print"), command=self._imprimir_compras)
+        btn.grid(row=0, column=5)
+        self._ui_refs["btn_print"] = btn
 
     def _build_tabs(self):
         tabs = ctk.CTkTabview(self)
         tabs.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 24))
 
-        pedidos_tab = tabs.add("Pedidos de Compra")
-        recebimento_tab = tabs.add("Recebimentos")
-        fornecedores_tab = tabs.add("Fornecedores")
+        pedidos_tab = tabs.add(self._get_text("tabs")[0])
+        recebimento_tab = tabs.add(self._get_text("tabs")[1])
+        fornecedores_tab = tabs.add(self._get_text("tabs")[2])
 
         self._build_pedidos_tab(pedidos_tab)
         self._build_recebimentos_tab(recebimento_tab)
@@ -109,8 +177,10 @@ class ComprasPage(ctk.CTkFrame):
         filters.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 12))
         filters.grid_columnconfigure(8, weight=1)
 
-        ctk.CTkLabel(filters, text="Período").grid(row=0, column=0, padx=(12, 6), pady=8)
-        self.filter_inicio_entry = ctk.CTkEntry(filters, placeholder_text="De")
+        lbl_period = ctk.CTkLabel(filters, text=self._get_text("period"))
+        lbl_period.grid(row=0, column=0, padx=(12, 6), pady=8)
+        self._ui_refs["lbl_period"] = lbl_period
+        self.filter_inicio_entry = ctk.CTkEntry(filters, placeholder_text=self._get_text("from"))
         self.filter_inicio_entry.grid(row=0, column=1, padx=(0, 6), pady=8)
         ctk.CTkButton(
             filters,
@@ -118,7 +188,7 @@ class ComprasPage(ctk.CTkFrame):
             width=32,
             command=lambda: self._abrir_calendario(self.filter_inicio_entry),
         ).grid(row=0, column=2, padx=(0, 6), pady=8)
-        self.filter_fim_entry = ctk.CTkEntry(filters, placeholder_text="Até")
+        self.filter_fim_entry = ctk.CTkEntry(filters, placeholder_text=self._get_text("to"))
         self.filter_fim_entry.grid(row=0, column=3, padx=(0, 12), pady=8)
         ctk.CTkButton(
             filters,
@@ -126,14 +196,18 @@ class ComprasPage(ctk.CTkFrame):
             width=32,
             command=lambda: self._abrir_calendario(self.filter_fim_entry),
         ).grid(row=0, column=4, padx=(0, 12), pady=8)
-        ctk.CTkLabel(filters, text="Status").grid(row=0, column=5, padx=(0, 6), pady=8)
-        ctk.CTkOptionMenu(filters, values=["Em aberto", "Aprovado", "Recebido", "Cancelado"]).grid(
+        lbl_status = ctk.CTkLabel(filters, text=self._get_text("status"))
+        lbl_status.grid(row=0, column=5, padx=(0, 6), pady=8)
+        self._ui_refs["lbl_status"] = lbl_status
+        ctk.CTkOptionMenu(filters, values=[self._get_text("open"), self._get_text("approved"), self._get_text("received"), self._get_text("cancelled")]).grid(
             row=0, column=6, padx=(0, 12), pady=8
         )
-        ctk.CTkEntry(filters, placeholder_text="Fornecedor ou item").grid(
-            row=0, column=7, sticky="ew", padx=(0, 12), pady=8
-        )
-        ctk.CTkButton(filters, text="Filtrar").grid(row=0, column=8, padx=(0, 12), pady=8)
+        entry_supplier = ctk.CTkEntry(filters, placeholder_text=self._get_text("supplier_or_item"))
+        entry_supplier.grid(row=0, column=7, sticky="ew", padx=(0, 12), pady=8)
+        self._ui_refs["entry_supplier_or_item"] = entry_supplier
+        btn_filter = ctk.CTkButton(filters, text=self._get_text("filter"))
+        btn_filter.grid(row=0, column=8, padx=(0, 12), pady=8)
+        self._ui_refs["btn_filter"] = btn_filter
 
         form = ctk.CTkFrame(parent)
         form.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 12))
@@ -153,9 +227,13 @@ class ComprasPage(ctk.CTkFrame):
 
         actions = ctk.CTkFrame(parent, fg_color="transparent")
         actions.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 12))
-        ctk.CTkButton(actions, text="Novo", command=self._novo_pedido).grid(row=0, column=0, padx=(0, 8))
-        ctk.CTkButton(actions, text="Salvar", command=self._salvar_pedido).grid(row=0, column=1, padx=(0, 8))
-        ctk.CTkButton(actions, text="Cancelar", command=self._novo_pedido).grid(row=0, column=2)
+        btn = ctk.CTkButton(actions, text=self._get_text("new"), command=self._novo_pedido)
+        btn.grid(row=0, column=0, padx=(0, 8))
+        self._ui_refs["btn_new"] = btn
+        ctk.CTkButton(actions, text=self._get_text("save"), command=self._salvar_pedido).grid(row=0, column=1, padx=(0, 8))
+        btn = ctk.CTkButton(actions, text=self._get_text("cancel"), command=self._novo_pedido)
+        btn.grid(row=0, column=2)
+        self._ui_refs["btn_cancel"] = btn
 
         tree_frame = ctk.CTkFrame(parent)
         tree_frame.grid(row=3, column=0, sticky="nsew", padx=16, pady=(0, 16))
@@ -205,9 +283,9 @@ class ComprasPage(ctk.CTkFrame):
             "<Double-Button-1>",
             lambda e: self._abrir_calendario(self.recebimento_entries["data_recebimento"]),
         )
-        ctk.CTkButton(info, text="Registrar Recebimento", command=self._salvar_recebimento).grid(
-            row=0, column=6, padx=(12, 12), pady=8, rowspan=2, sticky="ns"
-        )
+        btn = ctk.CTkButton(info, text=self._get_text("register_receipt"), command=self._salvar_recebimento)
+        btn.grid(row=0, column=6, padx=(12, 12), pady=8, rowspan=2, sticky="ns")
+        self._ui_refs["btn_register_receipt"] = btn
 
         tree_frame = ctk.CTkFrame(parent)
         tree_frame.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))
@@ -245,20 +323,21 @@ class ComprasPage(ctk.CTkFrame):
         toolbar = ctk.CTkFrame(parent)
         toolbar.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 12))
         toolbar.grid_columnconfigure(6, weight=1)
-        ctk.CTkButton(toolbar, text="Novo Fornecedor", command=self._novo_fornecedor).grid(
-            row=0, column=0, padx=(0, 8)
-        )
-        ctk.CTkButton(toolbar, text="Salvar", command=self._salvar_fornecedor).grid(
+        btn = ctk.CTkButton(toolbar, text=self._get_text("new_supplier"), command=self._novo_fornecedor)
+        btn.grid(row=0, column=0, padx=(0, 8))
+        self._ui_refs["btn_new_supplier"] = btn
+        ctk.CTkButton(toolbar, text=self._get_text("save"), command=self._salvar_fornecedor).grid(
             row=0, column=1, padx=(0, 8)
         )
-        ctk.CTkButton(toolbar, text="Inativar", command=self._inativar_fornecedor).grid(
-            row=0, column=2, padx=(0, 8)
-        )
-        self.search_fornecedor = ctk.CTkEntry(toolbar, placeholder_text="Buscar fornecedor")
+        btn = ctk.CTkButton(toolbar, text=self._get_text("deactivate"), command=self._inativar_fornecedor)
+        btn.grid(row=0, column=2, padx=(0, 8))
+        self._ui_refs["btn_deactivate"] = btn
+        self.search_fornecedor = ctk.CTkEntry(toolbar, placeholder_text=self._get_text("search_supplier"))
         self.search_fornecedor.grid(row=0, column=4, sticky="ew", padx=(12, 12))
-        ctk.CTkButton(toolbar, text="Filtrar", command=self._carregar_fornecedores).grid(
-            row=0, column=5
-        )
+        self._ui_refs["search_supplier"] = self.search_fornecedor
+        btn = ctk.CTkButton(toolbar, text=self._get_text("filter"), command=self._carregar_fornecedores)
+        btn.grid(row=0, column=5)
+        self._ui_refs["btn_filter_sup"] = btn
 
         form = ctk.CTkFrame(parent)
         form.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 12))

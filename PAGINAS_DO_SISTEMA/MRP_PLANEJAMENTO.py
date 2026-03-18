@@ -31,6 +31,11 @@ class MRPPage(ctk.CTkFrame):
         self.filtro_status = None
         self._build()
         self._carregar_dados_mrp()
+        try:
+            self.refresh_texts()
+        except Exception:
+            pass
+
 
     def _build(self):
         self.configure(fg_color="transparent")
@@ -820,6 +825,112 @@ class MRPPage(ctk.CTkFrame):
 
         desenhar_calendario()
 
+
+    _I18N_MAP = {'en_US': {'MRP / Necessidades de Insumos': 'MRP / Material Requirements', 'Planejamento de materiais com base em ordens e estoque atual.': 'Material planning based on orders and current stock.', 'Gerar MRP': 'Generate MRP', 'Simular': 'Simulate', 'Aprovar Compra': 'Approve Purchase', 'Exportar PDF': 'Export PDF', 'Imprimir': 'Print', 'Configurações': 'Settings', 'Período': 'Period', 'De': 'From', 'Até': 'To', 'Coleção': 'Collection', 'Status': 'Status', 'Filtrar': 'Filter', 'Todas': 'All', 'Crítico': 'Critical', 'Atenção': 'Attention', 'OK': 'OK', 'Todos': 'All', 'Necessidades': 'Requirements', 'Ordens Recomendadas': 'Recommended Orders', 'Fornecedores Críticos': 'Critical Suppliers', 'Itens críticos: 0': 'Critical items: 0', 'Faltantes: 0': 'Missing: 0', 'Valor a comprar: R$ 0,00': 'Value to purchase: $ 0.00', 'Lead time médio: 0 dias': 'Average lead time: 0 days', 'Plano de compra recomendado': 'Recommended purchasing plan', 'Converter em Pedido': 'Convert to Order', 'Insumo': 'Material', 'Quantidade': 'Quantity', 'Fornecedor': 'Supplier', 'Entrega Prevista': 'Expected Delivery', 'Estoque': 'Stock', 'Faltante': 'Shortage', 'Lead Time': 'Lead Time', 'Ordem': 'Order', 'Insumos Críticos': 'Critical Materials', 'Atraso Médio': 'Average Delay', 'Risco': 'Risk', 'Calendário': 'Calendar', 'Relatório MRP': 'MRP Report', 'MRP': 'MRP'}, 'es_ES': {'MRP / Necessidades de Insumos': 'MRP / Necesidades de Insumos', 'Planejamento de materiais com base em ordens e estoque atual.': 'Planificación de materiales basada en órdenes y stock actual.', 'Gerar MRP': 'Generar MRP', 'Simular': 'Simular', 'Aprovar Compra': 'Aprobar Compra', 'Exportar PDF': 'Exportar PDF', 'Imprimir': 'Imprimir', 'Configurações': 'Configuraciones', 'Período': 'Período', 'De': 'Desde', 'Até': 'Hasta', 'Coleção': 'Colección', 'Status': 'Estado', 'Filtrar': 'Filtrar', 'Todas': 'Todas', 'Crítico': 'Crítico', 'Atenção': 'Atención', 'OK': 'OK', 'Todos': 'Todos', 'Necessidades': 'Necesidades', 'Ordens Recomendadas': 'Órdenes Recomendadas', 'Fornecedores Críticos': 'Proveedores Críticos', 'Itens críticos: 0': 'Ítems críticos: 0', 'Faltantes: 0': 'Faltantes: 0', 'Valor a comprar: R$ 0,00': 'Valor a comprar: $ 0,00', 'Lead time médio: 0 dias': 'Lead time medio: 0 días', 'Plano de compra recomendado': 'Plan de compra recomendado', 'Converter em Pedido': 'Convertir en Pedido', 'Insumo': 'Insumo', 'Quantidade': 'Cantidad', 'Fornecedor': 'Proveedor', 'Entrega Prevista': 'Entrega Prevista', 'Estoque': 'Stock', 'Faltante': 'Faltante', 'Lead Time': 'Lead Time', 'Ordem': 'Orden', 'Insumos Críticos': 'Insumos Críticos', 'Atraso Médio': 'Retraso Medio', 'Risco': 'Riesgo', 'Calendário': 'Calendario', 'Relatório MRP': 'Informe MRP', 'MRP': 'MRP'}}
+
+    def _get_idioma_atual(self):
+        try:
+            if getattr(self, "sistema", None) is not None:
+                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
+        except Exception:
+            pass
+        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
+
+    def _canonical_i18n_text(self, text):
+        if text is None:
+            return text
+        s = str(text)
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        if s in maps.get("pt_BR", {}):
+            return s
+        for _lang, table in maps.items():
+            for pt_key, translated in table.items():
+                if s == translated:
+                    return pt_key
+        return s
+
+    def _translate_i18n_text(self, text):
+        if text is None:
+            return text
+        idioma = self._get_idioma_atual()
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        canonical = self._canonical_i18n_text(text)
+        return maps.get(idioma, {}).get(canonical, canonical)
+
+    def _translate_i18n_values(self, values):
+        if not isinstance(values, (list, tuple)):
+            return values
+        return [self._translate_i18n_text(v) for v in values]
+
+    def _refresh_widget_i18n(self, widget):
+        try:
+            if hasattr(widget, "cget"):
+                try:
+                    text = widget.cget("text")
+                    if isinstance(text, str) and text:
+                        new_text = self._translate_i18n_text(text)
+                        if new_text != text:
+                            widget.configure(text=new_text)
+                except Exception:
+                    pass
+
+                try:
+                    placeholder = widget.cget("placeholder_text")
+                    if isinstance(placeholder, str) and placeholder:
+                        new_placeholder = self._translate_i18n_text(placeholder)
+                        if new_placeholder != placeholder:
+                            widget.configure(placeholder_text=new_placeholder)
+                except Exception:
+                    pass
+
+                try:
+                    values = widget.cget("values")
+                    if isinstance(values, (list, tuple)) and values:
+                        current = None
+                        try:
+                            current = widget.get()
+                        except Exception:
+                            current = None
+                        translated_values = self._translate_i18n_values(list(values))
+                        widget.configure(values=translated_values)
+                        if current:
+                            widget.set(self._translate_i18n_text(current))
+                except Exception:
+                    pass
+
+            if isinstance(widget, ttk.Treeview):
+                try:
+                    for col in widget["columns"]:
+                        info = widget.heading(col)
+                        heading_text = info.get("text", "")
+                        if heading_text:
+                            widget.heading(col, text=self._translate_i18n_text(heading_text))
+                except Exception:
+                    pass
+
+            for child in widget.winfo_children():
+                self._refresh_widget_i18n(child)
+        except Exception:
+            pass
+
+    def refresh_texts(self):
+        try:
+            target = getattr(self, "root", None) or self
+            self._refresh_widget_i18n(target)
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "root") and self.root:
+                self.root.title(self._translate_i18n_text(self.root.title()))
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "PAGE_TITLE"):
+                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     app = ctk.CTk()

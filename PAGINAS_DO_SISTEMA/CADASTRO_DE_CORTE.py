@@ -116,12 +116,90 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.rendimento_var = ctk.StringVar(value="0.00")
         self.tecido_var = ctk.StringVar()
         self.cor_var = ctk.StringVar()
+        self._i18n_refs = {}
 
         # Configuração inicial
         self._conectar_banco_dados()
         self.carregar_dados_iniciais()
         self.carregar_logo()
         self.setup_ui()
+
+
+    def _get_idioma_atual(self):
+        return getattr(self.sistema, "idioma_atual", "pt_BR")
+
+    def _tr(self, chave, **kwargs):
+        textos = {
+            "pt_BR": {
+                "title": "CADASTRO DE ORDEM DE CORTE", "logo_missing": "[LOGO NÃO CARREGADA]", "order_no": "Nº ORDEM:",
+                "code": "CÓDIGO:", "description": "DESCRIÇÃO:", "model": "MODELO:", "reload": "↻",
+                "length_m": "COMPRIMENTO (m):", "width_m": "LARGURA (m):", "cutter": "CORTADOR:", "assistant": "AJUDANTE:",
+                "date": "DATA:", "add_fabric": "Adicionar Tecido", "remove_fabric": "Remover Tecido", "clear_table": "Limpar Tabela",
+                "total_pieces": "TOTAL DE PEÇAS:", "sheets": "FOLHAS:", "meters": "METROS:", "yield": "RENDIMENTO:",
+                "notes": "OBSERVAÇÕES:", "clear_all": "Limpar Tudo", "save_order": "Salvar Ordem",
+                "search_fabric": "Buscar Tecido (código/nome/composicao):", "available_color": "Cor Disponível:",
+                "bobbins": "Bobinas:", "sheets_short": "Folhas:", "qty_by_size": "Quantidades por Tamanho:",
+                "confirm": "Confirmar", "cancel": "Cancelar", "search": "Buscar",
+                "warn": "Aviso", "error": "Erro", "confirm_title": "Confirmar", "table_not_found": "Tabela não encontrada",
+                "db_error": "Erro no Banco de Dados", "fill_order_before_save": "Informe o Nº ORDEM antes de salvar.",
+                "cut_exists": "Corte já existe", "cut_exists_msg": "A Ordem de Corte {numero_ordem} já existe no sistema e não pode ser salva novamente.",
+                "confirm_clear": "Deseja limpar todos os campos?", "interface_not_init": "Interface não inicializada corretamente",
+                "clear_fail": "Falha ao limpar campos:\n{erro}", "save_success": "Ordem salva com sucesso!", "save_fail": "Erro ao salvar ordem de corte:\n{erro}",
+            },
+            "en_US": {
+                "title": "CUTTING ORDER REGISTRATION", "logo_missing": "[LOGO NOT LOADED]", "order_no": "ORDER NO.:",
+                "code": "CODE:", "description": "DESCRIPTION:", "model": "MODEL:", "reload": "↻",
+                "length_m": "LENGTH (m):", "width_m": "WIDTH (m):", "cutter": "CUTTER:", "assistant": "ASSISTANT:",
+                "date": "DATE:", "add_fabric": "Add Fabric", "remove_fabric": "Remove Fabric", "clear_table": "Clear Table",
+                "total_pieces": "TOTAL PIECES:", "sheets": "SHEETS:", "meters": "METERS:", "yield": "YIELD:",
+                "notes": "NOTES:", "clear_all": "Clear All", "save_order": "Save Order",
+                "search_fabric": "Search Fabric (code/name/composition):", "available_color": "Available Color:",
+                "bobbins": "Rolls:", "sheets_short": "Sheets:", "qty_by_size": "Quantities by Size:",
+                "confirm": "Confirm", "cancel": "Cancel", "search": "Search",
+                "warn": "Warning", "error": "Error", "confirm_title": "Confirm", "table_not_found": "Table not found",
+                "db_error": "Database Error", "fill_order_before_save": "Enter the ORDER NO. before saving.",
+                "cut_exists": "Order already exists", "cut_exists_msg": "The Cutting Order {numero_ordem} already exists in the system and cannot be saved again.",
+                "confirm_clear": "Do you want to clear all fields?", "interface_not_init": "Interface not initialized correctly",
+                "clear_fail": "Failed to clear fields:\n{erro}", "save_success": "Order saved successfully!", "save_fail": "Error saving cutting order:\n{erro}",
+            },
+            "es_ES": {
+                "title": "REGISTRO DE ORDEN DE CORTE", "logo_missing": "[LOGO NO CARGADO]", "order_no": "N.º ORDEN:",
+                "code": "CÓDIGO:", "description": "DESCRIPCIÓN:", "model": "MODELO:", "reload": "↻",
+                "length_m": "LARGO (m):", "width_m": "ANCHO (m):", "cutter": "CORTADOR:", "assistant": "AYUDANTE:",
+                "date": "FECHA:", "add_fabric": "Agregar Tela", "remove_fabric": "Quitar Tela", "clear_table": "Limpiar Tabla",
+                "total_pieces": "TOTAL DE PIEZAS:", "sheets": "HOJAS:", "meters": "METROS:", "yield": "RENDIMIENTO:",
+                "notes": "OBSERVACIONES:", "clear_all": "Limpiar Todo", "save_order": "Guardar Orden",
+                "search_fabric": "Buscar Tela (código/nombre/composición):", "available_color": "Color disponible:",
+                "bobbins": "Bobinas:", "sheets_short": "Hojas:", "qty_by_size": "Cantidades por Talla:",
+                "confirm": "Confirmar", "cancel": "Cancelar", "search": "Buscar",
+                "warn": "Aviso", "error": "Error", "confirm_title": "Confirmar", "table_not_found": "Tabla no encontrada",
+                "db_error": "Error de base de datos", "fill_order_before_save": "Informe el N.º ORDEN antes de guardar.",
+                "cut_exists": "La orden ya existe", "cut_exists_msg": "La Orden de Corte {numero_ordem} ya existe en el sistema y no puede guardarse nuevamente.",
+                "confirm_clear": "¿Desea limpiar todos los campos?", "interface_not_init": "Interfaz no inicializada correctamente",
+                "clear_fail": "Error al limpiar campos:\n{erro}", "save_success": "¡Orden guardada con éxito!", "save_fail": "Error al guardar la orden de corte:\n{erro}",
+            },
+        }
+        idioma = self._get_idioma_atual()
+        base = textos.get(idioma, textos["pt_BR"])
+        texto = base.get(chave, textos["pt_BR"].get(chave, chave))
+        try:
+            return texto.format(**kwargs) if kwargs else texto
+        except Exception:
+            return texto
+
+    def refresh_texts(self):
+        try:
+            state = self.get_state()
+        except Exception:
+            state = None
+        for child in self.winfo_children():
+            child.destroy()
+        self.setup_ui()
+        if state:
+            try:
+                self.set_state(state)
+            except Exception:
+                pass
 
     def obter_cores_por_tema(self):
         """Define cores de texto dinamicamente baseado no tema atual - MESMO PADRÃO DA ENTRADA_ESTOQUE"""
@@ -204,15 +282,11 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 ok = cur.fetchone() is not None
             conn.close()
             if not ok:
-                messagebox.showerror(
-                    "Tabela não encontrada",
-                    "A tabela 'estoque_tecidos' não existe! Peça ao administrador do sistema para corrigir."
-                )
+                messagebox.showerror(self._tr("table_not_found"), "A tabela 'estoque_tecidos' não existe! Peça ao administrador do sistema para corrigir.")
                 return False
             return True
         except Exception as e:
-            messagebox.showerror("Erro no Banco de Dados",
-                                 f"Falha ao verificar tabela de tecidos:\n{str(e)}")
+            messagebox.showerror(self._tr("db_error"), f"Falha ao verificar tabela de tecidos:\n{str(e)}")
             return False
 
     def _conectar_banco_dados(self):
@@ -222,8 +296,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             self.conn = None
             self.cursor = None
         except Exception as e:
-            messagebox.showerror("Erro de Banco de Dados",
-                                 f"Não foi possível conectar ao banco de dados:\n{str(e)}")
+            messagebox.showerror(self._tr("db_error"), f"Não foi possível conectar ao banco de dados:\n{str(e)}")
             self.master.destroy()
 
     def get_state(self):
@@ -421,7 +494,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkLabel(
             header_frame,
-            text="CADASTRO DE ORDEM DE CORTE",
+            text=self._tr("title"),
             font=("Arial", 18, "bold"),
             text_color=self.cor_texto
         ).pack(side="left", padx=10)
@@ -430,7 +503,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         if hasattr(self, "logo_image") and self.logo_image:
             ctk.CTkLabel(header_frame, image=self.logo_image, text="").pack(side="right", padx=10)
         else:
-            ctk.CTkLabel(header_frame, text="[LOGO NÃO CARREGADA]", text_color="red").pack(side="right", padx=10)
+            self._i18n_refs["logo_missing"] = ctk.CTkLabel(header_frame, text=self._tr("logo_missing"), text_color="red")
+            self._i18n_refs["logo_missing"].pack(side="right", padx=10)
 
         # =========================
         # INFORMAÇÕES BÁSICAS (compacto)
@@ -442,8 +516,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         ordem_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         ordem_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(ordem_frame, text="Nº ORDEM:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
-                                                                                                          padx=5)
+        self._i18n_refs["order_no"] = ctk.CTkLabel(ordem_frame, text=self._tr("order_no"), width=80, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["order_no"].pack(side="left", padx=5)
 
         self.numero_ordem_entry = ctk.CTkEntry(
             ordem_frame,
@@ -460,8 +534,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         codigo_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         codigo_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(codigo_frame, text="CÓDIGO:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
-                                                                                                         padx=5)
+        self._i18n_refs["code"] = ctk.CTkLabel(codigo_frame, text=self._tr("code"), width=80, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["code"].pack(side="left", padx=5)
 
         self.codigo_entry = ctk.CTkEntry(
             codigo_frame,
@@ -474,8 +548,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.codigo_entry.bind("<FocusOut>", self.buscar_descricao_por_codigo)
         self.codigo_entry.bind("<Return>", self.buscar_descricao_por_codigo)
 
-        ctk.CTkLabel(codigo_frame, text="DESCRIÇÃO:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
-                                                                                                            padx=5)
+        self._i18n_refs["description"] = ctk.CTkLabel(codigo_frame, text=self._tr("description"), width=80, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["description"].pack(side="left", padx=5)
 
         self.descricao_entry = ctk.CTkEntry(
             codigo_frame,
@@ -490,8 +564,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         sel_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         sel_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(sel_frame, text="MODELO:", width=120, anchor="e", text_color=self.cor_texto).pack(side="left",
-                                                                                                       padx=5)
+        self._i18n_refs["model"] = ctk.CTkLabel(sel_frame, text=self._tr("model"), width=120, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["model"].pack(side="left", padx=5)
 
         self.modelo_ocf_cb = ctk.CTkComboBox(
             sel_frame,
@@ -509,7 +583,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkButton(
             sel_frame,
-            text="↻",
+            text=self._tr("reload"),
             width=40,
             command=self._recarregar_modelos_ocf,
             fg_color=self.cor_primaria,
@@ -523,8 +597,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         dimensoes_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         dimensoes_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(dimensoes_frame, text="COMPRIMENTO (m):", width=120, anchor="e", text_color=self.cor_texto).pack(
-            side="left", padx=5)
+        self._i18n_refs["length_m"] = ctk.CTkLabel(dimensoes_frame, text=self._tr("length_m"), width=120, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["length_m"].pack(side="left", padx=5)
 
         self.comprimento_entry = ctk.CTkEntry(
             dimensoes_frame,
@@ -539,8 +613,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.comprimento_entry.pack(side="left", padx=5)
         self.comprimento_entry.insert(0, "7.35")
 
-        ctk.CTkLabel(dimensoes_frame, text="LARGURA (m):", width=100, anchor="e", text_color=self.cor_texto).pack(
-            side="left", padx=5)
+        self._i18n_refs["width_m"] = ctk.CTkLabel(dimensoes_frame, text=self._tr("width_m"), width=100, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["width_m"].pack(side="left", padx=5)
 
         self.largura_entry = ctk.CTkEntry(
             dimensoes_frame,
@@ -559,8 +633,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         pessoal_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         pessoal_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(pessoal_frame, text="CORTADOR:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
-                                                                                                            padx=5)
+        self._i18n_refs["cutter"] = ctk.CTkLabel(pessoal_frame, text=self._tr("cutter"), width=80, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["cutter"].pack(side="left", padx=5)
 
         self.cortador_entry = ctk.CTkEntry(
             pessoal_frame,
@@ -571,8 +645,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         )
         self.cortador_entry.pack(side="left", padx=5)
 
-        ctk.CTkLabel(pessoal_frame, text="AJUDANTE:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
-                                                                                                            padx=5)
+        self._i18n_refs["assistant"] = ctk.CTkLabel(pessoal_frame, text=self._tr("assistant"), width=80, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["assistant"].pack(side="left", padx=5)
 
         self.ajudante_entry = ctk.CTkEntry(
             pessoal_frame,
@@ -587,8 +661,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         data_frame = ctk.CTkFrame(info_frame, fg_color=self.cor_fundo)
         data_frame.pack(fill="x", pady=1)
 
-        ctk.CTkLabel(data_frame, text="DATA:", width=80, anchor="e", text_color=self.cor_texto).pack(side="left",
-                                                                                                     padx=5)
+        self._i18n_refs["date"] = ctk.CTkLabel(data_frame, text=self._tr("date"), width=80, anchor="e", text_color=self.cor_texto)
+        self._i18n_refs["date"].pack(side="left", padx=5)
 
         self.data_entry = ctk.CTkEntry(
             data_frame,
@@ -669,7 +743,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         self.btn_adicionar_tecido = ctk.CTkButton(
             button_frame,
-            text="Adicionar Tecido",
+            text=self._tr("add_fabric"),
             command=self.adicionar_tecido,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
@@ -680,7 +754,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="Remover Tecido",
+            text=self._tr("remove_fabric"),
             command=self.remover_tecido,
             fg_color=self.cor_secundaria,
             hover_color=self.cor_hover,
@@ -690,7 +764,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="Limpar Tabela",
+            text=self._tr("clear_table"),
             command=self.limpar_tabela,
             fg_color=self.cor_secundaria,
             hover_color=self.cor_hover,
@@ -766,7 +840,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkLabel(
             footer_frame,
-            text="TOTAL DE PEÇAS:",
+            text=self._tr("total_pieces"),
             width=120,
             anchor="e",
             font=("Arial", 12, "bold"),
@@ -785,7 +859,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkLabel(
             footer_frame,
-            text="FOLHAS:",
+            text=self._tr("sheets"),
             width=80,
             anchor="e",
             font=("Arial", 12, "bold"),
@@ -804,7 +878,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkLabel(
             footer_frame,
-            text="METROS:",
+            text=self._tr("meters"),
             width=80,
             anchor="e",
             font=("Arial", 12, "bold"),
@@ -823,7 +897,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkLabel(
             footer_frame,
-            text="RENDIMENTO:",
+            text=self._tr("yield"),
             width=100,
             anchor="e",
             font=("Arial", 12, "bold"),
@@ -846,7 +920,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         obs_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         obs_frame.pack(fill="x", pady=5)
 
-        ctk.CTkLabel(obs_frame, text="OBSERVAÇÕES:", width=100, anchor="e", text_color=self.cor_texto).pack(side="left",
+        ctk.CTkLabel(obs_frame, text=self._tr("notes"), width=100, anchor="e", text_color=self.cor_texto).pack(side="left",
                                                                                                             padx=5)
 
         self.obs_entry = ctk.CTkEntry(
@@ -865,7 +939,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkButton(
             action_frame,
-            text="Limpar Tudo",
+            text=self._tr("clear_all"),
             command=self.limpar_tudo,
             fg_color=self.cor_secundaria,
             hover_color=self.cor_hover,
@@ -875,7 +949,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         ctk.CTkButton(
             action_frame,
-            text="Salvar Ordem",
+            text=self._tr("save_order"),
             command=self.salvar_ordem,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
@@ -1496,7 +1570,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         btn_confirmar = ctk.CTkButton(
             btn_frame,
-            text="Confirmar",
+            text=self._tr("confirm"),
             command=lambda: self._confirmar_adicao_tecido(
                 dialog, tecido_tree, self.cor_cb_add,
                 bobinas_entry, folhas_entry, tamanho_entries
@@ -1510,7 +1584,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         btn_cancelar = ctk.CTkButton(
             btn_frame,
-            text="Cancelar",
+            text=self._tr("cancel"),
             command=dialog.destroy,
             fg_color=self.cor_secundaria,
             hover_color=self.cor_hover,
@@ -1932,10 +2006,10 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 self.cortador_entry is None or self.ajudante_entry is None or
                 self.data_entry is None or self.obs_entry is None or
                 self.tree is None or self.lotes_tree is None):
-            messagebox.showerror("Erro", "Interface não inicializada corretamente")
+            messagebox.showerror(self._tr("error"), self._tr("interface_not_init"))
             return
 
-        if not messagebox.askyesno("Confirmar", "Deseja limpar todos os campos?"):
+        if not messagebox.askyesno(self._tr("confirm_title"), self._tr("confirm_clear")):
             return
 
         try:
@@ -1980,7 +2054,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             self.numero_ordem_entry.configure(state="readonly")
 
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao limpar campos:\n{e}")
+            messagebox.showerror(self._tr("error"), self._tr("clear_fail", erro=e))
 
     def _get_text(self, *attr_names, default=""):
         for name in attr_names:
@@ -2008,7 +2082,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 # ========================================================
                 numero_ordem = (self._get_text("numero_ordem_entry") or "").strip()
                 if not numero_ordem:
-                    messagebox.showwarning("Aviso", "Informe o Nº ORDEM antes de salvar.")
+                    messagebox.showwarning(self._tr("warn"), self._tr("fill_order_before_save"))
                     return
 
                 # Verifica se já existe no banco (case-insensitive)
@@ -2017,10 +2091,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                     (numero_ordem,)
                 )
                 if cur.fetchone():
-                    messagebox.showwarning(
-                        "Corte já existe",
-                        f"A Ordem de Corte {numero_ordem} já existe no sistema e não pode ser salva novamente."
-                    )
+                    messagebox.showwarning(self._tr("cut_exists"), self._tr("cut_exists_msg", numero_ordem=numero_ordem))
                     return
 
                 # ========================================================

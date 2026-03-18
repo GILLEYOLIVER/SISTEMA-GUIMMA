@@ -526,10 +526,32 @@ def imprimir_pdf_windows(pdf_path: str, printer: str | None = None) -> bool:
 # UI: PÁGINA DE IMPRESSÃO
 # =============================================================
 class ImprimirFichasTecnicasPage(ctk.CTkFrame):
+    TRANSLATIONS = {
+     "pt_BR":{"title":"IMPRIMIR FICHAS TÉCNICAS (layout idêntico ao CADASTRAR_MODELO)","search_label":"Pesquisar:","search_placeholder":"Código, descrição ou coleção...","search":"Buscar","clear":"Limpar","print_sheet":"Imprimir Ficha","save_pdf":"Salvar PDF...","refresh":"Atualizar Lista","col_code":"Código","col_description":"Descrição","col_collection":"Coleção","col_base_size":"Tamanho Base","col_date":"Data","warning":"Aviso","error":"Erro","info":"Informação"},
+     "en_US":{"title":"PRINT TECHNICAL SHEETS (same layout as CADASTRAR_MODELO)","search_label":"Search:","search_placeholder":"Code, description or collection...","search":"Search","clear":"Clear","print_sheet":"Print Sheet","save_pdf":"Save PDF...","refresh":"Refresh List","col_code":"Code","col_description":"Description","col_collection":"Collection","col_base_size":"Base Size","col_date":"Date","warning":"Warning","error":"Error","info":"Information"},
+     "es_ES":{"title":"IMPRIMIR FICHAS TÉCNICAS (mismo diseño que CADASTRAR_MODELO)","search_label":"Buscar:","search_placeholder":"Código, descripción o colección...","search":"Buscar","clear":"Limpiar","print_sheet":"Imprimir Ficha","save_pdf":"Guardar PDF...","refresh":"Actualizar Lista","col_code":"Código","col_description":"Descripción","col_collection":"Colección","col_base_size":"Talla Base","col_date":"Fecha","warning":"Aviso","error":"Error","info":"Información"}
+    }
+    def _init_i18n(self):
+        self.idioma_atual = getattr(self.sistema, "idioma_atual", "pt_BR")
+    def _get_text(self, key, default=None):
+        lang = getattr(self, "idioma_atual", "pt_BR")
+        return self.TRANSLATIONS.get(lang, {}).get(key, self.TRANSLATIONS["pt_BR"].get(key, default if default is not None else key))
+    def refresh_texts(self):
+        for n,k in [("title_label","title"),("search_label","search_label"),("search_btn","search"),("clear_btn","clear"),("print_btn","print_sheet"),("save_pdf_btn","save_pdf"),("refresh_btn","refresh")]:
+            try: getattr(self,n).configure(text=self._get_text(k))
+            except Exception: pass
+        try: self.search_entry.configure(placeholder_text=self._get_text("search_placeholder"))
+        except Exception: pass
+        try:
+            for col,key in [("Código","col_code"),("Descrição","col_description"),("Coleção","col_collection"),("Tamanho Base","col_base_size"),("Data","col_date")]:
+                self.tree.heading(col, text=self._get_text(key))
+        except Exception: pass
     def __init__(self, master=None, sistema=None):
         super().__init__(master, fg_color=getattr(sistema, 'cor_fundo', '#0F0F0F') if sistema else '#0F0F0F')
         self.sistema = sistema
+        self._init_i18n()
         self._build_ui()
+        self.refresh_texts()
         self._carregar_modelos()
 
     # -------------------- UI --------------------
@@ -542,22 +564,22 @@ class ImprimirFichasTecnicasPage(ctk.CTkFrame):
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        title = ctk.CTkLabel(self, text="IMPRIMIR FICHAS TÉCNICAS (layout idêntico ao CADASTRAR_MODELO)",
+        self.title_label = ctk.CTkLabel(self, text="IMPRIMIR FICHAS TÉCNICAS (layout idêntico ao CADASTRAR_MODELO)",
                              font=("Arial, Helvetica, sans-serif", 18, "bold"), text_color=cor_texto)
-        title.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 6))
+        self.title_label.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 6))
         ctk.CTkFrame(self, height=2, fg_color=cor_borda).grid(row=0, column=0, sticky="ew", padx=10, pady=(42, 8))
 
         search = ctk.CTkFrame(self, fg_color="transparent")
         search.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 8))
         search.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(search, text="Pesquisar:", font=("Arial", 13), text_color=cor_texto).grid(row=0, column=0, padx=(0, 6))
+        self.search_label = ctk.CTkLabel(search, text="Pesquisar:", font=("Arial", 13), text_color=cor_texto); self.search_label.grid(row=0, column=0, padx=(0, 6))
         self.search_entry = ctk.CTkEntry(search, placeholder_text="Código, descrição ou coleção...", height=34)
         self.search_entry.grid(row=0, column=1, sticky="ew")
         self.search_entry.bind("<Return>", lambda e: self._pesquisar())
 
-        ctk.CTkButton(search, text="Buscar", command=self._pesquisar, fg_color=cor_prim, hover_color=cor_hover).grid(row=0, column=2, padx=(8, 0))
-        ctk.CTkButton(search, text="Limpar", command=self._limpar_busca).grid(row=0, column=3, padx=(8, 0))
+        self.search_btn = ctk.CTkButton(search, text="Buscar", command=self._pesquisar, fg_color=cor_prim, hover_color=cor_hover); self.search_btn.grid(row=0, column=2, padx=(8, 0))
+        self.clear_btn = ctk.CTkButton(search, text="Limpar", command=self._limpar_busca); self.clear_btn.grid(row=0, column=3, padx=(8, 0))
 
         table_frame = ctk.CTkFrame(self, fg_color="transparent")
         table_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 10))
@@ -581,9 +603,9 @@ class ImprimirFichasTecnicasPage(ctk.CTkFrame):
 
         actions = ctk.CTkFrame(self, fg_color="transparent")
         actions.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 12))
-        ctk.CTkButton(actions, text="Imprimir Ficha", command=self._imprimir_selecionado, fg_color=cor_prim, hover_color=cor_hover).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(actions, text="Salvar PDF...", command=self._salvar_pdf).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(actions, text="Atualizar Lista", command=self._carregar_modelos).pack(side="left", padx=(0, 8))
+        self.print_btn = ctk.CTkButton(actions, text="Imprimir Ficha", command=self._imprimir_selecionado, fg_color=cor_prim, hover_color=cor_hover); self.print_btn.pack(side="left", padx=(0, 8))
+        self.save_pdf_btn = ctk.CTkButton(actions, text="Salvar PDF...", command=self._salvar_pdf); self.save_pdf_btn.pack(side="left", padx=(0, 8))
+        self.refresh_btn = ctk.CTkButton(actions, text="Atualizar Lista", command=self._carregar_modelos); self.refresh_btn.pack(side="left", padx=(0, 8))
 
     # -------------------- Dados / ações --------------------
     def _carregar_modelos(self):

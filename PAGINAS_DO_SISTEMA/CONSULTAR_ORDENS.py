@@ -32,6 +32,180 @@ def cor_e_clara(cor):
 
 
 class OrdemCorteFinalizada(ctk.CTkFrame):
+    TRANSLATIONS = {
+        "pt_BR": {
+            "search_order": "Buscar Ordem:",
+            "search_placeholder": "Digite código ou descrição...",
+            "search": "🔍 Buscar",
+            "print_pdf": "📄 Imprimir PDF",
+            "materials_used": "MATERIAIS UTILIZADOS",
+            "production_lots": "LOTES DE PRODUÇÃO",
+            "totals": "TOTAIS:",
+            "pieces": "PEÇAS:",
+            "sheets": "FOLHAS:",
+            "meters": "METROS:",
+            "yield": "RENDIMENTO:",
+            "size_distribution": "DISTRIBUIÇÃO POR TAMANHO:",
+            "observations": "OBSERVAÇÕES:",
+            "obs_placeholder": "Insira observações relevantes...",
+            "orders_found": "ORDENS ENCONTRADAS",
+            "orders_header": "ORDEM   | CÓDIGO | DESCRIÇÃO           | QTD  | DATA      ",
+            "cancel": "Cancelar",
+            "save_pdf": "Salvar PDF",
+            "print": "Imprimir",
+            "close": "Fechar",
+            "search_title": "Busca",
+            "database": "Banco de Dados",
+            "error": "Erro",
+            "warning": "Aviso",
+            "success": "Sucesso",
+            "type_code_or_description": "Digite o código ou descrição para buscar.",
+            "no_orders_found": "Nenhuma ordem encontrada.",
+            "search_error": "Erro ao buscar ordem:\n{erro}",
+            "select_order": "Selecione a Ordem",
+            "order_not_found": "Ordem não encontrada!",
+            "no_order_loaded": "Nenhuma ordem carregada para gerar PDF.",
+            "temp_pdf_error": "Falha ao gerar PDF temporário:\n{erro}",
+            "load_order_error": "Falha ao carregar ordem:\n{erro}",
+            "no_observation": "Nenhuma observação",
+            "pdf_saved_success": "PDF salvo com sucesso em:\n{caminho}",
+            "pdf_files": "Arquivos PDF",
+            "preview_title": "Pré-visualização do PDF",
+            "pdf_preview_unavailable": "Não foi possível renderizar a pré-visualização do PDF neste computador. O arquivo será aberto externamente.",
+            "open_pdf_error": "Não foi possível abrir o PDF:\n{erro}",
+            "schema_validation_error": "Não foi possível validar o schema:\n{erro}",
+            "query_order": "Consultar Ordens de Corte"
+        },
+        "en_US": {
+            "search_order": "Search Order:",
+            "search_placeholder": "Enter code or description...",
+            "search": "🔍 Search",
+            "print_pdf": "📄 Print PDF",
+            "materials_used": "MATERIALS USED",
+            "production_lots": "PRODUCTION LOTS",
+            "totals": "TOTALS:",
+            "pieces": "PIECES:",
+            "sheets": "SHEETS:",
+            "meters": "METERS:",
+            "yield": "YIELD:",
+            "size_distribution": "SIZE DISTRIBUTION:",
+            "observations": "OBSERVATIONS:",
+            "obs_placeholder": "Enter relevant notes...",
+            "orders_found": "ORDERS FOUND",
+            "orders_header": "ORDER   | CODE   | DESCRIPTION          | QTY  | DATE      ",
+            "cancel": "Cancel",
+            "save_pdf": "Save PDF",
+            "print": "Print",
+            "close": "Close",
+            "search_title": "Search",
+            "database": "Database",
+            "error": "Error",
+            "warning": "Warning",
+            "success": "Success",
+            "type_code_or_description": "Enter the code or description to search.",
+            "no_orders_found": "No orders found.",
+            "search_error": "Error searching order:\n{erro}",
+            "select_order": "Select Order",
+            "order_not_found": "Order not found!",
+            "no_order_loaded": "No order loaded to generate PDF.",
+            "temp_pdf_error": "Failed to generate temporary PDF:\n{erro}",
+            "load_order_error": "Failed to load order:\n{erro}",
+            "no_observation": "No observations",
+            "pdf_saved_success": "PDF saved successfully at:\n{caminho}",
+            "pdf_files": "PDF Files",
+            "preview_title": "PDF Preview",
+            "pdf_preview_unavailable": "Could not render the PDF preview on this computer. The file will be opened externally.",
+            "open_pdf_error": "Could not open the PDF:\n{erro}",
+            "schema_validation_error": "Could not validate the schema:\n{erro}",
+            "query_order": "View Cut Orders"
+        },
+        "es_ES": {
+            "search_order": "Buscar Orden:",
+            "search_placeholder": "Ingrese código o descripción...",
+            "search": "🔍 Buscar",
+            "print_pdf": "📄 Imprimir PDF",
+            "materials_used": "MATERIALES UTILIZADOS",
+            "production_lots": "LOTES DE PRODUCCIÓN",
+            "totals": "TOTALES:",
+            "pieces": "PIEZAS:",
+            "sheets": "HOJAS:",
+            "meters": "METROS:",
+            "yield": "RENDIMIENTO:",
+            "size_distribution": "DISTRIBUCIÓN POR TALLA:",
+            "observations": "OBSERVACIONES:",
+            "obs_placeholder": "Ingrese observaciones relevantes...",
+            "orders_found": "ÓRDENES ENCONTRADAS",
+            "orders_header": "ORDEN   | CÓDIGO | DESCRIPCIÓN          | CANT | FECHA     ",
+            "cancel": "Cancelar",
+            "save_pdf": "Guardar PDF",
+            "print": "Imprimir",
+            "close": "Cerrar",
+            "search_title": "Búsqueda",
+            "database": "Base de Datos",
+            "error": "Error",
+            "warning": "Aviso",
+            "success": "Éxito",
+            "type_code_or_description": "Ingrese el código o la descripción para buscar.",
+            "no_orders_found": "No se encontraron órdenes.",
+            "search_error": "Error al buscar la orden:\n{erro}",
+            "select_order": "Seleccionar Orden",
+            "order_not_found": "¡Orden no encontrada!",
+            "no_order_loaded": "No hay una orden cargada para generar PDF.",
+            "temp_pdf_error": "Error al generar el PDF temporal:\n{erro}",
+            "load_order_error": "Error al cargar la orden:\n{erro}",
+            "no_observation": "Sin observaciones",
+            "pdf_saved_success": "PDF guardado correctamente en:\n{caminho}",
+            "pdf_files": "Archivos PDF",
+            "preview_title": "Vista previa del PDF",
+            "pdf_preview_unavailable": "No fue posible renderizar la vista previa del PDF en este equipo. El archivo se abrirá externamente.",
+            "open_pdf_error": "No fue posible abrir el PDF:\n{erro}",
+            "schema_validation_error": "No fue posible validar el esquema:\n{erro}",
+            "query_order": "Consultar Órdenes de Corte"
+        },
+    }
+
+    def _get_idioma_atual(self):
+        return getattr(self.sistema, "idioma_atual", "pt_BR")
+
+    def _get_text(self, chave, **kwargs):
+        idioma = self._get_idioma_atual()
+        texto = self.TRANSLATIONS.get(idioma, {}).get(chave, self.TRANSLATIONS.get("pt_BR", {}).get(chave, chave))
+        try:
+            return texto.format(**kwargs)
+        except Exception:
+            return texto
+
+    def refresh_texts(self):
+        refs = getattr(self, "_ui_refs", {})
+        if refs.get("search_label"):
+            refs["search_label"].configure(text=self._get_text("search_order"))
+        if refs.get("search_entry"):
+            refs["search_entry"].configure(placeholder_text=self._get_text("search_placeholder"))
+        if refs.get("search_button"):
+            refs["search_button"].configure(text=self._get_text("search"))
+        if refs.get("print_button"):
+            refs["print_button"].configure(text=self._get_text("print_pdf"))
+        if refs.get("materials_title"):
+            refs["materials_title"].configure(text=self._get_text("materials_used"))
+        if refs.get("lots_title"):
+            refs["lots_title"].configure(text=self._get_text("production_lots"))
+        if refs.get("totals_title"):
+            refs["totals_title"].configure(text=self._get_text("totals"))
+        if refs.get("pieces_label"):
+            refs["pieces_label"].configure(text=self._get_text("pieces"))
+        if refs.get("sheets_label"):
+            refs["sheets_label"].configure(text=self._get_text("sheets"))
+        if refs.get("meters_label"):
+            refs["meters_label"].configure(text=self._get_text("meters"))
+        if refs.get("yield_label"):
+            refs["yield_label"].configure(text=self._get_text("yield"))
+        if refs.get("size_title"):
+            refs["size_title"].configure(text=self._get_text("size_distribution"))
+        if refs.get("obs_label"):
+            refs["obs_label"].configure(text=self._get_text("observations"))
+        if refs.get("obs_entry"):
+            refs["obs_entry"].configure(placeholder_text=self._get_text("obs_placeholder"))
+
     def __init__(self, master, sistema=None, app=None, *args, **kwargs):
         # Normaliza: funciona tanto se o menu passar 'sistema' quanto 'app'
         self.sistema = sistema or app
@@ -63,6 +237,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                 pass
 
         self.campos = {}
+        self._ui_refs = {}
         self.dados_ordem_atual = None
         self._ultimo_pdf_temp = None  # caminho do último PDF gerado para preview
 
@@ -70,26 +245,29 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         frame_busca = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_busca.pack(fill="x", padx=10, pady=5)
 
-        ctk.CTkLabel(frame_busca, text="Buscar Ordem:", text_color=self.cor_texto)\
-            .pack(side="left", padx=(0, 5))
+        self._ui_refs["search_label"] = ctk.CTkLabel(frame_busca, text=self._get_text("search_order"), text_color=self.cor_texto)
+        self._ui_refs["search_label"].pack(side="left", padx=(0, 5))
         self.ordem_busca_entry = ctk.CTkEntry(
             frame_busca, width=250,
-            placeholder_text="Digite código ou descrição...",
+            placeholder_text=self._get_text("search_placeholder"),
             text_color=self.cor_texto, fg_color=self.cor_fundo, border_color=self.cor_borda
         )
         self.ordem_busca_entry.pack(side="left", fill="x", expand=True, padx=5)
+        self._ui_refs["search_entry"] = self.ordem_busca_entry
         self.ordem_busca_entry.bind("<Return>", lambda e: self.buscar_ordem())
 
-        ctk.CTkButton(
-            frame_busca, text="🔍 Buscar", width=100, command=self.buscar_ordem,
+        self._ui_refs["search_button"] = ctk.CTkButton(
+            frame_busca, text=self._get_text("search"), width=100, command=self.buscar_ordem,
             fg_color=self.cor_primaria, hover_color=self.cor_hover, text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        )
+        self._ui_refs["search_button"].pack(side="left", padx=5)
 
-        ctk.CTkButton(
-            frame_busca, text="📄 Imprimir PDF", width=120,
+        self._ui_refs["print_button"] = ctk.CTkButton(
+            frame_busca, text=self._get_text("print_pdf"), width=120,
             command=self.previsualizar_controle,
             fg_color=self.cor_imprimir, hover_color=self.cor_hover, text_color=self.cor_texto
-        ).pack(side="left", padx=5)
+        )
+        self._ui_refs["print_button"].pack(side="left", padx=5)
 
         # ------------------------ UI: INFO BÁSICAS ------------------------
         frame_info = ctk.CTkFrame(self, fg_color=self.cor_fundo)
@@ -107,8 +285,9 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         # ------------------------ UI: TECIDOS ------------------------
         frame_tecidos = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_tecidos.pack(fill="both", expand=True, padx=10, pady=(10, 5))
-        ctk.CTkLabel(frame_tecidos, text="MATERIAIS UTILIZADOS",
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto).pack(pady=(0, 5))
+        self._ui_refs["materials_title"] = ctk.CTkLabel(frame_tecidos, text=self._get_text("materials_used"),
+                     font=("Arial", 12, "bold"), text_color=self.cor_texto)
+        self._ui_refs["materials_title"].pack(pady=(0, 5))
 
         colunas_tecido = ("TECIDO", "COR", "COMPOSIÇÃO", "BOBINAS", "FOLHAS",
                           "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL")
@@ -118,8 +297,9 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         # ------------------------ UI: LOTES ------------------------
         frame_lotes = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_lotes.pack(fill="both", expand=True, padx=10, pady=5)
-        ctk.CTkLabel(frame_lotes, text="LOTES DE PRODUÇÃO",
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto).pack(pady=(0, 5))
+        self._ui_refs["lots_title"] = ctk.CTkLabel(frame_lotes, text=self._get_text("production_lots"),
+                     font=("Arial", 12, "bold"), text_color=self.cor_texto)
+        self._ui_refs["lots_title"].pack(pady=(0, 5))
 
         colunas_lote = ("LOTE", "TECIDO", "COR", "COMPOSIÇÃO", "BOBINAS", "FOLHAS",
                         "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL")
@@ -129,19 +309,21 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         # ------------------------ UI: TOTAIS ------------------------
         frame_totais = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_totais.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(frame_totais, text="TOTAIS:", font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).grid(row=0, column=0, sticky="w")
+        self._ui_refs["totals_title"] = ctk.CTkLabel(frame_totais, text=self._get_text("totals"), font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto)
+        self._ui_refs["totals_title"].grid(row=0, column=0, sticky="w")
 
-        self.total_pecas_valor = self._criar_label_valor(frame_totais, "PEÇAS:", "0", 0, 1)
-        self.folhas_valor      = self._criar_label_valor(frame_totais, "FOLHAS:", "0", 0, 3)
-        self.metros_valor      = self._criar_label_valor(frame_totais, "METROS:", "0", 0, 5)
-        self.rendimento_valor  = self._criar_label_valor(frame_totais, "RENDIMENTO:", "0%", 0, 7)
+        self.total_pecas_valor = self._criar_label_valor(frame_totais, "pieces", "0", 0, 1)
+        self.folhas_valor      = self._criar_label_valor(frame_totais, "sheets", "0", 0, 3)
+        self.metros_valor      = self._criar_label_valor(frame_totais, "meters", "0", 0, 5)
+        self.rendimento_valor  = self._criar_label_valor(frame_totais, "yield", "0%", 0, 7)
 
         # ------------------------ UI: % REAL ------------------------
         frame_pct = ctk.CTkFrame(frame_totais, fg_color=self.cor_fundo)
         frame_pct.grid(row=1, column=0, columnspan=8, sticky="nsew", pady=(10, 0))
-        ctk.CTkLabel(frame_pct, text="DISTRIBUIÇÃO POR TAMANHO:",
-                     font=("Arial", 11, "bold"), text_color=self.cor_texto).pack()
+        self._ui_refs["size_title"] = ctk.CTkLabel(frame_pct, text=self._get_text("size_distribution"),
+                     font=("Arial", 11, "bold"), text_color=self.cor_texto)
+        self._ui_refs["size_title"].pack()
 
         self.tree_porcentagem = ttk.Treeview(
             frame_pct, columns=("PP", "P", "M", "G", "GG", "G1", "G2", "G3"),
@@ -155,17 +337,20 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         # ------------------------ UI: OBS ------------------------
         frame_obs = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_obs.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(frame_obs, text="OBSERVAÇÕES:", font=("Arial", 12),
-                     text_color=self.cor_texto).pack(anchor="w")
+        self._ui_refs["obs_label"] = ctk.CTkLabel(frame_obs, text=self._get_text("observations"), font=("Arial", 12),
+                     text_color=self.cor_texto)
+        self._ui_refs["obs_label"].pack(anchor="w")
 
         self.obs_entry = ctk.CTkEntry(
-            frame_obs, placeholder_text="Insira observações relevantes...",
+            frame_obs, placeholder_text=self._get_text("obs_placeholder"),
             text_color=self.cor_texto, fg_color=self.cor_fundo, border_color=self.cor_borda
         )
         self.obs_entry.pack(fill="x", pady=5)
+        self._ui_refs["obs_entry"] = self.obs_entry
 
         # Estilo do Treeview conforme tema
         self._configurar_estilo_treeview()
+        self.refresh_texts()
 
 
     # -------------------- UI helpers --------------------
@@ -201,13 +386,16 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         valor.grid(row=linha, column=coluna + 1, padx=(0, 20), pady=5, sticky="w")
         return valor
 
-    def _criar_label_valor(self, frame, texto, valor, linha, coluna):
-        ctk.CTkLabel(frame, text=texto, font=("Arial", 11), text_color=self.cor_texto).grid(
+    def _criar_label_valor(self, frame, chave_texto, valor, linha, coluna):
+        texto = self._get_text(chave_texto)
+        texto_label = ctk.CTkLabel(frame, text=texto, font=("Arial", 11), text_color=self.cor_texto)
+        texto_label.grid(
             row=linha, column=coluna, padx=(10, 0), sticky="e"
         )
+        self._ui_refs[f"{chave_texto}_label"] = texto_label
         label = ctk.CTkLabel(frame, text=valor, font=("Arial", 11, "bold"), text_color=self.cor_sucesso)
         label.grid(row=linha, column=coluna + 1, padx=(0, 20), sticky="w")
-        nome = texto.strip(":").lower() + "_valor"
+        nome = chave_texto.strip(":").lower() + "_valor"
         setattr(self, nome, label)
         return label
 
@@ -251,7 +439,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
     def buscar_ordem(self):
         termo = (self.ordem_busca_entry.get() or "").strip()
         if not termo:
-            messagebox.showwarning("Busca", "Digite o código ou descrição para buscar.")
+            messagebox.showwarning(self._get_text("search_title"), self._get_text("type_code_or_description"))
             return
         try:
             schema = get_schema()
@@ -290,7 +478,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                     resultados = cur.fetchall()
 
             if not resultados:
-                messagebox.showinfo("Busca", "Nenhuma ordem encontrada.")
+                messagebox.showinfo(self._get_text("search_title"), self._get_text("no_orders_found"))
                 return
             if len(resultados) > 1:
                 self._escolher_ordem(resultados)
@@ -305,7 +493,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             return lambda: self._executar_e_fechar(ordem, popup)
 
         popup = ctk.CTkToplevel(self)
-        popup.title("Selecione a Ordem")
+        popup.title(self._get_text("select_order"))
         popup.resizable(False, False)
         popup.configure(fg_color=self.cor_fundo)
         popup.grab_set()
@@ -323,7 +511,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         ctk.CTkLabel(
             card,
-            text="ORDENS ENCONTRADAS",
+            text=self._get_text("orders_found"),
             font=("Consolas", 15, "bold"),
             text_color=self.cor_texto,
             fg_color="transparent"
@@ -331,7 +519,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         ctk.CTkLabel(
             card,
-            text="ORDEM   | CÓDIGO | DESCRIÇÃO           | QTD  | DATA      ",
+            text=self._get_text("orders_header"),
             font=("Consolas", 12, "bold"),
             text_color=self.cor_texto,
             fg_color=self.cor_fundo,
@@ -368,7 +556,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         ctk.CTkButton(
             card,
-            text="Cancelar",
+            text=self._get_text("cancel"),
             fg_color=self.cor_alerta if hasattr(self, "cor_alerta") else "#a83232",
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
@@ -419,7 +607,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                     dados_ordem = cursor.fetchone()
 
                     if not dados_ordem:
-                        messagebox.showwarning("Aviso", "Ordem não encontrada!")
+                        messagebox.showwarning(self._get_text("warning"), self._get_text("order_not_found"))
                         return
 
                     # Preenche campos básicos
@@ -447,7 +635,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
                     # Preenche observações
                     self.obs_entry.delete(0, 'end')
-                    self.obs_entry.insert(0, dados_ordem[15] if dados_ordem[15] else "Nenhuma observação")
+                    self.obs_entry.insert(0, dados_ordem[15] if dados_ordem[15] else self._get_text("no_observation"))
 
                     # Armazena dados completos
                     self.dados_ordem_atual = {
@@ -525,7 +713,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
     def previsualizar_controle(self):
         """Gera um PDF temporário com o layout original e abre a pré-visualização."""
         if not self.dados_ordem_atual:
-            messagebox.showwarning("Aviso", "Nenhuma ordem carregada para gerar PDF.")
+            messagebox.showwarning(self._get_text("warning"), self._get_text("no_order_loaded"))
             return
 
         # recalcula total_pecas a partir da tree_tecido
@@ -735,7 +923,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         ctk.CTkButton(
             botoes,
-            text="Salvar PDF",
+            text=self._get_text("save_pdf"),
             width=120,
             command=self._salvar_pdf,
             fg_color=cor_prim,
@@ -745,7 +933,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         ctk.CTkButton(
             botoes,
-            text="Imprimir",
+            text=self._get_text("print"),
             width=120,
             command=self._imprimir_pdf,
             fg_color=cor_prim,
@@ -755,7 +943,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         ctk.CTkButton(
             botoes,
-            text="Fechar",
+            text=self._get_text("close"),
             width=120,
             command=janela.destroy,
             fg_color=cor_fechar,
@@ -783,7 +971,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
     def gerar_pdf(self):
         """Mantida caso queira apenas salvar sem pré-visualizar."""
         if not self.dados_ordem_atual:
-            messagebox.showwarning("Aviso", "Nenhuma ordem carregada para gerar PDF.")
+            messagebox.showwarning(self._get_text("warning"), self._get_text("no_order_loaded"))
             return
 
         # --- Calcula o total de peças diretamente da tree_tecido ---
@@ -831,7 +1019,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         desktop = os.path.join(os.path.expanduser("~"), "Desktop")
         caminho_arquivo = filedialog.asksaveasfilename(
             initialdir=desktop, defaultextension=".pdf",
-            filetypes=[("Arquivos PDF", "*.pdf")], initialfile=nome_padrao
+            filetypes=[(self._get_text("pdf_files"), "*.pdf")], initialfile=nome_padrao
         )
 
         if caminho_arquivo:
@@ -910,7 +1098,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         from tkinter import messagebox, filedialog
 
         if not getattr(self, "dados_ordem_atual", None):
-            messagebox.showwarning("Aviso", "Nenhuma ordem carregada para gerar PDF.")
+            messagebox.showwarning(self._get_text("warning"), self._get_text("no_order_loaded"))
             return
 
         def _to_int(v):
@@ -1311,6 +1499,7 @@ if __name__ == "__main__":
     root.title("Visualização da Ordem de Corte")
 
     class SistemaMock:
+        idioma_atual = "pt_BR"
         cor_fundo = "#121212"
         cor_borda = "#2E2E3E"
         cor_primaria = "#1E1E2E"

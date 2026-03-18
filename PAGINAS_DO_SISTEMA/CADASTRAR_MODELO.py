@@ -202,7 +202,7 @@ class CadastroModelosPDF(FPDF):
             pass
 
         # Título centralizado corretamente
-        titulo = "CADASTRO DE MODELOS DE PRODUTO"
+        titulo = getattr(self, "_pdf_title", "CADASTRO DE MODELOS DE PRODUTO")
 
         self.set_font("helvetica", "B", 14)
         self.set_text_color(255, 255, 255)
@@ -553,6 +553,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         self.master = master
         self.sistema = sistema
         self.root = sistema.root if hasattr(sistema, 'root') else sistema
+        self._ui_refs = {}
 
         # CORREÇÃO: Adicionar referências para imagens
         self.frente_img_ref = None
@@ -661,6 +662,87 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         # Pesquisa
         self.pesquisa_entry = None
+
+
+    # =========================
+    # IDIOMA
+    # =========================
+    def _get_idioma_atual(self):
+        return getattr(self.sistema, "idioma_atual", "pt_BR")
+
+    def _get_text(self, chave, **kwargs):
+        textos = {
+            "pt_BR": {
+                "tab_main": "Principal", "tab_fabrics": "Tecidos", "tab_trims": "Aviamentos", "tab_others": "Outros serviços", "tab_search": "Pesquisa",
+                "main_title": "CADASTRO DE MODELOS", "code": "Código:", "description": "Descrição:", "collection": "Coleção:",
+                "size_base": "Tam Base:", "difficulty": "Dificuldade:", "modeler": "Modelista:", "cost": "Custo R$:",
+                "pilot": "Pilotista:", "ready_prod": "Pronto produção", "cost_per_piece": "Gasto/Peça:", "grade": "Grade disp.:",
+                "images_model": "IMAGENS DO MODELO", "front": "FRENTE", "back": "COSTAS", "click_add_image": "Clique para adicionar imagem",
+                "add": "Adicionar", "remove": "Remover", "fabrics_title": "TECIDOS UTILIZADOS", "add_fabric": "Adicionar Tecido",
+                "search_fabric": "Pesquisar Tecido", "remove_fabric": "Remover Tecido", "fabric_images": "IMAGENS DOS TECIDOS",
+                "add_image": "Adicionar Imagem", "trims_title": "AVIAMENTOS UTILIZADOS", "add_trim": "Adicionar Aviamento",
+                "search_trim": "Pesquisar Aviamento", "remove_trim": "Remover Aviamento", "trim_images": "IMAGENS DOS AVIAMENTOS",
+                "others_title": "OUTROS ITENS / SERVIÇOS UTILIZADOS", "add_other": "Adicionar Outros serviços", "remove_service": "REMOVER SERVIÇOS",
+                "service_images": "IMAGENS DOS SERVIÇOS", "search_title": "PESQUISA E PRÉ-VISUALIZAÇÃO DE MODELOS", "search_label": "Pesquisar:",
+                "search": "Pesquisar", "clear": "Limpar", "load_model": "Carregar Modelo", "generate_pdf": "Gerar PDF", "print_pdf": "Imprimir PDF",
+                "new": "Novo", "pdf": "PDF", "export": "Exportar", "save": "Salvar", "cancel": "Cancelar", "calc_total": "↻ Calcular Total",
+                "save_emoji": "💾 Salvar", "cancel_emoji": "❌ Cancelar", "add_selected": "➕ Adicionar Selecionado", "close": "❌ Fechar",
+                "tip_select": "💡 Dica: Use as setas para navegar e Enter ou duplo-clique para selecionar", "ok": "OK", "cancel_simple": "Cancel",
+                "pdf_title": "CADASTRO DE MODELOS DE PRODUTO", "pdf_generated": "Gerado em {data}   |   Página {pagina}",
+            },
+            "en_US": {
+                "tab_main": "Main", "tab_fabrics": "Fabrics", "tab_trims": "Trims", "tab_others": "Other services", "tab_search": "Search",
+                "main_title": "MODEL REGISTRY", "code": "Code:", "description": "Description:", "collection": "Collection:",
+                "size_base": "Base Size:", "difficulty": "Difficulty:", "modeler": "Designer:", "cost": "Cost $:",
+                "pilot": "Sample Maker:", "ready_prod": "Production ready", "cost_per_piece": "Cost/Piece:", "grade": "Available size range:",
+                "images_model": "MODEL IMAGES", "front": "FRONT", "back": "BACK", "click_add_image": "Click to add image",
+                "add": "Add", "remove": "Remove", "fabrics_title": "USED FABRICS", "add_fabric": "Add Fabric",
+                "search_fabric": "Search Fabric", "remove_fabric": "Remove Fabric", "fabric_images": "FABRIC IMAGES",
+                "add_image": "Add Image", "trims_title": "USED TRIMS", "add_trim": "Add Trim",
+                "search_trim": "Search Trim", "remove_trim": "Remove Trim", "trim_images": "TRIM IMAGES",
+                "others_title": "OTHER ITEMS / SERVICES USED", "add_other": "Add Other Services", "remove_service": "REMOVE SERVICES",
+                "service_images": "SERVICE IMAGES", "search_title": "MODEL SEARCH AND PREVIEW", "search_label": "Search:",
+                "search": "Search", "clear": "Clear", "load_model": "Load Model", "generate_pdf": "Generate PDF", "print_pdf": "Print PDF",
+                "new": "New", "pdf": "PDF", "export": "Export", "save": "Save", "cancel": "Cancel", "calc_total": "↻ Calculate Total",
+                "save_emoji": "💾 Save", "cancel_emoji": "❌ Cancel", "add_selected": "➕ Add Selected", "close": "❌ Close",
+                "tip_select": "💡 Tip: Use the arrows to navigate and Enter or double-click to select", "ok": "OK", "cancel_simple": "Cancel",
+                "pdf_title": "PRODUCT MODEL REGISTRY", "pdf_generated": "Generated on {data}   |   Page {pagina}",
+            },
+            "es_ES": {
+                "tab_main": "Principal", "tab_fabrics": "Tejidos", "tab_trims": "Avíos", "tab_others": "Otros servicios", "tab_search": "Búsqueda",
+                "main_title": "REGISTRO DE MODELOS", "code": "Código:", "description": "Descripción:", "collection": "Colección:",
+                "size_base": "Talla Base:", "difficulty": "Dificultad:", "modeler": "Modelista:", "cost": "Costo $:",
+                "pilot": "Pilotista:", "ready_prod": "Listo para producción", "cost_per_piece": "Gasto/Pieza:", "grade": "Tallas disp.:",
+                "images_model": "IMÁGENES DEL MODELO", "front": "FRENTE", "back": "ESPALDA", "click_add_image": "Haga clic para agregar imagen",
+                "add": "Agregar", "remove": "Quitar", "fabrics_title": "TEJIDOS UTILIZADOS", "add_fabric": "Agregar Tejido",
+                "search_fabric": "Buscar Tejido", "remove_fabric": "Quitar Tejido", "fabric_images": "IMÁGENES DE LOS TEJIDOS",
+                "add_image": "Agregar Imagen", "trims_title": "AVIAMENTOS UTILIZADOS", "add_trim": "Agregar Aviamento",
+                "search_trim": "Buscar Aviamento", "remove_trim": "Quitar Aviamento", "trim_images": "IMÁGENES DE LOS AVIAMENTOS",
+                "others_title": "OTROS ÍTEMS / SERVICIOS UTILIZADOS", "add_other": "Agregar Otros servicios", "remove_service": "QUITAR SERVICIOS",
+                "service_images": "IMÁGENES DE LOS SERVICIOS", "search_title": "BÚSQUEDA Y VISTA PREVIA DE MODELOS", "search_label": "Buscar:",
+                "search": "Buscar", "clear": "Limpiar", "load_model": "Cargar Modelo", "generate_pdf": "Generar PDF", "print_pdf": "Imprimir PDF",
+                "new": "Nuevo", "pdf": "PDF", "export": "Exportar", "save": "Guardar", "cancel": "Cancelar", "calc_total": "↻ Calcular Total",
+                "save_emoji": "💾 Guardar", "cancel_emoji": "❌ Cancelar", "add_selected": "➕ Agregar Seleccionado", "close": "❌ Cerrar",
+                "tip_select": "💡 Consejo: Use las flechas para navegar y Enter o doble clic para seleccionar", "ok": "OK", "cancel_simple": "Cancelar",
+                "pdf_title": "REGISTRO DE MODELOS DE PRODUCTO", "pdf_generated": "Generado el {data}   |   Página {pagina}",
+            },
+        }
+        idioma = self._get_idioma_atual()
+        base = textos.get(idioma, textos["pt_BR"])
+        texto = base.get(chave, textos["pt_BR"].get(chave, chave))
+        try:
+            return texto.format(**kwargs) if kwargs else texto
+        except Exception:
+            return texto
+
+    def refresh_texts(self):
+        for child in self.winfo_children():
+            child.destroy()
+        self._setup_ui()
+        try:
+            self._initialize_data()
+        except Exception:
+            pass
 
     # =================== MÉTODOS DE INICIALIZAÇÃO ===================
     def criar_pastas_imagens(self):
@@ -771,11 +853,11 @@ class CadastroModelosApp(ctk.CTkFrame):
         self._configurar_estilo_abas()
 
         # Criar as abas - TODAS com cor_fundo
-        self.tab_principal = self.tabview.add("Principal")
-        self.tab_tecidos = self.tabview.add("Tecidos")
-        self.tab_aviamentos = self.tabview.add("Aviamentos")
-        self.tab_outros = self.tabview.add("Outros serviços")
-        self.tab_pesquisa = self.tabview.add("Pesquisa")
+        self.tab_principal = self.tabview.add(self._get_text("tab_main"))
+        self.tab_tecidos = self.tabview.add(self._get_text("tab_fabrics"))
+        self.tab_aviamentos = self.tabview.add(self._get_text("tab_trims"))
+        self.tab_outros = self.tabview.add(self._get_text("tab_others"))
+        self.tab_pesquisa = self.tabview.add(self._get_text("tab_search"))
 
         # Configurar cada aba COM LAYOUT MAIS COMPACTO
         self._create_principal_tab()
@@ -885,7 +967,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkLabel(
             titulo_frame,
-            text="CADASTRO DE MODELOS",
+            text=self._get_text("main_title"),
             font=("Arial", 11, "bold"),  # Fonte compacta
             text_color=cor_texto,
         ).pack()
@@ -917,12 +999,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         linha1.pack_propagate(False)
 
         # Código
-        ctk.CTkLabel(linha1, text="Código:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha1, text=self._get_text("code"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
         self.codigo_entry = ctk.CTkEntry(linha1, font=("Arial", 11), width=100, height=26)
         self.codigo_entry.pack(side="left", padx=(0, 15))
 
         # Descrição
-        ctk.CTkLabel(linha1, text="Descrição:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha1, text=self._get_text("description"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
         self.descricao_entry = ctk.CTkEntry(linha1, font=("Arial", 11), width=350, height=26)
         self.descricao_entry.pack(side="left")
 
@@ -932,12 +1014,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         linha2.pack_propagate(False)
 
         # Coleção
-        ctk.CTkLabel(linha2, text="Coleção:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha2, text=self._get_text("collection"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
         self.colecao_entry = ctk.CTkEntry(linha2, font=("Arial", 11), width=120, height=26)
         self.colecao_entry.pack(side="left", padx=(0, 15))
 
         # Tamanho Base - COMPACTO
-        ctk.CTkLabel(linha2, text="Tam Base:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha2, text=self._get_text("size_base"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
         tamanho_frame = ctk.CTkFrame(linha2, fg_color="transparent", height=26)
         tamanho_frame.pack(side="left", padx=(0, 15))
 
@@ -950,7 +1032,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                                hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF')).pack(side="left", padx=2)
 
         # Dificuldade - COMPACTO
-        ctk.CTkLabel(linha2, text="Dificuldade:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha2, text=self._get_text("difficulty"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
         dificuldade_frame = ctk.CTkFrame(linha2, fg_color="transparent", height=26)
         dificuldade_frame.pack(side="left")
 
@@ -967,23 +1049,23 @@ class CadastroModelosApp(ctk.CTkFrame):
         linha3.pack_propagate(False)
 
         # Modelista
-        ctk.CTkLabel(linha3, text="Modelista:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha3, text=self._get_text("modeler"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
         self.modelista_entry = ctk.CTkEntry(linha3, font=("Arial", 11), width=120, height=26)
         self.modelista_entry.pack(side="left", padx=(0, 15))
 
         # Custo
-        ctk.CTkLabel(linha3, text="Custo R$:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha3, text=self._get_text("cost"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
         self.custo_entry = ctk.CTkEntry(linha3, font=("Arial", 11), width=80, height=26, state="readonly")
         self.custo_entry.insert(0, "0,00")
         self.custo_entry.pack(side="left", padx=(0, 15))
 
         # Pilotista
-        ctk.CTkLabel(linha3, text="Pilotista:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha3, text=self._get_text("pilot"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
         self.pilotista_entry = ctk.CTkEntry(linha3, font=("Arial", 11), width=120, height=26)
         self.pilotista_entry.pack(side="left", padx=(0, 15))
 
         # Pronto para produção (Checkbox compacto)
-        ctk.CTkCheckBox(linha3, text="Pronto produção", variable=self.pronto_prod_var,
+        ctk.CTkCheckBox(linha3, text=self._get_text("ready_prod"), variable=self.pronto_prod_var,
                         font=("Arial", 11), height=18, width=0,
                         fg_color=cor_selecao, border_color=cor_borda, text_color=cor_texto,
                         hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF')).pack(side="left")
@@ -994,7 +1076,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         linha4.pack(fill="x", pady=1)
         linha4.pack_propagate(False)
 
-        ctk.CTkLabel(linha4, text="Gasto/Peça:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha4, text=self._get_text("cost_per_piece"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
 
         self.gasto_peca_entry = ctk.CTkEntry(
             linha4,
@@ -1013,7 +1095,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         linha5.pack(fill="x", pady=1)
         linha5.pack_propagate(False)
 
-        ctk.CTkLabel(linha5, text="Grade disp.:", font=("Arial", 11)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(linha5, text=self._get_text("grade"), font=("Arial", 11)).pack(side="left", padx=(0, 5))
 
         grade_frame = ctk.CTkFrame(linha5, fg_color="transparent")
         grade_frame.pack(side="left")
@@ -1047,7 +1129,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         img_frame.pack(fill="both", expand=True, pady=3, padx=10)
 
         # Título MENOR
-        ctk.CTkLabel(img_frame, text="IMAGENS DO MODELO", font=("Arial", 12, "bold"),
+        ctk.CTkLabel(img_frame, text=self._get_text("images_model"), font=("Arial", 12, "bold"),
                      text_color=cor_texto).pack(pady=(0, 3))
 
         # Container para as imagens lado a lado
@@ -1059,11 +1141,11 @@ class CadastroModelosApp(ctk.CTkFrame):
         frente_frame.pack(side="left", fill="both", expand=True, padx=8)
 
         # Título FRENTE MENOR
-        ctk.CTkLabel(frente_frame, text="FRENTE", font=("Arial", 11, "bold"),
+        ctk.CTkLabel(frente_frame, text=self._get_text("front"), font=("Arial", 11, "bold"),
                      text_color=cor_texto).pack(pady=3)
 
         # LABEL DA IMAGEM FRENTE - DIMINUÍDA
-        self.frente_img_label = ctk.CTkLabel(frente_frame, text="Clique para adicionar imagem",
+        self.frente_img_label = ctk.CTkLabel(frente_frame, text=self._get_text("click_add_image"),
                                              width=380, height=500, corner_radius=5,
                                              fg_color=cor_secundaria,
                                              text_color=get_contraste_texto(cor_secundaria),
@@ -1076,12 +1158,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         frente_btn_frame.pack(pady=3)
 
         # Botões MENORES
-        ctk.CTkButton(frente_btn_frame, text="Adicionar", command=lambda: self.adicionar_imagem("frente"),
+        ctk.CTkButton(frente_btn_frame, text=self._get_text("add"), command=lambda: self.adicionar_imagem("frente"),
                       width=90, height=28, font=("Arial", 10),
                       fg_color=cor_primaria, hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'),
                       text_color=get_contraste_texto(cor_primaria)).pack(side="left", padx=3)
 
-        ctk.CTkButton(frente_btn_frame, text="Remover", command=lambda: self.remover_imagem("frente"),
+        ctk.CTkButton(frente_btn_frame, text=self._get_text("remove"), command=lambda: self.remover_imagem("frente"),
                       width=90, height=28, font=("Arial", 10),
                       fg_color=getattr(self.sistema, 'cor_alerta', '#DC3545'),
                       hover_color=self._ajustar_hover(getattr(self.sistema, 'cor_alerta', '#DC3545')),
@@ -1093,11 +1175,11 @@ class CadastroModelosApp(ctk.CTkFrame):
         costas_frame.pack(side="right", fill="both", expand=True, padx=8)
 
         # Título COSTAS MENOR
-        ctk.CTkLabel(costas_frame, text="COSTAS", font=("Arial", 11, "bold"),
+        ctk.CTkLabel(costas_frame, text=self._get_text("back"), font=("Arial", 11, "bold"),
                      text_color=cor_texto).pack(pady=3)
 
         # LABEL DA IMAGEM COSTAS - DIMINUÍDA
-        self.costas_img_label = ctk.CTkLabel(costas_frame, text="Clique para adicionar imagem",
+        self.costas_img_label = ctk.CTkLabel(costas_frame, text=self._get_text("click_add_image"),
                                              width=380, height=500, corner_radius=5,
                                              fg_color=cor_secundaria,
                                              text_color=get_contraste_texto(cor_secundaria),
@@ -1110,12 +1192,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         costas_btn_frame.pack(pady=3)
 
         # Botões MENORES
-        ctk.CTkButton(costas_btn_frame, text="Adicionar", command=lambda: self.adicionar_imagem("costas"),
+        ctk.CTkButton(costas_btn_frame, text=self._get_text("add"), command=lambda: self.adicionar_imagem("costas"),
                       width=90, height=28, font=("Arial", 10),
                       fg_color=cor_primaria, hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'),
                       text_color=get_contraste_texto(cor_primaria)).pack(side="left", padx=3)
 
-        ctk.CTkButton(costas_btn_frame, text="Remover", command=lambda: self.remover_imagem("costas"),
+        ctk.CTkButton(costas_btn_frame, text=self._get_text("remove"), command=lambda: self.remover_imagem("costas"),
                       width=90, height=28, font=("Arial", 10),
                       fg_color=getattr(self.sistema, 'cor_alerta', '#DC3545'),
                       hover_color=self._ajustar_hover(getattr(self.sistema, 'cor_alerta', '#DC3545')),
@@ -1127,7 +1209,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Título
         ctk.CTkLabel(
             self.tab_tecidos,
-            text="TECIDOS UTILIZADOS",
+            text=self._get_text("fabrics_title"),
             font=("Arial", 16, "bold"),
             text_color=getattr(self.sistema, 'cor_texto', '#000000')
         ).pack(pady=(10, 5))
@@ -1140,7 +1222,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         _cor_btn = getattr(self.sistema, 'cor_primaria', '#007BFF')
         ctk.CTkButton(
             tecidos_btn_frame,
-            text="Adicionar Tecido",
+            text=self._get_text("add_fabric"),
             command=self.adicionar_tecido,
             fg_color=_cor_btn,
             hover_color=self._ajustar_hover(_cor_btn),
@@ -1152,7 +1234,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             tecidos_btn_frame,
-            text="Pesquisar Tecido",
+            text=self._get_text("search_fabric"),
             command=self.pesquisar_tecido,
             fg_color=_cor_btn,
             hover_color=self._ajustar_hover(_cor_btn),
@@ -1188,7 +1270,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         remover_frame = ctk.CTkFrame(self.tab_tecidos, fg_color="transparent")
         remover_frame.pack(fill="x", pady=5, padx=10)
 
-        ctk.CTkButton(remover_frame, text="Remover Tecido", command=self.remover_tecido,
+        ctk.CTkButton(remover_frame, text=self._get_text("remove_fabric"), command=self.remover_tecido,
                       fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'), hover_color="#ff3333",
                       text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12), width=140, height=35).pack(side="left", padx=5)
 
@@ -1196,13 +1278,13 @@ class CadastroModelosApp(ctk.CTkFrame):
         tecidos_img_frame = ctk.CTkFrame(self.tab_tecidos, fg_color=getattr(self.sistema, 'cor_fundo', '#FFFFFF'))
         tecidos_img_frame.pack(fill="x", pady=(10, 5), padx=10)
 
-        ctk.CTkLabel(tecidos_img_frame, text="IMAGENS DOS TECIDOS", font=("Arial", 12, "bold"),
+        ctk.CTkLabel(tecidos_img_frame, text=self._get_text("fabric_images"), font=("Arial", 12, "bold"),
                      text_color=getattr(self.sistema, 'cor_texto', '#000000')).pack(pady=5)
 
         self.tecidos_img_container = ctk.CTkFrame(tecidos_img_frame, fg_color="transparent")
         self.tecidos_img_container.pack(fill="x")
 
-        ctk.CTkButton(tecidos_img_frame, text="Adicionar Imagem", command=self.adicionar_imagem_tecido,
+        ctk.CTkButton(tecidos_img_frame, text=self._get_text("add_image"), command=self.adicionar_imagem_tecido,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(pady=5)
@@ -1212,7 +1294,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Título
         ctk.CTkLabel(
             self.tab_aviamentos,
-            text="AVIAMENTOS UTILIZADOS",
+            text=self._get_text("trims_title"),
             font=("Arial", 16, "bold"),
             text_color=getattr(self.sistema, 'cor_texto', '#000000')
         ).pack(pady=(10, 5))
@@ -1221,12 +1303,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         aviamentos_btn_frame = ctk.CTkFrame(self.tab_aviamentos, fg_color="transparent")
         aviamentos_btn_frame.pack(fill="x", pady=5, padx=10)
 
-        ctk.CTkButton(aviamentos_btn_frame, text="Adicionar Aviamento", command=self.adicionar_aviamento,
+        ctk.CTkButton(aviamentos_btn_frame, text=self._get_text("add_trim"), command=self.adicionar_aviamento,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12), width=140, height=35).pack(side="left", padx=5)
 
-        ctk.CTkButton(aviamentos_btn_frame, text="Pesquisar Aviamento", command=self.pesquisar_aviamento,
+        ctk.CTkButton(aviamentos_btn_frame, text=self._get_text("search_trim"), command=self.pesquisar_aviamento,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12), width=140, height=35).pack(side="left", padx=5)
@@ -1257,7 +1339,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         remover_frame = ctk.CTkFrame(self.tab_aviamentos, fg_color="transparent")
         remover_frame.pack(fill="x", pady=5, padx=10)
 
-        ctk.CTkButton(remover_frame, text="Remover Aviamento", command=self.remover_aviamento,
+        ctk.CTkButton(remover_frame, text=self._get_text("remove_trim"), command=self.remover_aviamento,
                       fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'), hover_color="#ff3333",
                       text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12), width=140, height=35).pack(side="left", padx=5)
 
@@ -1265,13 +1347,13 @@ class CadastroModelosApp(ctk.CTkFrame):
         aviamentos_img_frame = ctk.CTkFrame(self.tab_aviamentos, fg_color=getattr(self.sistema, 'cor_fundo', '#FFFFFF'))
         aviamentos_img_frame.pack(fill="x", pady=(10, 5), padx=10)
 
-        ctk.CTkLabel(aviamentos_img_frame, text="IMAGENS DOS AVIAMENTOS", font=("Arial", 12, "bold"),
+        ctk.CTkLabel(aviamentos_img_frame, text=self._get_text("trim_images"), font=("Arial", 12, "bold"),
                      text_color=getattr(self.sistema, 'cor_texto', '#000000')).pack(pady=5)
 
         self.aviamentos_img_container = ctk.CTkFrame(aviamentos_img_frame, fg_color="transparent")
         self.aviamentos_img_container.pack(fill="x")
 
-        ctk.CTkButton(aviamentos_img_frame, text="Adicionar Imagem", command=self.adicionar_imagem_aviamento,
+        ctk.CTkButton(aviamentos_img_frame, text=self._get_text("add_image"), command=self.adicionar_imagem_aviamento,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(pady=5)
@@ -1281,7 +1363,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Título
         ctk.CTkLabel(
             self.tab_outros,
-            text="OUTROS ITENS / SERVIÇOS UTILIZADOS",
+            text=self._get_text("others_title"),
             font=("Arial", 16, "bold"),
             text_color=getattr(self.sistema, 'cor_texto', '#000000')
         ).pack(pady=(10, 5))
@@ -1290,7 +1372,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(self.tab_outros, fg_color="transparent")
         btn_frame.pack(fill="x", pady=5, padx=10)
 
-        ctk.CTkButton(btn_frame, text="Adicionar Outros serviços",
+        ctk.CTkButton(btn_frame, text=self._get_text("add_other"),
                       command=self.adicionar_outro,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12),
@@ -1316,7 +1398,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Remover
         rodape = ctk.CTkFrame(self.tab_outros, fg_color="transparent")
         rodape.pack(fill="x", pady=5, padx=10)
-        btn_remover = ctk.CTkButton(rodape, text="REMOVER SERVIÇOS",
+        btn_remover = ctk.CTkButton(rodape, text=self._get_text("remove_service"),
                                     command=self.remover_outro,
                                     fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'),
                                     text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12),
@@ -1330,13 +1412,13 @@ class CadastroModelosApp(ctk.CTkFrame):
         img_frame = ctk.CTkFrame(self.tab_outros, fg_color=getattr(self.sistema, 'cor_fundo', '#FFFFFF'))
         img_frame.pack(fill="x", pady=(10, 5), padx=10)
 
-        ctk.CTkLabel(img_frame, text="IMAGENS DOS SERVIÇOS", font=("Arial", 12, "bold"),
+        ctk.CTkLabel(img_frame, text=self._get_text("service_images"), font=("Arial", 12, "bold"),
                      text_color=getattr(self.sistema, 'cor_texto', '#000000')).pack(pady=5)
 
         self.outros_img_container = ctk.CTkFrame(img_frame, fg_color="transparent")
         self.outros_img_container.pack(fill="x")
 
-        ctk.CTkButton(img_frame, text="Adicionar Imagem",
+        ctk.CTkButton(img_frame, text=self._get_text("add_image"),
                       command=self.adicionar_imagem_outro,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12)).pack(pady=5)
@@ -1346,7 +1428,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Título
         ctk.CTkLabel(
             self.tab_pesquisa,
-            text="PESQUISA E PRÉ-VISUALIZAÇÃO DE MODELOS",
+            text=self._get_text("search_title"),
             font=("Arial", 16, "bold"),
             text_color=getattr(self.sistema, 'cor_texto', '#000000')
         ).pack(pady=(10, 5))
@@ -1355,12 +1437,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         pesquisa_frame = ctk.CTkFrame(self.tab_pesquisa, fg_color="transparent")
         pesquisa_frame.pack(fill="x", pady=10, padx=10)
 
-        ctk.CTkLabel(pesquisa_frame, text="Pesquisar:", font=("Arial", 12)).pack(side="left", padx=5)
+        ctk.CTkLabel(pesquisa_frame, text=self._get_text("search_label"), font=("Arial", 12)).pack(side="left", padx=5)
         self.pesquisa_entry = ctk.CTkEntry(pesquisa_frame, font=("Arial", 12), width=200)
         self.pesquisa_entry.pack(side="left", padx=5)
-        ctk.CTkButton(pesquisa_frame, text="Pesquisar", command=self.pesquisar_modelos, width=80).pack(side="left",
+        ctk.CTkButton(pesquisa_frame, text=self._get_text("search"), command=self.pesquisar_modelos, width=80).pack(side="left",
                                                                                                        padx=5)
-        ctk.CTkButton(pesquisa_frame, text="Limpar", command=self.limpar_pesquisa, width=80).pack(side="left", padx=5)
+        ctk.CTkButton(pesquisa_frame, text=self._get_text("clear"), command=self.limpar_pesquisa, width=80).pack(side="left", padx=5)
 
         # Tabela de resultados
         tabela_frame = ctk.CTkFrame(self.tab_pesquisa, fg_color=getattr(self.sistema, 'cor_fundo', '#FFFFFF'))
@@ -1387,15 +1469,15 @@ class CadastroModelosApp(ctk.CTkFrame):
         acoes_frame = ctk.CTkFrame(self.tab_pesquisa, fg_color="transparent")
         acoes_frame.pack(fill="x", pady=10, padx=10)
 
-        ctk.CTkButton(acoes_frame, text="Carregar Modelo", command=self.carregar_modelo_pesquisa,
+        ctk.CTkButton(acoes_frame, text=self._get_text("load_model"), command=self.carregar_modelo_pesquisa,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(side="left", padx=5)
-        ctk.CTkButton(acoes_frame, text="Gerar PDF", command=self.gerar_pdf_pesquisa,
+        ctk.CTkButton(acoes_frame, text=self._get_text("generate_pdf"), command=self.gerar_pdf_pesquisa,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(side="left", padx=5)
-        ctk.CTkButton(acoes_frame, text="Imprimir PDF", command=self.imprimir_pdf_pesquisa,
+        ctk.CTkButton(acoes_frame, text=self._get_text("print_pdf"), command=self.imprimir_pdf_pesquisa,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(side="left", padx=5)
@@ -1418,7 +1500,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         _cor_btn = getattr(self.sistema, 'cor_primaria', '#007BFF')
         ctk.CTkButton(
             btn_frame,
-            text="Novo",
+            text=self._get_text("new"),
             command=self.novo_cadastro,
             fg_color=_cor_btn,
             hover_color=self._ajustar_hover(_cor_btn),
@@ -1431,7 +1513,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Botão Gerar PDF - MAIS COMPACTO com cores dinâmicas
         ctk.CTkButton(
             btn_frame,
-            text="PDF",
+            text=self._get_text("pdf"),
             command=self.on_click_imprimir,
             fg_color=_cor_btn,
             hover_color=self._ajustar_hover(_cor_btn),
@@ -1444,7 +1526,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Botão Exportar - MAIS COMPACTO
         ctk.CTkButton(
             btn_frame,
-            text="Exportar",
+            text=self._get_text("export"),
             command=self.exportar_cadastro,
             fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'),
             hover_color="#ff3333",
@@ -1457,7 +1539,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Botão Salvar (no canto inferior direito) - MAIS COMPACTO
         ctk.CTkButton(
             btn_frame,
-            text="Salvar",
+            text=self._get_text("save"),
             command=self.salvar_cadastro,
             fg_color=getattr(self.sistema, 'cor_sucesso', '#28A745'),
             hover_color="#2ECC71",
@@ -1647,11 +1729,11 @@ class CadastroModelosApp(ctk.CTkFrame):
             if tipo == "frente":
                 self.imagens_modelo["frente"] = None
                 self._safe_clear_image_reference(self.frente_img_label)
-                self.frente_img_label.configure(text="Clique para adicionar imagem")
+                self.frente_img_label.configure(text=self._get_text("click_add_image"))
             elif tipo == "costas":
                 self.imagens_modelo["costas"] = None
                 self._safe_clear_image_reference(self.costas_img_label)
-                self.costas_img_label.configure(text="Clique para adicionar imagem")
+                self.costas_img_label.configure(text=self._get_text("click_add_image"))
             print(f"✅ Imagem {tipo} removida")
         except Exception as e:
             print(f"❌ Erro ao remover imagem {tipo}: {e}")
@@ -1810,7 +1892,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
                     self.frente_img_label = ctk.CTkLabel(
                         parent,
-                        text="Clique para adicionar imagem",
+                        text=self._get_text("click_add_image"),
                         width=400,
                         height=500,
                         corner_radius=5,
@@ -1832,7 +1914,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
                     self.costas_img_label = ctk.CTkLabel(
                         parent,
-                        text="Clique para adicionar imagem",
+                        text=self._get_text("click_add_image"),
                         width=400,
                         height=500,
                         corner_radius=5,
@@ -1896,7 +1978,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                         label.image_ref = img_ctk
                         label.pack()
 
-                    ctk.CTkButton(img_frame, text="Remover",
+                    ctk.CTkButton(img_frame, text=self._get_text("remove"),
                                   command=lambda idx=i: self.remover_imagem_tecido(idx),
                                   width=60, height=25, font=("Arial", 10)).pack(pady=2)
 
@@ -1936,7 +2018,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                         label.image_ref = img_ctk
                         label.pack()
 
-                    ctk.CTkButton(img_frame, text="Remover",
+                    ctk.CTkButton(img_frame, text=self._get_text("remove"),
                                   command=lambda idx=i: self.remover_imagem_aviamento(idx),
                                   width=60, height=25, font=("Arial", 10)).pack(pady=2)
 
@@ -1976,7 +2058,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                         label.image_ref = img_ctk
                         label.pack()
 
-                    ctk.CTkButton(img_frame, text="Remover",
+                    ctk.CTkButton(img_frame, text=self._get_text("remove"),
                                   command=lambda idx=i: self.remover_imagem_outro(idx),
                                   width=60, height=25, font=("Arial", 10)).pack(pady=2)
 
@@ -3023,7 +3105,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="↻ Calcular Total",
+            text=self._get_text("calc_total"),
             command=calcular_total,
             fg_color=cor_primaria,
             hover_color=hover_primaria,
@@ -3097,7 +3179,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="💾 Salvar",
+            text=self._get_text("save_emoji"),
             command=salvar,
             fg_color=cor_sucesso,
             hover_color=hover_sucesso,
@@ -3109,7 +3191,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="❌ Cancelar",
+            text=self._get_text("cancel_emoji"),
             command=cancelar,
             fg_color=cor_destaque,
             hover_color=hover_destaque,
@@ -3299,7 +3381,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="↻ Calcular Total",
+            text=self._get_text("calc_total"),
             command=calcular_total,
             fg_color=cor_primaria,
             hover_color=hover_primaria,
@@ -3371,7 +3453,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="💾 Salvar",
+            text=self._get_text("save_emoji"),
             command=salvar,
             fg_color=cor_sucesso,
             hover_color=hover_sucesso,
@@ -3383,7 +3465,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="❌ Cancelar",
+            text=self._get_text("cancel_emoji"),
             command=cancelar,
             fg_color=cor_destaque,
             hover_color=hover_destaque,
@@ -3546,7 +3628,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="↻ Calcular Total",
+            text=self._get_text("calc_total"),
             command=calcular_total,
             fg_color=cor_primaria,
             hover_color=hover_primaria,
@@ -3607,7 +3689,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="Salvar",
+            text=self._get_text("save"),
             command=salvar,
             fg_color=cor_sucesso,
             hover_color=hover_sucesso,
@@ -3619,7 +3701,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         ctk.CTkButton(
             button_frame,
-            text="Cancelar",
+            text=self._get_text("cancel"),
             command=cancelar,
             fg_color=cor_destaque,
             hover_color=hover_destaque,
@@ -4071,7 +4153,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         btn_adicionar = ctk.CTkButton(
             button_frame,
-            text="➕ Adicionar Selecionado",
+            text=self._get_text("add_selected"),
             command=on_escolher_e_abrir,
             fg_color=cor_sucesso,
             hover_color=hover_sucesso,
@@ -4084,7 +4166,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         btn_fechar = ctk.CTkButton(
             button_frame,
-            text="❌ Fechar",
+            text=self._get_text("close"),
             command=jan.destroy,
             fg_color=cor_destaque,
             hover_color=hover_destaque,
@@ -4109,7 +4191,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         dica_label = ctk.CTkLabel(
             main_frame,
-            text="💡 Dica: Use as setas para navegar e Enter ou duplo-clique para selecionar",
+            text=self._get_text("tip_select"),
             font=("Arial", 9),
             text_color=get_contraste_texto(getattr(self.sistema, "cor_secundaria", "#E0E0E0")),
         )
@@ -4302,6 +4384,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         self.master = master
         self.sistema = sistema
         self.root = sistema.root if hasattr(sistema, 'root') else sistema
+        self._ui_refs = {}
 
         # CORREÇÃO: Adicionar referências para imagens
         self.frente_img_ref = None
@@ -4445,7 +4528,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         btn_cancel = ctk.CTkButton(
             btn_frame,
-            text="Cancel",
+            text=self._get_text("cancel_simple"),
             command=cancelar,
             width=120,
             fg_color=cor_destaque,

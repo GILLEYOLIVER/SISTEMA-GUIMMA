@@ -64,13 +64,13 @@ if platform.system() == "Windows":
         pass
 
 
-def log_ok(msg): print(f"{Colors.GREEN}[OK]{Colors.RESET} {msg}")
-def log_warn(msg): print(f"{Colors.YELLOW}[AVISO]{Colors.RESET} {msg}")
-def log_err(msg): print(f"{Colors.RED}[ERRO]{Colors.RESET} {msg}")
-def log_info(msg): print(f"{Colors.BLUE}[INFO]{Colors.RESET} {msg}")
-def log_debug(msg): print(f"{Colors.MAGENTA}[DEBUG]{Colors.RESET} {msg}")
-def log_success(msg): print(f"{Colors.BG_GREEN}[SUCESSO]{Colors.RESET} {msg}")
-def log_critical(msg): print(f"{Colors.BG_RED}[CRÍTICO]{Colors.RESET} {msg}")
+def log_ok(msg): print(f"{Colors.GREEN}[{_pg_text('ok')}] {Colors.RESET}{msg}")
+def log_warn(msg): print(f"{Colors.YELLOW}[{_pg_text('warning')}] {Colors.RESET}{msg}")
+def log_err(msg): print(f"{Colors.RED}[{_pg_text('error')}] {Colors.RESET}{msg}")
+def log_info(msg): print(f"{Colors.BLUE}[{_pg_text('info')}] {Colors.RESET}{msg}")
+def log_debug(msg): print(f"{Colors.MAGENTA}[{_pg_text('debug')}] {Colors.RESET}{msg}")
+def log_success(msg): print(f"{Colors.BG_GREEN}[{_pg_text('success')}] {Colors.RESET}{msg}")
+def log_critical(msg): print(f"{Colors.BG_RED}[{_pg_text('critical')}] {Colors.RESET}{msg}")
 
 
 def _safe_exc_text(exc: Exception) -> str:
@@ -87,6 +87,50 @@ def _safe_exc_text(exc: Exception) -> str:
         return text.encode("utf-8", "replace").decode("utf-8", "replace")
     except Exception:
         return repr(exc)
+
+
+
+
+# ==============================================================================
+# IDIOMA / MENSAGENS PÚBLICAS
+# ==============================================================================
+def _get_app_lang() -> str:
+    return (os.getenv("OPERA_APP_LANG") or "pt_BR").strip()
+
+
+def _pg_text(key: str, **kwargs) -> str:
+    lang = _get_app_lang()
+    texts = {
+        "pt_BR": {
+            "ok": "OK",
+            "warning": "AVISO",
+            "error": "ERRO",
+            "info": "INFO",
+            "debug": "DEBUG",
+            "success": "SUCESSO",
+            "critical": "CRÍTICO",
+        },
+        "en_US": {
+            "ok": "OK",
+            "warning": "WARNING",
+            "error": "ERROR",
+            "info": "INFO",
+            "debug": "DEBUG",
+            "success": "SUCCESS",
+            "critical": "CRITICAL",
+        },
+        "es_ES": {
+            "ok": "OK",
+            "warning": "AVISO",
+            "error": "ERROR",
+            "info": "INFO",
+            "debug": "DEPURACIÓN",
+            "success": "ÉXITO",
+            "critical": "CRÍTICO",
+        },
+    }
+    base = texts.get(lang, texts["pt_BR"])
+    return base.get(key, key).format(**kwargs)
 
 
 # ==============================================================================

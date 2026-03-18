@@ -25,10 +25,12 @@ import customtkinter as ctk
 
 OPERA_DEBUG = bool(os.environ.get('OPERA_DEBUG', '').strip())
 
+
 def _dprint(*args, **kwargs):
     """Print controlado por OPERA_DEBUG para não atrasar o startup."""
     if OPERA_DEBUG:
         print(*args, **kwargs)
+
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.abspath(os.path.join(APP_DIR, ".."))
@@ -56,27 +58,34 @@ from PAGINAS_DO_SISTEMA.LOG_SISTEMA import get_logger
 # ===== IMPORTAÇÕES DO SISTEMA =====
 try:
     from PAGINAS_DO_SISTEMA.USUARIOS import registrar_log_db
+
     LOGS_DISPONIVEIS = True
     _dprint("✅ Função de logs disponível.")
 except ImportError as e:
     LOGS_DISPONIVEIS = False
     _dprint(f"⚠️ Logs não disponíveis: {e}")
+
+
     def registrar_log_db(usuario, acao, pagina, detalhe=""):
         """Função fallback para logs."""
         pass
 
 try:
     from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema
+
     MENU_POSTGRES_AVAILABLE = True
     _dprint("✅ PostgreSQL disponível.")
 except Exception as e:
     _dprint(f"❌ PostgreSQL indisponível: {e}")
     MENU_POSTGRES_AVAILABLE = False
+
+
     def get_conn():
         raise RuntimeError("PostgreSQL indisponível")
+
+
     def get_schema():
         return "opera"
-
 
 # === WRAPPER: evita travar o sistema quando o banco cair ===
 # Se a conexão falhar 1x, entra em "cooldown" e não tenta de novo por alguns segundos,
@@ -85,6 +94,7 @@ if 'MENU_POSTGRES_AVAILABLE' in globals() and MENU_POSTGRES_AVAILABLE:
     _raw_get_conn = get_conn  # mantém referência
     _DB_FAIL_UNTIL = 0.0
     _DB_COOLDOWN_SECONDS = float(os.environ.get("OPERA_DB_COOLDOWN", "30") or "30")
+
 
     def get_conn(*args, **kwargs):
         global _DB_FAIL_UNTIL
@@ -106,7 +116,7 @@ def is_dark_color_fallback(hex_color: str) -> bool:
     """
     hex_color = hex_color.lstrip('#')
     if len(hex_color) == 3:
-        hex_color = ''.join([c*2 for c in hex_color])
+        hex_color = ''.join([c * 2 for c in hex_color])
     try:
         r = int(hex_color[0:2], 16)
         g = int(hex_color[2:4], 16)
@@ -115,6 +125,7 @@ def is_dark_color_fallback(hex_color: str) -> bool:
         return luminancia < 0.5
     except:
         return True  # seguro: assume escuro
+
 
 # Tenta importar a função original, senão usa o fallback
 try:
@@ -128,6 +139,7 @@ IS_WIN = platform.system() == "Windows"
 BASE_DIR = os.path.dirname(APP_DIR)
 ROOT_DIR = os.path.dirname(SRC_DIR)
 
+
 def _resolve_app_path(filename: str) -> str:
     """Resolve caminhos de arquivos compartilhados na raiz do projeto."""
     local_path = os.path.join(APP_DIR, filename)
@@ -138,10 +150,12 @@ def _resolve_app_path(filename: str) -> str:
         return base_path
     return os.path.join(ROOT_DIR, filename)
 
+
 ROUTES_PATH = _resolve_app_path("route_map.json")
 SETTINGS_PATH = _resolve_app_path("settings.json")
 ICONS_DIR = _resolve_app_path("icons")
 ICONE_SISTEMA = _resolve_app_path("ICONE_SISTEMA.png")
+
 
 # ===== GERENCIADOR DE CONFIGURAÇÕES =====
 class ConfigManager:
@@ -150,7 +164,7 @@ class ConfigManager:
     @staticmethod
     def load_settings() -> dict:
         """Carrega configurações do arquivo settings.json."""
-        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard"}
+        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard", "language": "pt_BR"}
         if os.path.exists(SETTINGS_PATH):
             try:
                 with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
@@ -197,6 +211,7 @@ class ConfigManager:
             _dprint(f"📁 Criando pasta de ícones: {ICONS_DIR}")
             os.makedirs(ICONS_DIR, exist_ok=True)
         return ICONS_DIR
+
 
 # ===== GERENCIADOR DE TEMAS =====
 class ThemeManager:
@@ -738,7 +753,7 @@ class ThemeManager:
 
         btn = ctk.CTkButton(
             item_frame,
-            text=f"  {item}",
+            text=f"  {self._translate_menu_label(item)}",
             image=icon,
             compound="left",
             anchor="w",
@@ -871,7 +886,6 @@ class UserManager:
         except Exception as e:
             _dprint(f"[UserManager][AVISO] Banco indisponível ao carregar tema do usuário: {e}")
             return default_theme, None
-
 
     def save_user_theme(self, theme_name: str):
         if not getattr(self.app, "usuario_id", None):
@@ -1048,16 +1062,20 @@ class OperaMenuApp(ctk.CTk):
     SUBMENU_ICON_MAPPING = {
         "Dashboard": {"Dashboard": "DASHBORD.png"},
         "MODELOS": {"Cadastrar Modelo": "ROUPA.png", "Imprimir Ficha Técnica": "IMPRESSORA.png"},
-        "ORDENS DE CORTE": {"Nova Ordem": "NOVA_ORDEM.png", "Ordens Planejadas": "RELATORIO.png", "Ordens de Corte Impressão": "IMPRESSORA.png"},
+        "ORDENS DE CORTE": {"Nova Ordem": "NOVA_ORDEM.png", "Ordens Planejadas": "RELATORIO.png",
+                            "Ordens de Corte Impressão": "IMPRESSORA.png"},
         "REGISTRO DE CORTE": {"Cadastrar Corte": "CADASTRO_CORTE.png", "Consultar Ordens": "CONSULTAR ORDENS.png"},
         "COMPRAS": {"Compras": "DINHEIRO.png"},
-        "ESTOQUE": {"Entrada de Estoque": "ESTOQUE.png", "Saída de Estoque": "ESTOQUE.png", "Relatórios": "RELATORIO 2.png"},
+        "ESTOQUE": {"Entrada de Estoque": "ESTOQUE.png", "Saída de Estoque": "ESTOQUE.png",
+                    "Relatórios": "RELATORIO 2.png"},
         "COMERCIAL": {"Clientes": "USUARIOS.png"},
         "PRESTADORES": {"Cadastro de Prestadores": "FACÇAO.png", "Pesquisar Serviço": "CONSULTAR ORDENS.png"},
         "MÃO DE OBRA": {"Controle de Mão de Obra": "MAO DE OBRA.png"},
-        "PLANEJAMENTO": {"MRP": "RELATORIO.png", "Planejamento de Produção": "PRODUÇAO.png", "Custos Reais": "RELATORIO.png"},
+        "PLANEJAMENTO": {"MRP": "RELATORIO.png", "Planejamento de Produção": "PRODUÇAO.png",
+                         "Custos Reais": "RELATORIO.png"},
         "PRODUÇÃO": {"Produção": "PRODUÇAO.png"},
-        "ACABAMENTO": {"Registro Acabamento": "ACABAMENTO.png", "Finalizar Corte / Acabamento": "ACABAMENTO.png", "Retrabalho de Defeitos": "ACABAMENTO.png"},
+        "ACABAMENTO": {"Registro Acabamento": "ACABAMENTO.png", "Finalizar Corte / Acabamento": "ACABAMENTO.png",
+                       "Retrabalho de Defeitos": "ACABAMENTO.png"},
         "FINANCEIRO": {
             "Pagamento de Serviços": "DINHEIRO.png", "Recibos de Pagamentos": "IMPRESSORA.png",
             "Custo Produto": "DINHEIRO.png", "Folha Pagamento": "DINHEIRO.png",
@@ -1116,6 +1134,128 @@ class OperaMenuApp(ctk.CTk):
         "Gerenciar": "banco_dados",
     }
 
+    SUPPORTED_LANGUAGES = {
+        "pt_BR": "Português (Brasil)",
+        "en_US": "English (US)",
+        "es_ES": "Español",
+    }
+
+    UI_TEXTS = {
+        "pt_BR": {
+            "system_title": "SISTEMA OPERA",
+            "main_menu": "Menu Principal",
+            "topbar_dashboard": "Dashboard",
+            "language": "Idioma",
+            "current_language": "Idioma atual",
+            "refresh_page": "Atualizar página",
+            "switch_user": "Trocar usuário",
+            "loading": "Carregando...",
+            "error": "Erro",
+            "language_changed": "Idioma alterado para {language}",
+            "no_permission": "Sem permissão para acessar {page}",
+            "clock_format": "%d/%m/%Y %H:%M:%S",
+        },
+        "en_US": {
+            "system_title": "OPERA SYSTEM",
+            "main_menu": "Main Menu",
+            "topbar_dashboard": "Dashboard",
+            "language": "Language",
+            "current_language": "Current language",
+            "refresh_page": "Refresh page",
+            "switch_user": "Switch user",
+            "loading": "Loading...",
+            "error": "Error",
+            "language_changed": "Language changed to {language}",
+            "no_permission": "No permission to access {page}",
+            "clock_format": "%m/%d/%Y %I:%M:%S %p",
+        },
+        "es_ES": {
+            "system_title": "SISTEMA OPERA",
+            "main_menu": "Menú Principal",
+            "topbar_dashboard": "Panel",
+            "language": "Idioma",
+            "current_language": "Idioma actual",
+            "refresh_page": "Actualizar página",
+            "switch_user": "Cambiar usuario",
+            "loading": "Cargando...",
+            "error": "Error",
+            "language_changed": "Idioma cambiado a {language}",
+            "no_permission": "Sin permiso para acceder a {page}",
+            "clock_format": "%d/%m/%Y %H:%M:%S",
+        },
+    }
+
+    MENU_LABELS = {
+        "Dashboard": {"pt_BR": "Dashboard", "en_US": "Dashboard", "es_ES": "Panel"},
+        "MODELOS": {"pt_BR": "MODELOS", "en_US": "MODELS", "es_ES": "MODELOS"},
+        "ORDENS DE CORTE": {"pt_BR": "ORDENS DE CORTE", "en_US": "CUT ORDERS", "es_ES": "ÓRDENES DE CORTE"},
+        "REGISTRO DE CORTE": {"pt_BR": "REGISTRO DE CORTE", "en_US": "CUT RECORDS", "es_ES": "REGISTRO DE CORTE"},
+        "MÃO DE OBRA": {"pt_BR": "MÃO DE OBRA", "en_US": "LABOR", "es_ES": "MANO DE OBRA"},
+        "COMPRAS": {"pt_BR": "COMPRAS", "en_US": "PURCHASING", "es_ES": "COMPRAS"},
+        "ESTOQUE": {"pt_BR": "ESTOQUE", "en_US": "INVENTORY", "es_ES": "STOCK"},
+        "COMERCIAL": {"pt_BR": "COMERCIAL", "en_US": "SALES", "es_ES": "COMERCIAL"},
+        "PRESTADORES": {"pt_BR": "PRESTADORES", "en_US": "PROVIDERS", "es_ES": "PRESTADORES"},
+        "ACABAMENTO": {"pt_BR": "ACABAMENTO", "en_US": "FINISHING", "es_ES": "ACABADO"},
+        "PLANEJAMENTO": {"pt_BR": "PLANEJAMENTO", "en_US": "PLANNING", "es_ES": "PLANIFICACIÓN"},
+        "FINANCEIRO": {"pt_BR": "FINANCEIRO", "en_US": "FINANCIAL", "es_ES": "FINANZAS"},
+        "RELATÓRIOS": {"pt_BR": "RELATÓRIOS", "en_US": "REPORTS", "es_ES": "INFORMES"},
+        "CONFIGURAÇÕES": {"pt_BR": "CONFIGURAÇÕES", "en_US": "SETTINGS", "es_ES": "CONFIGURACIÓN"},
+        "BANCO DE DADOS": {"pt_BR": "BANCO DE DADOS", "en_US": "DATABASE", "es_ES": "BASE DE DATOS"},
+        "Cadastrar Modelo": {"pt_BR": "Cadastrar Modelo", "en_US": "Register Model", "es_ES": "Registrar Modelo"},
+        "Imprimir Ficha Técnica": {"pt_BR": "Imprimir Ficha Técnica", "en_US": "Print Technical Sheet",
+                                   "es_ES": "Imprimir Ficha Técnica"},
+        "Nova Ordem": {"pt_BR": "Nova Ordem", "en_US": "New Order", "es_ES": "Nueva Orden"},
+        "Ordens Planejadas": {"pt_BR": "Ordens Planejadas", "en_US": "Planned Orders", "es_ES": "Órdenes Planificadas"},
+        "Ordens de Corte Impressão": {"pt_BR": "Ordens de Corte Impressão", "en_US": "Print Cut Orders",
+                                      "es_ES": "Impresión de Órdenes"},
+        "Cadastrar Corte": {"pt_BR": "Cadastrar Corte", "en_US": "Register Cut", "es_ES": "Registrar Corte"},
+        "Consultar Ordens": {"pt_BR": "Consultar Ordens", "en_US": "Consult Orders", "es_ES": "Consultar Órdenes"},
+        "Controle de Mão de Obra": {"pt_BR": "Controle de Mão de Obra", "en_US": "Labor Control",
+                                    "es_ES": "Control de Mano de Obra"},
+        "Compras": {"pt_BR": "Compras", "en_US": "Purchases", "es_ES": "Compras"},
+        "Entrada de Estoque": {"pt_BR": "Entrada de Estoque", "en_US": "Stock Entry", "es_ES": "Entrada de Stock"},
+        "Saída de Estoque": {"pt_BR": "Saída de Estoque", "en_US": "Stock Output", "es_ES": "Salida de Stock"},
+        "Relatórios": {"pt_BR": "Relatórios", "en_US": "Reports", "es_ES": "Informes"},
+        "Clientes": {"pt_BR": "Clientes", "en_US": "Clients", "es_ES": "Clientes"},
+        "Cadastro de Prestadores": {"pt_BR": "Cadastro de Prestadores", "en_US": "Providers Register",
+                                    "es_ES": "Registro de Prestadores"},
+        "Pesquisar Serviço": {"pt_BR": "Pesquisar Serviço", "en_US": "Search Service", "es_ES": "Buscar Servicio"},
+        "Registro Acabamento": {"pt_BR": "Registro Acabamento", "en_US": "Finishing Record",
+                                "es_ES": "Registro de Acabado"},
+        "Finalizar Corte / Acabamento": {"pt_BR": "Finalizar Corte / Acabamento", "en_US": "Finalize Cut / Finishing",
+                                         "es_ES": "Finalizar Corte / Acabado"},
+        "Retrabalho de Defeitos": {"pt_BR": "Retrabalho de Defeitos", "en_US": "Defect Rework",
+                                   "es_ES": "Retrabajo de Defectos"},
+        "MRP": {"pt_BR": "MRP", "en_US": "MRP", "es_ES": "MRP"},
+        "Planejamento de Produção": {"pt_BR": "Planejamento de Produção", "en_US": "Production Planning",
+                                     "es_ES": "Planificación de Producción"},
+        "Custos Reais": {"pt_BR": "Custos Reais", "en_US": "Actual Costs", "es_ES": "Costos Reales"},
+        "Pagamento de Serviços": {"pt_BR": "Pagamento de Serviços", "en_US": "Service Payments",
+                                  "es_ES": "Pago de Servicios"},
+        "Recibos de Pagamentos": {"pt_BR": "Recibos de Pagamentos", "en_US": "Payment Receipts",
+                                  "es_ES": "Recibos de Pago"},
+        "Custo Produto": {"pt_BR": "Custo Produto", "en_US": "Product Cost", "es_ES": "Costo del Producto"},
+        "Folha Pagamento": {"pt_BR": "Folha Pagamento", "en_US": "Payroll", "es_ES": "Nómina"},
+        "Fechamento Mensal": {"pt_BR": "Fechamento Mensal", "en_US": "Monthly Closing", "es_ES": "Cierre Mensual"},
+        "Contas a Pagar": {"pt_BR": "Contas a Pagar", "en_US": "Accounts Payable", "es_ES": "Cuentas por Pagar"},
+        "Adiantamento": {"pt_BR": "Adiantamento", "en_US": "Advance", "es_ES": "Adelanto"},
+        "Adiantamentos Pendentes": {"pt_BR": "Adiantamentos Pendentes", "en_US": "Pending Advances",
+                                    "es_ES": "Adelantos Pendientes"},
+        "Produção": {"pt_BR": "Produção", "en_US": "Production", "es_ES": "Producción"},
+        "Serviços Externos": {"pt_BR": "Serviços Externos", "en_US": "External Services",
+                              "es_ES": "Servicios Externos"},
+        "Modelos Produzidos": {"pt_BR": "Modelos Produzidos", "en_US": "Produced Models",
+                               "es_ES": "Modelos Producidos"},
+        "Logs e Atividades": {"pt_BR": "Logs e Atividades", "en_US": "Logs and Activities",
+                              "es_ES": "Registros y Actividades"},
+        "Trocar Usuário": {"pt_BR": "Trocar Usuário", "en_US": "Switch User", "es_ES": "Cambiar Usuario"},
+        "Usuários": {"pt_BR": "Usuários", "en_US": "Users", "es_ES": "Usuarios"},
+        "Temas": {"pt_BR": "Temas", "en_US": "Themes", "es_ES": "Temas"},
+        "Atualizar Sistema": {"pt_BR": "Atualizar Sistema", "en_US": "Update System", "es_ES": "Actualizar Sistema"},
+        "Gerenciar": {"pt_BR": "Gerenciar", "en_US": "Manage", "es_ES": "Gestionar"},
+        "Backup": {"pt_BR": "Backup", "en_US": "Backup", "es_ES": "Respaldo"},
+    }
+
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         reset_tk_default_root()
         super().__init__()
@@ -1157,6 +1297,9 @@ class OperaMenuApp(ctk.CTk):
         self.routes = ConfigManager.load_routes()
         ConfigManager.ensure_icons_directory()
         self.tema_preferido_inicial = tema_preferido or self.settings.get("theme") or "CLÁSSICO CLARO"
+        self.idioma_atual = self.settings.get("language") or "pt_BR"
+        if self.idioma_atual not in self.SUPPORTED_LANGUAGES:
+            self.idioma_atual = "pt_BR"
 
         self.theme_manager = ThemeManager(self)
         self._theme_manager = self.theme_manager
@@ -1272,6 +1415,7 @@ class OperaMenuApp(ctk.CTk):
             except Exception:
                 pass
             self._pending_responsive_job = None
+
         def _apply_resize():
             self._pending_responsive_job = None
             self._configure_responsive_layout(width=size_key[0], height=size_key[1])
@@ -1279,6 +1423,7 @@ class OperaMenuApp(ctk.CTk):
                 self._notify_current_page_resize(width=size_key[0], height=size_key[1])
             except Exception:
                 pass
+
         self._pending_responsive_job = self.after(120, _apply_resize)
 
     def _calculate_ui_scale(self, width: int, height: int) -> float:
@@ -1793,20 +1938,20 @@ class OperaMenuApp(ctk.CTk):
                 icon_label.pack(side="left", padx=(0, 10))
         except Exception as e:
             _dprint(f"⚠️ Erro ao carregar ícone no sidebar: {e}")
-        titulo = ctk.CTkLabel(
+        self.sidebar_title_label = ctk.CTkLabel(
             titulo_frame,
-            text="SISTEMA OPERA",
+            text=self._get_text("system_title"),
             font=self.font_sidebar_titulo,
             text_color=self.cor_texto,
         )
-        titulo.pack(side="left")
-        subtitulo = ctk.CTkLabel(
+        self.sidebar_title_label.pack(side="left")
+        self.sidebar_subtitle_label = ctk.CTkLabel(
             self.sidebar,
-            text="Menu Principal",
+            text=self._get_text("main_menu"),
             font=self.font_sidebar_subtitulo,
             text_color=self.cor_texto,
         )
-        subtitulo.pack(pady=(0, 40))
+        self.sidebar_subtitle_label.pack(pady=(0, 40))
         self.menu_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         self.menu_frame.pack(fill="both", expand=True, padx=10, pady=(4, 8))
         self._build_menu_content()
@@ -1852,14 +1997,16 @@ class OperaMenuApp(ctk.CTk):
         self.topbar.grid_columnconfigure(2, weight=0)
         self.topbar.grid_columnconfigure(3, weight=0)
         self.topbar.grid_columnconfigure(4, weight=0)
+        self.topbar.grid_columnconfigure(5, weight=0)
         self.title_label = ctk.CTkLabel(
             self.topbar,
-            text="Dashboard",
+            text=self._translate_page_name("Dashboard"),
             font=self.font_topbar_titulo,
             text_color=self.cor_texto,
         )
         self.title_label.grid(row=0, column=0, sticky="w", padx=15, pady=4)
         self._build_utility_buttons()
+        self._add_language_selector_to_topbar()
         self._add_theme_switch_to_topbar()
         self._build_user_widget()
 
@@ -1876,10 +2023,13 @@ class OperaMenuApp(ctk.CTk):
         base_bg = "transparent"
         hover_bg = self.cor_terciaria
         hover_radius = 12
+
         def on_enter(widget):
             widget.configure(fg_color=hover_bg, corner_radius=hover_radius)
+
         def on_leave(widget):
             widget.configure(fg_color=base_bg, corner_radius=0)
+
         self.icon_refresh = None
         for nome in ["ATUALIZAR.png", "REFRESH.png", "RELOAD.png", "ATUALIZAR_PAGINA.png"]:
             try:
@@ -1891,7 +2041,7 @@ class OperaMenuApp(ctk.CTk):
             except Exception:
                 pass
         if self.icon_refresh:
-            lbl_refresh = ctk.CTkLabel(
+            self.lbl_refresh = ctk.CTkLabel(
                 button_frame,
                 text="",
                 image=self.icon_refresh,
@@ -1899,7 +2049,7 @@ class OperaMenuApp(ctk.CTk):
                 corner_radius=0
             )
         else:
-            lbl_refresh = ctk.CTkLabel(
+            self.lbl_refresh = ctk.CTkLabel(
                 button_frame,
                 text="↻",
                 font=("Segoe UI", 22, "bold"),
@@ -1907,10 +2057,10 @@ class OperaMenuApp(ctk.CTk):
                 fg_color=base_bg,
                 corner_radius=0
             )
-        lbl_refresh.pack(side="left", padx=16, pady=0)
-        lbl_refresh.bind("<Button-1>", lambda e: self.reload_current_page())
-        lbl_refresh.bind("<Enter>", lambda e, w=lbl_refresh: on_enter(w))
-        lbl_refresh.bind("<Leave>", lambda e, w=lbl_refresh: on_leave(w))
+        self.lbl_refresh.pack(side="left", padx=16, pady=0)
+        self.lbl_refresh.bind("<Button-1>", lambda e: self.reload_current_page())
+        self.lbl_refresh.bind("<Enter>", lambda e, w=self.lbl_refresh: on_enter(w))
+        self.lbl_refresh.bind("<Leave>", lambda e, w=self.lbl_refresh: on_leave(w))
         self.icon_switch_user = None
         try:
             icon_path = os.path.join(ICONS_DIR, "TROCAR_USUARIO.png")
@@ -1919,7 +2069,7 @@ class OperaMenuApp(ctk.CTk):
                 self.icon_switch_user = ctk.CTkImage(light_image=img, dark_image=img, size=(22, 22))
         except Exception as e:
             _dprint("Erro ao carregar TROCAR_USUARIO.png:", e)
-        lbl_user = ctk.CTkLabel(
+        self.lbl_switch_user = ctk.CTkLabel(
             button_frame,
             text="",
             image=self.icon_switch_user,
@@ -1927,10 +2077,132 @@ class OperaMenuApp(ctk.CTk):
             bg_color="transparent",
             corner_radius=0
         )
-        lbl_user.pack(side="left", padx=10, pady=0)
-        lbl_user.bind("<Button-1>", lambda e: self.trocar_usuario())
-        lbl_user.bind("<Enter>", lambda e, w=lbl_user: on_enter(w))
-        lbl_user.bind("<Leave>", lambda e, w=lbl_user: on_leave(w))
+        self.lbl_switch_user.pack(side="left", padx=10, pady=0)
+        self.lbl_switch_user.bind("<Button-1>", lambda e: self.trocar_usuario())
+        self.lbl_switch_user.bind("<Enter>", lambda e, w=self.lbl_switch_user: on_enter(w))
+        self.lbl_switch_user.bind("<Leave>", lambda e, w=self.lbl_switch_user: on_leave(w))
+
+    def _get_text(self, chave: str, **kwargs) -> str:
+        base = self.UI_TEXTS.get(self.idioma_atual, self.UI_TEXTS["pt_BR"])
+        texto = base.get(chave, self.UI_TEXTS["pt_BR"].get(chave, chave))
+        try:
+            return texto.format(**kwargs)
+        except Exception:
+            return texto
+
+    def _get_language_display_name(self, idioma: str | None = None) -> str:
+        codigo = idioma or self.idioma_atual
+        return self.SUPPORTED_LANGUAGES.get(codigo, self.SUPPORTED_LANGUAGES["pt_BR"])
+
+    def _translate_menu_label(self, texto: str) -> str:
+        mapa = self.MENU_LABELS.get(texto)
+        if not mapa:
+            return texto
+        return mapa.get(self.idioma_atual, mapa.get("pt_BR", texto))
+
+    def _translate_page_name(self, page_name: str) -> str:
+        if page_name == "Dashboard":
+            return self._get_text("topbar_dashboard")
+        return self._translate_menu_label(page_name)
+
+    def _save_language_preference(self):
+        try:
+            self.settings["language"] = self.idioma_atual
+            ConfigManager.save_settings(self.settings)
+        except Exception as e:
+            _dprint(f"⚠️ Não foi possível salvar idioma: {e}")
+
+    def _clear_page_cache_except_current(self):
+        current = getattr(self, "_current_frame", None)
+        current_page = getattr(self, "current_page", None)
+        for page_name, frame in list(self._page_cache.items()):
+            if frame is current and page_name == current_page:
+                continue
+            try:
+                frame.destroy()
+            except Exception:
+                pass
+            self._page_cache.pop(page_name, None)
+            if page_name in self._page_cache_order:
+                self._page_cache_order.remove(page_name)
+
+    def _refresh_current_page_language(self):
+        frame = getattr(self, "_current_frame", None)
+        if not frame or not getattr(frame, "winfo_exists", lambda: False)():
+            return
+        try:
+            if hasattr(frame, "sistema"):
+                frame.sistema = self
+            if hasattr(frame, "app"):
+                frame.app = self
+            if hasattr(frame, "refresh_texts"):
+                frame.refresh_texts()
+            elif hasattr(frame, "on_language_changed"):
+                frame.on_language_changed(self.idioma_atual)
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao atualizar idioma da página atual: {e}")
+
+    def _change_language(self, selected_value=None):
+        novo_idioma = selected_value if selected_value in self.SUPPORTED_LANGUAGES else None
+        if novo_idioma is None:
+            for codigo, nome in self.SUPPORTED_LANGUAGES.items():
+                if nome == selected_value:
+                    novo_idioma = codigo
+                    break
+        if not novo_idioma:
+            novo_idioma = "pt_BR"
+        if novo_idioma == getattr(self, "idioma_atual", "pt_BR"):
+            if hasattr(self, "language_status_label") and self.language_status_label.winfo_exists():
+                self.language_status_label.configure(text=self._get_language_display_name())
+            return
+        self.idioma_atual = novo_idioma
+        self._save_language_preference()
+        self._clear_page_cache_except_current()
+        self._refresh_language_widgets()
+        self._refresh_current_page_language()
+        if getattr(self, "current_page", None) and hasattr(self, "title_label"):
+            self.title_label.configure(text=self._translate_page_name(self.current_page))
+        self._show_temporary_message(self._get_text("language_changed", language=self._get_language_display_name()))
+
+    def _add_language_selector_to_topbar(self):
+        if hasattr(self, "language_frame") and self.language_frame.winfo_exists():
+            self.language_frame.destroy()
+
+        self.language_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
+        self.language_frame.grid(row=0, column=2, padx=(0, 12), sticky="e")
+
+        self.language_label = ctk.CTkLabel(
+            self.language_frame,
+            text=f"🌐 {self._get_text('language')}",
+            font=("Arial", max(11, int(12 * getattr(self, 'ui_scale', 1.0))), "bold"),
+            text_color=self.cor_texto,
+        )
+        self.language_label.pack(side="left", padx=(0, 8))
+
+        self.language_status_label = ctk.CTkLabel(
+            self.language_frame,
+            text=self._get_language_display_name(),
+            font=("Arial", max(10, int(11 * getattr(self, 'ui_scale', 1.0)))),
+            text_color=self.cor_texto,
+        )
+        self.language_status_label.pack(side="left", padx=(0, 8))
+
+        self.language_var = ctk.StringVar(value=self._get_language_display_name())
+        self.language_menu = ctk.CTkOptionMenu(
+            self.language_frame,
+            variable=self.language_var,
+            values=list(self.SUPPORTED_LANGUAGES.values()),
+            width=max(150, int(170 * getattr(self, 'ui_scale', 1.0))),
+            command=self._change_language,
+            fg_color=self.cor_secundaria,
+            button_color=self.cor_primaria,
+            button_hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            dropdown_fg_color=self.cor_secundaria,
+            dropdown_text_color=self.cor_texto,
+            dropdown_hover_color=self.cor_hover,
+        )
+        self.language_menu.pack(side="left")
 
     @staticmethod
     def _theme_mode_from_name(tema_nome: str) -> str:
@@ -2115,7 +2387,7 @@ class OperaMenuApp(ctk.CTk):
         user_frame.grid(row=0, column=4, padx=18, sticky="e")
         self.user_info_label = ctk.CTkLabel(
             user_frame,
-            text="Carregando...",
+            text=self._get_text("loading"),
             font=("Arial", 14),
             text_color=self.cor_texto,
         )
@@ -2129,7 +2401,7 @@ class OperaMenuApp(ctk.CTk):
     def _update_user_info_once(self):
         if not hasattr(self, 'user_info_label'):
             return
-        now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        now = datetime.now().strftime(self._get_text("clock_format"))
         user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
             user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
@@ -2141,7 +2413,7 @@ class OperaMenuApp(ctk.CTk):
     def _tick_clock(self):
         if not hasattr(self, 'user_info_label') or not self.winfo_exists():
             return
-        now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        now = datetime.now().strftime(self._get_text("clock_format"))
         user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
             user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
@@ -2151,6 +2423,32 @@ class OperaMenuApp(ctk.CTk):
             _dprint(f"Erro ao atualizar relógio: {e}")
             return
         self._agendar_after(1000, self._tick_clock)
+
+    def _refresh_language_widgets(self):
+        try:
+            if hasattr(self, "sidebar_title_label") and self.sidebar_title_label.winfo_exists():
+                self.sidebar_title_label.configure(text=self._get_text("system_title"))
+            if hasattr(self, "sidebar_subtitle_label") and self.sidebar_subtitle_label.winfo_exists():
+                self.sidebar_subtitle_label.configure(text=self._get_text("main_menu"))
+            if hasattr(self, "language_label") and self.language_label.winfo_exists():
+                self.language_label.configure(text=f"🌐 {self._get_text('language')}")
+            if hasattr(self, "language_status_label") and self.language_status_label.winfo_exists():
+                self.language_status_label.configure(text=self._get_language_display_name())
+            if hasattr(self, "language_var"):
+                self.language_var.set(self._get_language_display_name())
+            if hasattr(self, "language_menu") and self.language_menu.winfo_exists():
+                self.language_menu.configure(values=list(self.SUPPORTED_LANGUAGES.values()))
+            if hasattr(self, "user_info_label") and self.user_info_label.winfo_exists():
+                self._update_user_info_once()
+            if hasattr(self, "current_page") and self.current_page and hasattr(self,
+                                                                               "title_label") and self.title_label.winfo_exists():
+                self.title_label.configure(text=self._translate_page_name(self.current_page))
+            elif hasattr(self, "title_label") and self.title_label.winfo_exists():
+                self.title_label.configure(text=self._translate_page_name("Dashboard"))
+            self._build_menu_content()
+            self._update_menu_buttons_colors()
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao atualizar widgets de idioma: {e}")
 
     def _cancel_submenu_hide_timer(self):
         if self._submenu_timer:
@@ -2178,7 +2476,8 @@ class OperaMenuApp(ctk.CTk):
                 widget_abaixo = None
 
             while widget_abaixo is not None:
-                if getattr(widget_abaixo, '_opera_menu_button', False) or getattr(widget_abaixo, '_opera_submenu_button', False):
+                if getattr(widget_abaixo, '_opera_menu_button', False) or getattr(widget_abaixo,
+                                                                                  '_opera_submenu_button', False):
                     return
                 if widget_abaixo in self.submenu_frames.values() or widget_abaixo in self.botoes_menu.values():
                     return
@@ -2200,7 +2499,8 @@ class OperaMenuApp(ctk.CTk):
             self._active_submenu = None
             self._update_menu_buttons_colors()
 
-    def _apply_menu_hover_behavior(self, widget, fg, texto, hover_fg, hover_texto, *, border_width=1, border_color=None):
+    def _apply_menu_hover_behavior(self, widget, fg, texto, hover_fg, hover_texto, *, border_width=1,
+                                   border_color=None):
         """Aplica no menu o mesmo padrão de hover da página de temas: fundo muda no hover e o texto acompanha."""
         try:
             widget.configure(
@@ -2338,7 +2638,7 @@ class OperaMenuApp(ctk.CTk):
 
         btn = ctk.CTkButton(
             btn_frame,
-            text=f"  {categoria}",
+            text=f"  {self._translate_menu_label(categoria)}",
             image=icon,
             compound="left",
             anchor="w",
@@ -2414,7 +2714,7 @@ class OperaMenuApp(ctk.CTk):
 
         btn = ctk.CTkButton(
             item_frame,
-            text=f"  {item}",
+            text=f"  {self._translate_menu_label(item)}",
             image=icon,
             compound="left",
             anchor="w",
@@ -2640,7 +2940,7 @@ class OperaMenuApp(ctk.CTk):
             self.trocar_usuario()
             return
         if not self.user_manager.has_permission(page_name, "ver", categoria):
-            self._show_temporary_message(f"Sem permissão para acessar {page_name}")
+            self._show_temporary_message(self._get_text("no_permission", page=self._translate_page_name(page_name)))
             return
         self._page_loading = True
         try:
@@ -2657,7 +2957,8 @@ class OperaMenuApp(ctk.CTk):
                     self.after(80, self._notify_current_page_resize)
                 except Exception:
                     pass
-                if page_name == "Nova Ordem" and hasattr(self, "_ordem_planejada_prefill") and self._ordem_planejada_prefill:
+                if page_name == "Nova Ordem" and hasattr(self,
+                                                         "_ordem_planejada_prefill") and self._ordem_planejada_prefill:
                     try:
                         if hasattr(frame, "carregar_op_planejada"):
                             frame.carregar_op_planejada(self._ordem_planejada_prefill)
@@ -2666,7 +2967,7 @@ class OperaMenuApp(ctk.CTk):
                         _dprint(f"⚠️ Prefill de OP planejada falhou: {_exc}")
 
                 if hasattr(self, "title_label"):
-                    self.title_label.configure(text=page_name)
+                    self.title_label.configure(text=self._translate_page_name(page_name))
                 try:
                     if hasattr(frame, "on_page_open"):
                         frame.on_page_open()
@@ -2674,8 +2975,10 @@ class OperaMenuApp(ctk.CTk):
                     _dprint(f"⚠️ Erro ao atualizar página ao abrir '{page_name}': {_exc}")
                 self._apply_theme_to_frame_safely(frame)
                 # Reforços para widgets que são criados após o primeiro draw
-                self.after(120, lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
-                self.after(320, lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(120,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(320,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.current_page = page_name
                 self._current_frame = frame
                 try:
@@ -2685,7 +2988,8 @@ class OperaMenuApp(ctk.CTk):
                     pass
                 _dprint(f"✅ Página '{page_name}' carregada")
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao abrir {page_name}:\n{e}", parent=self)
+            messagebox.showerror(self._get_text("error"),
+                                 f"Falha ao abrir {self._translate_page_name(page_name)}:\n{e}", parent=self)
             _dprint(f"❌ Erro: {e}")
         finally:
             self._page_loading = False
@@ -2701,7 +3005,6 @@ class OperaMenuApp(ctk.CTk):
             frame.place_configure(x=0, y=0, relwidth=1, relheight=1)
         except:
             pass
-
 
     def _notify_current_page_resize(self, width: int | None = None, height: int | None = None):
         """Notifica a página atual (se suportar) o tamanho REAL do container 'content'.
@@ -2933,6 +3236,7 @@ class OperaMenuApp(ctk.CTk):
         BACKUP_AUTO["running"] = True
         BACKUP_AUTO["interval"] = 3600
         BACKUP_AUTO["pasta"] = pasta_backups
+
         def loop():
             import time
             BackupPage._executar_backup_auto_silencioso_static()
@@ -2940,6 +3244,7 @@ class OperaMenuApp(ctk.CTk):
                 time.sleep(BACKUP_AUTO.get("interval", 3600))
                 if BACKUP_AUTO.get("running", False):
                     BackupPage._executar_backup_auto_silencioso_static()
+
         t = threading.Thread(target=loop, daemon=True)
         BACKUP_AUTO["thread"] = t
         t.start()
@@ -2984,6 +3289,7 @@ def remover_foco_e_bordas_menu(widget_root):
             pass
         for child in widget.winfo_children():
             limpar(child)
+
     limpar(widget_root)
 
 
@@ -2998,6 +3304,7 @@ def main():
         import traceback
         traceback.print_exc()
         messagebox.showerror("Erro Fatal", f"Erro ao iniciar o sistema:\n{e}")
+
 
 if __name__ == "__main__":
     main()

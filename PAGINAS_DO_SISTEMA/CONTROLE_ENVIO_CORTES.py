@@ -100,6 +100,38 @@ def fmt_dec2_br(valor):
 
 # ============================== Página ==============================
 class EnvioCortes(ctk.CTkFrame):
+    TRANSLATIONS = {
+        "pt_BR": {"title":"CONTROLE DE MÃO DE OBRA — Envio de Cortes","search_cut":"Buscar Corte:","search_button":"Buscar","filter_service":"Filtrar Serviço:","seamstress":"Costureira:","service":"Serviço:","bank_data":"Dados Bancários do Prestador","phone":"Telefone:","bank":"Banco:","agency":"Agência:","account":"Conta:","holder":"Titular:","delivery_forecast":"Previsão de Entrega:","code":"Código:","description":"Descrição:","order_no":"Nº Ordem:","sizes_title":"Quantidades por Tamanho","single_value":"Valor único para todos os tamanhos","warning":"Aviso","error":"Erro","success":"Sucesso","select_provider_cut":"Selecione prestador e corte.","preview_error":"Falha ao gerar pré-visualização: {erro}","save_pdf_as":"Salvar PDF como","pdf_saved":"PDF salvo em: {path}","export_pdf_error":"Falha ao exportar PDF: {erro}"},
+        "en_US": {"title":"LABOR CONTROL — Cut Dispatch","search_cut":"Search Cut:","search_button":"Search","filter_service":"Filter Service:","seamstress":"Seamstress:","service":"Service:","bank_data":"Provider Bank Details","phone":"Phone:","bank":"Bank:","agency":"Agency:","account":"Account:","holder":"Holder:","delivery_forecast":"Delivery Forecast:","code":"Code:","description":"Description:","order_no":"Order No:","sizes_title":"Quantities by Size","single_value":"Single value for all sizes","warning":"Warning","error":"Error","success":"Success","select_provider_cut":"Select provider and cut.","preview_error":"Failed to generate preview: {erro}","save_pdf_as":"Save PDF as","pdf_saved":"PDF saved to: {path}","export_pdf_error":"Failed to export PDF: {erro}"},
+        "es_ES": {"title":"CONTROL DE MANO DE OBRA — Envío de Cortes","search_cut":"Buscar Corte:","search_button":"Buscar","filter_service":"Filtrar Servicio:","seamstress":"Costurera:","service":"Servicio:","bank_data":"Datos Bancarios del Prestador","phone":"Teléfono:","bank":"Banco:","agency":"Agencia:","account":"Cuenta:","holder":"Titular:","delivery_forecast":"Previsión de Entrega:","code":"Código:","description":"Descripción:","order_no":"Nº Orden:","sizes_title":"Cantidades por Talla","single_value":"Valor único para todas las tallas","warning":"Aviso","error":"Error","success":"Éxito","select_provider_cut":"Seleccione prestador y corte.","preview_error":"Error al generar vista previa: {erro}","save_pdf_as":"Guardar PDF como","pdf_saved":"PDF guardado en: {path}","export_pdf_error":"Error al exportar PDF: {erro}"},
+    }
+
+    def _get_idioma_atual(self):
+        origem = getattr(self, "sistema", None) or getattr(self, "master", None)
+        return getattr(origem, "idioma_atual", "pt_BR") if origem else "pt_BR"
+
+    def _get_text(self, chave, default=None, **kwargs):
+        idioma = self._get_idioma_atual()
+        base = self.TRANSLATIONS.get("pt_BR", {})
+        texto = self.TRANSLATIONS.get(idioma, {}).get(chave, base.get(chave, default if default is not None else chave))
+        try:
+            return texto.format(**kwargs)
+        except Exception:
+            return texto
+
+    def refresh_texts(self):
+        try:
+            if getattr(self, '_ui_refs', None):
+                mp={"title":"title","lbl_search_cut":"search_cut","btn_search":"search_button","lbl_filter_service":"filter_service","lbl_seamstress":"seamstress","lbl_service":"service","lbl_bank_data":"bank_data","lbl_phone":"phone","lbl_bank":"bank","lbl_agency":"agency","lbl_account":"account","lbl_holder":"holder","lbl_forecast":"delivery_forecast","lbl_code":"code","lbl_description":"description","lbl_order":"order_no","lbl_sizes":"sizes_title"}
+                for k,v in mp.items():
+                    w=self._ui_refs.get(k)
+                    if w:
+                        w.configure(text=self._get_text(v))
+                if getattr(self,'chk_valor_unico',None):
+                    self.chk_valor_unico.configure(text=self._get_text('single_value'))
+        except Exception:
+            pass
+
     tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
 
     def __init__(self, master, sistema=None):
@@ -178,8 +210,10 @@ class EnvioCortes(ctk.CTkFrame):
         # Esquema de cadastro_de_corte detectado
         self._corte_schema = None
 
+        self._ui_refs = {}
         self.pack(fill="both", expand=True)
         self._build_ui()
+        self.refresh_texts()
         self._resolver_corte_schema()
         self._carregar_prestadores()
         self._buscar_cortes_iniciais()
@@ -194,8 +228,9 @@ class EnvioCortes(ctk.CTkFrame):
         header = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         header.pack(fill="x", pady=(0, 2))
 
-        ctk.CTkLabel(header, text="CONTROLE DE MÃO DE OBRA — Envio de Cortes",
-                     font=("Arial", 16, "bold"), text_color=self.cor_texto).pack(side="left", padx=(0, 6))
+        self._ui_refs["title"] = ctk.CTkLabel(header, text=self._get_text("title"),
+                     font=("Arial", 16, "bold"), text_color=self.cor_texto)
+        self._ui_refs["title"].pack(side="left", padx=(0, 6))
 
         if PIL_OK and os.path.exists(LOGO_PATH):
             img = Image.open(LOGO_PATH)
@@ -212,7 +247,8 @@ class EnvioCortes(ctk.CTkFrame):
         linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
         linha.pack(fill="x", pady=(0, 2))
 
-        ctk.CTkLabel(linha, text="Buscar Corte:", width=95, text_color=self.cor_texto).pack(side="left", padx=(2, 4))
+        self._ui_refs["lbl_search_cut"] = ctk.CTkLabel(linha, text=self._get_text("search_cut"), width=95, text_color=self.cor_texto)
+        self._ui_refs["lbl_search_cut"].pack(side="left", padx=(2, 4))
 
         self.busca_entry = ctk.CTkEntry(linha, width=240, height=26,
                                         placeholder_text="Número, código ou descrição",
@@ -221,13 +257,14 @@ class EnvioCortes(ctk.CTkFrame):
         self.busca_entry.pack(side="left")
         self.busca_entry.bind("<Return>", lambda e: self.buscar_cortes())
 
-        ctk.CTkButton(linha, text="Buscar", width=80, height=26, command=self.buscar_cortes,
+        self._ui_refs["btn_search"] = ctk.CTkButton(linha, text=self._get_text("search_button"), width=80, height=26, command=self.buscar_cortes,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=6)
+                      text_color=self.cor_texto)
+        self._ui_refs["btn_search"].pack(side="left", padx=6)
 
         # Filtro de serviço - COM TEMA
-        ctk.CTkLabel(linha, text="Filtrar Serviço:", width=85, text_color=self.cor_texto).pack(side="left",
-                                                                                                padx=(6, 4))
+        self._ui_refs["lbl_filter_service"] = ctk.CTkLabel(linha, text=self._get_text("filter_service"), width=85, text_color=self.cor_texto)
+        self._ui_refs["lbl_filter_service"].pack(side="left", padx=(6, 4))
 
         self.filtro_servico_cb = ctk.CTkComboBox(
             linha,
@@ -246,8 +283,8 @@ class EnvioCortes(ctk.CTkFrame):
         self.filtro_servico_cb.pack(side="left", padx=(0, 10))
         self.filtro_servico_cb.bind("<<ComboboxSelected>>", lambda e: self._on_filtro_servico_trocado())
 
-        ctk.CTkLabel(linha, text="Costureira:", width=80, text_color=self.cor_texto).pack(side="left",
-                                                                                          padx=(0, 4))
+        self._ui_refs["lbl_seamstress"] = ctk.CTkLabel(linha, text=self._get_text("seamstress"), width=80, text_color=self.cor_texto)
+        self._ui_refs["lbl_seamstress"].pack(side="left", padx=(0, 4))
 
         # Combobox de costureira - COM TEMA
         # Combobox de costureira usando CTkComboBox com callback adequado
@@ -273,7 +310,8 @@ class EnvioCortes(ctk.CTkFrame):
         self.prestador_busca_cb.bind("<Return>", self._on_costureira_selected)
         self.prestador_busca_cb.bind("<FocusOut>", self._on_costureira_selected)
 
-        ctk.CTkLabel(linha, text="Serviço:", width=60, text_color=self.cor_texto).pack(side="left", padx=(6, 4))
+        self._ui_refs["lbl_service"] = ctk.CTkLabel(linha, text=self._get_text("service"), width=60, text_color=self.cor_texto)
+        self._ui_refs["lbl_service"].pack(side="left", padx=(6, 4))
 
         # Combobox de tipo de serviço - COM TEMA
         self.tipo_cb = ctk.CTkComboBox(
@@ -295,8 +333,9 @@ class EnvioCortes(ctk.CTkFrame):
         banco = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
         banco.pack(fill="x", pady=(2, 2))
 
-        ctk.CTkLabel(banco, text="Dados Bancários do Prestador", font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=4, pady=(0, 1))
+        self._ui_refs["lbl_bank_data"] = ctk.CTkLabel(banco, text=self._get_text("bank_data"), font=("Arial", 12, "bold"),
+                     text_color=self.cor_texto)
+        self._ui_refs["lbl_bank_data"].pack(anchor="w", padx=4, pady=(0, 1))
 
         grid = ctk.CTkFrame(banco, fg_color=self.cor_fundo)
         grid.pack(fill="x", padx=2)
@@ -308,28 +347,33 @@ class EnvioCortes(ctk.CTkFrame):
 
         l1b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
         l1b.pack(fill="x", pady=1)
-        ctk.CTkLabel(l1b, text="Telefone:", width=80, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_phone"] = ctk.CTkLabel(l1b, text=self._get_text("phone"), width=80, text_color=self.cor_texto)
+        self._ui_refs["lbl_phone"].pack(side="left", padx=4)
         self.telefone_entry = ro(l1b, 190)
         self.telefone_entry.pack(side="left", padx=4)
         ctk.CTkLabel(l1b, text="CPF:", width=50, text_color=self.cor_texto).pack(side="left", padx=4)
         self.cpf_entry = ro(l1b, 140)
         self.cpf_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l1b, text="Banco:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_bank"] = ctk.CTkLabel(l1b, text=self._get_text("bank"), width=60, text_color=self.cor_texto)
+        self._ui_refs["lbl_bank"].pack(side="left", padx=4)
         self.banco_entry = ro(l1b, 140)
         self.banco_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l1b, text="Agência:", width=70, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_agency"] = ctk.CTkLabel(l1b, text=self._get_text("agency"), width=70, text_color=self.cor_texto)
+        self._ui_refs["lbl_agency"].pack(side="left", padx=4)
         self.agencia_entry = ro(l1b, 120)
         self.agencia_entry.pack(side="left", padx=4)
 
         l2b = ctk.CTkFrame(grid, fg_color=self.cor_fundo)
         l2b.pack(fill="x", pady=1)
-        ctk.CTkLabel(l2b, text="Conta:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_account"] = ctk.CTkLabel(l2b, text=self._get_text("account"), width=60, text_color=self.cor_texto)
+        self._ui_refs["lbl_account"].pack(side="left", padx=4)
         self.conta_entry = ro(l2b, 150)
         self.conta_entry.pack(side="left", padx=4)
         ctk.CTkLabel(l2b, text="PIX:", width=50, text_color=self.cor_texto).pack(side="left", padx=4)
         self.pix_entry = ro(l2b, 180)
         self.pix_entry.pack(side="left", padx=4)
-        ctk.CTkLabel(l2b, text="Titular:", width=60, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_holder"] = ctk.CTkLabel(l2b, text=self._get_text("holder"), width=60, text_color=self.cor_texto)
+        self._ui_refs["lbl_holder"].pack(side="left", padx=4)
         self.titular_entry = ro(l2b, 220)
         self.titular_entry.pack(side="left", padx=4)
 
@@ -399,7 +443,8 @@ class EnvioCortes(ctk.CTkFrame):
         self.data_entry.pack(side="left", padx=4)
 
         # Previsão de entrega + calendário - COM TEMA
-        ctk.CTkLabel(l1, text="Previsão de Entrega:", width=160, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_forecast"] = ctk.CTkLabel(l1, text=self._get_text("delivery_forecast"), width=160, text_color=self.cor_texto)
+        self._ui_refs["lbl_forecast"].pack(side="left", padx=4)
         self.previsao_entry = ctk.CTkEntry(l1, width=120, fg_color=self.cor_terciaria,
                                            border_color=self.cor_borda, text_color=self.cor_texto)
         self.previsao_entry.pack(side="left", padx=(4, 0))
@@ -412,19 +457,22 @@ class EnvioCortes(ctk.CTkFrame):
 
         l2 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
         l2.pack(fill="x", pady=2)
-        ctk.CTkLabel(l2, text="Código:", width=70, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_code"] = ctk.CTkLabel(l2, text=self._get_text("code"), width=70, text_color=self.cor_texto)
+        self._ui_refs["lbl_code"].pack(side="left", padx=4)
         self.codigo_entry = ctk.CTkEntry(l2, width=180, fg_color=self.cor_terciaria,
                                          border_color=self.cor_borda, text_color=self.cor_texto,
                                          state="disabled")
         self.codigo_entry.pack(side="left", padx=4)
 
-        ctk.CTkLabel(l2, text="Descrição:", width=80, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_description"] = ctk.CTkLabel(l2, text=self._get_text("description"), width=80, text_color=self.cor_texto)
+        self._ui_refs["lbl_description"].pack(side="left", padx=4)
         self.descricao_entry = ctk.CTkEntry(l2, width=360, fg_color=self.cor_terciaria,
                                             border_color=self.cor_borda, text_color=self.cor_texto,
                                             state="disabled")
         self.descricao_entry.pack(side="left", padx=4)
 
-        ctk.CTkLabel(l2, text="Nº Ordem:", width=80, text_color=self.cor_texto).pack(side="left", padx=4)
+        self._ui_refs["lbl_order"] = ctk.CTkLabel(l2, text=self._get_text("order_no"), width=80, text_color=self.cor_texto)
+        self._ui_refs["lbl_order"].pack(side="left", padx=4)
         self.ordem_entry = ctk.CTkEntry(l2, width=120, fg_color=self.cor_terciaria,
                                         border_color=self.cor_borda, text_color=self.cor_texto,
                                         state="disabled")
@@ -441,13 +489,14 @@ class EnvioCortes(ctk.CTkFrame):
         left = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
-        ctk.CTkLabel(left, text="Quantidades por Tamanho", font=("Arial", 13, "bold"),
-                     text_color=self.cor_texto).pack(anchor="w", padx=4, pady=2)
+        self._ui_refs["lbl_sizes"] = ctk.CTkLabel(left, text=self._get_text("sizes_title"), font=("Arial", 13, "bold"),
+                     text_color=self.cor_texto)
+        self._ui_refs["lbl_sizes"].pack(anchor="w", padx=4, pady=2)
 
         ctrl_valor = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         ctrl_valor.pack(fill="x", pady=(0, 6))
 
-        self.chk_valor_unico = ctk.CTkCheckBox(ctrl_valor, text="Valor único para todos os tamanhos",
+        self.chk_valor_unico = ctk.CTkCheckBox(ctrl_valor, text=self._get_text("single_value"),
                                                variable=self.valor_unico_var, command=self._on_toggle_valor_unico,
                                                fg_color=self.cor_primaria, hover_color=self.cor_hover,
                                                text_color=self.cor_texto, checkmark_color=self.cor_texto)
@@ -2932,14 +2981,14 @@ class EnvioCortes(ctk.CTkFrame):
 
     def preview_impressao(self):
         if not self._prestador_id or not self.corte_selecionado:
-            messagebox.showwarning("Aviso", "Selecione prestador e corte.")
+            messagebox.showwarning(self._get_text("warning"), self._get_text("select_provider_cut"))
             return
 
         # Gera PDF temporário e abre no navegador
         try:
             self._gerar_pdf(abrir_pdf=True)
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao gerar pré-visualização: {e}")
+            messagebox.showerror(self._get_text("error"), self._get_text("preview_error", erro=e))
 
     def exportar_pdf(self):
         if not self._prestador_id or not self.corte_selecionado:
@@ -2949,16 +2998,16 @@ class EnvioCortes(ctk.CTkFrame):
         file_path = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF files", "*.pdf")],
-            title="Salvar PDF como"
+            title=self._get_text("save_pdf_as")
         )
         if not file_path:
             return
 
         try:
             pdf_path = self._gerar_pdf(file_path)
-            messagebox.showinfo("Sucesso", f"PDF salvo em: {pdf_path}")
+            messagebox.showinfo(self._get_text("success"), self._get_text("pdf_saved", path=pdf_path))
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao exportar PDF: {e}")
+            messagebox.showerror(self._get_text("error"), self._get_text("export_pdf_error", erro=e))
 
 
 if __name__ == "__main__":

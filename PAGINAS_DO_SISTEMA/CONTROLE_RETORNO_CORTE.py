@@ -120,6 +120,36 @@ def _coluna_cliente():
 
 # ============================== Tela ==============================
 class RetornoCortes(ctk.CTkFrame):
+    TRANSLATIONS = {
+        "pt_BR": {"title":"CONTROLE DE MÃO DE OBRA — Retorno de Cortes","search_dispatch":"Buscar Envio:","search_button":"Buscar","show_conference":"Mostrar 'Em Conferência'","provider":"Prestador:","service":"Serviço:","arrival":"Chegada:","code":"Código:","order_no":"Nº Ordem:","description":"Descrição:","error":"Erro","none":"Nenhum."},
+        "en_US": {"title":"LABOR CONTROL — Cut Return","search_dispatch":"Search Dispatch:","search_button":"Search","show_conference":"Show 'Under Review'","provider":"Provider:","service":"Service:","arrival":"Arrival:","code":"Code:","order_no":"Order No:","description":"Description:","error":"Error","none":"None."},
+        "es_ES": {"title":"CONTROL DE MANO DE OBRA — Retorno de Cortes","search_dispatch":"Buscar Envío:","search_button":"Buscar","show_conference":"Mostrar 'En Conferencia'","provider":"Prestador:","service":"Servicio:","arrival":"Llegada:","code":"Código:","order_no":"Nº Orden:","description":"Descripción:","error":"Error","none":"Ninguno."}
+    }
+
+    def _get_idioma_atual(self):
+        origem = getattr(self, "sistema", None) or getattr(self, "master", None)
+        return getattr(origem, "idioma_atual", "pt_BR") if origem else "pt_BR"
+
+    def _get_text(self, chave, default=None):
+        idioma = self._get_idioma_atual()
+        base = self.TRANSLATIONS.get("pt_BR", {})
+        return self.TRANSLATIONS.get(idioma, {}).get(chave, base.get(chave, default if default is not None else chave))
+
+    def refresh_texts(self):
+        try:
+            if getattr(self, '_ui_refs', None):
+                mp={"title":"title","lbl_search_dispatch":"search_dispatch","btn_search":"search_button","lbl_provider":"provider","lbl_service":"service","lbl_arrival":"arrival","lbl_code":"code","lbl_order":"order_no","lbl_description":"description"}
+                for k,v in mp.items():
+                    w=self._ui_refs.get(k)
+                    if w:
+                        w.configure(text=self._get_text(v))
+                if getattr(self,'cb_mostrar_conf',None):
+                    self.cb_mostrar_conf.configure(text=self._get_text('show_conference'))
+                if getattr(self,'piloto_resumo_lbl',None) and self.piloto_resumo_lbl.cget('text') in ('Nenhum.','None.','Ninguno.'):
+                    self.piloto_resumo_lbl.configure(text=self._get_text('none'))
+        except Exception:
+            pass
+
     tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
 
     def __init__(self, master, sistema=None):
@@ -202,8 +232,10 @@ class RetornoCortes(ctk.CTkFrame):
         self.logo_img = None
 
         # Configuração inicial
+        self._ui_refs = {}
         self.pack(fill="both", expand=True)
         self._build_ui()
+        self.refresh_texts()
         self.carregar_envios_pendentes()
 
     def obter_cores_por_tema(self):
@@ -302,12 +334,13 @@ class RetornoCortes(ctk.CTkFrame):
         head = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         head.pack(fill="x", pady=(0, 4))
 
-        ctk.CTkLabel(
+        self._ui_refs["title"] = ctk.CTkLabel(
             head,
-            text="CONTROLE DE MÃO DE OBRA — Retorno de Cortes",
+            text=self._get_text("title"),
             font=("Arial", 16, "bold"),
             text_color=self.cor_texto
-        ).pack(side="left", padx=(6, 0))
+        )
+        self._ui_refs["title"].pack(side="left", padx=(6, 0))
 
         # Logo (menor)
         try:
@@ -326,21 +359,23 @@ class RetornoCortes(ctk.CTkFrame):
         busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         busca.pack(fill="x", pady=(0, 4))
 
-        mk_lbl(busca, "Buscar Envio:", width=105).pack(side="left", padx=(0, 6))
+        self._ui_refs["lbl_search_dispatch"] = mk_lbl(busca, self._get_text("search_dispatch"), width=105)
+        self._ui_refs["lbl_search_dispatch"].pack(side="left", padx=(0, 6))
         self.busca_entry = mk_entry(busca, width=320, placeholder="Ordem, código ou descrição")
         self.busca_entry.pack(side="left")
         self.busca_entry.bind("<Return>", lambda e: self.carregar_envios_pendentes())
 
-        ctk.CTkButton(
-            busca, text="Buscar", width=90, height=entry_h,
+        self._ui_refs["btn_search"] = ctk.CTkButton(
+            busca, text=self._get_text("search_button"), width=90, height=entry_h,
             command=self.carregar_envios_pendentes,
             fg_color=self.cor_primaria, hover_color=self.cor_hover,
             text_color=self.cor_texto, font=f_ent
-        ).pack(side="left", padx=6)
+        )
+        self._ui_refs["btn_search"].pack(side="left", padx=6)
 
         self.cb_mostrar_conf = ctk.CTkCheckBox(
             busca,
-            text="Mostrar 'Em Conferência'",
+            text=self._get_text("show_conference"),
             variable=self.incluir_conferencia_var,
             onvalue=True,
             offvalue=False,
@@ -361,7 +396,8 @@ class RetornoCortes(ctk.CTkFrame):
         linha_a = ctk.CTkFrame(cab, fg_color=self.cor_fundo)
         linha_a.pack(fill="x", pady=(0, 2))
 
-        mk_lbl(linha_a, "Prestador:", width=80).pack(side="left", padx=(0, 6))
+        self._ui_refs["lbl_provider"] = mk_lbl(linha_a, self._get_text("provider"), width=80)
+        self._ui_refs["lbl_provider"] .pack(side="left", padx=(0, 6))
         self.prestador_entry = mk_entry(linha_a, width=320, readonly=True)
         self.prestador_entry.pack(side="left")
 
@@ -379,15 +415,18 @@ class RetornoCortes(ctk.CTkFrame):
         linha_b = ctk.CTkFrame(cab, fg_color=self.cor_fundo)
         linha_b.pack(fill="x", pady=(0, 2))
 
-        mk_lbl(linha_b, "Código:", width=80).pack(side="left", padx=(0, 6))
+        self._ui_refs["lbl_code"] = mk_lbl(linha_b, self._get_text("code"), width=80)
+        self._ui_refs["lbl_code"].pack(side="left", padx=(0, 6))
         self.codigo_entry = mk_entry(linha_b, width=120, readonly=True)
         self.codigo_entry.pack(side="left")
 
-        mk_lbl(linha_b, "Nº Ordem:", width=80).pack(side="left", padx=(10, 6))
+        self._ui_refs["lbl_order"] = mk_lbl(linha_b, self._get_text("order_no"), width=80)
+        self._ui_refs["lbl_order"].pack(side="left", padx=(10, 6))
         self.ordem_entry = mk_entry(linha_b, width=120, readonly=True)
         self.ordem_entry.pack(side="left")
 
-        mk_lbl(linha_b, "Descrição:", width=80).pack(side="left", padx=(10, 6))
+        self._ui_refs["lbl_description"] = mk_lbl(linha_b, self._get_text("description"), width=80)
+        self._ui_refs["lbl_description"].pack(side="left", padx=(10, 6))
         self.descricao_entry = mk_entry(linha_b, width=420, readonly=True)
         self.descricao_entry.pack(side="left", fill="x", expand=True)
 
@@ -983,7 +1022,7 @@ class RetornoCortes(ctk.CTkFrame):
                 elif resumo_pilotos:
                     self.piloto_resumo_lbl.configure(text=", ".join(resumo_pilotos))
                 else:
-                    self.piloto_resumo_lbl.configure(text="Nenhum.")
+                    self.piloto_resumo_lbl.configure(text=self._get_text("none"))
 
             # Ajustes adicionais do RETORNO, se já existir
             try:

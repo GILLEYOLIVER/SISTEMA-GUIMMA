@@ -303,6 +303,11 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         elif values:
             self.cmb_modelo.set(values[0])
         self._on_model_change()
+        try:
+            self.refresh_texts()
+        except Exception:
+            pass
+
 
     # ---------- UI
     def _build_ui(self):
@@ -1144,6 +1149,112 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
 
 # ------------------ Execução standalone --------------------------------------
+    _I18N_MAP = {'en_US': {'Precificação de Produto': 'Product Pricing', 'Modelo': 'Model', 'Recarregar': 'Reload', 'Canal': 'Channel', 'Resumo': 'Summary', 'Custos': 'Costs', 'Impostos & Margem': 'Taxes & Margin', 'Simulações': 'Simulations', 'BOM / Itens': 'BOM / Items', 'Relatório': 'Report', 'Calcular': 'Calculate', 'Arredondamento': 'Rounding', 'Salvar perfil como...': 'Save profile as...', 'Carregar perfil...': 'Load profile...', 'Escada de preços (margem %)': 'Price ladder (margin %)', 'Analisar preço alvo': 'Analyze target price', 'Margem atingida (%)': 'Achieved margin (%)', 'Exportar simulações CSV': 'Export simulations CSV', 'Relatório de Pré-Custo': 'Pre-Cost Report', 'Gerar & Abrir HTML': 'Generate & Open HTML', 'Imprimir (Windows)': 'Print (Windows)', 'Copiar preço sugerido': 'Copy suggested price', 'Varejo (Loja)': 'Retail (Store)', 'Atacado': 'Wholesale', 'E-commerce': 'E-commerce', 'Marketplace': 'Marketplace', 'Sem arredondamento': 'No rounding', 'Terminar em .90 (para cima)': 'End in .90 (round up)', 'Terminar em .99 (para cima)': 'End in .99 (round up)', 'Múltiplo de 0,50 (para cima)': 'Multiple of 0.50 (round up)', 'Múltiplo de 1,00 (para cima)': 'Multiple of 1.00 (round up)', 'Múltiplo de 5,00 (para cima)': 'Multiple of 5.00 (round up)', 'Múltiplo de 10,00 (para cima)': 'Multiple of 10.00 (round up)'}, 'es_ES': {'Precificação de Produto': 'Fijación de Precio del Producto', 'Modelo': 'Modelo', 'Recarregar': 'Recargar', 'Canal': 'Canal', 'Resumo': 'Resumen', 'Custos': 'Costos', 'Impostos & Margem': 'Impuestos y Margen', 'Simulações': 'Simulaciones', 'BOM / Itens': 'BOM / Ítems', 'Relatório': 'Informe', 'Calcular': 'Calcular', 'Arredondamento': 'Redondeo', 'Salvar perfil como...': 'Guardar perfil como...', 'Carregar perfil...': 'Cargar perfil...', 'Escada de preços (margem %)': 'Escala de precios (margen %)', 'Analisar preço alvo': 'Analizar precio objetivo', 'Margem atingida (%)': 'Margen alcanzado (%)', 'Exportar simulações CSV': 'Exportar simulaciones CSV', 'Relatório de Pré-Custo': 'Informe de Pre-Costo', 'Gerar & Abrir HTML': 'Generar y Abrir HTML', 'Imprimir (Windows)': 'Imprimir (Windows)', 'Copiar preço sugerido': 'Copiar precio sugerido', 'Varejo (Loja)': 'Minorista (Tienda)', 'Atacado': 'Mayorista', 'E-commerce': 'E-commerce', 'Marketplace': 'Marketplace', 'Sem arredondamento': 'Sin redondeo', 'Terminar em .90 (para cima)': 'Terminar en .90 (hacia arriba)', 'Terminar em .99 (para cima)': 'Terminar en .99 (hacia arriba)', 'Múltiplo de 0,50 (para cima)': 'Múltiplo de 0,50 (hacia arriba)', 'Múltiplo de 1,00 (para cima)': 'Múltiplo de 1,00 (hacia arriba)', 'Múltiplo de 5,00 (para cima)': 'Múltiplo de 5,00 (hacia arriba)', 'Múltiplo de 10,00 (para cima)': 'Múltiplo de 10,00 (hacia arriba)'}}
+
+    def _get_idioma_atual(self):
+        try:
+            if getattr(self, "sistema", None) is not None:
+                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
+        except Exception:
+            pass
+        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
+
+    def _canonical_i18n_text(self, text):
+        if text is None:
+            return text
+        s = str(text)
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        if s in maps.get("pt_BR", {}):
+            return s
+        for _lang, table in maps.items():
+            for pt_key, translated in table.items():
+                if s == translated:
+                    return pt_key
+        return s
+
+    def _translate_i18n_text(self, text):
+        if text is None:
+            return text
+        idioma = self._get_idioma_atual()
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        canonical = self._canonical_i18n_text(text)
+        return maps.get(idioma, {}).get(canonical, canonical)
+
+    def _translate_i18n_values(self, values):
+        if not isinstance(values, (list, tuple)):
+            return values
+        return [self._translate_i18n_text(v) for v in values]
+
+    def _refresh_widget_i18n(self, widget):
+        try:
+            if hasattr(widget, "cget"):
+                try:
+                    text = widget.cget("text")
+                    if isinstance(text, str) and text:
+                        new_text = self._translate_i18n_text(text)
+                        if new_text != text:
+                            widget.configure(text=new_text)
+                except Exception:
+                    pass
+
+                try:
+                    placeholder = widget.cget("placeholder_text")
+                    if isinstance(placeholder, str) and placeholder:
+                        new_placeholder = self._translate_i18n_text(placeholder)
+                        if new_placeholder != placeholder:
+                            widget.configure(placeholder_text=new_placeholder)
+                except Exception:
+                    pass
+
+                try:
+                    values = widget.cget("values")
+                    if isinstance(values, (list, tuple)) and values:
+                        current = None
+                        try:
+                            current = widget.get()
+                        except Exception:
+                            current = None
+                        translated_values = self._translate_i18n_values(list(values))
+                        widget.configure(values=translated_values)
+                        if current:
+                            widget.set(self._translate_i18n_text(current))
+                except Exception:
+                    pass
+
+            if isinstance(widget, ttk.Treeview):
+                try:
+                    for col in widget["columns"]:
+                        info = widget.heading(col)
+                        heading_text = info.get("text", "")
+                        if heading_text:
+                            widget.heading(col, text=self._translate_i18n_text(heading_text))
+                except Exception:
+                    pass
+
+            for child in widget.winfo_children():
+                self._refresh_widget_i18n(child)
+        except Exception:
+            pass
+
+    def refresh_texts(self):
+        try:
+            target = getattr(self, "root", None) or self
+            self._refresh_widget_i18n(target)
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "root") and self.root:
+                self.root.title(self._translate_i18n_text(self.root.title()))
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "PAGE_TITLE"):
+                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
+        except Exception:
+            pass
+
 if __name__ == "__main__":
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("dark-blue")

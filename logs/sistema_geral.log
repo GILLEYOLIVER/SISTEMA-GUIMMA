@@ -483,3 +483,48 @@ Exception: Não foi possível conectar. Portas testadas: [5432]
 2026-03-16 17:46:41 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
 2026-03-16 17:46:43 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
 2026-03-16 17:46:54 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-03-17 18:11:10 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-03-18 08:22:12 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 09:06:22 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 09:38:05 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 10:45:46 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-18 10:47:42 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-18 10:47:54 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-18 10:48:26 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-18 12:31:25 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 12:45:42 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 12:46:13 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 12:49:57 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-18 13:32:17 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:32:17 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:34:54 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:34:54 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:38:27 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:38:27 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:40:13 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:40:13 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:41:22 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:41:22 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:41:47 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:41:47 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:49:15 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:49:15 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:49:36 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:49:36 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:49:54 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:49:54 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:50:09 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:50:09 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:57:31 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:57:31 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 13:57:46 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 13:57:46 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 14:41:29 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 14:41:29 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 14:41:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 14:41:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 14:42:31 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 14:42:31 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 14:42:46 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 14:42:46 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 14:42:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado

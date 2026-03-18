@@ -55,6 +55,26 @@ def fmt_moeda(v):
 
 # ============================== Tela ==============================
 class FinalizacaoCortes(ctk.CTkFrame):
+    TRANSLATIONS = {
+     "pt_BR":{"title":"CONTROLE DE MÃO DE OBRA — Finalização de Cortes","search_return":"Buscar Retorno:","search_placeholder":"Ordem, código ou descrição","search":"Buscar","show_finished":"Mostrar Finalizados","provider":"Prestador:","service":"Serviço:","entry_id":"Entrada ID:","arrival_date":"Data Chegada:","code":"Código:","description":"Descrição:","order_no":"Nº Ordem:","size_control":"Controle por Tamanho - Edite as quantidades","size":"Tam.","sent":"Enviado","delivered":"Entregue","sample_received":"Piloto recebida","defect":"Defeito","missing":"Faltante","regular":"Regulares","piece_value":"Valor/Peça","subtotal":"Subtotal","total_delivered":"Total Entregue:","total_samples":"Piloto recebida:","total_defect":"Defeito:","total_missing":"Faltante:","total_regular":"Regulares (pagas):","total_to_pay":"Valor Total a Pagar:","bonus":"Bonificação:","yes":"Sim","no":"Não","finish_full":"Finalizar Corte Completo","save_partial":"Salvar Baixa Parcial","report":"Relatório","print":"Imprimir","save_pdf":"Salvar PDF","open_html":"Abrir HTML","pending_title":"Retornos Pendentes","col_id":"ID","col_order":"Ordem","col_code":"Código","col_description":"Descrição","col_provider":"Prestador","col_entry_date":"Data Entrada","col_status":"Status","col_total_qty":"Qtd Total","col_remaining":"Peças Restantes","warning":"Aviso","error":"Erro","select_return_first":"Selecione um retorno primeiro!","finalization_report":"Relatório de Finalização"},
+     "en_US":{"title":"LABOR CONTROL — Cut Finalization","search_return":"Search Return:","search_placeholder":"Order, code or description","search":"Search","show_finished":"Show Finished","provider":"Provider:","service":"Service:","entry_id":"Entry ID:","arrival_date":"Arrival Date:","code":"Code:","description":"Description:","order_no":"Order No.:","size_control":"Size Control - Edit quantities","size":"Size","sent":"Sent","delivered":"Delivered","sample_received":"Sample received","defect":"Defect","missing":"Missing","regular":"Regular","piece_value":"Value/Piece","subtotal":"Subtotal","total_delivered":"Total Delivered:","total_samples":"Sample received:","total_defect":"Defect:","total_missing":"Missing:","total_regular":"Regular (paid):","total_to_pay":"Total to Pay:","bonus":"Bonus:","yes":"Yes","no":"No","finish_full":"Finalize Full Cut","save_partial":"Save Partial Entry","report":"Report","print":"Print","save_pdf":"Save PDF","open_html":"Open HTML","pending_title":"Pending Returns","col_id":"ID","col_order":"Order","col_code":"Code","col_description":"Description","col_provider":"Provider","col_entry_date":"Entry Date","col_status":"Status","col_total_qty":"Total Qty","col_remaining":"Remaining Pieces","warning":"Warning","error":"Error","select_return_first":"Select a return first!","finalization_report":"Finalization Report"},
+     "es_ES":{"title":"CONTROL DE MANO DE OBRA — Finalización de Cortes","search_return":"Buscar Retorno:","search_placeholder":"Orden, código o descripción","search":"Buscar","show_finished":"Mostrar Finalizados","provider":"Prestador:","service":"Servicio:","entry_id":"ID Entrada:","arrival_date":"Fecha Llegada:","code":"Código:","description":"Descripción:","order_no":"Nº Orden:","size_control":"Control por Talla - Edite las cantidades","size":"Talla","sent":"Enviado","delivered":"Entregado","sample_received":"Muestra recibida","defect":"Defecto","missing":"Faltante","regular":"Regulares","piece_value":"Valor/Pieza","subtotal":"Subtotal","total_delivered":"Total Entregado:","total_samples":"Muestra recibida:","total_defect":"Defecto:","total_missing":"Faltante:","total_regular":"Regulares (pagadas):","total_to_pay":"Valor Total a Pagar:","bonus":"Bonificación:","yes":"Sí","no":"No","finish_full":"Finalizar Corte Completo","save_partial":"Guardar Baja Parcial","report":"Reporte","print":"Imprimir","save_pdf":"Guardar PDF","open_html":"Abrir HTML","pending_title":"Retornos Pendientes","col_id":"ID","col_order":"Orden","col_code":"Código","col_description":"Descripción","col_provider":"Prestador","col_entry_date":"Fecha Entrada","col_status":"Estado","col_total_qty":"Cant. Total","col_remaining":"Piezas Restantes","warning":"Aviso","error":"Error","select_return_first":"¡Seleccione un retorno primero!","finalization_report":"Reporte de Finalización"}
+    }
+    def _init_i18n(self):
+        self.idioma_atual = getattr(self.sistema, "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    def _get_text(self, key, default=None):
+        lang = getattr(self, "idioma_atual", "pt_BR")
+        return self.TRANSLATIONS.get(lang, {}).get(key, self.TRANSLATIONS["pt_BR"].get(key, default if default is not None else key))
+    def refresh_texts(self):
+        for n,k in [("lbl_title","title"),("lbl_busca","search_return"),("btn_buscar","search"),("cb_mostrar_finalizados","show_finished"),("lbl_prestador","provider"),("lbl_servico","service"),("lbl_entrada_id","entry_id"),("lbl_data_chegada","arrival_date"),("lbl_codigo","code"),("lbl_descricao","description"),("lbl_ordem","order_no"),("lbl_grade_titulo","size_control"),("lbl_total_entregue_titulo","total_delivered"),("lbl_total_copias_titulo","total_samples"),("lbl_total_defeito_titulo","total_defect"),("lbl_total_faltante_titulo","total_missing"),("lbl_total_regulares_titulo","total_regular"),("lbl_valor_total_titulo","total_to_pay"),("lbl_bonificacao","bonus"),("rb_bonus_yes","yes"),("rb_bonus_no","no"),("btn_finalizar","finish_full"),("btn_baixa_parcial","save_partial"),("btn_relatorio","report"),("btn_imprimir","print"),("btn_salvar_pdf","save_pdf"),("btn_abrir_html","open_html")]:
+            try: getattr(self,n).configure(text=self._get_text(k))
+            except Exception: pass
+        try: self.busca_entry.configure(placeholder_text=self._get_text("search_placeholder"))
+        except Exception: pass
+        try:
+            cols = {"ID":"col_id","Ordem":"col_order","Código":"col_code","Descrição":"col_description","Prestador":"col_provider","Data Entrada":"col_entry_date","Status":"col_status","Qtd Total":"col_total_qty","Peças Restantes":"col_remaining"}
+            for col,key in cols.items(): self.retornos_tree.heading(col, text=self._get_text(key))
+        except Exception: pass
     tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
 
     def __init__(self, master, sistema=None):
@@ -81,8 +101,10 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.valor_por_tam = {t: 0.0 for t in self.tamanhos}
         self.pilotos_por_tam = {t: 0 for t in self.tamanhos}
 
+        self._init_i18n()
         self.pack(fill="both", expand=True)
         self._build_ui()
+        self.refresh_texts()
         self.carregar_retornos_pendentes()
 
     # ----------------------------- THEME MANAGEMENT -----------------------------
@@ -198,7 +220,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         head = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         head.pack(fill="x", pady=(0, 8))
 
-        ctk.CTkLabel(
+        self.lbl_title = ctk.CTkLabel(
             head,
             text="CONTROLE DE MÃO DE OBRA — Finalização de Cortes",
             font=("Arial", 18, "bold"),
@@ -221,8 +243,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         busca.pack(fill="x", pady=6)
 
-        ctk.CTkLabel(busca, text="Buscar Retorno:", width=120,
-                     text_color=self.cor_texto).pack(side="left", padx=(0, 6))
+        self.lbl_busca = ctk.CTkLabel(busca, text="Buscar Retorno:", width=120,
+                     text_color=self.cor_texto); self.lbl_busca.pack(side="left", padx=(0, 6))
 
         self.busca_entry = ctk.CTkEntry(busca, width=250,
                                         placeholder_text="Ordem, código ou descrição",
@@ -233,11 +255,12 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.busca_entry.pack(side="left")
         self.busca_entry.bind("<Return>", lambda e: self.carregar_retornos_pendentes())
 
-        ctk.CTkButton(busca, text="Buscar", width=90,
+        self.btn_buscar = ctk.CTkButton(busca, text="Buscar", width=90,
                       command=self.carregar_retornos_pendentes,
                       fg_color=self.cor_primaria,
                       hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=8)
+                      text_color=self.cor_texto)
+        self.btn_buscar.pack(side="left", padx=8)
 
         # Checkbox para mostrar finalizados
         self.cb_mostrar_finalizados = ctk.CTkCheckBox(
@@ -255,8 +278,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         linha = ctk.CTkFrame(prest, fg_color=self.cor_fundo)
         linha.pack(fill="x", pady=(4, 2))
 
-        ctk.CTkLabel(linha, text="Prestador:", width=100,
-                     text_color=self.cor_texto).pack(side="left", padx=4)
+        self.lbl_prestador = ctk.CTkLabel(linha, text="Prestador:", width=100,
+                     text_color=self.cor_texto); self.lbl_prestador.pack(side="left", padx=4)
 
         self.prestador_entry = ctk.CTkEntry(linha, width=360,
                                             fg_color=self.cor_secundaria,
@@ -265,8 +288,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.prestador_entry.pack(side="left", padx=4)
         self.prestador_entry.configure(state="disabled")
 
-        ctk.CTkLabel(linha, text="Serviço:", width=80,
-                     text_color=self.cor_texto).pack(side="left", padx=(16, 4))
+        self.lbl_servico = ctk.CTkLabel(linha, text="Serviço:", width=80,
+                     text_color=self.cor_texto); self.lbl_servico.pack(side="left", padx=(16, 4))
 
         self.servico_entry = ctk.CTkEntry(linha, width=220,
                                           fg_color=self.cor_secundaria,
@@ -322,8 +345,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         l1 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
         l1.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(l1, text="Entrada ID:", width=100,
-                     text_color=self.cor_texto).pack(side="left", padx=4)
+        self.lbl_entrada_id = ctk.CTkLabel(l1, text="Entrada ID:", width=100,
+                     text_color=self.cor_texto); self.lbl_entrada_id.pack(side="left", padx=4)
 
         self.entrada_id_entry = ctk.CTkEntry(l1, width=120,
                                              fg_color=self.cor_secundaria,
@@ -332,8 +355,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.entrada_id_entry.pack(side="left", padx=4)
         self.entrada_id_entry.configure(state="disabled")
 
-        ctk.CTkLabel(l1, text="Data Chegada:", width=100,
-                     text_color=self.cor_texto).pack(side="left", padx=4)
+        self.lbl_data_chegada = ctk.CTkLabel(l1, text="Data Chegada:", width=100,
+                     text_color=self.cor_texto); self.lbl_data_chegada.pack(side="left", padx=4)
 
         self.data_entrada_entry = ctk.CTkEntry(l1, width=180,
                                                fg_color=self.cor_secundaria,
@@ -345,8 +368,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         l2 = ctk.CTkFrame(det, fg_color=self.cor_fundo)
         l2.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(l2, text="Código:", width=70,
-                     text_color=self.cor_texto).pack(side="left", padx=4)
+        self.lbl_codigo = ctk.CTkLabel(l2, text="Código:", width=70,
+                     text_color=self.cor_texto); self.lbl_codigo.pack(side="left", padx=4)
 
         self.codigo_entry = ctk.CTkEntry(l2, width=180,
                                          fg_color=self.cor_secundaria,
@@ -355,8 +378,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.codigo_entry.pack(side="left", padx=4)
         self.codigo_entry.configure(state="disabled")
 
-        ctk.CTkLabel(l2, text="Descrição:", width=80,
-                     text_color=self.cor_texto).pack(side="left", padx=4)
+        self.lbl_descricao = ctk.CTkLabel(l2, text="Descrição:", width=80,
+                     text_color=self.cor_texto); self.lbl_descricao.pack(side="left", padx=4)
 
         self.descricao_entry = ctk.CTkEntry(l2, width=380,
                                             fg_color=self.cor_secundaria,
@@ -365,8 +388,8 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.descricao_entry.pack(side="left", padx=4)
         self.descricao_entry.configure(state="disabled")
 
-        ctk.CTkLabel(l2, text="Nº Ordem:", width=80,
-                     text_color=self.cor_texto).pack(side="left", padx=4)
+        self.lbl_ordem = ctk.CTkLabel(l2, text="Nº Ordem:", width=80,
+                     text_color=self.cor_texto); self.lbl_ordem.pack(side="left", padx=4)
 
         self.ordem_entry = ctk.CTkEntry(l2, width=120,
                                         fg_color=self.cor_secundaria,
@@ -386,7 +409,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         left = ctk.CTkFrame(mid, fg_color=self.cor_fundo)
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
-        ctk.CTkLabel(left, text="Controle por Tamanho - Edite as quantidades",
+        self.lbl_grade_titulo = ctk.CTkLabel(left, text="Controle por Tamanho - Edite as quantidades",
                      font=("Arial", 13, "bold"),
                      text_color=self.cor_texto).pack(anchor="w", padx=4, pady=(4, 6))
 
@@ -476,7 +499,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         totais = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         totais.pack(fill="x", pady=(6, 8))
 
-        ctk.CTkLabel(totais, text="Total Entregue:", width=140,
+        self.lbl_total_entregue_titulo = ctk.CTkLabel(totais, text="Total Entregue:", width=140,
                      font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=4)
 
@@ -485,7 +508,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                                text_color=self.cor_texto)
         self.lbl_total_entregue.pack(side="left", padx=4)
 
-        ctk.CTkLabel(totais, text="Piloto recebida:", width=140,
+        self.lbl_total_copias_titulo = ctk.CTkLabel(totais, text="Piloto recebida:", width=140,
                      font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=12)
 
@@ -494,7 +517,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                              text_color=self.cor_texto)
         self.lbl_total_copias.pack(side="left", padx=4)
 
-        ctk.CTkLabel(totais, text="Defeito:", width=80,
+        self.lbl_total_defeito_titulo = ctk.CTkLabel(totais, text="Defeito:", width=80,
                      font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=12)
 
@@ -503,7 +526,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                               text_color=self.cor_texto)
         self.lbl_total_defeito.pack(side="left", padx=4)
 
-        ctk.CTkLabel(totais, text="Faltante:", width=80,
+        self.lbl_total_faltante_titulo = ctk.CTkLabel(totais, text="Faltante:", width=80,
                      font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=12)
 
@@ -512,7 +535,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                                text_color=self.cor_texto)
         self.lbl_total_faltante.pack(side="left", padx=4)
 
-        ctk.CTkLabel(totais, text="Regulares (pagas):", width=160,
+        self.lbl_total_regulares_titulo = ctk.CTkLabel(totais, text="Regulares (pagas):", width=160,
                      font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=12)
 
@@ -521,7 +544,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
                                                 text_color=self.cor_texto)
         self.lbl_total_regulares.pack(side="left", padx=4)
 
-        ctk.CTkLabel(totais, text="Valor Total a Pagar:", width=170,
+        self.lbl_valor_total_titulo = ctk.CTkLabel(totais, text="Valor Total a Pagar:", width=170,
                      font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=12)
 
@@ -535,15 +558,15 @@ class FinalizacaoCortes(ctk.CTkFrame):
         bonif_frame = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         bonif_frame.pack(fill="x", pady=(0, 8))
 
-        ctk.CTkLabel(bonif_frame, text="Bonificação:", width=120,
+        self.lbl_bonificacao = ctk.CTkLabel(bonif_frame, text="Bonificação:", width=120,
                      font=("Arial", 12, "bold"),
                      text_color=self.cor_texto).pack(side="left", padx=4)
 
-        ctk.CTkRadioButton(bonif_frame, text="Sim",
+        self.rb_bonus_yes = ctk.CTkRadioButton(bonif_frame, text="Sim",
                            variable=self.bonif_final_var, value="sim",
                            text_color=self.cor_texto).pack(side="left", padx=(0, 8))
 
-        ctk.CTkRadioButton(bonif_frame, text="Não",
+        self.rb_bonus_no = ctk.CTkRadioButton(bonif_frame, text="Não",
                            variable=self.bonif_final_var, value="nao",
                            text_color=self.cor_texto).pack(side="left")
 
@@ -1137,14 +1160,14 @@ class FinalizacaoCortes(ctk.CTkFrame):
     # ----------------------------- Relatório -----------------------------
     def abrir_relatorio(self):
         if not self.retorno_selecionado:
-            messagebox.showwarning("Aviso", "Selecione um retorno primeiro!")
+            messagebox.showwarning(self._get_text("warning"), self._get_text("select_return_first"))
             return
 
         dados = self._coletar_dados_relatorio()
         html = self._gerar_html_relatorio(dados)
 
         win = ctk.CTkToplevel(self)
-        win.title("Relatório de Finalização")
+        win.title(self._get_text("finalization_report"))
         win.geometry("900x650")
 
         header = ctk.CTkFrame(win)

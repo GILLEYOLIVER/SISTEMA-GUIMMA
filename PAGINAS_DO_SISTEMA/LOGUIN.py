@@ -266,7 +266,17 @@ class SistemaLoginModerno:
             return
 
         self._configurar_interface()
+        try:
+            self.refresh_texts()
+        except Exception:
+            pass
+
         self.root.bind("<Return>", lambda evento: self.entrar_no_sistema())
+        try:
+            self.refresh_texts()
+        except Exception:
+            pass
+
 
     def exibir_janela(self):
         try:
@@ -1050,6 +1060,112 @@ class SistemaLoginModerno:
 # ============================================================
 # Inicialização
 # ============================================================
+    _I18N_MAP = {'en_US': {'OPERA FASHION - Login': 'OPERA FASHION - Login', 'ACESSO AO SISTEMA': 'SYSTEM ACCESS', 'Usuário': 'User', 'Senha': 'Password', 'Mostrar senha': 'Show password', 'ENTRAR': 'LOGIN', 'Usuários no sistema:': 'Users in the system:', 'Selecionar': 'Select', 'Fechar': 'Close', 'Usuários cadastrados': 'Registered users', 'Caps Lock ativo': 'Caps Lock is on', 'Atenção': 'Attention', 'Preencha usuário e senha.': 'Enter username and password.', 'Falha no login': 'Login failed', 'Usuário não encontrado.': 'User not found.', 'Acesso negado': 'Access denied', 'Usuário inativo.': 'Inactive user.', 'Senha incorreta.': 'Incorrect password.', 'Erro': 'Error', 'Falha ao iniciar o sistema:\n{erro}': 'Failed to start the system:\n{erro}', 'Banco não preparado': 'Database not ready', 'Configuração necessária': 'Configuration required'}, 'es_ES': {'OPERA FASHION - Login': 'OPERA FASHION - Inicio de sesión', 'ACESSO AO SISTEMA': 'ACCESO AL SISTEMA', 'Usuário': 'Usuario', 'Senha': 'Contraseña', 'Mostrar senha': 'Mostrar contraseña', 'ENTRAR': 'INGRESAR', 'Usuários no sistema:': 'Usuarios en el sistema:', 'Selecionar': 'Seleccionar', 'Fechar': 'Cerrar', 'Usuários cadastrados': 'Usuarios registrados', 'Caps Lock ativo': 'Bloq Mayús activo', 'Atenção': 'Atención', 'Preencha usuário e senha.': 'Ingrese usuario y contraseña.', 'Falha no login': 'Error de inicio de sesión', 'Usuário não encontrado.': 'Usuario no encontrado.', 'Acesso negado': 'Acceso denegado', 'Usuário inativo.': 'Usuario inactivo.', 'Senha incorreta.': 'Contraseña incorrecta.', 'Erro': 'Error', 'Banco não preparado': 'Base de datos no preparada', 'Configuração necessária': 'Configuración necesaria'}}
+
+    def _get_idioma_atual(self):
+        try:
+            if getattr(self, "sistema", None) is not None:
+                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
+        except Exception:
+            pass
+        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
+
+    def _canonical_i18n_text(self, text):
+        if text is None:
+            return text
+        s = str(text)
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        if s in maps.get("pt_BR", {}):
+            return s
+        for _lang, table in maps.items():
+            for pt_key, translated in table.items():
+                if s == translated:
+                    return pt_key
+        return s
+
+    def _translate_i18n_text(self, text):
+        if text is None:
+            return text
+        idioma = self._get_idioma_atual()
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        canonical = self._canonical_i18n_text(text)
+        return maps.get(idioma, {}).get(canonical, canonical)
+
+    def _translate_i18n_values(self, values):
+        if not isinstance(values, (list, tuple)):
+            return values
+        return [self._translate_i18n_text(v) for v in values]
+
+    def _refresh_widget_i18n(self, widget):
+        try:
+            if hasattr(widget, "cget"):
+                try:
+                    text = widget.cget("text")
+                    if isinstance(text, str) and text:
+                        new_text = self._translate_i18n_text(text)
+                        if new_text != text:
+                            widget.configure(text=new_text)
+                except Exception:
+                    pass
+
+                try:
+                    placeholder = widget.cget("placeholder_text")
+                    if isinstance(placeholder, str) and placeholder:
+                        new_placeholder = self._translate_i18n_text(placeholder)
+                        if new_placeholder != placeholder:
+                            widget.configure(placeholder_text=new_placeholder)
+                except Exception:
+                    pass
+
+                try:
+                    values = widget.cget("values")
+                    if isinstance(values, (list, tuple)) and values:
+                        current = None
+                        try:
+                            current = widget.get()
+                        except Exception:
+                            current = None
+                        translated_values = self._translate_i18n_values(list(values))
+                        widget.configure(values=translated_values)
+                        if current:
+                            widget.set(self._translate_i18n_text(current))
+                except Exception:
+                    pass
+
+            if isinstance(widget, ttk.Treeview):
+                try:
+                    for col in widget["columns"]:
+                        info = widget.heading(col)
+                        heading_text = info.get("text", "")
+                        if heading_text:
+                            widget.heading(col, text=self._translate_i18n_text(heading_text))
+                except Exception:
+                    pass
+
+            for child in widget.winfo_children():
+                self._refresh_widget_i18n(child)
+        except Exception:
+            pass
+
+    def refresh_texts(self):
+        try:
+            target = getattr(self, "root", None) or self
+            self._refresh_widget_i18n(target)
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "root") and self.root:
+                self.root.title(self._translate_i18n_text(self.root.title()))
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "PAGE_TITLE"):
+                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
+        except Exception:
+            pass
+
 if __name__ == "__main__":
     root = tk.Tk()
     aplicacao = SistemaLoginModerno(root)

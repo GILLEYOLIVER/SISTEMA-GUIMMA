@@ -51,6 +51,8 @@ class BackupPage(ctk.CTkFrame):
         super().__init__(master, *args, **kwargs)
         self.master = master
         self.sistema = sistema
+        self.app = sistema
+        self._ui_refs = {}
 
         # 🎨 Tema (com fallback seguro)
         origem = sistema or master
@@ -201,7 +203,7 @@ class BackupPage(ctk.CTkFrame):
                 self.btn_parar_auto.configure(state="disabled")
                 self.entry_auto_pasta.configure(state="normal")
                 self.lbl_status_auto.configure(
-                    text="Backup automático: INATIVO",
+                    text=self._get_text("auto_inactive"),
                     text_color="#9ca3af"
                 )
 
@@ -402,6 +404,36 @@ class BackupPage(ctk.CTkFrame):
             return True
         except:
             return False
+
+    # ------------------------------------------------------------------ Idioma
+    TEXTOS_I18N = {'pt_BR': {'title': '💽 Backup do Banco de Dados', 'checking_db': 'Verificando banco...', 'backup_desc': 'Gerar backup completo do banco Opera (pg_dump).', 'backup_now': '💾 Gerar backup agora', 'open_folder': '📂 Abrir pasta de backups', 'auto_title': '🔄 Backup Automático (rotação: 300 arquivos)', 'interval': 'Intervalo:', 'every_hour': '(A cada hora)', 'every_6_hours': '(A cada 6 horas)', 'every_12_hours': '(A cada 12 horas)', 'daily': '(Diariamente)', 'every_2_days': '(A cada 2 dias)', 'weekly': '(Semanalmente)', 'folder': 'Pasta:', 'auto_folder_placeholder': 'Pasta para backups automáticos...', 'start_auto': '▶ Iniciar Backup Automático', 'stop_auto': '⏹ Parar Backup Automático', 'auto_inactive': 'Backup automático: INATIVO', 'run_now': '⚡ Executar Agora', 'log_title': 'Log de backup', 'host': 'Host:', 'port': 'Porta:', 'user': 'Usuário:', 'database': 'Banco:', 'error': 'Erro', 'select_auto_folder': 'Selecionar pasta para backups automáticos', 'invalid_interval': 'Intervalo inválido. Selecione um intervalo válido.', 'cannot_access_folder': 'Não foi possível criar/acessar a pasta:\n{pasta}', 'backup_title': 'Backup', 'backup_already_running': 'Já existe um backup em execução. Aguarde terminar.', 'unknown_size': 'Tamanho desconhecido', 'cannot_open_folder': 'Não foi possível abrir a pasta:\n\n{erro}', 'backup_screen_loaded': 'Tela de backup carregada.', 'backups_info': 'Backups: {total}/{maximo} | Tamanho: {tamanho}'}, 'en_US': {'title': '💽 Database Backup', 'checking_db': 'Checking database...', 'backup_desc': 'Generate a full backup of the Opera database (pg_dump).', 'backup_now': '💾 Back up now', 'open_folder': '📂 Open backup folder', 'auto_title': '🔄 Automatic Backup (rotation: 300 files)', 'interval': 'Interval:', 'every_hour': '(Every hour)', 'every_6_hours': '(Every 6 hours)', 'every_12_hours': '(Every 12 hours)', 'daily': '(Daily)', 'every_2_days': '(Every 2 days)', 'weekly': '(Weekly)', 'folder': 'Folder:', 'auto_folder_placeholder': 'Folder for automatic backups...', 'start_auto': '▶ Start Automatic Backup', 'stop_auto': '⏹ Stop Automatic Backup', 'auto_inactive': 'Automatic backup: INACTIVE', 'run_now': '⚡ Run Now', 'log_title': 'Backup log', 'host': 'Host:', 'port': 'Port:', 'user': 'User:', 'database': 'Database:', 'error': 'Error', 'select_auto_folder': 'Select folder for automatic backups', 'invalid_interval': 'Invalid interval. Select a valid interval.', 'cannot_access_folder': 'Could not create/access the folder:\n{pasta}', 'backup_title': 'Backup', 'backup_already_running': 'A backup is already running. Wait for it to finish.', 'unknown_size': 'Unknown size', 'cannot_open_folder': 'Could not open the folder:\n\n{erro}', 'backup_screen_loaded': 'Backup screen loaded.', 'backups_info': 'Backups: {total}/{maximo} | Size: {tamanho}'}, 'es_ES': {'title': '💽 Respaldo de Base de Datos', 'checking_db': 'Verificando base de datos...', 'backup_desc': 'Generar respaldo completo de la base de datos Opera (pg_dump).', 'backup_now': '💾 Generar respaldo ahora', 'open_folder': '📂 Abrir carpeta de respaldos', 'auto_title': '🔄 Respaldo Automático (rotación: 300 archivos)', 'interval': 'Intervalo:', 'every_hour': '(Cada hora)', 'every_6_hours': '(Cada 6 horas)', 'every_12_hours': '(Cada 12 horas)', 'daily': '(Diariamente)', 'every_2_days': '(Cada 2 días)', 'weekly': '(Semanalmente)', 'folder': 'Carpeta:', 'auto_folder_placeholder': 'Carpeta para respaldos automáticos...', 'start_auto': '▶ Iniciar Respaldo Automático', 'stop_auto': '⏹ Detener Respaldo Automático', 'auto_inactive': 'Respaldo automático: INACTIVO', 'run_now': '⚡ Ejecutar ahora', 'log_title': 'Registro de respaldo', 'host': 'Host:', 'port': 'Puerto:', 'user': 'Usuario:', 'database': 'Base de datos:', 'error': 'Error', 'select_auto_folder': 'Seleccionar carpeta para respaldos automáticos', 'invalid_interval': 'Intervalo inválido. Seleccione un intervalo válido.', 'cannot_access_folder': 'No se pudo crear/acceder a la carpeta:\n{pasta}', 'backup_title': 'Respaldo', 'backup_already_running': 'Ya hay un respaldo en ejecución. Espere a que termine.', 'unknown_size': 'Tamaño desconocido', 'cannot_open_folder': 'No fue posible abrir la carpeta:\n\n{erro}', 'backup_screen_loaded': 'Pantalla de respaldo cargada.', 'backups_info': 'Respaldos: {total}/{maximo} | Tamaño: {tamanho}'}}
+
+    def _get_idioma_atual(self):
+        origem = getattr(self, "sistema", None) or getattr(self, "app", None)
+        return getattr(origem, "idioma_atual", "pt_BR") if origem else "pt_BR"
+
+    def _get_text(self, chave, **kwargs):
+        idioma = self._get_idioma_atual()
+        base = self.TEXTOS_I18N.get(idioma) or self.TEXTOS_I18N["pt_BR"]
+        valor = base.get(chave) or self.TEXTOS_I18N["pt_BR"].get(chave) or chave
+        try:
+            return valor.format(**kwargs)
+        except Exception:
+            return valor
+
+    def refresh_texts(self):
+        if not getattr(self, "_ui_refs", None):
+            return
+        mapping = {"title_label":"title","desc_label":"backup_desc","btn_backup":"backup_now","btn_open_folder":"open_folder","auto_title_label":"auto_title","interval_label":"interval","folder_label":"folder","btn_iniciar_auto":"start_auto","btn_parar_auto":"stop_auto","btn_executar_agora":"run_now","log_title_label":"log_title","host_label":"host","port_label":"port","user_label":"user","db_label":"database"}
+        for ref,key in mapping.items():
+            widget=self._ui_refs.get(ref)
+            if widget:
+                widget.configure(text=self._get_text(key))
+        if hasattr(self,'entry_auto_pasta'):
+            self.entry_auto_pasta.configure(placeholder_text=self._get_text('auto_folder_placeholder'))
+        self._atualizar_descricao_intervalo(self.interval_var.get())
+        self._atualizar_info_pasta()
+
     # ------------------------------------------------------------------ UI
     def _apply_ttk_theme(self):
         style = ttk.Style()
@@ -415,12 +447,13 @@ class BackupPage(ctk.CTkFrame):
         header = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         header.pack(fill="x", padx=10, pady=(10, 6))
 
-        ctk.CTkLabel(
+        self._ui_refs["title_label"] = ctk.CTkLabel(
             header,
-            text="💽 Backup do Banco de Dados",
+            text=self._get_text("title"),
             font=ctk.CTkFont(size=18, weight="bold"),
             text_color=self.cor_texto,
-        ).pack(side="left")
+        )
+        self._ui_refs["title_label"].pack(side="left")
 
         # Painel de informações do banco
         info = ctk.CTkFrame(
@@ -435,24 +468,26 @@ class BackupPage(ctk.CTkFrame):
         grid = ctk.CTkFrame(info, fg_color=self.cor_fundo)
         grid.pack(side="left", padx=10, pady=10)
 
-        def add_row(row, label, value):
-            ctk.CTkLabel(
+        def add_row(row, ref_key, label, value):
+            lbl = ctk.CTkLabel(
                 grid, text=label, text_color=self.cor_texto
-            ).grid(row=row, column=0, sticky="w", padx=(0, 5))
+            )
+            lbl.grid(row=row, column=0, sticky="w", padx=(0, 5))
+            self._ui_refs[ref_key] = lbl
             ctk.CTkLabel(
                 grid, text=value, text_color=self.cor_texto,
                 font=ctk.CTkFont(size=13, weight="bold")
             ).grid(row=row, column=1, sticky="w")
 
-        add_row(0, "Host:", str(self.host))
-        add_row(1, "Porta:", str(self.port))
-        add_row(2, "Usuário:", self.user)
-        add_row(3, "Banco:", self.database)
+        add_row(0, "host_label", self._get_text("host"), str(self.host))
+        add_row(1, "port_label", self._get_text("port"), str(self.port))
+        add_row(2, "user_label", self._get_text("user"), self.user)
+        add_row(3, "db_label", self._get_text("database"), self.database)
 
         # Status do banco
         self.lbl_status = ctk.CTkLabel(
             info,
-            text="Verificando banco...",
+            text=self._get_text("checking_db"),
             text_color="#e5e7eb",
             font=ctk.CTkFont(size=13, weight="bold"),
         )
@@ -468,34 +503,37 @@ class BackupPage(ctk.CTkFrame):
         )
         actions.pack(fill="x", padx=10, pady=(0, 10))
 
-        ctk.CTkLabel(
+        self._ui_refs["desc_label"] = ctk.CTkLabel(
             actions,
-            text="Gerar backup completo do banco Opera (pg_dump).",
+            text=self._get_text("backup_desc"),
             text_color=self.cor_texto,
-        ).pack(anchor="w", padx=10, pady=(8, 4))
+        )
+        self._ui_refs["desc_label"].pack(anchor="w", padx=10, pady=(8, 4))
 
         btns = ctk.CTkFrame(actions, fg_color=self.cor_fundo)
         btns.pack(fill="x", padx=10, pady=(0, 10))
 
         self.btn_backup = ctk.CTkButton(
             btns,
-            text="💾 Gerar backup agora",
+            text=self._get_text("backup_now"),
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
             command=self._on_backup_clicked,
             width=180,
         )
+        self._ui_refs["btn_backup"] = self.btn_backup
         self.btn_backup.pack(side="left", padx=(0, 10))
 
-        ctk.CTkButton(
+        self._ui_refs["btn_open_folder"] = ctk.CTkButton(
             btns,
-            text="📂 Abrir pasta de backups",
+            text=self._get_text("open_folder"),
             fg_color=self.cor_destaque,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
             command=self._abrir_pasta_backups,
-        ).pack(side="left", padx=(0, 10))
+        )
+        self._ui_refs["btn_open_folder"].pack(side="left", padx=(0, 10))
 
         # Info da pasta de backups
         self.lbl_info_pasta = ctk.CTkLabel(
@@ -516,23 +554,25 @@ class BackupPage(ctk.CTkFrame):
         )
         auto_frame.pack(fill="x", padx=10, pady=(0, 10))
 
-        ctk.CTkLabel(
+        self._ui_refs["auto_title_label"] = ctk.CTkLabel(
             auto_frame,
-            text="🔄 Backup Automático (rotação: 300 arquivos)",
+            text=self._get_text("auto_title"),
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=self.cor_texto,
-        ).pack(anchor="w", padx=10, pady=(8, 4))
+        )
+        self._ui_refs["auto_title_label"].pack(anchor="w", padx=10, pady=(8, 4))
 
         # Configuração do backup automático
         config_frame = ctk.CTkFrame(auto_frame, fg_color=self.cor_fundo)
         config_frame.pack(fill="x", padx=10, pady=(0, 10))
 
         # Intervalo
-        ctk.CTkLabel(
+        self._ui_refs["interval_label"] = ctk.CTkLabel(
             config_frame,
-            text="Intervalo:",
+            text=self._get_text("interval"),
             text_color=self.cor_texto,
-        ).grid(row=0, column=0, sticky="w", padx=(0, 5), pady=5)
+        )
+        self._ui_refs["interval_label"].grid(row=0, column=0, sticky="w", padx=(0, 5), pady=5)
 
         self.interval_var = ctk.StringVar(value="3600")
 
@@ -549,7 +589,7 @@ class BackupPage(ctk.CTkFrame):
         # Label para mostrar a descrição do intervalo selecionado
         self.lbl_intervalo_desc = ctk.CTkLabel(
             config_frame,
-            text="(A cada hora)",
+            text=self._get_text("every_hour"),
             text_color="#9ca3af",
             font=ctk.CTkFont(size=11),
         )
@@ -560,18 +600,19 @@ class BackupPage(ctk.CTkFrame):
         self._atualizar_descricao_intervalo(self.interval_var.get())
 
         # Pasta de destino
-        ctk.CTkLabel(
+        self._ui_refs["folder_label"] = ctk.CTkLabel(
             config_frame,
-            text="Pasta:",
+            text=self._get_text("folder"),
             text_color=self.cor_texto,
-        ).grid(row=1, column=0, sticky="w", padx=(0, 5), pady=5)
+        )
+        self._ui_refs["folder_label"].grid(row=1, column=0, sticky="w", padx=(0, 5), pady=5)
 
         self.auto_pasta_var = ctk.StringVar(value="")
         self.entry_auto_pasta = ctk.CTkEntry(
             config_frame,
             textvariable=self.auto_pasta_var,
             width=300,
-            placeholder_text="Pasta para backups automáticos..."
+            placeholder_text=self._get_text("auto_folder_placeholder")
         )
         self.entry_auto_pasta.grid(row=1, column=1, columnspan=2, sticky="w", padx=(0, 10), pady=5)
 
@@ -588,18 +629,19 @@ class BackupPage(ctk.CTkFrame):
 
         self.btn_iniciar_auto = ctk.CTkButton(
             control_frame,
-            text="▶ Iniciar Backup Automático",
+            text=self._get_text("start_auto"),
             fg_color="#059669",
             hover_color="#047857",
             text_color=self.cor_texto,
             command=self._iniciar_backup_auto,
             width=200
         )
+        self._ui_refs["btn_iniciar_auto"] = self.btn_iniciar_auto
         self.btn_iniciar_auto.pack(side="left", padx=(0, 10))
 
         self.btn_parar_auto = ctk.CTkButton(
             control_frame,
-            text="⏹ Parar Backup Automático",
+            text=self._get_text("stop_auto"),
             fg_color="#dc2626",
             hover_color="#b91c1c",
             text_color=self.cor_texto,
@@ -607,24 +649,26 @@ class BackupPage(ctk.CTkFrame):
             width=200,
             state="disabled"
         )
+        self._ui_refs["btn_parar_auto"] = self.btn_parar_auto
         self.btn_parar_auto.pack(side="left", padx=(0, 10))
 
         # Status do backup automático
         self.lbl_status_auto = ctk.CTkLabel(
             control_frame,
-            text="Backup automático: INATIVO",
+            text=self._get_text("auto_inactive"),
             text_color="#9ca3af",
             font=ctk.CTkFont(weight="bold")
         )
         self.btn_executar_agora = ctk.CTkButton(
             control_frame,
-            text="⚡ Executar Agora",
+            text=self._get_text("run_now"),
             fg_color="#7c3aed",
             hover_color="#6d28d9",
             text_color=self.cor_texto,
             command=self._executar_backup_auto_agora,
             width=120
         )
+        self._ui_refs["btn_executar_agora"] = self.btn_executar_agora
         self.btn_executar_agora.pack(side="right", padx=(10, 0))
 
         self.lbl_status_auto.pack(side="right", padx=(10, 0))
@@ -639,9 +683,10 @@ class BackupPage(ctk.CTkFrame):
         )
         log_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
-        ctk.CTkLabel(
-            log_frame, text="Log de backup", text_color=self.cor_texto
-        ).pack(anchor="w", padx=10, pady=(8, 0))
+        self._ui_refs["log_title_label"] = ctk.CTkLabel(
+            log_frame, text=self._get_text("log_title"), text_color=self.cor_texto
+        )
+        self._ui_refs["log_title_label"].pack(anchor="w", padx=10, pady=(8, 0))
 
         self.txt_log = ctk.CTkTextbox(
             log_frame,
@@ -653,19 +698,19 @@ class BackupPage(ctk.CTkFrame):
         )
         self.txt_log.pack(fill="both", expand=True, padx=10, pady=(4, 10))
 
-        self._log("Tela de backup carregada.")
+        self._log(self._get_text("backup_screen_loaded"))
         self._log(f"🔧 Configuração: {self.user}@{self.host}:{self.port}/{self.database}")
         self._atualizar_info_pasta()
 
     def _atualizar_descricao_intervalo(self, valor_selecionado):
         """Atualiza a descrição do intervalo selecionado"""
         descricoes = {
-            "3600": "(A cada hora)",
-            "21600": "(A cada 6 horas)",
-            "43200": "(A cada 12 horas)",
-            "86400": "(Diariamente)",
-            "172800": "(A cada 2 dias)",
-            "604800": "(Semanalmente)"
+            "3600": self._get_text("every_hour"),
+            "21600": self._get_text("every_6_hours"),
+            "43200": self._get_text("every_12_hours"),
+            "86400": self._get_text("daily"),
+            "172800": self._get_text("every_2_days"),
+            "604800": self._get_text("weekly")
         }
         descricao = descricoes.get(valor_selecionado, "")
         self.lbl_intervalo_desc.configure(text=descricao)
@@ -760,8 +805,7 @@ class BackupPage(ctk.CTkFrame):
         try:
             total = self._contar_backups()
             tamanho_pasta = self._calcular_tamanho_pasta()
-            texto = f"Backups: {total}/{self._max_backups} | Tamanho: {tamanho_pasta}"
-            self.lbl_info_pasta.configure(text=texto)
+            self.lbl_info_pasta.configure(text=self._get_text("backups_info", total=total, maximo=self._max_backups, tamanho=tamanho_pasta))
         except:
             pass
 
@@ -791,7 +835,7 @@ class BackupPage(ctk.CTkFrame):
     def _selecionar_pasta_auto(self):
         """Seleciona a pasta para backup automático"""
         pasta = filedialog.askdirectory(
-            title="Selecionar pasta para backups automáticos"
+            title=self._get_text("select_auto_folder")
         )
         if pasta:
             self.auto_pasta_var.set(pasta)
@@ -811,8 +855,8 @@ class BackupPage(ctk.CTkFrame):
             self._backup_auto_interval = int(self.interval_var.get())
         except ValueError:
             messagebox.showerror(
-                "Erro",
-                "Intervalo inválido. Selecione um intervalo válido."
+                self._get_text("error"),
+                self._get_text("invalid_interval")
             )
             return
 
@@ -871,7 +915,7 @@ class BackupPage(ctk.CTkFrame):
         self.btn_parar_auto.configure(state="disabled")
         self.entry_auto_pasta.configure(state="normal")
         self.lbl_status_auto.configure(
-            text="Backup automático: INATIVO",
+            text=self._get_text("auto_inactive"),
             text_color="#9ca3af"
         )
 
@@ -893,8 +937,8 @@ class BackupPage(ctk.CTkFrame):
 
         if self._backup_thread and self._backup_thread.is_alive():
             messagebox.showinfo(
-                "Backup",
-                "Já existe um backup em execução. Aguarde terminar."
+                self._get_text("backup_title"),
+                self._get_text("backup_already_running")
             )
             return
 
@@ -1308,8 +1352,8 @@ class BackupPage(ctk.CTkFrame):
     def _on_backup_clicked(self):
         if self._backup_thread and self._backup_thread.is_alive():
             messagebox.showinfo(
-                "Backup",
-                "Já existe um backup em execução. Aguarde terminar.",
+                self._get_text("backup_title"),
+                self._get_text("backup_already_running"),
             )
             return
 
@@ -1558,7 +1602,7 @@ class BackupPage(ctk.CTkFrame):
                     0,
                     lambda: self.btn_backup.configure(
                         state="normal",
-                        text="💾 Gerar backup agora",
+                        text=self._get_text("backup_now"),
                     ),
                 )
 
@@ -1571,7 +1615,7 @@ class BackupPage(ctk.CTkFrame):
                 size /= 1024.0
             return f"{size:.1f} TB"
         except:
-            return "Tamanho desconhecido"
+            return self._get_text("unknown_size")
 
     # ------------------------------------------------------------------ Utilidades
     def _abrir_pasta_backups(self):

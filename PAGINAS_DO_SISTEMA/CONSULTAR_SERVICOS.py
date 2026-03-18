@@ -70,6 +70,29 @@ def _dt(s: str) -> str:
 
 # ---------- Página Principal ----------
 class HistoricoServicosPage(ctk.CTkFrame):
+
+    TRANSLATIONS = {
+        "pt_BR":{"title":"HISTÓRICO DE SERVIÇOS POR PRESTADOR","period":"Período:","all_records":"Todos os registros","from":"De:","to":"Até:","provider":"Prestador:","service":"Serviço:","search":"🔍 Buscar","export_csv":"📤 Exportar CSV","report":"🖨️ Gerar Relatório","period_values":["Personalizado","Esta Semana","Semana Passada","Este Mês","Mês Passado","Este Semestre","Semestre Passado","Todos"],"service_values":["Todos","Facção","Bordado","Caseador","Botões","Estamparia","Interna","Tingimento","Outros Trabalhos"]},
+        "en_US":{"title":"SERVICE HISTORY BY PROVIDER","period":"Period:","all_records":"All records","from":"From:","to":"To:","provider":"Provider:","service":"Service:","search":"🔍 Search","export_csv":"📤 Export CSV","report":"🖨️ Generate Report","period_values":["Custom","This Week","Last Week","This Month","Last Month","This Semester","Last Semester","All"],"service_values":["All","Outsourcing","Embroidery","Buttonhole","Buttons","Printing","Internal","Dyeing","Other Work"]},
+        "es_ES":{"title":"HISTORIAL DE SERVICIOS POR PRESTADOR","period":"Período:","all_records":"Todos los registros","from":"De:","to":"Hasta:","provider":"Prestador:","service":"Servicio:","search":"🔍 Buscar","export_csv":"📤 Exportar CSV","report":"🖨️ Generar Informe","period_values":["Personalizado","Esta Semana","Semana Pasada","Este Mes","Mes Pasado","Este Semestre","Semestre Pasado","Todos"],"service_values":["Todos","Facción","Bordado","Ojal","Botones","Estampado","Interno","Teñido","Otros Trabajos"]}
+    }
+    def _get_idioma_atual(self):
+        origem = getattr(self, "sistema", None) or getattr(self, "master", None)
+        return getattr(origem, "idioma_atual", "pt_BR") if origem else "pt_BR"
+    def _get_text(self, chave, default=None):
+        idioma = self._get_idioma_atual()
+        base = self.TRANSLATIONS["pt_BR"]
+        return self.TRANSLATIONS.get(idioma, {}).get(chave, base.get(chave, default if default is not None else chave))
+    def refresh_texts(self):
+        try:
+            if hasattr(self, "_ui_refs"):
+                for k,ch in [("title","title"),("lbl_period","period"),("chk_all","all_records"),("lbl_from","from"),("lbl_to","to"),("lbl_provider","provider"),("lbl_service","service"),("btn_search","search"),("btn_export","export_csv"),("btn_report","report")]:
+                    if self._ui_refs.get(k): self._ui_refs[k].configure(text=self._get_text(ch))
+                if self._ui_refs.get("period_combo"): self._ui_refs["period_combo"].configure(values=self._get_text("period_values"))
+                if self._ui_refs.get("service_combo"): self._ui_refs["service_combo"].configure(values=self._get_text("service_values"))
+        except Exception:
+            pass
+
     PAGE_TITLE = "Histórico de Serviços por Prestador"
 
     def __init__(self, parent, sistema=None, *args, **kwargs):
@@ -96,6 +119,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.kpi_pagos = None
         self.kpi_valor = None
         self.kpi_media = None
+        self._ui_refs = {}
 
         # Configurar interface
         self.setup_ui()
@@ -358,8 +382,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
         header_frame.pack(fill="x", pady=(0, 10))
 
         # Título alinhado à esquerda
-        ctk.CTkLabel(header_frame, text="HISTÓRICO DE SERVIÇOS POR PRESTADOR",
-                     font=("Arial", 18, "bold"), text_color=self.cor_texto).pack(side="left", padx=10)
+        title_lbl = ctk.CTkLabel(header_frame, text=self._get_text("title"),
+                     font=("Arial", 18, "bold"), text_color=self.cor_texto)
+        title_lbl.pack(side="left", padx=10)
+        self._ui_refs["title"] = title_lbl
 
         # ========== FILTROS - MESMO ESTILO DO CADASTRO_DE_CORTE ==========
         filtros_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
@@ -369,31 +395,34 @@ class HistoricoServicosPage(ctk.CTkFrame):
         periodo_frame = ctk.CTkFrame(filtros_frame, fg_color=self.cor_fundo)
         periodo_frame.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(periodo_frame, text="Período:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        lbl = ctk.CTkLabel(periodo_frame, text=self._get_text("period"), width=80, anchor="e",
+                     text_color=self.cor_texto)
+        lbl.pack(side="left", padx=5)
+        self._ui_refs["lbl_period"] = lbl
 
-        periodo_combo = ctk.CTkComboBox(periodo_frame, values=[
-            "Personalizado", "Esta Semana", "Semana Passada", "Este Mês",
-            "Mês Passado", "Este Semestre", "Semestre Passado"
-            , "Todos"
-        ], width=150, variable=self.periodo_var, command=self._on_periodo_change,
+        periodo_combo = ctk.CTkComboBox(periodo_frame, values=self._get_text("period_values"), width=150, variable=self.periodo_var, command=self._on_periodo_change,
                                         fg_color=self.cor_secundaria,
                                         border_color=self.cor_borda,
                                         text_color=self.cor_texto,
                                         button_color=self.cor_primaria,
                                         button_hover_color=self.cor_hover)
         periodo_combo.pack(side="left", padx=5)
+        self._ui_refs["period_combo"] = periodo_combo
 
-        ctk.CTkCheckBox(
+        chk = ctk.CTkCheckBox(
             periodo_frame,
-            text="Todos os registros",
+            text=self._get_text("all_records"),
             variable=self.todos_registros_var,
             command=self._on_todos_registros_toggle,
             text_color=self.cor_texto
-        ).pack(side="left", padx=(10, 5))
+        )
+        chk.pack(side="left", padx=(10, 5))
+        self._ui_refs["chk_all"] = chk
 
-        ctk.CTkLabel(periodo_frame, text="De:", width=30, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=(15, 5))
+        lbl = ctk.CTkLabel(periodo_frame, text=self._get_text("from"), width=30, anchor="e",
+                     text_color=self.cor_texto)
+        lbl.pack(side="left", padx=(15, 5))
+        self._ui_refs["lbl_from"] = lbl
 
         hoje = date.today()
         self.ini_var.set(_first_day_of_month(hoje).strftime("%Y-%m-%d"))
@@ -414,8 +443,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
             text_color=self.cor_texto
         ).pack(side="left", padx=(0, 10))
 
-        ctk.CTkLabel(periodo_frame, text="Até:", width=30, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=(15, 5))
+        lbl = ctk.CTkLabel(periodo_frame, text=self._get_text("to"), width=30, anchor="e",
+                     text_color=self.cor_texto)
+        lbl.pack(side="left", padx=(15, 5))
+        self._ui_refs["lbl_to"] = lbl
 
         self.fim_var.set(_last_day_of_month(hoje).strftime("%Y-%m-%d"))
         self.fim_entry = ctk.CTkEntry(periodo_frame, width=120,
@@ -438,8 +469,10 @@ class HistoricoServicosPage(ctk.CTkFrame):
         prestador_frame = ctk.CTkFrame(filtros_frame, fg_color=self.cor_fundo)
         prestador_frame.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(prestador_frame, text="Prestador:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=5)
+        lbl = ctk.CTkLabel(prestador_frame, text=self._get_text("provider"), width=80, anchor="e",
+                     text_color=self.cor_texto)
+        lbl.pack(side="left", padx=5)
+        self._ui_refs["lbl_provider"] = lbl
 
         self.prestador_combo = ctk.CTkComboBox(prestador_frame, values=[], width=200,
                                                variable=self.prestador_var,
@@ -450,13 +483,12 @@ class HistoricoServicosPage(ctk.CTkFrame):
                                                button_hover_color=self.cor_hover)
         self.prestador_combo.pack(side="left", padx=5)
 
-        ctk.CTkLabel(prestador_frame, text="Serviço:", width=80, anchor="e",
-                     text_color=self.cor_texto).pack(side="left", padx=(15, 5))
+        lbl = ctk.CTkLabel(prestador_frame, text=self._get_text("service"), width=80, anchor="e",
+                     text_color=self.cor_texto)
+        lbl.pack(side="left", padx=(15, 5))
+        self._ui_refs["lbl_service"] = lbl
 
-        serv_combo = ctk.CTkComboBox(prestador_frame, values=[
-            "Todos", "Facção", "Bordado", "Caseador", "Botões",
-            "Estamparia", "Interna", "Tingimento", "Outros Trabalhos"
-        ], width=150, variable=self.servico_var,
+        serv_combo = ctk.CTkComboBox(prestador_frame, values=self._get_text("service_values"), width=150, variable=self.servico_var,
                                      fg_color=self.cor_secundaria,
                                      border_color=self.cor_borda,
                                      text_color=self.cor_texto,
@@ -464,15 +496,17 @@ class HistoricoServicosPage(ctk.CTkFrame):
                                      button_hover_color=self.cor_hover,
                                      command=lambda _: self._carregar_prestadores(self.servico_var.get()))
         serv_combo.pack(side="left", padx=5)
+        self._ui_refs["service_combo"] = serv_combo
 
         # Botão buscar
-        buscar_btn = ctk.CTkButton(prestador_frame, text="🔍 Buscar", width=100,
+        buscar_btn = ctk.CTkButton(prestador_frame, text=self._get_text("search"), width=100,
                                    command=self._search,
                                    fg_color=self.cor_primaria,
                                    hover_color=self.cor_hover,
                                    text_color=self.cor_texto,
                                    font=("Arial", 12))
         buscar_btn.pack(side="left", padx=(20, 5))
+        self._ui_refs["btn_search"] = buscar_btn
 
         # ========== KPIs - MESMO ESTILO DO CADASTRO_DE_CORTE ==========
         kpis_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
@@ -565,7 +599,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         ctk.CTkButton(
             action_frame,
-            text="📤 Exportar CSV",
+            text=self._get_text("export_csv"),
             command=self._export_csv,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
@@ -577,7 +611,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
 
         ctk.CTkButton(
             action_frame,
-            text="🖨️ Gerar Relatório",
+            text=self._get_text("report"),
             command=self._generate_report,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,

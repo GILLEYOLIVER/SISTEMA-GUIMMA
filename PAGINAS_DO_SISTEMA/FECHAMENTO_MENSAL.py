@@ -63,6 +63,110 @@ class _Theme:
 
 # ---------- Página ----------
 class FechamentoMensalPage(ctk.CTkFrame):
+    TRANSLATIONS = {
+        "pt_BR": {
+            "page_title": "Fechamento Mensal (Consolidação)",
+            "from": "De:", "to": "Até:", "service": "Serviço:",
+            "search_label": "Buscar (modelo/corte/costureira):", "search": "🔍 Buscar",
+            "date_placeholder": "AAAA-MM-DD",
+            "tab_kpi": "Consolidado", "tab_env": "Envios", "tab_ret": "Retornos/Entradas",
+            "tab_pag": "Pagamentos", "tab_adi": "Adiantamentos", "tab_his": "Histórico", "tab_rel": "Relatório",
+            "export_csv": "📤 Exportar CSV (Consolidado)", "report_html": "🖨️ Gerar Relatório HTML",
+            "kpi_sent": "Peças Enviadas", "kpi_returned": "Peças Retornadas", "kpi_missing": "Faltantes",
+            "kpi_defect": "Defeitos", "kpi_paid": "Total Pago", "kpi_advance": "Adiantamentos",
+            "all": "Todos", "faction":"Facção","embroidery":"Bordado","buttonhole":"Caseador","buttons":"Botões",
+            "printing":"Estamparia","dyeing":"Tingimento","other_jobs":"Outros Trabalhos",
+            "sum_model":"MODELO","sum_description":"DESCRIÇÃO","sum_destination":"DESTINO","sum_seamstress":"COSTUREIRA","sum_service":"SERVIÇO","sum_sent":"ENVIOS","sum_returned":"RETORNOS","sum_missing":"FALT.","sum_defect":"DEF.","sum_paid_value":"VALOR PAGO",
+            "env_date":"DATA","env_order":"ORDEM","env_code":"CÓDIGO","env_description":"DESCRIÇÃO","env_service":"SERVIÇO","env_destination":"DESTINO","env_qty":"QTD","env_samples":"PILOTOS","env_piece_value":"VALOR PEÇA",
+            "ret_date":"DATA","ret_code":"CÓDIGO","ret_size":"TAMANHO","ret_qty":"QTD","ret_copies":"CÓPIAS","ret_defect":"DEFEITO","ret_piece_value":"VALOR PEÇA","ret_obs":"OBS",
+            "pag_date":"DATA","pag_service":"SERVIÇO","pag_code":"CÓDIGO","pag_description":"DESCRIÇÃO","pag_seamstress":"COSTUREIRA","pag_qty":"QTD","pag_piece_value":"VALOR PEÇA","pag_base":"BASE","pag_discounts":"DESCONTOS","pag_help":"AJUDAS","pag_total":"TOTAL",
+            "adi_date":"DATA","adi_model_code":"CÓDIGO MODELO","adi_faction":"FACÇÃO","adi_value":"VALOR","adi_method":"FORMA","adi_installments":"PARCELAS",
+            "his_date":"DATA","his_event":"EVENTO","his_cut":"CORTE","his_send":"ENVIO","his_entry":"ENTRADA","his_description":"DESCRIÇÃO","his_sector":"SETOR","his_qty":"QTD","his_value":"VALOR","his_status":"STATUS",
+        },
+        "en_US": {
+            "page_title": "Monthly Closing (Consolidation)",
+            "from": "From:", "to": "To:", "service": "Service:",
+            "search_label": "Search (model/cut/seamstress):", "search": "🔍 Search",
+            "date_placeholder": "YYYY-MM-DD",
+            "tab_kpi": "Summary", "tab_env": "Shipments", "tab_ret": "Returns/Entries",
+            "tab_pag": "Payments", "tab_adi": "Advances", "tab_his": "History", "tab_rel": "Report",
+            "export_csv": "📤 Export CSV (Summary)", "report_html": "🖨️ Generate HTML Report",
+            "kpi_sent": "Pieces Sent", "kpi_returned": "Pieces Returned", "kpi_missing": "Missing",
+            "kpi_defect": "Defects", "kpi_paid": "Total Paid", "kpi_advance": "Advances",
+            "all": "All", "faction":"Outsource","embroidery":"Embroidery","buttonhole":"Buttonhole","buttons":"Buttons",
+            "printing":"Printing","dyeing":"Dyeing","other_jobs":"Other Jobs",
+            "sum_model":"MODEL","sum_description":"DESCRIPTION","sum_destination":"DESTINATION","sum_seamstress":"SEAMSTRESS","sum_service":"SERVICE","sum_sent":"SENT","sum_returned":"RETURNED","sum_missing":"MISS.","sum_defect":"DEF.","sum_paid_value":"PAID VALUE",
+            "env_date":"DATE","env_order":"ORDER","env_code":"CODE","env_description":"DESCRIPTION","env_service":"SERVICE","env_destination":"DESTINATION","env_qty":"QTY","env_samples":"SAMPLES","env_piece_value":"PIECE VALUE",
+            "ret_date":"DATE","ret_code":"CODE","ret_size":"SIZE","ret_qty":"QTY","ret_copies":"COPIES","ret_defect":"DEFECT","ret_piece_value":"PIECE VALUE","ret_obs":"NOTES",
+            "pag_date":"DATE","pag_service":"SERVICE","pag_code":"CODE","pag_description":"DESCRIPTION","pag_seamstress":"SEAMSTRESS","pag_qty":"QTY","pag_piece_value":"PIECE VALUE","pag_base":"BASE","pag_discounts":"DISCOUNTS","pag_help":"HELPS","pag_total":"TOTAL",
+            "adi_date":"DATE","adi_model_code":"MODEL CODE","adi_faction":"OUTSOURCE","adi_value":"VALUE","adi_method":"METHOD","adi_installments":"INSTALLMENTS",
+            "his_date":"DATE","his_event":"EVENT","his_cut":"CUT","his_send":"SHIPMENT","his_entry":"ENTRY","his_description":"DESCRIPTION","his_sector":"SECTOR","his_qty":"QTY","his_value":"VALUE","his_status":"STATUS",
+        },
+        "es_ES": {
+            "page_title": "Cierre Mensual (Consolidación)",
+            "from": "Desde:", "to": "Hasta:", "service": "Servicio:",
+            "search_label": "Buscar (modelo/corte/costurera):", "search": "🔍 Buscar",
+            "date_placeholder": "AAAA-MM-DD",
+            "tab_kpi": "Consolidado", "tab_env": "Envíos", "tab_ret": "Retornos/Entradas",
+            "tab_pag": "Pagos", "tab_adi": "Adelantos", "tab_his": "Historial", "tab_rel": "Reporte",
+            "export_csv": "📤 Exportar CSV (Consolidado)", "report_html": "🖨️ Generar Reporte HTML",
+            "kpi_sent": "Piezas Enviadas", "kpi_returned": "Piezas Recibidas", "kpi_missing": "Faltantes",
+            "kpi_defect": "Defectos", "kpi_paid": "Total Pagado", "kpi_advance": "Adelantos",
+            "all": "Todos", "faction":"Facción","embroidery":"Bordado","buttonhole":"Caseador","buttons":"Botones",
+            "printing":"Estampado","dyeing":"Teñido","other_jobs":"Otros Trabajos",
+            "sum_model":"MODELO","sum_description":"DESCRIPCIÓN","sum_destination":"DESTINO","sum_seamstress":"COSTURERA","sum_service":"SERVICIO","sum_sent":"ENVÍOS","sum_returned":"RETORNOS","sum_missing":"FALT.","sum_defect":"DEF.","sum_paid_value":"VALOR PAGADO",
+            "env_date":"FECHA","env_order":"ORDEN","env_code":"CÓDIGO","env_description":"DESCRIPCIÓN","env_service":"SERVICIO","env_destination":"DESTINO","env_qty":"CANT","env_samples":"MUESTRAS","env_piece_value":"VALOR PIEZA",
+            "ret_date":"FECHA","ret_code":"CÓDIGO","ret_size":"TALLA","ret_qty":"CANT","ret_copies":"COPIAS","ret_defect":"DEFECTO","ret_piece_value":"VALOR PIEZA","ret_obs":"OBS",
+            "pag_date":"FECHA","pag_service":"SERVICIO","pag_code":"CÓDIGO","pag_description":"DESCRIPCIÓN","pag_seamstress":"COSTURERA","pag_qty":"CANT","pag_piece_value":"VALOR PIEZA","pag_base":"BASE","pag_discounts":"DESCUENTOS","pag_help":"AYUDAS","pag_total":"TOTAL",
+            "adi_date":"FECHA","adi_model_code":"CÓDIGO MODELO","adi_faction":"FACCIÓN","adi_value":"VALOR","adi_method":"FORMA","adi_installments":"PARCELAS",
+            "his_date":"FECHA","his_event":"EVENTO","his_cut":"CORTE","his_send":"ENVÍO","his_entry":"ENTRADA","his_description":"DESCRIPCIÓN","his_sector":"SECTOR","his_qty":"CANT","his_value":"VALOR","his_status":"ESTADO",
+        },
+    }
+    def _init_i18n(self):
+        self.idioma_atual = getattr(self._host, "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    def _get_text(self, key, default=None):
+        lang = getattr(self, "idioma_atual", "pt_BR")
+        return self.TRANSLATIONS.get(lang, {}).get(key, self.TRANSLATIONS["pt_BR"].get(key, default if default is not None else key))
+    def _service_options(self):
+        return [self._get_text(k) for k in ("all","faction","embroidery","buttonhole","buttons","printing","dyeing","other_jobs")]
+    def refresh_texts(self):
+        self.PAGE_TITLE = self._get_text("page_title")
+        try: self.lbl_title.configure(text=self._get_text("page_title"))
+        except Exception: pass
+        for wname,key in [("lbl_de","from"),("lbl_ate","to"),("lbl_servico","service"),("lbl_busca","search_label"),("btn_buscar","search"),("btn_export_csv","export_csv"),("btn_report_html","report_html")]:
+            try: getattr(self, wname).configure(text=self._get_text(key))
+            except Exception: pass
+        for en in ("ini_entry","fim_entry"):
+            try: getattr(self, en).configure(placeholder_text=self._get_text("date_placeholder"))
+            except Exception: pass
+        try:
+            vals = self._service_options()
+            current = self.servico_var.get()
+            mapping = {"Todos":"all","Facção":"faction","Bordado":"embroidery","Caseador":"buttonhole","Botões":"buttons","Estamparia":"printing","Tingimento":"dyeing","Outros Trabalhos":"other_jobs",
+                       "All":"all","Outsource":"faction","Embroidery":"embroidery","Buttonhole":"buttonhole","Buttons":"buttons","Printing":"printing","Dyeing":"dyeing","Other Jobs":"other_jobs",
+                       "Facción":"faction","Estampado":"printing","Teñido":"dyeing"}
+            self.cmb_serv.configure(values=vals)
+            self.servico_var.set(self._get_text(mapping.get(current,"all")))
+        except Exception: pass
+        try:
+            self.tabs._segmented_button.configure(values=[self._get_text("tab_kpi"),self._get_text("tab_env"),self._get_text("tab_ret"),self._get_text("tab_pag"),self._get_text("tab_adi"),self._get_text("tab_his"),self._get_text("tab_rel")])
+        except Exception: pass
+        self._refresh_tree_headings()
+    def _refresh_tree_headings(self):
+        maps = {
+          "tree_sum":[("modelo","sum_model"),("descricao","sum_description"),("destino","sum_destination"),("costureira","sum_seamstress"),("servico","sum_service"),("env","sum_sent"),("ret","sum_returned"),("falt","sum_missing"),("def","sum_defect"),("valor_pago","sum_paid_value")],
+          "tree_env":[("data_envio","env_date"),("ordem_corte","env_order"),("codigo_corte","env_code"),("descricao_corte","env_description"),("servico","env_service"),("destino","env_destination"),("qtd_total","env_qty"),("pilotos","env_samples"),("valor_peca","env_piece_value")],
+          "tree_ret":[("data","ret_date"),("codigo","ret_code"),("tamanho","ret_size"),("qtd","ret_qty"),("copias","ret_copies"),("defeito","ret_defect"),("valor_peca","ret_piece_value"),("obs","ret_obs")],
+          "tree_pag":[("data_pag","pag_date"),("tipo_servico","pag_service"),("codigo","pag_code"),("descricao","pag_description"),("costureira","pag_seamstress"),("qtd","pag_qty"),("v_peca","pag_piece_value"),("base","pag_base"),("descontos","pag_discounts"),("ajudas","pag_help"),("total","pag_total")],
+          "tree_adi":[("data","adi_date"),("codigo_modelo","adi_model_code"),("faccao","adi_faction"),("valor","adi_value"),("forma_pagamento","adi_method"),("parcelas","adi_installments")],
+          "tree_his":[("data","his_date"),("evento","his_event"),("corte_id","his_cut"),("envio_id","his_send"),("entrada_id","his_entry"),("descricao","his_description"),("setor","his_sector"),("quant","his_qty"),("valor","his_value"),("status","his_status")]
+        }
+        for tree_name, items in maps.items():
+            tree = getattr(self, tree_name, None)
+            if tree:
+                for col, key in items:
+                    try: tree.heading(col, text=self._get_text(key))
+                    except Exception: pass
     PAGE_TITLE = "Fechamento Mensal (Consolidação)"
 
     def __init__(self, parent, host=None, *args, **kwargs):
@@ -70,8 +174,10 @@ class FechamentoMensalPage(ctk.CTkFrame):
         self.theme = _Theme(self._host)
         self._apply_ctk_global_theme()
         super().__init__(parent, fg_color=self.theme.cor_fundo, *args, **kwargs)
+        self._init_i18n()
         self._build_ui()
         self._apply_theme_widgets()
+        self.refresh_texts()
         self._search()
 
     # ======= UI =======
@@ -81,7 +187,8 @@ class FechamentoMensalPage(ctk.CTkFrame):
 
         # Título
         top = ctk.CTkFrame(self, corner_radius=0); top.grid(row=0, column=0, sticky="ew")
-        ctk.CTkLabel(top, text=self.PAGE_TITLE, font=ctk.CTkFont(size=16, weight="bold")).grid(
+        self.lbl_title = ctk.CTkLabel(top, text=self.PAGE_TITLE, font=ctk.CTkFont(size=16, weight="bold"))
+        self.lbl_title.grid(
             row=0, column=0, padx=20, pady=8, sticky="w"
         )
 
@@ -94,27 +201,28 @@ class FechamentoMensalPage(ctk.CTkFrame):
         self.ini_var = ctk.StringVar(value=_first_day_of_month(hoje).strftime("%Y-%m-%d"))
         self.fim_var = ctk.StringVar(value=_last_day_of_month(hoje).strftime("%Y-%m-%d"))
 
-        ctk.CTkLabel(filt, text="De:").grid(row=0, column=0, padx=(10,4), pady=8, sticky="e")
-        ctk.CTkEntry(filt, width=120, textvariable=self.ini_var, placeholder_text="AAAA-MM-DD").grid(row=0, column=1, padx=4, pady=8)
+        self.lbl_de = ctk.CTkLabel(filt, text="De:"); self.lbl_de.grid(row=0, column=0, padx=(10,4), pady=8, sticky="e")
+        self.ini_entry = ctk.CTkEntry(filt, width=120, textvariable=self.ini_var, placeholder_text="AAAA-MM-DD"); self.ini_entry.grid(row=0, column=1, padx=4, pady=8)
 
-        ctk.CTkLabel(filt, text="Até:").grid(row=0, column=2, padx=(12,4), pady=8, sticky="e")
-        ctk.CTkEntry(filt, width=120, textvariable=self.fim_var, placeholder_text="AAAA-MM-DD").grid(row=0, column=3, padx=4, pady=8)
+        self.lbl_ate = ctk.CTkLabel(filt, text="Até:"); self.lbl_ate.grid(row=0, column=2, padx=(12,4), pady=8, sticky="e")
+        self.fim_entry = ctk.CTkEntry(filt, width=120, textvariable=self.fim_var, placeholder_text="AAAA-MM-DD"); self.fim_entry.grid(row=0, column=3, padx=4, pady=8)
 
         self.servico_var = ctk.StringVar(value="Todos")
-        ctk.CTkLabel(filt, text="Serviço:").grid(row=0, column=4, padx=(12,4), pady=8, sticky="e")
+        self.lbl_servico = ctk.CTkLabel(filt, text="Serviço:"); self.lbl_servico.grid(row=0, column=4, padx=(12,4), pady=8, sticky="e")
         self.cmb_serv = ctk.CTkComboBox(filt, values=[
             "Todos","Facção","Bordado","Caseador","Botões","Estamparia","Tingimento","Outros Trabalhos"
         ], width=160, variable=self.servico_var, state="readonly")
         self.cmb_serv.grid(row=0, column=5, padx=4, pady=8)
 
         self.busca_var = ctk.StringVar(value="")
-        ctk.CTkLabel(filt, text="Buscar (modelo/corte/costureira):").grid(row=0, column=6, padx=(12,4), pady=8, sticky="e")
-        ent_busca = ctk.CTkEntry(filt, width=260, textvariable=self.busca_var); ent_busca.grid(row=0, column=7, padx=4, pady=8)
-        ent_busca.bind("<Return>", lambda e: self._search())
-        ctk.CTkButton(filt, text="🔍 Buscar", width=120, command=self._search).grid(row=0, column=9, padx=(8,10), pady=8, sticky="e")
+        self.lbl_busca = ctk.CTkLabel(filt, text="Buscar (modelo/corte/costureira):"); self.lbl_busca.grid(row=0, column=6, padx=(12,4), pady=8, sticky="e")
+        self.busca_entry = ctk.CTkEntry(filt, width=260, textvariable=self.busca_var); self.busca_entry.grid(row=0, column=7, padx=4, pady=8)
+        self.busca_entry.bind("<Return>", lambda e: self._search())
+        self.btn_buscar = ctk.CTkButton(filt, text="🔍 Buscar", width=120, command=self._search); self.btn_buscar.grid(row=0, column=9, padx=(8,10), pady=8, sticky="e")
 
         # Abas
-        tabs = ctk.CTkTabview(self); tabs.grid(row=2, column=0, sticky="nsew", padx=8, pady=8)
+        self.tabs = ctk.CTkTabview(self); self.tabs.grid(row=2, column=0, sticky="nsew", padx=8, pady=8)
+        tabs = self.tabs
         self.tab_kpi = tabs.add("Consolidado")
         self.tab_env = tabs.add("Envios")
         self.tab_ret = tabs.add("Retornos/Entradas")
@@ -150,8 +258,8 @@ class FechamentoMensalPage(ctk.CTkFrame):
 
         # Relatórios
         box_rel = ctk.CTkFrame(self.tab_rel); box_rel.grid(row=0, column=0, sticky="nw", padx=10, pady=10)
-        ctk.CTkButton(box_rel, text="📤 Exportar CSV (Consolidado)", command=self._export_csv).grid(row=0, column=0, padx=6, pady=6, sticky="w")
-        ctk.CTkButton(box_rel, text="🖨️ Gerar Relatório HTML", command=self._report_html).grid(row=0, column=1, padx=6, pady=6, sticky="w")
+        self.btn_export_csv = ctk.CTkButton(box_rel, text="📤 Exportar CSV (Consolidado)", command=self._export_csv); self.btn_export_csv.grid(row=0, column=0, padx=6, pady=6, sticky="w")
+        self.btn_report_html = ctk.CTkButton(box_rel, text="🖨️ Gerar Relatório HTML", command=self._report_html); self.btn_report_html.grid(row=0, column=1, padx=6, pady=6, sticky="w")
 
     def _build_kpi(self, parent):
         """
@@ -180,12 +288,12 @@ class FechamentoMensalPage(ctk.CTkFrame):
             return lbl
 
         # KPIs (na ordem usada pelo restante do código)
-        self.kpi_envios = make_card(0, "Peças Enviadas", "0")
-        self.kpi_retorno = make_card(1, "Peças Retornadas", "0")
-        self.kpi_falt = make_card(2, "Faltantes", "0")
-        self.kpi_def = make_card(3, "Defeitos", "0")
-        self.kpi_pago = make_card(4, "Total Pago", "R$ 0,00")
-        self.kpi_adi = make_card(5, "Adiantamentos", "R$ 0,00")
+        self.kpi_envios = make_card(0, self._get_text("kpi_sent"), "0")
+        self.kpi_retorno = make_card(1, self._get_text("kpi_returned"), "0")
+        self.kpi_falt = make_card(2, self._get_text("kpi_missing"), "0")
+        self.kpi_def = make_card(3, self._get_text("kpi_defect"), "0")
+        self.kpi_pago = make_card(4, self._get_text("kpi_paid"), "R$ 0,00")
+        self.kpi_adi = make_card(5, self._get_text("kpi_advance"), "R$ 0,00")
 
     def _apply_ctk_global_theme(self):
         try:

@@ -36,6 +36,63 @@ def _dt(s: str) -> str:
 
 
 class ContasAPagarPage(ctk.CTkFrame):
+    TRANSLATIONS = {
+        "pt_BR": {
+            "page_title": "Contas a Pagar — Controle Completo",
+            "from": "De:", "to": "Até:", "status": "Status:", "search": "Buscar:",
+            "search_button": "Buscar", "period_only": "Apenas pag. do período",
+            "status_all": "Todos", "status_sent": "Enviado", "status_progress": "Em Progresso", "status_pending": "Pendente", "status_finished": "Finalizado",
+            "kpi_base": "Base (R$)", "kpi_paid": "Pago (R$)", "kpi_balance": "Saldo a Pagar (R$)", "kpi_cuts": "Qtd Cortes", "kpi_seamstresses": "Qtd Costureiras", "kpi_avg": "Média por Corte (R$)",
+            "tab_entries": "Lançamentos", "tab_summary": "Resumo por Costureira"
+        },
+        "en_US": {
+            "page_title": "Accounts Payable — Full Control",
+            "from": "From:", "to": "To:", "status": "Status:", "search": "Search:",
+            "search_button": "Search", "period_only": "Only payments in period",
+            "status_all": "All", "status_sent": "Sent", "status_progress": "In Progress", "status_pending": "Pending", "status_finished": "Finished",
+            "kpi_base": "Base (R$)", "kpi_paid": "Paid (R$)", "kpi_balance": "Balance Due (R$)", "kpi_cuts": "Cuts Qty", "kpi_seamstresses": "Seamstresses Qty", "kpi_avg": "Average per Cut (R$)",
+            "tab_entries": "Entries", "tab_summary": "Summary by Seamstress"
+        },
+        "es_ES": {
+            "page_title": "Cuentas por Pagar — Control Completo",
+            "from": "De:", "to": "Hasta:", "status": "Estado:", "search": "Buscar:",
+            "search_button": "Buscar", "period_only": "Solo pagos del período",
+            "status_all": "Todos", "status_sent": "Enviado", "status_progress": "En Progreso", "status_pending": "Pendiente", "status_finished": "Finalizado",
+            "kpi_base": "Base (R$)", "kpi_paid": "Pagado (R$)", "kpi_balance": "Saldo a Pagar (R$)", "kpi_cuts": "Cant. Cortes", "kpi_seamstresses": "Cant. Costureras", "kpi_avg": "Promedio por Corte (R$)",
+            "tab_entries": "Lanzamientos", "tab_summary": "Resumen por Costurera"
+        },
+    }
+
+    def _get_idioma_atual(self):
+        origem = getattr(self, "host", None) or getattr(self, "sistema", None) or getattr(self, "master", None)
+        return getattr(origem, "idioma_atual", "pt_BR") if origem else "pt_BR"
+
+    def _get_text(self, chave, default=None):
+        idioma = self._get_idioma_atual()
+        base = self.TRANSLATIONS.get("pt_BR", {})
+        return self.TRANSLATIONS.get(idioma, {}).get(chave, base.get(chave, default if default is not None else chave))
+
+    def refresh_texts(self):
+        try:
+            self.PAGE_TITLE = self._get_text("page_title")
+            if getattr(self, "_ui_refs", None):
+                mp = {
+                    "title":"page_title","lbl_from":"from","lbl_to":"to","lbl_status":"status","lbl_search":"search","chk_period":"period_only","btn_search":"search_button"
+                }
+                for k,v in mp.items():
+                    w = self._ui_refs.get(k)
+                    if w:
+                        w.configure(text=self._get_text(v))
+                cb=self._ui_refs.get("status_cb")
+                if cb:
+                    vals=[self._get_text("status_all"),self._get_text("status_sent"),self._get_text("status_progress"),self._get_text("status_pending"),self._get_text("status_finished")]
+                    cur = cb.get()
+                    cb.configure(values=vals)
+                    if cur not in vals:
+                        cb.set(vals[0])
+        except Exception:
+            pass
+
     PAGE_TITLE = "Contas a Pagar — Controle Completo"
 
     def __init__(self, parent, host=None, sistema=None, app=None, **kwargs):
@@ -66,7 +123,9 @@ class ContasAPagarPage(ctk.CTkFrame):
             })()
 
         self.configure(fg_color=self.theme.cor_fundo)
+        self._ui_refs = {}
         self._build_ui()
+        self.refresh_texts()
         self._search()
 
     def _build_ui(self):
@@ -75,7 +134,8 @@ class ContasAPagarPage(ctk.CTkFrame):
 
         top = ctk.CTkFrame(self, corner_radius=0, fg_color=self.theme.cor_fundo)
         top.grid(row=0, column=0, sticky="ew")
-        ctk.CTkLabel(top, text=self.PAGE_TITLE, font=ctk.CTkFont(size=16, weight="bold"), text_color=self.theme.cor_texto).grid(row=0, column=0, padx=16, pady=10, sticky="w")
+        self._ui_refs["title"] = ctk.CTkLabel(top, text=self._get_text("page_title"), font=ctk.CTkFont(size=16, weight="bold"), text_color=self.theme.cor_texto)
+        self._ui_refs["title"].grid(row=0, column=0, padx=16, pady=10, sticky="w")
 
         filt = ctk.CTkFrame(self, fg_color=self.theme.cor_secundaria)
         filt.grid(row=1, column=0, sticky="ew", padx=8, pady=(4, 4))
@@ -94,18 +154,25 @@ class ContasAPagarPage(ctk.CTkFrame):
         lbl = {"text_color": self.theme.cor_texto}
         ent = {"fg_color": self.theme.cor_terciaria, "border_color": self.theme.cor_borda, "text_color": self.theme.cor_texto}
 
-        ctk.CTkLabel(filt, text="De:", **lbl).grid(row=0, column=0, padx=(8,4), pady=8)
+        self._ui_refs["lbl_from"] = ctk.CTkLabel(filt, text=self._get_text("from"), **lbl)
+        self._ui_refs["lbl_from"].grid(row=0, column=0, padx=(8,4), pady=8)
         ctk.CTkEntry(filt, width=120, textvariable=self.ini_var, **ent).grid(row=0, column=1, padx=4, pady=8)
-        ctk.CTkLabel(filt, text="Até:", **lbl).grid(row=0, column=2, padx=(8,4), pady=8)
+        self._ui_refs["lbl_to"] = ctk.CTkLabel(filt, text=self._get_text("to"), **lbl)
+        self._ui_refs["lbl_to"].grid(row=0, column=2, padx=(8,4), pady=8)
         ctk.CTkEntry(filt, width=120, textvariable=self.fim_var, **ent).grid(row=0, column=3, padx=4, pady=8)
-        ctk.CTkLabel(filt, text="Status:", **lbl).grid(row=0, column=4, padx=(8,4), pady=8)
-        ctk.CTkComboBox(filt, values=["Todos", "Enviado", "Em Progresso", "Pendente", "Finalizado"], variable=self.status_var, width=140, state="readonly", fg_color=self.theme.cor_terciaria, border_color=self.theme.cor_borda, text_color=self.theme.cor_texto).grid(row=0, column=5, padx=4, pady=8)
-        ctk.CTkLabel(filt, text="Buscar:", **lbl).grid(row=0, column=6, padx=(8,4), pady=8)
+        self._ui_refs["lbl_status"] = ctk.CTkLabel(filt, text=self._get_text("status"), **lbl)
+        self._ui_refs["lbl_status"].grid(row=0, column=4, padx=(8,4), pady=8)
+        self._ui_refs["status_cb"] = ctk.CTkComboBox(filt, values=[self._get_text("status_all"), self._get_text("status_sent"), self._get_text("status_progress"), self._get_text("status_pending"), self._get_text("status_finished")], variable=self.status_var, width=140, state="readonly", fg_color=self.theme.cor_terciaria, border_color=self.theme.cor_borda, text_color=self.theme.cor_texto)
+        self._ui_refs["status_cb"].grid(row=0, column=5, padx=4, pady=8)
+        self._ui_refs["lbl_search"] = ctk.CTkLabel(filt, text=self._get_text("search"), **lbl)
+        self._ui_refs["lbl_search"].grid(row=0, column=6, padx=(8,4), pady=8)
         e = ctk.CTkEntry(filt, width=200, textvariable=self.busca_var, **ent)
         e.grid(row=0, column=7, padx=4, pady=8)
         e.bind("<Return>", lambda ev: self._search())
-        ctk.CTkCheckBox(filt, text="Apenas pag. do período", variable=self.por_pagamento_periodo, fg_color=self.theme.cor_primaria, text_color=self.theme.cor_texto).grid(row=0, column=8, padx=8, pady=8)
-        ctk.CTkButton(filt, text="Buscar", width=100, command=self._search, fg_color=self.theme.cor_destaque, text_color="white").grid(row=0, column=11, padx=8, pady=8, sticky="e")
+        self._ui_refs["chk_period"] = ctk.CTkCheckBox(filt, text=self._get_text("period_only"), variable=self.por_pagamento_periodo, fg_color=self.theme.cor_primaria, text_color=self.theme.cor_texto)
+        self._ui_refs["chk_period"].grid(row=0, column=8, padx=8, pady=8)
+        self._ui_refs["btn_search"] = ctk.CTkButton(filt, text=self._get_text("search_button"), width=100, command=self._search, fg_color=self.theme.cor_destaque, text_color="white")
+        self._ui_refs["btn_search"].grid(row=0, column=11, padx=8, pady=8, sticky="e")
 
         kpis = ctk.CTkFrame(self, fg_color=self.theme.cor_terciaria)
         kpis.grid(row=2, column=0, sticky="ew", padx=8, pady=(2,8))

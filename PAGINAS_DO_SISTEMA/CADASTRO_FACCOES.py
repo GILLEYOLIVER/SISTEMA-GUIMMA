@@ -23,6 +23,111 @@ except ImportError:
 
 class CadastroFaccoesView(ctk.CTkFrame):
 
+    TRANSLATIONS = {
+        "pt_BR": {
+            "page_title": "Cadastro de Prestadores",
+            "page_subtitle": "Gerencie prestadores e dados de pagamento",
+            "new": "Novo",
+            "payment_data": "DADOS PARA PAGAMENTO",
+            "search_placeholder": "Pesquisar prestadores...",
+            "update": "Atualizar",
+            "register": "Cadastrar",
+            "type": "Tipo:",
+            "name": "Nome",
+            "phone": "Telefone",
+            "address": "Endereço",
+            "account_holder": "Titular da Conta",
+            "cpf": "CPF",
+            "bank": "Banco",
+            "agency": "Agência",
+            "account": "Conta",
+            "pix": "Pix",
+            "provider_types": ["Facção","Bordado","Caseador","Botões","Estamparia","Interna","Tingimento","Outros Trabalhos"],
+            "provider_types_all": ["Todos","Facção","Bordado","Caseador","Botões","Estamparia","Interna","Tingimento","Outros Trabalhos"],
+            "provider": "Prestador",
+            "code": "Código",
+            "date": "Data",
+            "actions": "Ações",
+        },
+        "en_US": {
+            "page_title": "Provider Registry",
+            "page_subtitle": "Manage providers and payment details",
+            "new": "New",
+            "payment_data": "PAYMENT DETAILS",
+            "search_placeholder": "Search providers...",
+            "update": "Refresh",
+            "register": "Register",
+            "type": "Type:",
+            "name": "Name",
+            "phone": "Phone",
+            "address": "Address",
+            "account_holder": "Account Holder",
+            "cpf": "Tax ID",
+            "bank": "Bank",
+            "agency": "Branch",
+            "account": "Account",
+            "pix": "Pix",
+            "provider_types": ["Outsourcing","Embroidery","Buttonhole","Buttons","Printing","Internal","Dyeing","Other Work"],
+            "provider_types_all": ["All","Outsourcing","Embroidery","Buttonhole","Buttons","Printing","Internal","Dyeing","Other Work"],
+            "provider": "Provider",
+            "code": "Code",
+            "date": "Date",
+            "actions": "Actions",
+        },
+        "es_ES": {
+            "page_title": "Registro de Prestadores",
+            "page_subtitle": "Gestione prestadores y datos de pago",
+            "new": "Nuevo",
+            "payment_data": "DATOS DE PAGO",
+            "search_placeholder": "Buscar prestadores...",
+            "update": "Actualizar",
+            "register": "Registrar",
+            "type": "Tipo:",
+            "name": "Nombre",
+            "phone": "Teléfono",
+            "address": "Dirección",
+            "account_holder": "Titular de la Cuenta",
+            "cpf": "CPF",
+            "bank": "Banco",
+            "agency": "Agencia",
+            "account": "Cuenta",
+            "pix": "Pix",
+            "provider_types": ["Facción","Bordado","Ojal","Botones","Estampado","Interno","Teñido","Otros Trabajos"],
+            "provider_types_all": ["Todos","Facción","Bordado","Ojal","Botones","Estampado","Interno","Teñido","Otros Trabajos"],
+            "provider": "Prestador",
+            "code": "Código",
+            "date": "Fecha",
+            "actions": "Acciones",
+        },
+    }
+
+    def _get_idioma_atual(self):
+        origem = getattr(self, "sistema", None) or getattr(self, "app", None) or getattr(self, "master", None)
+        return getattr(origem, "idioma_atual", "pt_BR") if origem else "pt_BR"
+
+    def _get_text(self, chave, default=None):
+        idioma = self._get_idioma_atual()
+        base = self.TRANSLATIONS.get("pt_BR", {})
+        texto = self.TRANSLATIONS.get(idioma, {}).get(chave, base.get(chave, default if default is not None else chave))
+        return texto
+
+    def refresh_texts(self):
+        try:
+            if hasattr(self, "_ui_refs"):
+                if self._ui_refs.get("title_label"): self._ui_refs["title_label"].configure(text=self._get_text("page_title"))
+                if self._ui_refs.get("subtitle_label"): self._ui_refs["subtitle_label"].configure(text=self._get_text("page_subtitle"))
+                if self._ui_refs.get("btn_novo"): self._ui_refs["btn_novo"].configure(text=self._get_text("new"))
+                if self._ui_refs.get("pagamento_label"): self._ui_refs["pagamento_label"].configure(text=self._get_text("payment_data"))
+                if self._ui_refs.get("entry_pesquisa"): self._ui_refs["entry_pesquisa"].configure(placeholder_text=self._get_text("search_placeholder"))
+                if self._ui_refs.get("btn_atualizar"): self._ui_refs["btn_atualizar"].configure(text=self._get_text("update"))
+                if self._ui_refs.get("btn_cadastrar"): self._ui_refs["btn_cadastrar"].configure(text=self._get_text("register"))
+                if self._ui_refs.get("tipo_label"): self._ui_refs["tipo_label"].configure(text=self._get_text("type"))
+                if self._ui_refs.get("tipo_menu"): self._ui_refs["tipo_menu"].configure(values=self._get_text("provider_types"))
+                if self._ui_refs.get("tipo_filtro"): self._ui_refs["tipo_filtro"].configure(values=self._get_text("provider_types_all"))
+        except Exception:
+            pass
+
+
     def __init__(self, master, sistema=None, app=None, *args, **kwargs):
         """
         Construtor compatível com o menu principal.
@@ -66,6 +171,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
         self.faccao_selecionada = None
         self.modo_edicao = False
         self.entries = {}
+        self._ui_refs = {}
 
         # --- Verificar conexão com o banco PostgreSQL ---
         self.verificar_conexao_banco()
@@ -200,13 +306,14 @@ class CadastroFaccoesView(ctk.CTkFrame):
         title_frame.grid(row=0, column=0, sticky="w")
         icon_label = ctk.CTkLabel(title_frame, text="🧵", font=("Roboto", 20), text_color=self.cor_texto)
         icon_label.pack(side="left", padx=(0, 5))
-        title_label = ctk.CTkLabel(title_frame, text="Cadastro de Prestadores", font=("Roboto", 18, "bold"),
+        title_label = ctk.CTkLabel(title_frame, text=self._get_text("page_title"), font=("Roboto", 18, "bold"),
                                    text_color=self.cor_texto)
         title_label.pack(side="left")
+        self._ui_refs["title_label"] = title_label
 
         btn_novo = ctk.CTkButton(
             top_row,
-            text="Novo",
+            text=self._get_text("new"),
             command=self.limpar_campos,
             fg_color=self.cor_destaque,
             hover_color=self.cor_hover,
@@ -216,14 +323,16 @@ class CadastroFaccoesView(ctk.CTkFrame):
             height=32
         )
         btn_novo.grid(row=0, column=1, sticky="e", padx=(5, 0))
+        self._ui_refs["btn_novo"] = btn_novo
 
         subtitle_label = ctk.CTkLabel(
             header_container,
-            text="Gerencie prestadores e dados de pagamento",
+            text=self._get_text("page_subtitle"),
             font=("Roboto", 11),
             text_color=self.cor_texto
         )
         subtitle_label.grid(row=1, column=0, sticky="w", pady=(2, 0), padx=(25, 0))
+        self._ui_refs["subtitle_label"] = subtitle_label
 
         separator = ctk.CTkFrame(header_container, height=1, fg_color=self.cor_borda)
         separator.grid(row=2, column=0, sticky="ew", pady=(8, 5))
@@ -250,21 +359,13 @@ class CadastroFaccoesView(ctk.CTkFrame):
 
         tipo_row = ctk.CTkFrame(bloco_esquerdo, fg_color="transparent")
         tipo_row.pack(fill="x", pady=4)
-        ctk.CTkLabel(tipo_row, text="Tipo:", width=100, anchor="w", text_color=self.cor_texto).pack(side="left",
-                                                                                                    padx=(0, 5))
+        tipo_label = ctk.CTkLabel(tipo_row, text=self._get_text("type"), width=100, anchor="w", text_color=self.cor_texto)
+        tipo_label.pack(side="left", padx=(0, 5))
+        self._ui_refs["tipo_label"] = tipo_label
         self.tipo_prestador_var = ctk.StringVar(value="Facção")
         self.tipo_prestador_menu = ctk.CTkOptionMenu(
             tipo_row,
-            values=[
-                "Facção",
-                "Bordado",
-                "Caseador",
-                "Botões",
-                "Estamparia",
-                "Interna",
-                "Tingimento",
-                "Outros Trabalhos",
-            ],
+            values=self._get_text("provider_types"),
             variable=self.tipo_prestador_var,
             fg_color=self.cor_fundo,
             button_color=self.cor_primaria,
@@ -273,14 +374,16 @@ class CadastroFaccoesView(ctk.CTkFrame):
             width=200
         )
         self.tipo_prestador_menu.pack(side="left", fill="x", expand=True)
+        self._ui_refs["tipo_menu"] = self.tipo_prestador_menu
 
         # Dados bancários
         bloco_direito = ctk.CTkFrame(form_frame, fg_color="transparent")
         bloco_direito.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
 
-        pagamento_label = ctk.CTkLabel(bloco_direito, text="DADOS PARA PAGAMENTO", font=("Roboto", 12, "bold"),
+        pagamento_label = ctk.CTkLabel(bloco_direito, text=self._get_text("payment_data"), font=("Roboto", 12, "bold"),
                                        text_color=self.cor_texto)
         pagamento_label.pack(anchor="w", pady=(0, 6))
+        self._ui_refs["pagamento_label"] = pagamento_label
 
         for label_text, field in [
             ("Titular da Conta", "titular_da_conta"),
@@ -313,7 +416,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
         search_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(5, 5))
         self.entry_pesquisa = ctk.CTkEntry(
             search_frame,
-            placeholder_text="Pesquisar prestadores...",
+            placeholder_text=self._get_text("search_placeholder"),
             width=240,
             height=32,
             fg_color=self.cor_fundo,
@@ -325,17 +428,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
         self.tipo_filtro_var = ctk.StringVar(value="Todos")
         self.tipo_filtro_menu = ctk.CTkOptionMenu(
             search_frame,
-            values=[
-                "Todos",
-                "Facção",
-                "Bordado",
-                "Caseador",
-                "Botões",
-                "Estamparia",
-                "Interna",
-                "Tingimento",
-                "Outros Trabalhos",
-            ],
+            values=self._get_text("provider_types_all"),
             variable=self.tipo_filtro_var,
             fg_color=self.cor_fundo,
             button_color=self.cor_primaria,
@@ -406,10 +499,10 @@ class CadastroFaccoesView(ctk.CTkFrame):
 
     def atualizar_estado_botoes(self):
         if self.modo_edicao:
-            self.btn_salvar.configure(text="Atualizar", fg_color=self.cor_alerta)
+            self.btn_salvar.configure(text=self._get_text("update"), fg_color=self.cor_alerta)
             self.btn_excluir.configure(state="disabled")
         else:
-            self.btn_salvar.configure(text="Cadastrar", fg_color=self.cor_sucesso)
+            self.btn_salvar.configure(text=self._get_text("register"), fg_color=self.cor_sucesso)
             estado = "normal" if self.faccao_selecionada else "disabled"
             self.btn_excluir.configure(state=estado)
 

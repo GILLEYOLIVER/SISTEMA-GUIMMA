@@ -4,11 +4,11 @@
     "class": "DashboardPage"
   },
   "Entrada de Estoque": {
-    "file": "ENTRADA_ESTOQUE.py",
+    "file": "ENTRADA_ESTOQUE_es-pt.py",
     "class": "EntradaEstoqueApp"
   },
   "Saída de Estoque": {
-    "file": "SAIDA_ESTOQUE.py",
+    "file": "SAIDA_ESTOQUE_es-pt.py",
     "class": "SaidaEstoquePage"
   },
   "Relatórios": {
@@ -108,11 +108,11 @@
     "class": "ContasAPagarPage"
   },
   "Adiantamento": {
-    "file": "ADIANTAMENTO_PAGE.py",
+    "file": "ADIANTAMENTO_PAGE_es-pt.py",
     "class": "PagamentoAdiantamentoPage"
   },
   "Adiantamentos Pendentes": {
-    "file": "ADIANTAMENTO_PENDENTE.py",
+    "file": "ADIANTAMENTO_PENDENTE_es-pt.py",
     "class": "AdiantamentosPendentesPage"
   },
   "Produção": {

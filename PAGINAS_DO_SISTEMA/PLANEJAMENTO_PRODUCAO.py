@@ -11,8 +11,14 @@ import os
 import webbrowser
 from decimal import Decimal
 from tkinter import messagebox, ttk
+import tkinter as tk
 
 import customtkinter as ctk
+
+try:
+    from tkcalendar import Calendar
+except Exception:
+    Calendar = None
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
@@ -40,6 +46,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.ops_index = {}
         self.detalhe_labels = {}
         self.modelos_cache = []
+        self._calendar_popup = None
 
         self.cor_fundo = getattr(sistema, "cor_fundo", "#F5F5F5")
         self.cor_primaria = getattr(sistema, "cor_primaria", "#3A7EBF")
@@ -56,6 +63,11 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self._garantir_estrutura_planejamento()
         self._carregar_modelos_cache()
         self._carregar_dados_planejamento()
+        try:
+            self.refresh_texts()
+        except Exception:
+            pass
+
 
     # =========================================================
     # Construção da interface
@@ -1791,80 +1803,367 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
     # =========================================================
     # Calendário
     # =========================================================
-    def _abrir_calendario(self, entry):
-        import calendar as _cal
-        from datetime import datetime as _dt
+    def _get_calendar_locale(self):
+        idioma = getattr(self.sistema, "idioma_atual", "pt_BR")
+        mapa = {
+            "pt": "pt_BR",
+            "pt_BR": "pt_BR",
+            "en": "en_US",
+            "en_US": "en_US",
+            "es": "es_ES",
+            "es_ES": "es_ES",
+        }
+        return mapa.get(idioma, "pt_BR")
 
-        def setar_data(d):
-            entry.delete(0, "end")
-            entry.insert(0, d.strftime("%d/%m/%Y"))
-            top.destroy()
+    def _get_date_pattern(self):
+        idioma = getattr(self.sistema, "idioma_atual", "pt_BR")
+        mapa = {
+            "pt": "dd/mm/yyyy",
+            "pt_BR": "dd/mm/yyyy",
+            "en": "mm/dd/yyyy",
+            "en_US": "mm/dd/yyyy",
+            "es": "dd/mm/yyyy",
+            "es_ES": "dd/mm/yyyy",
+        }
+        return mapa.get(idioma, "dd/mm/yyyy")
 
-        top = ctk.CTkToplevel(self)
-        top.title("Calendário")
-        top.resizable(False, False)
+    def _get_calendar_title(self):
+        idioma = getattr(self.sistema, "idioma_atual", "pt_BR")
+        textos = {
+            "pt": "Calendário",
+            "pt_BR": "Calendário",
+            "en": "Calendar",
+            "en_US": "Calendar",
+            "es": "Calendario",
+            "es_ES": "Calendario",
+        }
+        return textos.get(idioma, "Calendário")
 
-        W, H = 300, 300
-        self.update_idletasks()
-        top.update_idletasks()
+    def _get_text(self, chave):
+        idioma = getattr(self.sistema, "idioma_atual", "pt_BR")
+        textos = {
+            "pt": {
+                "clear": "Limpar",
+                "today": "Hoje",
+                "confirm": "Confirmar",
+                "calendar_missing": "A biblioteca tkcalendar não está instalada.\n\nInstale com:\npip install tkcalendar",
+                "calendar_error": "Erro ao selecionar data: {erro}",
+            },
+            "pt_BR": {
+                "clear": "Limpar",
+                "today": "Hoje",
+                "confirm": "Confirmar",
+                "calendar_missing": "A biblioteca tkcalendar não está instalada.\n\nInstale com:\npip install tkcalendar",
+                "calendar_error": "Erro ao selecionar data: {erro}",
+            },
+            "en": {
+                "clear": "Clear",
+                "today": "Today",
+                "confirm": "Confirm",
+                "calendar_missing": "The tkcalendar library is not installed.\n\nInstall with:\npip install tkcalendar",
+                "calendar_error": "Error selecting date: {erro}",
+            },
+            "en_US": {
+                "clear": "Clear",
+                "today": "Today",
+                "confirm": "Confirm",
+                "calendar_missing": "The tkcalendar library is not installed.\n\nInstall with:\npip install tkcalendar",
+                "calendar_error": "Error selecting date: {erro}",
+            },
+            "es": {
+                "clear": "Limpiar",
+                "today": "Hoy",
+                "confirm": "Confirmar",
+                "calendar_missing": "La biblioteca tkcalendar no está instalada.\n\nInstala con:\npip install tkcalendar",
+                "calendar_error": "Error al seleccionar fecha: {erro}",
+            },
+            "es_ES": {
+                "clear": "Limpiar",
+                "today": "Hoy",
+                "confirm": "Confirmar",
+                "calendar_missing": "La biblioteca tkcalendar no está instalada.\n\nInstala con:\npip install tkcalendar",
+                "calendar_error": "Error al seleccionar fecha: {erro}",
+            },
+        }
+        idioma_textos = textos.get(idioma, textos["pt_BR"])
+        return idioma_textos.get(chave, chave)
 
-        ex = entry.winfo_rootx()
-        ey = entry.winfo_rooty()
-        eh = entry.winfo_height()
-        x = ex
-        y = ey + eh + 6
-        sw = top.winfo_screenwidth()
-        sh = top.winfo_screenheight()
-        if x + W > sw:
-            x = sw - W - 10
-        if y + H > sh:
-            y = ey - H - 6
-        top.geometry(f"{W}x{H}+{x}+{y}")
-        top.transient(self)
-        top.grab_set()
+    def _abrir_calendario(self, entry_destino):
+        if Calendar is None:
+            messagebox.showwarning(
+                self._get_calendar_title(),
+                self._get_text("calendar_missing")
+            )
+            return
 
-        now = _dt.now()
-        ano = now.year
-        mes = now.month
+        try:
+            if self._calendar_popup and self._calendar_popup.winfo_exists():
+                self._calendar_popup.destroy()
+        except Exception:
+            pass
 
-        nav = ctk.CTkFrame(top)
-        nav.pack(fill="x", padx=10, pady=5)
-        lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
-        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
-        lbl_mes.pack(side="left", expand=True)
-        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        popup = ctk.CTkToplevel(self)
+        self._calendar_popup = popup
+        popup.title(self._get_calendar_title())
+        popup.geometry("320x340")
+        popup.resizable(False, False)
+        popup.transient(self.winfo_toplevel())
+        popup.grab_set()
 
-        dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-        frame_dias = ctk.CTkFrame(top)
-        frame_dias.pack(fill="both", expand=True, padx=10, pady=5)
-        for i, dia in enumerate(dias_semana):
-            ctk.CTkLabel(frame_dias, text=dia, width=30, height=30).grid(row=0, column=i, padx=2, pady=2)
+        try:
+            popup.after(10, popup.lift)
+            popup.focus_force()
+        except Exception:
+            pass
 
-        def mudar_mes(delta):
-            nonlocal mes, ano
-            mes += delta
-            if mes > 12:
-                mes = 1
-                ano += 1
-            elif mes < 1:
-                mes = 12
-                ano -= 1
-            lbl_mes.configure(text=f"{_cal.month_name[mes]} {ano}")
-            desenhar_calendario()
+        try:
+            x = entry_destino.winfo_rootx()
+            y = entry_destino.winfo_rooty() + entry_destino.winfo_height() + 4
+            popup.geometry(f"+{x}+{y}")
+        except Exception:
+            pass
 
-        def desenhar_calendario():
-            for w in frame_dias.grid_slaves():
-                if int(w.grid_info()["row"]) > 0:
-                    w.destroy()
-            cal = _cal.monthcalendar(ano, mes)
-            for i, semana in enumerate(cal):
-                for j, dia in enumerate(semana):
-                    if dia == 0:
-                        continue
-                    ctk.CTkButton(frame_dias, text=str(dia), width=30, height=30, command=lambda d=dia: setar_data(_dt(ano, mes, d))).grid(row=i+1, column=j, padx=2, pady=2)
+        aparencia = ctk.get_appearance_mode().lower()
 
-        desenhar_calendario()
+        if aparencia == "light":
+            popup_fg = "#F4F6F9"
+            corpo_fg = "#EDEFF3"
+            rodape_fg = "transparent"
 
+            btn_secundario = "#6B7280"
+            btn_secundario_hover = "#4B5563"
+
+            btn_hoje = "#2563EB"
+            btn_hoje_hover = "#1D4ED8"
+
+            btn_confirmar = "#60A5FA"
+            btn_confirmar_hover = "#3B82F6"
+
+            texto_btn = "#FFFFFF"
+        else:
+            popup_fg = "#2B2B2B"
+            corpo_fg = "#343638"
+            rodape_fg = "transparent"
+
+            btn_secundario = "#4B5563"
+            btn_secundario_hover = "#374151"
+
+            btn_hoje = "#2563EB"
+            btn_hoje_hover = "#1D4ED8"
+
+            btn_confirmar = self.cor_primaria
+            btn_confirmar_hover = self._hover(self.cor_primaria)
+
+            texto_btn = "#FFFFFF"
+
+        popup.configure(fg_color=popup_fg)
+
+        corpo = ctk.CTkFrame(
+            popup,
+            fg_color=corpo_fg,
+            corner_radius=10
+        )
+        corpo.pack(fill="both", expand=True, padx=8, pady=8)
+
+        data_inicial = self._parse_data(entry_destino.get())
+        if data_inicial is None:
+            data_inicial = date.today()
+
+        locale_escolhido = self._get_calendar_locale()
+        pattern_escolhido = self._get_date_pattern()
+
+        try:
+            calendario = Calendar(
+                corpo,
+                selectmode="day",
+                year=data_inicial.year,
+                month=data_inicial.month,
+                day=data_inicial.day,
+                date_pattern=pattern_escolhido,
+                firstweekday="sunday",
+                locale=locale_escolhido,
+                showweeknumbers=False
+            )
+        except Exception:
+            calendario = Calendar(
+                corpo,
+                selectmode="day",
+                year=data_inicial.year,
+                month=data_inicial.month,
+                day=data_inicial.day,
+                date_pattern=pattern_escolhido,
+                firstweekday="sunday",
+                showweeknumbers=False
+            )
+
+        calendario.pack(fill="both", expand=True, padx=6, pady=6)
+
+        rodape = ctk.CTkFrame(corpo, fg_color=rodape_fg)
+        rodape.pack(fill="x", padx=6, pady=(0, 6))
+
+        def confirmar():
+            try:
+                data_escolhida = calendario.get_date()
+                entry_destino.delete(0, "end")
+                entry_destino.insert(0, data_escolhida)
+                popup.destroy()
+            except Exception as exc:
+                messagebox.showerror(
+                    self._get_calendar_title(),
+                    self._get_text("calendar_error").format(erro=exc)
+                )
+
+        def limpar():
+            entry_destino.delete(0, "end")
+            popup.destroy()
+
+        ctk.CTkButton(
+            rodape,
+            text=self._get_text("clear"),
+            width=90,
+            height=34,
+            corner_radius=8,
+            command=limpar,
+            fg_color=btn_secundario,
+            hover_color=btn_secundario_hover,
+            text_color=texto_btn,
+            border_width=0,
+        ).pack(side="left")
+
+        ctk.CTkButton(
+            rodape,
+            text=self._get_text("today"),
+            width=90,
+            height=34,
+            corner_radius=8,
+            command=lambda: calendario.selection_set(date.today()),
+            fg_color=btn_hoje,
+            hover_color=btn_hoje_hover,
+            text_color=texto_btn,
+            border_width=0,
+        ).pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            rodape,
+            text=self._get_text("confirm"),
+            width=110,
+            height=34,
+            corner_radius=8,
+            command=confirmar,
+            fg_color=btn_confirmar,
+            hover_color=btn_confirmar_hover,
+            text_color=texto_btn,
+            border_width=0,
+        ).pack(side="right")
+
+        popup.bind("<Escape>", lambda e: popup.destroy())
+
+
+    _I18N_MAP = {'en_US': {'Planejamento de Produção': 'Production Planning', 'Nova Programação': 'New Schedule', 'Atualizar': 'Refresh', 'Reprogramar +1 dia': 'Reschedule +1 day', 'Exportar PDF': 'Export PDF', 'Imprimir': 'Print', 'Período': 'Period', 'De': 'From', 'Até': 'To', 'Coleção': 'Collection', 'Prioridade': 'Priority', 'Programação': 'Schedule', 'Filtrar': 'Filter', 'Programações / OPs': 'Schedules / WOs', 'Resumo de Materiais': 'Materials Summary', 'Detalhes da OP Selecionada': 'Selected WO Details', 'Tecidos necessários': 'Required Fabrics', 'Aviamentos necessários': 'Required Trims', 'Passo 1 - Definir período e tipo de programação': 'Step 1 - Define period and schedule type', 'Período início': 'Period start', 'Período fim': 'Period end', 'Prazo para começar': 'Start deadline', 'Passo 2 - Escolher modelo': 'Step 2 - Choose model', 'Modelo': 'Model', 'Grade disponível: -': 'Available size set: -', 'Passo 3 - Distribuir grade (porcentagem)': 'Step 3 - Distribute size set (percentage)', 'Quantidade desejada': 'Desired quantity', 'Total da porcentagem: 0%': 'Total percentage: 0%', 'Passo 4 - Conferir materiais': 'Step 4 - Check materials', 'Calcular materiais': 'Calculate materials', 'Salvar programação': 'Save schedule', 'Nova Programação de Produção': 'New Production Schedule', 'Semanal': 'Weekly', 'Mensal': 'Monthly', 'Trimestral': 'Quarterly', 'Semestral': 'Semiannual', 'Baixa': 'Low', 'Média': 'Medium', 'Alta': 'High', 'Urgente': 'Urgent', 'Todas': 'All', 'OPs em execução: 0': 'WOs in progress: 0', 'Atrasos críticos: 0': 'Critical delays: 0', 'Capacidade usada: 0%': 'Capacity used: 0%', 'Ociosidade: 0%': 'Idle time: 0%', 'OP': 'WO', 'Qtde': 'Qty', 'Início': 'Start', 'Fim': 'End', 'Status': 'Status', 'Progresso': 'Progress'}, 'es_ES': {'Planejamento de Produção': 'Planificación de Producción', 'Nova Programação': 'Nueva Programación', 'Atualizar': 'Actualizar', 'Reprogramar +1 dia': 'Reprogramar +1 día', 'Exportar PDF': 'Exportar PDF', 'Imprimir': 'Imprimir', 'Período': 'Período', 'De': 'Desde', 'Até': 'Hasta', 'Coleção': 'Colección', 'Prioridade': 'Prioridad', 'Programação': 'Programación', 'Filtrar': 'Filtrar', 'Programações / OPs': 'Programaciones / OPs', 'Resumo de Materiais': 'Resumen de Materiales', 'Detalhes da OP Selecionada': 'Detalles de la OP Seleccionada', 'Tecidos necessários': 'Tejidos necesarios', 'Aviamentos necessários': 'Avíos necesarios', 'Passo 1 - Definir período e tipo de programação': 'Paso 1 - Definir período y tipo de programación', 'Período início': 'Inicio del período', 'Período fim': 'Fin del período', 'Prazo para começar': 'Plazo para empezar', 'Passo 2 - Escolher modelo': 'Paso 2 - Elegir modelo', 'Modelo': 'Modelo', 'Grade disponível: -': 'Tallas disponibles: -', 'Passo 3 - Distribuir grade (porcentagem)': 'Paso 3 - Distribuir tallas (porcentaje)', 'Quantidade desejada': 'Cantidad deseada', 'Total da porcentagem: 0%': 'Total del porcentaje: 0%', 'Passo 4 - Conferir materiais': 'Paso 4 - Revisar materiales', 'Calcular materiais': 'Calcular materiales', 'Salvar programação': 'Guardar programación', 'Nova Programação de Produção': 'Nueva Programación de Producción', 'Semanal': 'Semanal', 'Mensal': 'Mensual', 'Trimestral': 'Trimestral', 'Semestral': 'Semestral', 'Baixa': 'Baja', 'Média': 'Media', 'Alta': 'Alta', 'Urgente': 'Urgente', 'Todas': 'Todas', 'OPs em execução: 0': 'OPs en ejecución: 0', 'Atrasos críticos: 0': 'Atrasos críticos: 0', 'Capacidade usada: 0%': 'Capacidad usada: 0%', 'Ociosidade: 0%': 'Ociosidad: 0%', 'OP': 'OP', 'Qtde': 'Cant', 'Início': 'Inicio', 'Fim': 'Fin', 'Status': 'Estado', 'Progresso': 'Progreso'}}
+
+    def _get_idioma_atual(self):
+        try:
+            if getattr(self, "sistema", None) is not None:
+                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
+        except Exception:
+            pass
+        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
+
+    def _canonical_i18n_text(self, text):
+        if text is None:
+            return text
+        s = str(text)
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        if s in maps.get("pt_BR", {}):
+            return s
+        for _lang, table in maps.items():
+            for pt_key, translated in table.items():
+                if s == translated:
+                    return pt_key
+        return s
+
+    def _translate_i18n_text(self, text):
+        if text is None:
+            return text
+        idioma = self._get_idioma_atual()
+        maps = getattr(self, "_I18N_MAP", {}) or {}
+        canonical = self._canonical_i18n_text(text)
+        return maps.get(idioma, {}).get(canonical, canonical)
+
+    def _translate_i18n_values(self, values):
+        if not isinstance(values, (list, tuple)):
+            return values
+        return [self._translate_i18n_text(v) for v in values]
+
+    def _refresh_widget_i18n(self, widget):
+        try:
+            if hasattr(widget, "cget"):
+                try:
+                    text = widget.cget("text")
+                    if isinstance(text, str) and text:
+                        new_text = self._translate_i18n_text(text)
+                        if new_text != text:
+                            widget.configure(text=new_text)
+                except Exception:
+                    pass
+
+                try:
+                    placeholder = widget.cget("placeholder_text")
+                    if isinstance(placeholder, str) and placeholder:
+                        new_placeholder = self._translate_i18n_text(placeholder)
+                        if new_placeholder != placeholder:
+                            widget.configure(placeholder_text=new_placeholder)
+                except Exception:
+                    pass
+
+                try:
+                    values = widget.cget("values")
+                    if isinstance(values, (list, tuple)) and values:
+                        current = None
+                        try:
+                            current = widget.get()
+                        except Exception:
+                            current = None
+                        translated_values = self._translate_i18n_values(list(values))
+                        widget.configure(values=translated_values)
+                        if current:
+                            widget.set(self._translate_i18n_text(current))
+                except Exception:
+                    pass
+
+            if isinstance(widget, ttk.Treeview):
+                try:
+                    for col in widget["columns"]:
+                        info = widget.heading(col)
+                        heading_text = info.get("text", "")
+                        if heading_text:
+                            widget.heading(col, text=self._translate_i18n_text(heading_text))
+                except Exception:
+                    pass
+
+            for child in widget.winfo_children():
+                self._refresh_widget_i18n(child)
+        except Exception:
+            pass
+
+    def refresh_texts(self):
+        try:
+            target = getattr(self, "root", None) or self
+            self._refresh_widget_i18n(target)
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "root") and self.root:
+                self.root.title(self._translate_i18n_text(self.root.title()))
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "PAGE_TITLE"):
+                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     app = ctk.CTk()
