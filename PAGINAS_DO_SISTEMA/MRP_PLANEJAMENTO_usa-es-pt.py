@@ -31,11 +31,6 @@ class MRPPage(ctk.CTkFrame):
         self.filtro_status = None
         self._build()
         self._carregar_dados_mrp()
-        try:
-            self.refresh_texts()
-        except Exception:
-            pass
-
 
     def _build(self):
         self.configure(fg_color="transparent")
@@ -826,112 +821,6 @@ class MRPPage(ctk.CTkFrame):
         desenhar_calendario()
 
 
-    _I18N_MAP = {'en_US': {'MRP / Necessidades de Insumos': 'MRP / Material Requirements', 'Planejamento de materiais com base em ordens e estoque atual.': 'Material planning based on orders and current stock.', 'Gerar MRP': 'Generate MRP', 'Simular': 'Simulate', 'Aprovar Compra': 'Approve Purchase', 'Exportar PDF': 'Export PDF', 'Imprimir': 'Print', 'Configurações': 'Settings', 'Período': 'Period', 'De': 'From', 'Até': 'To', 'Coleção': 'Collection', 'Status': 'Status', 'Filtrar': 'Filter', 'Todas': 'All', 'Crítico': 'Critical', 'Atenção': 'Attention', 'OK': 'OK', 'Todos': 'All', 'Necessidades': 'Requirements', 'Ordens Recomendadas': 'Recommended Orders', 'Fornecedores Críticos': 'Critical Suppliers', 'Itens críticos: 0': 'Critical items: 0', 'Faltantes: 0': 'Missing: 0', 'Valor a comprar: R$ 0,00': 'Value to purchase: $ 0.00', 'Lead time médio: 0 dias': 'Average lead time: 0 days', 'Plano de compra recomendado': 'Recommended purchasing plan', 'Converter em Pedido': 'Convert to Order', 'Insumo': 'Material', 'Quantidade': 'Quantity', 'Fornecedor': 'Supplier', 'Entrega Prevista': 'Expected Delivery', 'Estoque': 'Stock', 'Faltante': 'Shortage', 'Lead Time': 'Lead Time', 'Ordem': 'Order', 'Insumos Críticos': 'Critical Materials', 'Atraso Médio': 'Average Delay', 'Risco': 'Risk', 'Calendário': 'Calendar', 'Relatório MRP': 'MRP Report', 'MRP': 'MRP'}, 'es_ES': {'MRP / Necessidades de Insumos': 'MRP / Necesidades de Insumos', 'Planejamento de materiais com base em ordens e estoque atual.': 'Planificación de materiales basada en órdenes y stock actual.', 'Gerar MRP': 'Generar MRP', 'Simular': 'Simular', 'Aprovar Compra': 'Aprobar Compra', 'Exportar PDF': 'Exportar PDF', 'Imprimir': 'Imprimir', 'Configurações': 'Configuraciones', 'Período': 'Período', 'De': 'Desde', 'Até': 'Hasta', 'Coleção': 'Colección', 'Status': 'Estado', 'Filtrar': 'Filtrar', 'Todas': 'Todas', 'Crítico': 'Crítico', 'Atenção': 'Atención', 'OK': 'OK', 'Todos': 'Todos', 'Necessidades': 'Necesidades', 'Ordens Recomendadas': 'Órdenes Recomendadas', 'Fornecedores Críticos': 'Proveedores Críticos', 'Itens críticos: 0': 'Ítems críticos: 0', 'Faltantes: 0': 'Faltantes: 0', 'Valor a comprar: R$ 0,00': 'Valor a comprar: $ 0,00', 'Lead time médio: 0 dias': 'Lead time medio: 0 días', 'Plano de compra recomendado': 'Plan de compra recomendado', 'Converter em Pedido': 'Convertir en Pedido', 'Insumo': 'Insumo', 'Quantidade': 'Cantidad', 'Fornecedor': 'Proveedor', 'Entrega Prevista': 'Entrega Prevista', 'Estoque': 'Stock', 'Faltante': 'Faltante', 'Lead Time': 'Lead Time', 'Ordem': 'Orden', 'Insumos Críticos': 'Insumos Críticos', 'Atraso Médio': 'Retraso Medio', 'Risco': 'Riesgo', 'Calendário': 'Calendario', 'Relatório MRP': 'Informe MRP', 'MRP': 'MRP'}}
-
-    def _get_idioma_atual(self):
-        try:
-            if getattr(self, "sistema", None) is not None:
-                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
-        except Exception:
-            pass
-        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
-
-    def _canonical_i18n_text(self, text):
-        if text is None:
-            return text
-        s = str(text)
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        if s in maps.get("pt_BR", {}):
-            return s
-        for _lang, table in maps.items():
-            for pt_key, translated in table.items():
-                if s == translated:
-                    return pt_key
-        return s
-
-    def _translate_i18n_text(self, text):
-        if text is None:
-            return text
-        idioma = self._get_idioma_atual()
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        canonical = self._canonical_i18n_text(text)
-        return maps.get(idioma, {}).get(canonical, canonical)
-
-    def _translate_i18n_values(self, values):
-        if not isinstance(values, (list, tuple)):
-            return values
-        return [self._translate_i18n_text(v) for v in values]
-
-    def _refresh_widget_i18n(self, widget):
-        try:
-            if hasattr(widget, "cget"):
-                try:
-                    text = widget.cget("text")
-                    if isinstance(text, str) and text:
-                        new_text = self._translate_i18n_text(text)
-                        if new_text != text:
-                            widget.configure(text=new_text)
-                except Exception:
-                    pass
-
-                try:
-                    placeholder = widget.cget("placeholder_text")
-                    if isinstance(placeholder, str) and placeholder:
-                        new_placeholder = self._translate_i18n_text(placeholder)
-                        if new_placeholder != placeholder:
-                            widget.configure(placeholder_text=new_placeholder)
-                except Exception:
-                    pass
-
-                try:
-                    values = widget.cget("values")
-                    if isinstance(values, (list, tuple)) and values:
-                        current = None
-                        try:
-                            current = widget.get()
-                        except Exception:
-                            current = None
-                        translated_values = self._translate_i18n_values(list(values))
-                        widget.configure(values=translated_values)
-                        if current:
-                            widget.set(self._translate_i18n_text(current))
-                except Exception:
-                    pass
-
-            if isinstance(widget, ttk.Treeview):
-                try:
-                    for col in widget["columns"]:
-                        info = widget.heading(col)
-                        heading_text = info.get("text", "")
-                        if heading_text:
-                            widget.heading(col, text=self._translate_i18n_text(heading_text))
-                except Exception:
-                    pass
-
-            for child in widget.winfo_children():
-                self._refresh_widget_i18n(child)
-        except Exception:
-            pass
-
-    def refresh_texts(self):
-        try:
-            target = getattr(self, "root", None) or self
-            self._refresh_widget_i18n(target)
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "root") and self.root:
-                self.root.title(self._translate_i18n_text(self.root.title()))
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "PAGE_TITLE"):
-                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
-        except Exception:
-            pass
-
 if __name__ == "__main__":
     app = ctk.CTk()
     app.title("MRP - Teste")
@@ -939,3 +828,171 @@ if __name__ == "__main__":
     page = MRPPage(master=app)
     page.pack(fill="both", expand=True)
     app.mainloop()
+
+
+
+
+# ===== PATCH MULTILÍNGUE LIGADO AO MENU =====
+try:
+    import customtkinter as _ctk_ml
+    from tkinter import ttk as _ttk_ml
+except Exception:
+    _ctk_ml = None
+    _ttk_ml = None
+
+def _ml_get_lang(self):
+    return getattr(getattr(self, 'sistema', None), 'idioma_atual', 'pt_BR') or 'pt_BR'
+
+def _ml_translate(self, text):
+    if not text:
+        return text
+    lang = _ml_get_lang(self)
+    mapping = getattr(self.__class__, '_TRANSLATIONS', {})
+    current = mapping.get(lang, mapping.get('pt_BR', {}))
+    if text in current:
+        return current[text]
+    for _, mp in mapping.items():
+        if text in mp:
+            canon = mp[text]
+            return current.get(canon, canon)
+    return text
+
+def _ml_translate_list(self, values):
+    return [self._ml_translate(v) for v in values]
+
+def _ml_walk(widget):
+    try:
+        yield widget
+        for child in widget.winfo_children():
+            yield from _ml_walk(child)
+    except Exception:
+        return
+
+def _ml_refresh_texts(self):
+    if _ctk_ml is None:
+        return
+    for w in _ml_walk(self):
+        try:
+            if hasattr(w, 'cget'):
+                try:
+                    txt = w.cget('text')
+                except Exception:
+                    txt = None
+                if isinstance(txt, str) and txt:
+                    new = self._ml_translate(txt)
+                    if new != txt:
+                        try:
+                            w.configure(text=new)
+                        except Exception:
+                            pass
+                try:
+                    ph = w.cget('placeholder_text')
+                except Exception:
+                    ph = None
+                if isinstance(ph, str) and ph:
+                    new_ph = self._ml_translate(ph)
+                    if new_ph != ph:
+                        try:
+                            w.configure(placeholder_text=new_ph)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    # placeholders por atributo
+    for attr, base in getattr(self.__class__, '_PLACEHOLDERS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is not None:
+            try:
+                obj.configure(placeholder_text=self._ml_translate(base))
+            except Exception:
+                pass
+
+    # combos / option menus / segmented
+    for attr, base_values in getattr(self.__class__, '_COMBOS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is None:
+            continue
+        try:
+            current_value = obj.get()
+        except Exception:
+            current_value = None
+        new_values = self._ml_translate_list(base_values)
+        try:
+            obj.configure(values=new_values)
+        except Exception:
+            pass
+        if current_value:
+            try:
+                obj.set(self._ml_translate(current_value))
+            except Exception:
+                try:
+                    obj.set(self._ml_translate(base_values[0]))
+                except Exception:
+                    pass
+
+    # tree headings
+    for attr, cols in getattr(self.__class__, '_TREE_HEADINGS', {}).items():
+        tree = getattr(self, attr, None)
+        if tree is None:
+            continue
+        try:
+            for col, label in cols.items():
+                tree.heading(col, text=self._ml_translate(label))
+        except Exception:
+            pass
+
+    # tabview texts
+    tab_names = getattr(self.__class__, '_TABS', [])
+    for w in _ml_walk(self):
+        if _ctk_ml and isinstance(w, _ctk_ml.CTkTabview):
+            try:
+                buttons = getattr(w._segmented_button, '_buttons_dict', {})
+                for original in tab_names:
+                    btn = buttons.get(original)
+                    if btn is not None:
+                        btn.configure(text=self._ml_translate(original))
+            except Exception:
+                pass
+
+    # page title class attr
+    try:
+        if hasattr(self.__class__, 'PAGE_TITLE'):
+            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
+    except Exception:
+        pass
+
+    try:
+        self.update_idletasks()
+    except Exception:
+        pass
+
+def _ml_on_language_changed(self, *_args, **_kwargs):
+    try:
+        self.refresh_texts()
+    except Exception:
+        try:
+            _ml_refresh_texts(self)
+        except Exception:
+            pass
+
+_TRANSLATIONS = {
+ 'pt_BR': {'MRP / Necessidades de Insumos':'MRP / Necessidades de Insumos','MRP / Material Requirements':'MRP / Necessidades de Insumos','Planejamento de materiais com base em ordens e estoque atual.':'Planejamento de materiais com base em ordens e estoque atual.','Material planning based on orders and current stock.':'Planejamento de materiais com base em ordens e estoque atual.','Gerar MRP':'Gerar MRP','Generate MRP':'Gerar MRP','Simular':'Simular','Simulate':'Simular','Aprovar Compra':'Aprovar Compra','Approve Purchase':'Aprovar Compra','Exportar PDF':'Exportar PDF','Export PDF':'Exportar PDF','Imprimir':'Imprimir','Print':'Imprimir','Configurações':'Configurações','Settings':'Configurações','Período':'Período','Period':'Período','De':'De','From':'De','Até':'Até','To':'Até','Coleção':'Coleção','Collection':'Coleção','Status':'Status','Filtrar':'Filtrar','Filter':'Filtrar','Necessidades':'Necessidades','Needs':'Necessidades','Ordens Recomendadas':'Ordens Recomendadas','Recommended Orders':'Ordens Recomendadas','Fornecedores Críticos':'Fornecedores Críticos','Critical Suppliers':'Fornecedores Críticos','Itens críticos: 0':'Itens críticos: 0','Critical items: 0':'Itens críticos: 0','Faltantes: 0':'Faltantes: 0','Missing: 0':'Faltantes: 0','Valor a comprar: R$ 0,00':'Valor a comprar: R$ 0,00','Purchase value: $ 0.00':'Valor a comprar: R$ 0,00','Lead time médio: 0 dias':'Lead time médio: 0 dias','Average lead time: 0 days':'Lead time médio: 0 dias','Plano de compra recomendado':'Plano de compra recomendado','Recommended purchase plan':'Plano de compra recomendado','Converter em Pedido':'Converter em Pedido','Convert to Order':'Converter em Pedido','Todas':'Todas','All':'Todas','Crítico':'Crítico','Critical':'Crítico','Atenção':'Atenção','Attention':'Atenção','OK':'OK'},
+ 'en_US': {'MRP / Necessidades de Insumos':'MRP / Material Requirements','MRP / Material Requirements':'MRP / Material Requirements','Planejamento de materiais com base em ordens e estoque atual.':'Material planning based on orders and current stock.','Material planning based on orders and current stock.':'Material planning based on orders and current stock.','Gerar MRP':'Generate MRP','Generate MRP':'Generate MRP','Simular':'Simulate','Simulate':'Simulate','Aprovar Compra':'Approve Purchase','Approve Purchase':'Approve Purchase','Exportar PDF':'Export PDF','Export PDF':'Export PDF','Imprimir':'Print','Print':'Print','Configurações':'Settings','Settings':'Settings','Período':'Period','Period':'Period','De':'From','From':'From','Até':'To','To':'To','Coleção':'Collection','Collection':'Collection','Status':'Status','Filtrar':'Filter','Filter':'Filter','Necessidades':'Needs','Needs':'Needs','Ordens Recomendadas':'Recommended Orders','Recommended Orders':'Recommended Orders','Fornecedores Críticos':'Critical Suppliers','Critical Suppliers':'Critical Suppliers','Itens críticos: 0':'Critical items: 0','Critical items: 0':'Critical items: 0','Faltantes: 0':'Missing: 0','Missing: 0':'Missing: 0','Valor a comprar: R$ 0,00':'Purchase value: $ 0.00','Purchase value: $ 0.00':'Purchase value: $ 0.00','Lead time médio: 0 dias':'Average lead time: 0 days','Average lead time: 0 days':'Average lead time: 0 days','Plano de compra recomendado':'Recommended purchase plan','Recommended purchase plan':'Recommended purchase plan','Converter em Pedido':'Convert to Order','Convert to Order':'Convert to Order','Todas':'All','All':'All','Crítico':'Critical','Critical':'Critical','Atenção':'Attention','Attention':'Attention','OK':'OK'},
+ 'es_ES': {'MRP / Necessidades de Insumos':'MRP / Necesidades de Insumos','MRP / Material Requirements':'MRP / Necesidades de Insumos','Planejamento de materiais com base em ordens e estoque atual.':'Planificación de materiales basada en órdenes y stock actual.','Material planning based on orders and current stock.':'Planificación de materiales basada en órdenes y stock actual.','Gerar MRP':'Generar MRP','Generate MRP':'Generar MRP','Simular':'Simular','Simulate':'Simular','Aprovar Compra':'Aprobar Compra','Approve Purchase':'Aprobar Compra','Exportar PDF':'Exportar PDF','Export PDF':'Exportar PDF','Imprimir':'Imprimir','Print':'Imprimir','Configurações':'Configuración','Settings':'Configuración','Período':'Período','Period':'Período','De':'Desde','From':'Desde','Até':'Hasta','To':'Hasta','Coleção':'Colección','Collection':'Colección','Status':'Estado','Filtrar':'Filtrar','Filter':'Filtrar','Necessidades':'Necesidades','Needs':'Necesidades','Ordens Recomendadas':'Órdenes Recomendadas','Recommended Orders':'Órdenes Recomendadas','Fornecedores Críticos':'Proveedores Críticos','Critical Suppliers':'Proveedores Críticos','Itens críticos: 0':'Ítems críticos: 0','Critical items: 0':'Ítems críticos: 0','Faltantes: 0':'Faltantes: 0','Missing: 0':'Faltantes: 0','Valor a comprar: R$ 0,00':'Valor de compra: R$ 0,00','Purchase value: $ 0.00':'Valor de compra: R$ 0,00','Lead time médio: 0 dias':'Lead time medio: 0 días','Average lead time: 0 days':'Lead time medio: 0 días','Plano de compra recomendado':'Plan de compra recomendado','Recommended purchase plan':'Plan de compra recomendado','Converter em Pedido':'Convertir en Pedido','Convert to Order':'Convertir en Pedido','Todas':'Todas','All':'Todas','Crítico':'Crítico','Critical':'Crítico','Atenção':'Atención','Attention':'Atención','OK':'OK'}
+}
+_TREE_HEADINGS = {'tree_necessidades': {'insumo':'Insumo','sku':'SKU','necessario':'Necessário','estoque':'Estoque','faltante':'Faltante','lead':'Lead Time','fornecedor':'Fornecedor','status':'Status'}, 'tree_ordens': {'insumo':'Insumo','fornecedor':'Fornecedor','faltante':'Faltante','lead':'Lead Time','sugestao':'Sugestão'}, 'tree_fornecedores': {'fornecedor':'Fornecedor','itens':'Itens Críticos','lead':'Lead Time Médio','valor':'Valor'}}
+_PLACEHOLDERS = {'mrp_inicio_entry':'De','mrp_fim_entry':'Até'}
+_COMBOS = {'filtro_colecao':['Todas','Linha Básica','Coleção 2026'], 'filtro_status':['Crítico','Atenção','OK','Todos']}
+_TABS = ['Necessidades','Ordens Recomendadas','Fornecedores Críticos']
+
+MRPPage._TRANSLATIONS = _TRANSLATIONS
+MRPPage._TREE_HEADINGS = _TREE_HEADINGS
+MRPPage._PLACEHOLDERS = _PLACEHOLDERS
+MRPPage._COMBOS = _COMBOS
+MRPPage._TABS = _TABS
+
+MRPPage._ml_translate = _ml_translate
+MRPPage._ml_translate_list = _ml_translate_list
+MRPPage.refresh_texts = _ml_refresh_texts
+MRPPage.on_language_changed = _ml_on_language_changed

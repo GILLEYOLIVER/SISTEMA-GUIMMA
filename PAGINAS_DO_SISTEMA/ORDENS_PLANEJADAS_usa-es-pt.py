@@ -38,11 +38,6 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         self._build()
         self._carregar_colecoes()
         self._carregar_ops()
-        try:
-            self.refresh_texts()
-        except Exception:
-            pass
-
 
     # =========================================================
     # UI
@@ -976,112 +971,6 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
 # =========================================================
 # TESTE ISOLADO
 # =========================================================
-    _I18N_MAP = {'en_US': {'Ordens Planejadas': 'Planned Orders', 'Atualizar': 'Refresh', 'Abrir na Nova Ordem': 'Open in New Order', 'Tempo': 'Time', 'Coleção': 'Collection', 'Cód. Modelo': 'Model Code', 'Código': 'Code', 'Descrição': 'Description', 'Descrição do modelo': 'Model description', 'Filtrar': 'Filter', 'Limpar Filtros': 'Clear Filters', 'Data de': 'Date from', 'Data até': 'Date to', 'Hora de': 'Time from', 'Hora até': 'Time to', 'A data/hora usa atualizado_em; se vazio, usa criado_em.': 'Date/time uses atualizado_em; if empty, criado_em is used.', 'Todas': 'All', 'Semanal': 'Weekly', 'Mensal': 'Monthly', 'Trimestral': 'Quarterly', 'Semestral': 'Semiannual', 'dd/mm/aaaa': 'dd/mm/yyyy', 'hh:mm': 'hh:mm', 'OP': 'WO', 'Modelo': 'Model', 'Qtde': 'Qty', 'Início': 'Start', 'Fim': 'End', 'Status': 'Status', 'Progresso': 'Progress', 'Atualizado em': 'Updated at', 'Teste Isolado - Ordens Planejadas': 'Standalone Test - Planned Orders'}, 'es_ES': {'Ordens Planejadas': 'Órdenes Planificadas', 'Atualizar': 'Actualizar', 'Abrir na Nova Ordem': 'Abrir en Nueva Orden', 'Tempo': 'Tiempo', 'Coleção': 'Colección', 'Cód. Modelo': 'Cód. Modelo', 'Código': 'Código', 'Descrição': 'Descripción', 'Descrição do modelo': 'Descripción del modelo', 'Filtrar': 'Filtrar', 'Limpar Filtros': 'Limpiar Filtros', 'Data de': 'Fecha desde', 'Data até': 'Fecha hasta', 'Hora de': 'Hora desde', 'Hora até': 'Hora hasta', 'A data/hora usa atualizado_em; se vazio, usa criado_em.': 'La fecha/hora usa actualizado_em; si está vacío, usa criado_em.', 'Todas': 'Todas', 'Semanal': 'Semanal', 'Mensal': 'Mensual', 'Trimestral': 'Trimestral', 'Semestral': 'Semestral', 'dd/mm/aaaa': 'dd/mm/aaaa', 'hh:mm': 'hh:mm', 'OP': 'OP', 'Modelo': 'Modelo', 'Qtde': 'Cant', 'Início': 'Inicio', 'Fim': 'Fin', 'Status': 'Estado', 'Progresso': 'Progreso', 'Atualizado em': 'Actualizado en', 'Teste Isolado - Ordens Planejadas': 'Prueba aislada - Órdenes Planificadas'}}
-
-    def _get_idioma_atual(self):
-        try:
-            if getattr(self, "sistema", None) is not None:
-                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
-        except Exception:
-            pass
-        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
-
-    def _canonical_i18n_text(self, text):
-        if text is None:
-            return text
-        s = str(text)
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        if s in maps.get("pt_BR", {}):
-            return s
-        for _lang, table in maps.items():
-            for pt_key, translated in table.items():
-                if s == translated:
-                    return pt_key
-        return s
-
-    def _translate_i18n_text(self, text):
-        if text is None:
-            return text
-        idioma = self._get_idioma_atual()
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        canonical = self._canonical_i18n_text(text)
-        return maps.get(idioma, {}).get(canonical, canonical)
-
-    def _translate_i18n_values(self, values):
-        if not isinstance(values, (list, tuple)):
-            return values
-        return [self._translate_i18n_text(v) for v in values]
-
-    def _refresh_widget_i18n(self, widget):
-        try:
-            if hasattr(widget, "cget"):
-                try:
-                    text = widget.cget("text")
-                    if isinstance(text, str) and text:
-                        new_text = self._translate_i18n_text(text)
-                        if new_text != text:
-                            widget.configure(text=new_text)
-                except Exception:
-                    pass
-
-                try:
-                    placeholder = widget.cget("placeholder_text")
-                    if isinstance(placeholder, str) and placeholder:
-                        new_placeholder = self._translate_i18n_text(placeholder)
-                        if new_placeholder != placeholder:
-                            widget.configure(placeholder_text=new_placeholder)
-                except Exception:
-                    pass
-
-                try:
-                    values = widget.cget("values")
-                    if isinstance(values, (list, tuple)) and values:
-                        current = None
-                        try:
-                            current = widget.get()
-                        except Exception:
-                            current = None
-                        translated_values = self._translate_i18n_values(list(values))
-                        widget.configure(values=translated_values)
-                        if current:
-                            widget.set(self._translate_i18n_text(current))
-                except Exception:
-                    pass
-
-            if isinstance(widget, ttk.Treeview):
-                try:
-                    for col in widget["columns"]:
-                        info = widget.heading(col)
-                        heading_text = info.get("text", "")
-                        if heading_text:
-                            widget.heading(col, text=self._translate_i18n_text(heading_text))
-                except Exception:
-                    pass
-
-            for child in widget.winfo_children():
-                self._refresh_widget_i18n(child)
-        except Exception:
-            pass
-
-    def refresh_texts(self):
-        try:
-            target = getattr(self, "root", None) or self
-            self._refresh_widget_i18n(target)
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "root") and self.root:
-                self.root.title(self._translate_i18n_text(self.root.title()))
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "PAGE_TITLE"):
-                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
-        except Exception:
-            pass
-
 if __name__ == "__main__":
     class SistemaMock:
         def __init__(self):
@@ -1108,3 +997,170 @@ if __name__ == "__main__":
     pagina.pack(fill="both", expand=True)
 
     app.mainloop()
+
+
+
+# ===== PATCH MULTILÍNGUE LIGADO AO MENU =====
+try:
+    import customtkinter as _ctk_ml
+    from tkinter import ttk as _ttk_ml
+except Exception:
+    _ctk_ml = None
+    _ttk_ml = None
+
+def _ml_get_lang(self):
+    return getattr(getattr(self, 'sistema', None), 'idioma_atual', 'pt_BR') or 'pt_BR'
+
+def _ml_translate(self, text):
+    if not text:
+        return text
+    lang = _ml_get_lang(self)
+    mapping = getattr(self.__class__, '_TRANSLATIONS', {})
+    current = mapping.get(lang, mapping.get('pt_BR', {}))
+    if text in current:
+        return current[text]
+    for _, mp in mapping.items():
+        if text in mp:
+            canon = mp[text]
+            return current.get(canon, canon)
+    return text
+
+def _ml_translate_list(self, values):
+    return [self._ml_translate(v) for v in values]
+
+def _ml_walk(widget):
+    try:
+        yield widget
+        for child in widget.winfo_children():
+            yield from _ml_walk(child)
+    except Exception:
+        return
+
+def _ml_refresh_texts(self):
+    if _ctk_ml is None:
+        return
+    for w in _ml_walk(self):
+        try:
+            if hasattr(w, 'cget'):
+                try:
+                    txt = w.cget('text')
+                except Exception:
+                    txt = None
+                if isinstance(txt, str) and txt:
+                    new = self._ml_translate(txt)
+                    if new != txt:
+                        try:
+                            w.configure(text=new)
+                        except Exception:
+                            pass
+                try:
+                    ph = w.cget('placeholder_text')
+                except Exception:
+                    ph = None
+                if isinstance(ph, str) and ph:
+                    new_ph = self._ml_translate(ph)
+                    if new_ph != ph:
+                        try:
+                            w.configure(placeholder_text=new_ph)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    # placeholders por atributo
+    for attr, base in getattr(self.__class__, '_PLACEHOLDERS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is not None:
+            try:
+                obj.configure(placeholder_text=self._ml_translate(base))
+            except Exception:
+                pass
+
+    # combos / option menus / segmented
+    for attr, base_values in getattr(self.__class__, '_COMBOS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is None:
+            continue
+        try:
+            current_value = obj.get()
+        except Exception:
+            current_value = None
+        new_values = self._ml_translate_list(base_values)
+        try:
+            obj.configure(values=new_values)
+        except Exception:
+            pass
+        if current_value:
+            try:
+                obj.set(self._ml_translate(current_value))
+            except Exception:
+                try:
+                    obj.set(self._ml_translate(base_values[0]))
+                except Exception:
+                    pass
+
+    # tree headings
+    for attr, cols in getattr(self.__class__, '_TREE_HEADINGS', {}).items():
+        tree = getattr(self, attr, None)
+        if tree is None:
+            continue
+        try:
+            for col, label in cols.items():
+                tree.heading(col, text=self._ml_translate(label))
+        except Exception:
+            pass
+
+    # tabview texts
+    tab_names = getattr(self.__class__, '_TABS', [])
+    for w in _ml_walk(self):
+        if _ctk_ml and isinstance(w, _ctk_ml.CTkTabview):
+            try:
+                buttons = getattr(w._segmented_button, '_buttons_dict', {})
+                for original in tab_names:
+                    btn = buttons.get(original)
+                    if btn is not None:
+                        btn.configure(text=self._ml_translate(original))
+            except Exception:
+                pass
+
+    # page title class attr
+    try:
+        if hasattr(self.__class__, 'PAGE_TITLE'):
+            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
+    except Exception:
+        pass
+
+    try:
+        self.update_idletasks()
+    except Exception:
+        pass
+
+def _ml_on_language_changed(self, *_args, **_kwargs):
+    try:
+        self.refresh_texts()
+    except Exception:
+        try:
+            _ml_refresh_texts(self)
+        except Exception:
+            pass
+
+_TRANSLATIONS = {
+ 'pt_BR': {'Ordens Planejadas':'Ordens Planejadas','Planned Orders':'Ordens Planejadas','Atualizar':'Atualizar','Refresh':'Atualizar','Abrir na Nova Ordem':'Abrir na Nova Ordem','Open in New Order':'Abrir na Nova Ordem','Tempo':'Tempo','Time':'Tempo','Coleção':'Coleção','Collection':'Coleção','Cód. Modelo':'Cód. Modelo','Model Code':'Cód. Modelo','Descrição':'Descrição','Description':'Descrição','Filtrar':'Filtrar','Filter':'Filtrar','Limpar Filtros':'Limpar Filtros','Clear Filters':'Limpar Filtros','Data de':'Data de','Date from':'Data de','Data até':'Data até','Date to':'Data até','Código':'Código','Code':'Código','Descrição do modelo':'Descrição do modelo','Model description':'Descrição do modelo','dd/mm/aaaa':'dd/mm/aaaa','mm/dd/yyyy':'dd/mm/aaaa','Todas':'Todas','All':'Todas','Semanal':'Semanal','Weekly':'Semanal','Mensal':'Mensal','Monthly':'Mensal','Trimestral':'Trimestral','Quarterly':'Trimestral','Semestral':'Semestral','Semiannual':'Semestral','Coleção':'Coleção'},
+ 'en_US': {'Ordens Planejadas':'Planned Orders','Planned Orders':'Planned Orders','Atualizar':'Refresh','Refresh':'Refresh','Abrir na Nova Ordem':'Open in New Order','Open in New Order':'Open in New Order','Tempo':'Time','Time':'Time','Coleção':'Collection','Collection':'Collection','Cód. Modelo':'Model Code','Model Code':'Model Code','Descrição':'Description','Description':'Description','Filtrar':'Filter','Filter':'Filter','Limpar Filtros':'Clear Filters','Clear Filters':'Clear Filters','Data de':'Date from','Date from':'Date from','Data até':'Date to','Date to':'Date to','Código':'Code','Code':'Code','Descrição do modelo':'Model description','Model description':'Model description','dd/mm/aaaa':'mm/dd/yyyy','mm/dd/yyyy':'mm/dd/yyyy','Todas':'All','All':'All','Semanal':'Weekly','Weekly':'Weekly','Mensal':'Monthly','Monthly':'Monthly','Trimestral':'Quarterly','Quarterly':'Quarterly','Semestral':'Semiannual','Semiannual':'Semiannual','Coleção':'Collection'},
+ 'es_ES': {'Ordens Planejadas':'Órdenes Planificadas','Planned Orders':'Órdenes Planificadas','Atualizar':'Actualizar','Refresh':'Actualizar','Abrir na Nova Ordem':'Abrir en Nueva Orden','Open in New Order':'Abrir en Nueva Orden','Tempo':'Tiempo','Time':'Tiempo','Coleção':'Colección','Collection':'Colección','Cód. Modelo':'Cód. Modelo','Model Code':'Cód. Modelo','Descrição':'Descripción','Description':'Descripción','Filtrar':'Filtrar','Filter':'Filtrar','Limpar Filtros':'Limpiar Filtros','Clear Filters':'Limpiar Filtros','Data de':'Fecha desde','Date from':'Fecha desde','Data até':'Fecha hasta','Date to':'Fecha hasta','Código':'Código','Code':'Código','Descrição do modelo':'Descripción del modelo','Model description':'Descripción del modelo','dd/mm/aaaa':'dd/mm/aaaa','mm/dd/yyyy':'dd/mm/aaaa','Todas':'Todas','All':'Todas','Semanal':'Semanal','Weekly':'Semanal','Mensal':'Mensual','Monthly':'Mensual','Trimestral':'Trimestral','Quarterly':'Trimestral','Semestral':'Semestral','Semiannual':'Semestral','Coleção':'Colección'}
+}
+_TREE_HEADINGS = {'tree': {'op':'OP','programacao':'Tempo','colecao':'Coleção','codigo':'Código','descricao':'Descrição','quantidade':'Quantidade','data':'Data','hora':'Hora','prioridade':'Prioridade','status':'Status'}}
+_PLACEHOLDERS = {'filtro_codigo':'Código','filtro_modelo':'Descrição do modelo','filtro_data_de':'dd/mm/aaaa','filtro_data_ate':'dd/mm/aaaa'}
+_COMBOS = {'filtro_programacao':['Todas','Semanal','Mensal','Trimestral','Semestral','Coleção'], 'filtro_colecao':['Todas']}
+_TABS = []
+
+OrdensPlanejadasPage._TRANSLATIONS = _TRANSLATIONS
+OrdensPlanejadasPage._TREE_HEADINGS = _TREE_HEADINGS
+OrdensPlanejadasPage._PLACEHOLDERS = _PLACEHOLDERS
+OrdensPlanejadasPage._COMBOS = _COMBOS
+OrdensPlanejadasPage._TABS = _TABS
+
+OrdensPlanejadasPage._ml_translate = _ml_translate
+OrdensPlanejadasPage._ml_translate_list = _ml_translate_list
+OrdensPlanejadasPage.refresh_texts = _ml_refresh_texts
+OrdensPlanejadasPage.on_language_changed = _ml_on_language_changed

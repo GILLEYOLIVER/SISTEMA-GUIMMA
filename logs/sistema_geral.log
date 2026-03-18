@@ -528,3 +528,50 @@ Exception: Não foi possível conectar. Portas testadas: [5432]
 2026-03-18 14:42:46 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
 2026-03-18 14:42:46 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
 2026-03-18 14:42:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 15:06:50 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:06:50 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:07:29 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 15:10:31 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:10:31 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:10:48 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:10:49 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:12:05 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 15:12:21 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 15:12:40 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-18 15:14:48 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:14:48 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:14:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:14:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:21:51 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:21:51 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:23:11 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:23:11 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:43:16 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:43:16 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:43:43 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:43:43 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:43:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:43:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:44:11 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:44:11 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 15:48:17 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 15:48:17 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA.py", line 703, in mostrar_status_conexao
+    base = self._get_base_window()
+           ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'GerenciadorBancoDados' object has no attribute '_get_base_window'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA.py", line 640, in conectar_como_admin
+    self.mostrar_status_conexao("🔐 CONECTADO COMO SUPER ADMINISTRADOR")
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA.py", line 764, in mostrar_status_conexao
+    print(self._tr("show_status_error", erro=e))
+          ^^^^^^^^
+AttributeError: 'GerenciadorBancoDados' object has no attribute '_tr'
+2026-03-18 16:55:48 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 16:55:48 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-18 16:56:01 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-18 16:56:01 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada

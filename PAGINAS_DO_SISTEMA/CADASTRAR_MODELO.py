@@ -688,6 +688,12 @@ class CadastroModelosApp(ctk.CTkFrame):
                 "new": "Novo", "pdf": "PDF", "export": "Exportar", "save": "Salvar", "cancel": "Cancelar", "calc_total": "↻ Calcular Total",
                 "save_emoji": "💾 Salvar", "cancel_emoji": "❌ Cancelar", "add_selected": "➕ Adicionar Selecionado", "close": "❌ Fechar",
                 "tip_select": "💡 Dica: Use as setas para navegar e Enter ou duplo-clique para selecionar", "ok": "OK", "cancel_simple": "Cancel",
+                "placeholder_cost_piece": "(T1 - 1,65) (T2 - 1,24) ...",
+                "difficulty_easy": "Fácil", "difficulty_medium": "Médio", "difficulty_hard": "Difícil",
+                "col_code": "Código", "col_description": "Descrição", "col_color": "Cor", "col_supplier": "Fornecedor",
+                "col_composition": "Composição", "col_meters_piece": "Metros/Peça", "col_meter_value": "Valor Metro",
+                "col_total": "Total", "col_quantity": "Quantidade", "col_unit_value": "Valor Unidade",
+                "col_unit": "Unid.", "col_price": "Preço", "col_collection": "Coleção", "col_date": "Data",
                 "pdf_title": "CADASTRO DE MODELOS DE PRODUTO", "pdf_generated": "Gerado em {data}   |   Página {pagina}",
             },
             "en_US": {
@@ -706,6 +712,12 @@ class CadastroModelosApp(ctk.CTkFrame):
                 "new": "New", "pdf": "PDF", "export": "Export", "save": "Save", "cancel": "Cancel", "calc_total": "↻ Calculate Total",
                 "save_emoji": "💾 Save", "cancel_emoji": "❌ Cancel", "add_selected": "➕ Add Selected", "close": "❌ Close",
                 "tip_select": "💡 Tip: Use the arrows to navigate and Enter or double-click to select", "ok": "OK", "cancel_simple": "Cancel",
+                "placeholder_cost_piece": "(F1 - 1.65) (F2 - 1.24) ...",
+                "difficulty_easy": "Easy", "difficulty_medium": "Medium", "difficulty_hard": "Hard",
+                "col_code": "Code", "col_description": "Description", "col_color": "Color", "col_supplier": "Supplier",
+                "col_composition": "Composition", "col_meters_piece": "Meters/Piece", "col_meter_value": "Meter Value",
+                "col_total": "Total", "col_quantity": "Quantity", "col_unit_value": "Unit Value",
+                "col_unit": "Unit", "col_price": "Price", "col_collection": "Collection", "col_date": "Date",
                 "pdf_title": "PRODUCT MODEL REGISTRY", "pdf_generated": "Generated on {data}   |   Page {pagina}",
             },
             "es_ES": {
@@ -724,6 +736,12 @@ class CadastroModelosApp(ctk.CTkFrame):
                 "new": "Nuevo", "pdf": "PDF", "export": "Exportar", "save": "Guardar", "cancel": "Cancelar", "calc_total": "↻ Calcular Total",
                 "save_emoji": "💾 Guardar", "cancel_emoji": "❌ Cancelar", "add_selected": "➕ Agregar Seleccionado", "close": "❌ Cerrar",
                 "tip_select": "💡 Consejo: Use las flechas para navegar y Enter o doble clic para seleccionar", "ok": "OK", "cancel_simple": "Cancelar",
+                "placeholder_cost_piece": "(T1 - 1,65) (T2 - 1,24) ...",
+                "difficulty_easy": "Fácil", "difficulty_medium": "Medio", "difficulty_hard": "Difícil",
+                "col_code": "Código", "col_description": "Descripción", "col_color": "Color", "col_supplier": "Proveedor",
+                "col_composition": "Composición", "col_meters_piece": "Metros/Pieza", "col_meter_value": "Valor Metro",
+                "col_total": "Total", "col_quantity": "Cantidad", "col_unit_value": "Valor Unidad",
+                "col_unit": "Unid.", "col_price": "Precio", "col_collection": "Colección", "col_date": "Fecha",
                 "pdf_title": "REGISTRO DE MODELOS DE PRODUCTO", "pdf_generated": "Generado el {data}   |   Página {pagina}",
             },
         }
@@ -734,6 +752,32 @@ class CadastroModelosApp(ctk.CTkFrame):
             return texto.format(**kwargs) if kwargs else texto
         except Exception:
             return texto
+
+    def _tree_heading_texts_tecidos(self):
+        return [
+            self._get_text("col_code"), self._get_text("col_description"), self._get_text("col_color"),
+            self._get_text("col_supplier"), self._get_text("col_composition"), self._get_text("col_meters_piece"),
+            self._get_text("col_meter_value"), self._get_text("col_total")
+        ]
+
+    def _tree_heading_texts_aviamentos(self):
+        return [
+            self._get_text("col_code"), self._get_text("col_description"), self._get_text("col_color"),
+            self._get_text("col_supplier"), self._get_text("col_quantity"), self._get_text("col_unit_value"),
+            self._get_text("col_total")
+        ]
+
+    def _tree_heading_texts_outros(self):
+        return [
+            self._get_text("col_code"), self._get_text("col_description"), self._get_text("col_color"),
+            self._get_text("col_supplier"), self._get_text("col_unit"), self._get_text("col_quantity"),
+            self._get_text("col_price"), self._get_text("col_total")
+        ]
+
+    def _tree_heading_texts_pesquisa(self):
+        return [
+            self._get_text("col_code"), self._get_text("col_description"), self._get_text("col_collection"), self._get_text("col_date")
+        ]
 
     def refresh_texts(self):
         for child in self.winfo_children():
@@ -1036,9 +1080,9 @@ class CadastroModelosApp(ctk.CTkFrame):
         dificuldade_frame = ctk.CTkFrame(linha2, fg_color="transparent", height=26)
         dificuldade_frame.pack(side="left")
 
-        dificuldades = ["Fácil", "Médio", "Difícil"]
-        for dif in dificuldades:
-            ctk.CTkRadioButton(dificuldade_frame, text=dif, variable=self.dificuldade_var, value=dif,
+        dificuldades = [("Fácil", self._get_text("difficulty_easy")), ("Médio", self._get_text("difficulty_medium")), ("Difícil", self._get_text("difficulty_hard"))]
+        for dif_val, dif_label in dificuldades:
+            ctk.CTkRadioButton(dificuldade_frame, text=dif_label, variable=self.dificuldade_var, value=dif_val,
                                font=("Arial", 10), width=0, height=18,
                                fg_color=cor_selecao, border_color=cor_borda, text_color=cor_texto,
                                hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF')).pack(side="left", padx=4)
@@ -1086,7 +1130,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             border_color=cor_borda,
             text_color=cor_texto,
             font=("Arial", 11),
-            placeholder_text="(T1 - 1,65) (T2 - 1,24) ...",
+            placeholder_text=self._get_text("placeholder_cost_piece"),
         )
         self.gasto_peca_entry.pack(side="left", padx=(0, 10))
 
@@ -1248,12 +1292,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         tecidos_tabela_frame = ctk.CTkFrame(self.tab_tecidos, fg_color=getattr(self.sistema, 'cor_fundo', '#FFFFFF'))
         tecidos_tabela_frame.pack(fill="both", expand=True, pady=5, padx=10)
 
-        tecidos_colunas = ["Código", "Descrição", "Cor", "Fornecedor", "Composição", "Metros/Peça", "Valor Metro",
-                           "Total"]
+        tecidos_colunas = ["Código", "Descrição", "Cor", "Fornecedor", "Composição", "Metros/Peça", "Valor Metro", "Total"]
+        tecidos_headings = self._tree_heading_texts_tecidos()
         self.tecidos_tabela = ttk.Treeview(tecidos_tabela_frame, columns=tecidos_colunas, show="headings", height=8)
 
-        for col in tecidos_colunas:
-            self.tecidos_tabela.heading(col, text=col)
+        for col, heading_text in zip(tecidos_colunas, tecidos_headings):
+            self.tecidos_tabela.heading(col, text=heading_text)
             self.tecidos_tabela.column(col, width=80, anchor="w")
 
         self.tecidos_tabela.column("Descrição", width=120)
@@ -1319,11 +1363,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         aviamentos_tabela_frame.pack(fill="both", expand=True, pady=5, padx=10)
 
         aviamentos_colunas = ["Código", "Descrição", "Cor", "Fornecedor", "Quantidade", "Valor Unidade", "Total"]
+        aviamentos_headings = self._tree_heading_texts_aviamentos()
         self.aviamentos_tabela = ttk.Treeview(aviamentos_tabela_frame, columns=aviamentos_colunas, show="headings",
                                               height=8)
 
-        for col in aviamentos_colunas:
-            self.aviamentos_tabela.heading(col, text=col)
+        for col, heading_text in zip(aviamentos_colunas, aviamentos_headings):
+            self.aviamentos_tabela.heading(col, text=heading_text)
             self.aviamentos_tabela.column(col, width=80, anchor="w")
 
         self.aviamentos_tabela.column("Descrição", width=120)
@@ -1383,9 +1428,10 @@ class CadastroModelosApp(ctk.CTkFrame):
         tabela_frame.pack(fill="both", expand=True, pady=5, padx=10)
 
         cols = ["Código", "Descrição", "Cor", "Fornecedor", "Unid.", "Quantidade", "Preço", "Total"]
+        outros_headings = self._tree_heading_texts_outros()
         self.outros_tabela = ttk.Treeview(tabela_frame, columns=cols, show="headings", height=8)
-        for c in cols:
-            self.outros_tabela.heading(c, text=c)
+        for c, heading_text in zip(cols, outros_headings):
+            self.outros_tabela.heading(c, text=heading_text)
             self.outros_tabela.column(c, width=80, anchor="w")
         self.outros_tabela.column("Descrição", width=160)
         self.outros_tabela.column("Fornecedor", width=120)
@@ -1449,11 +1495,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         tabela_frame.pack(fill="both", expand=True, pady=5, padx=10)
 
         colunas = ["Código", "Descrição", "Coleção", "Data"]
+        pesquisa_headings = self._tree_heading_texts_pesquisa()
         self.tabela_modelos = ttk.Treeview(tabela_frame, columns=colunas, show="headings", selectmode="browse",
                                            height=12)
 
-        for col in colunas:
-            self.tabela_modelos.heading(col, text=col)
+        for col, heading_text in zip(colunas, pesquisa_headings):
+            self.tabela_modelos.heading(col, text=heading_text)
             self.tabela_modelos.column(col, width=100, anchor="w")
 
         self.tabela_modelos.column("Descrição", width=200)

@@ -303,11 +303,6 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         elif values:
             self.cmb_modelo.set(values[0])
         self._on_model_change()
-        try:
-            self.refresh_texts()
-        except Exception:
-            pass
-
 
     # ---------- UI
     def _build_ui(self):
@@ -1149,112 +1144,6 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
 
 # ------------------ Execução standalone --------------------------------------
-    _I18N_MAP = {'en_US': {'Precificação de Produto': 'Product Pricing', 'Modelo': 'Model', 'Recarregar': 'Reload', 'Canal': 'Channel', 'Resumo': 'Summary', 'Custos': 'Costs', 'Impostos & Margem': 'Taxes & Margin', 'Simulações': 'Simulations', 'BOM / Itens': 'BOM / Items', 'Relatório': 'Report', 'Calcular': 'Calculate', 'Arredondamento': 'Rounding', 'Salvar perfil como...': 'Save profile as...', 'Carregar perfil...': 'Load profile...', 'Escada de preços (margem %)': 'Price ladder (margin %)', 'Analisar preço alvo': 'Analyze target price', 'Margem atingida (%)': 'Achieved margin (%)', 'Exportar simulações CSV': 'Export simulations CSV', 'Relatório de Pré-Custo': 'Pre-Cost Report', 'Gerar & Abrir HTML': 'Generate & Open HTML', 'Imprimir (Windows)': 'Print (Windows)', 'Copiar preço sugerido': 'Copy suggested price', 'Varejo (Loja)': 'Retail (Store)', 'Atacado': 'Wholesale', 'E-commerce': 'E-commerce', 'Marketplace': 'Marketplace', 'Sem arredondamento': 'No rounding', 'Terminar em .90 (para cima)': 'End in .90 (round up)', 'Terminar em .99 (para cima)': 'End in .99 (round up)', 'Múltiplo de 0,50 (para cima)': 'Multiple of 0.50 (round up)', 'Múltiplo de 1,00 (para cima)': 'Multiple of 1.00 (round up)', 'Múltiplo de 5,00 (para cima)': 'Multiple of 5.00 (round up)', 'Múltiplo de 10,00 (para cima)': 'Multiple of 10.00 (round up)'}, 'es_ES': {'Precificação de Produto': 'Fijación de Precio del Producto', 'Modelo': 'Modelo', 'Recarregar': 'Recargar', 'Canal': 'Canal', 'Resumo': 'Resumen', 'Custos': 'Costos', 'Impostos & Margem': 'Impuestos y Margen', 'Simulações': 'Simulaciones', 'BOM / Itens': 'BOM / Ítems', 'Relatório': 'Informe', 'Calcular': 'Calcular', 'Arredondamento': 'Redondeo', 'Salvar perfil como...': 'Guardar perfil como...', 'Carregar perfil...': 'Cargar perfil...', 'Escada de preços (margem %)': 'Escala de precios (margen %)', 'Analisar preço alvo': 'Analizar precio objetivo', 'Margem atingida (%)': 'Margen alcanzado (%)', 'Exportar simulações CSV': 'Exportar simulaciones CSV', 'Relatório de Pré-Custo': 'Informe de Pre-Costo', 'Gerar & Abrir HTML': 'Generar y Abrir HTML', 'Imprimir (Windows)': 'Imprimir (Windows)', 'Copiar preço sugerido': 'Copiar precio sugerido', 'Varejo (Loja)': 'Minorista (Tienda)', 'Atacado': 'Mayorista', 'E-commerce': 'E-commerce', 'Marketplace': 'Marketplace', 'Sem arredondamento': 'Sin redondeo', 'Terminar em .90 (para cima)': 'Terminar en .90 (hacia arriba)', 'Terminar em .99 (para cima)': 'Terminar en .99 (hacia arriba)', 'Múltiplo de 0,50 (para cima)': 'Múltiplo de 0,50 (hacia arriba)', 'Múltiplo de 1,00 (para cima)': 'Múltiplo de 1,00 (hacia arriba)', 'Múltiplo de 5,00 (para cima)': 'Múltiplo de 5,00 (hacia arriba)', 'Múltiplo de 10,00 (para cima)': 'Múltiplo de 10,00 (hacia arriba)'}}
-
-    def _get_idioma_atual(self):
-        try:
-            if getattr(self, "sistema", None) is not None:
-                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
-        except Exception:
-            pass
-        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
-
-    def _canonical_i18n_text(self, text):
-        if text is None:
-            return text
-        s = str(text)
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        if s in maps.get("pt_BR", {}):
-            return s
-        for _lang, table in maps.items():
-            for pt_key, translated in table.items():
-                if s == translated:
-                    return pt_key
-        return s
-
-    def _translate_i18n_text(self, text):
-        if text is None:
-            return text
-        idioma = self._get_idioma_atual()
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        canonical = self._canonical_i18n_text(text)
-        return maps.get(idioma, {}).get(canonical, canonical)
-
-    def _translate_i18n_values(self, values):
-        if not isinstance(values, (list, tuple)):
-            return values
-        return [self._translate_i18n_text(v) for v in values]
-
-    def _refresh_widget_i18n(self, widget):
-        try:
-            if hasattr(widget, "cget"):
-                try:
-                    text = widget.cget("text")
-                    if isinstance(text, str) and text:
-                        new_text = self._translate_i18n_text(text)
-                        if new_text != text:
-                            widget.configure(text=new_text)
-                except Exception:
-                    pass
-
-                try:
-                    placeholder = widget.cget("placeholder_text")
-                    if isinstance(placeholder, str) and placeholder:
-                        new_placeholder = self._translate_i18n_text(placeholder)
-                        if new_placeholder != placeholder:
-                            widget.configure(placeholder_text=new_placeholder)
-                except Exception:
-                    pass
-
-                try:
-                    values = widget.cget("values")
-                    if isinstance(values, (list, tuple)) and values:
-                        current = None
-                        try:
-                            current = widget.get()
-                        except Exception:
-                            current = None
-                        translated_values = self._translate_i18n_values(list(values))
-                        widget.configure(values=translated_values)
-                        if current:
-                            widget.set(self._translate_i18n_text(current))
-                except Exception:
-                    pass
-
-            if isinstance(widget, ttk.Treeview):
-                try:
-                    for col in widget["columns"]:
-                        info = widget.heading(col)
-                        heading_text = info.get("text", "")
-                        if heading_text:
-                            widget.heading(col, text=self._translate_i18n_text(heading_text))
-                except Exception:
-                    pass
-
-            for child in widget.winfo_children():
-                self._refresh_widget_i18n(child)
-        except Exception:
-            pass
-
-    def refresh_texts(self):
-        try:
-            target = getattr(self, "root", None) or self
-            self._refresh_widget_i18n(target)
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "root") and self.root:
-                self.root.title(self._translate_i18n_text(self.root.title()))
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "PAGE_TITLE"):
-                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
-        except Exception:
-            pass
-
 if __name__ == "__main__":
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("dark-blue")
@@ -1265,3 +1154,359 @@ if __name__ == "__main__":
     page.pack(fill="both", expand=True)
     app.mainloop()
 
+
+
+
+
+# ===== PATCH MULTILÍNGUE LIGADO AO MENU =====
+try:
+    import customtkinter as _ctk_ml
+    from tkinter import ttk as _ttk_ml
+except Exception:
+    _ctk_ml = None
+    _ttk_ml = None
+
+def _ml_get_lang(self):
+    return getattr(getattr(self, 'sistema', None), 'idioma_atual', 'pt_BR') or 'pt_BR'
+
+def _ml_translate(self, text):
+    if not text:
+        return text
+    lang = _ml_get_lang(self)
+    mapping = getattr(self.__class__, '_TRANSLATIONS', {})
+    current = mapping.get(lang, mapping.get('pt_BR', {}))
+    if text in current:
+        return current[text]
+    for _, mp in mapping.items():
+        if text in mp:
+            canon = mp[text]
+            return current.get(canon, canon)
+    return text
+
+def _ml_translate_list(self, values):
+    return [self._ml_translate(v) for v in values]
+
+def _ml_walk(widget):
+    try:
+        yield widget
+        for child in widget.winfo_children():
+            yield from _ml_walk(child)
+    except Exception:
+        return
+
+def _ml_refresh_texts(self):
+    if _ctk_ml is None:
+        return
+    for w in _ml_walk(self):
+        try:
+            if hasattr(w, 'cget'):
+                try:
+                    txt = w.cget('text')
+                except Exception:
+                    txt = None
+                if isinstance(txt, str) and txt:
+                    new = self._ml_translate(txt)
+                    if new != txt:
+                        try:
+                            w.configure(text=new)
+                        except Exception:
+                            pass
+                try:
+                    ph = w.cget('placeholder_text')
+                except Exception:
+                    ph = None
+                if isinstance(ph, str) and ph:
+                    new_ph = self._ml_translate(ph)
+                    if new_ph != ph:
+                        try:
+                            w.configure(placeholder_text=new_ph)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    # placeholders por atributo
+    for attr, base in getattr(self.__class__, '_PLACEHOLDERS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is not None:
+            try:
+                obj.configure(placeholder_text=self._ml_translate(base))
+            except Exception:
+                pass
+
+    # combos / option menus / segmented
+    for attr, base_values in getattr(self.__class__, '_COMBOS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is None:
+            continue
+        try:
+            current_value = obj.get()
+        except Exception:
+            current_value = None
+        new_values = self._ml_translate_list(base_values)
+        try:
+            obj.configure(values=new_values)
+        except Exception:
+            pass
+        if current_value:
+            try:
+                obj.set(self._ml_translate(current_value))
+            except Exception:
+                try:
+                    obj.set(self._ml_translate(base_values[0]))
+                except Exception:
+                    pass
+
+    # tree headings
+    for attr, cols in getattr(self.__class__, '_TREE_HEADINGS', {}).items():
+        tree = getattr(self, attr, None)
+        if tree is None:
+            continue
+        try:
+            for col, label in cols.items():
+                tree.heading(col, text=self._ml_translate(label))
+        except Exception:
+            pass
+
+    # tabview texts
+    tab_names = getattr(self.__class__, '_TABS', [])
+    for w in _ml_walk(self):
+        if _ctk_ml and isinstance(w, _ctk_ml.CTkTabview):
+            try:
+                buttons = getattr(w._segmented_button, '_buttons_dict', {})
+                for original in tab_names:
+                    btn = buttons.get(original)
+                    if btn is not None:
+                        btn.configure(text=self._ml_translate(original))
+            except Exception:
+                pass
+
+    # page title class attr
+    try:
+        if hasattr(self.__class__, 'PAGE_TITLE'):
+            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
+    except Exception:
+        pass
+
+    try:
+        self.update_idletasks()
+    except Exception:
+        pass
+
+def _ml_on_language_changed(self, *_args, **_kwargs):
+    try:
+        self.refresh_texts()
+    except Exception:
+        try:
+            _ml_refresh_texts(self)
+        except Exception:
+            pass
+
+_TRANSLATIONS = {
+    "pt_BR": {
+        "Precificação de Produto": "Precificação de Produto",
+        "Product Cost": "Precificação de Produto",
+        "Modelo": "Modelo",
+        "Model": "Modelo",
+        "Recarregar": "Recarregar",
+        "Reload": "Recarregar",
+        "Canal": "Canal",
+        "Channel": "Canal",
+        "Varejo (Loja)": "Varejo (Loja)",
+        "Retail (Store)": "Varejo (Loja)",
+        "Atacado": "Atacado",
+        "Wholesale": "Atacado",
+        "Resumo": "Resumo",
+        "Summary": "Resumo",
+        "Custos": "Custos",
+        "Costs": "Custos",
+        "Impostos & Margem": "Impostos & Margem",
+        "Taxes & Margin": "Impostos & Margem",
+        "Simulações": "Simulações",
+        "Simulations": "Simulações",
+        "Relatório": "Relatório",
+        "Report": "Relatório",
+        "BOM / Itens": "BOM / Itens",
+        "Materiais (R$)": "Materiais (R$)",
+        "Materials (R$)": "Materiais (R$)",
+        "Costura (R$)": "Costura (R$)",
+        "Sewing (R$)": "Costura (R$)",
+        "Overhead/peça (R$)": "Overhead/peça (R$)",
+        "Overhead/unit (R$)": "Overhead/peça (R$)",
+        "Custo Total (R$)": "Custo Total (R$)",
+        "Total Cost (R$)": "Custo Total (R$)",
+        "Preço Sugerido (R$)": "Preço Sugerido (R$)",
+        "Suggested Price (R$)": "Preço Sugerido (R$)",
+        "Lucro Unit. (R$)": "Lucro Unit. (R$)",
+        "Unit Profit (R$)": "Lucro Unit. (R$)",
+        "Markup (x)": "Markup (x)",
+        "Lote Ponto de Equilíbrio": "Lote Ponto de Equilíbrio",
+        "Break-even Batch": "Lote Ponto de Equilíbrio",
+        "Calcular": "Calcular",
+        "Calculate": "Calcular",
+        "Salvar perfil como...": "Salvar perfil como...",
+        "Save profile as...": "Salvar perfil como...",
+        "Carregar perfil...": "Carregar perfil...",
+        "Load profile...": "Carregar perfil...",
+        "Escada de preços (margem %)": "Escada de preços (margem %)",
+        "Price ladder (margin %)": "Escada de preços (margem %)",
+        "Sem arredondamento": "Sem arredondamento",
+        "No rounding": "Sem arredondamento",
+        "Terminar em .90 (para cima)": "Terminar em .90 (para cima)",
+        "End with .90 (up)": "Terminar em .90 (para cima)",
+        "Terminar em .99 (para cima)": "Terminar em .99 (para cima)",
+        "End with .99 (up)": "Terminar em .99 (para cima)",
+        "Múltiplo de 0,50 (para cima)": "Múltiplo de 0,50 (para cima)",
+        "Multiple of 0.50 (up)": "Múltiplo de 0,50 (para cima)",
+        "Múltiplo de 1,00 (para cima)": "Múltiplo de 1,00 (para cima)",
+        "Multiple of 1.00 (up)": "Múltiplo de 1,00 (para cima)",
+        "Múltiplo de 5,00 (para cima)": "Múltiplo de 5,00 (para cima)",
+        "Multiple of 5.00 (up)": "Múltiplo de 5,00 (para cima)",
+        "Múltiplo de 10,00 (para cima)": "Múltiplo de 10,00 (para cima)",
+        "Multiple of 10.00 (up)": "Múltiplo de 10,00 (para cima)",
+    },
+    "en_US": {
+        "Precificação de Produto": "Product Cost",
+        "Product Cost": "Product Cost",
+        "Modelo": "Model",
+        "Model": "Model",
+        "Recarregar": "Reload",
+        "Reload": "Reload",
+        "Canal": "Channel",
+        "Channel": "Channel",
+        "Varejo (Loja)": "Retail (Store)",
+        "Retail (Store)": "Retail (Store)",
+        "Atacado": "Wholesale",
+        "Wholesale": "Wholesale",
+        "Resumo": "Summary",
+        "Summary": "Summary",
+        "Custos": "Costs",
+        "Costs": "Costs",
+        "Impostos & Margem": "Taxes & Margin",
+        "Taxes & Margin": "Taxes & Margin",
+        "Simulações": "Simulations",
+        "Simulations": "Simulations",
+        "Relatório": "Report",
+        "Report": "Report",
+        "BOM / Itens": "BOM / Items",
+        "BOM / Items": "BOM / Items",
+        "Materiais (R$)": "Materials (R$)",
+        "Materials (R$)": "Materials (R$)",
+        "Costura (R$)": "Sewing (R$)",
+        "Sewing (R$)": "Sewing (R$)",
+        "Overhead/peça (R$)": "Overhead/unit (R$)",
+        "Overhead/unit (R$)": "Overhead/unit (R$)",
+        "Custo Total (R$)": "Total Cost (R$)",
+        "Total Cost (R$)": "Total Cost (R$)",
+        "Preço Sugerido (R$)": "Suggested Price (R$)",
+        "Suggested Price (R$)": "Suggested Price (R$)",
+        "Lucro Unit. (R$)": "Unit Profit (R$)",
+        "Unit Profit (R$)": "Unit Profit (R$)",
+        "Markup (x)": "Markup (x)",
+        "Lote Ponto de Equilíbrio": "Break-even Batch",
+        "Break-even Batch": "Break-even Batch",
+        "Calcular": "Calculate",
+        "Calculate": "Calculate",
+        "Salvar perfil como...": "Save profile as...",
+        "Save profile as...": "Save profile as...",
+        "Carregar perfil...": "Load profile...",
+        "Load profile...": "Load profile...",
+        "Escada de preços (margem %)": "Price ladder (margin %)",
+        "Price ladder (margin %)": "Price ladder (margin %)",
+        "Sem arredondamento": "No rounding",
+        "No rounding": "No rounding",
+        "Terminar em .90 (para cima)": "End with .90 (up)",
+        "End with .90 (up)": "End with .90 (up)",
+        "Terminar em .99 (para cima)": "End with .99 (up)",
+        "End with .99 (up)": "End with .99 (up)",
+        "Múltiplo de 0,50 (para cima)": "Multiple of 0.50 (up)",
+        "Multiple of 0.50 (up)": "Multiple of 0.50 (up)",
+        "Múltiplo de 1,00 (para cima)": "Multiple of 1.00 (up)",
+        "Multiple of 1.00 (up)": "Multiple of 1.00 (up)",
+        "Múltiplo de 5,00 (para cima)": "Multiple of 5.00 (up)",
+        "Multiple of 5.00 (up)": "Multiple of 5.00 (up)",
+        "Múltiplo de 10,00 (para cima)": "Multiple of 10.00 (up)",
+        "Multiple of 10.00 (up)": "Multiple of 10.00 (up)",
+    },
+    "es_ES": {
+        "Precificação de Produto": "Costo del Producto",
+        "Product Cost": "Costo del Producto",
+        "Modelo": "Modelo",
+        "Model": "Modelo",
+        "Recarregar": "Recargar",
+        "Reload": "Recargar",
+        "Canal": "Canal",
+        "Channel": "Canal",
+        "Varejo (Loja)": "Venta Minorista (Tienda)",
+        "Retail (Store)": "Venta Minorista (Tienda)",
+        "Atacado": "Mayorista",
+        "Wholesale": "Mayorista",
+        "Resumo": "Resumen",
+        "Summary": "Resumen",
+        "Custos": "Costos",
+        "Costs": "Costos",
+        "Impostos & Margem": "Impuestos y Margen",
+        "Taxes & Margin": "Impuestos y Margen",
+        "Simulações": "Simulaciones",
+        "Simulations": "Simulaciones",
+        "Relatório": "Informe",
+        "Report": "Informe",
+        "BOM / Itens": "BOM / Ítems",
+        "BOM / Items": "BOM / Ítems",
+        "Materiais (R$)": "Materiales (R$)",
+        "Materials (R$)": "Materiales (R$)",
+        "Costura (R$)": "Costura (R$)",
+        "Sewing (R$)": "Costura (R$)",
+        "Overhead/peça (R$)": "Gastos por unidad (R$)",
+        "Overhead/unit (R$)": "Gastos por unidad (R$)",
+        "Custo Total (R$)": "Costo Total (R$)",
+        "Total Cost (R$)": "Costo Total (R$)",
+        "Preço Sugerido (R$)": "Precio Sugerido (R$)",
+        "Suggested Price (R$)": "Precio Sugerido (R$)",
+        "Lucro Unit. (R$)": "Ganancia Unitaria (R$)",
+        "Unit Profit (R$)": "Ganancia Unitaria (R$)",
+        "Markup (x)": "Markup (x)",
+        "Lote Ponto de Equilíbrio": "Lote de Equilibrio",
+        "Break-even Batch": "Lote de Equilibrio",
+        "Calcular": "Calcular",
+        "Calculate": "Calcular",
+        "Salvar perfil como...": "Guardar perfil como...",
+        "Save profile as...": "Guardar perfil como...",
+        "Carregar perfil...": "Cargar perfil...",
+        "Load profile...": "Cargar perfil...",
+        "Escada de preços (margem %)": "Escala de precios (margen %)",
+        "Price ladder (margin %)": "Escala de precios (margen %)",
+        "Sem arredondamento": "Sin redondeo",
+        "No rounding": "Sin redondeo",
+        "Terminar em .90 (para cima)": "Terminar en .90 (hacia arriba)",
+        "End with .90 (up)": "Terminar en .90 (hacia arriba)",
+        "Terminar em .99 (para cima)": "Terminar en .99 (hacia arriba)",
+        "End with .99 (up)": "Terminar en .99 (hacia arriba)",
+        "Múltiplo de 0,50 (para cima)": "Múltiplo de 0,50 (hacia arriba)",
+        "Multiple of 0.50 (up)": "Múltiplo de 0,50 (hacia arriba)",
+        "Múltiplo de 1,00 (para cima)": "Múltiplo de 1,00 (hacia arriba)",
+        "Multiple of 1.00 (up)": "Múltiplo de 1,00 (hacia arriba)",
+        "Múltiplo de 5,00 (para cima)": "Múltiplo de 5,00 (hacia arriba)",
+        "Multiple of 5.00 (up)": "Múltiplo de 5,00 (hacia arriba)",
+        "Múltiplo de 10,00 (para cima)": "Múltiplo de 10,00 (hacia arriba)",
+        "Multiple of 10.00 (up)": "Múltiplo de 10,00 (hacia arriba)",
+    },
+}
+_TREE_HEADINGS = {}
+_PLACEHOLDERS = {}
+_COMBOS = {
+    'cmb_canal': ['Varejo (Loja)', 'Atacado', 'E-commerce', 'Marketplace'],
+    'cmb_round': ['Sem arredondamento', 'Terminar em .90 (para cima)', 'Terminar em .99 (para cima)', 'Múltiplo de 0,50 (para cima)', 'Múltiplo de 1,00 (para cima)', 'Múltiplo de 5,00 (para cima)', 'Múltiplo de 10,00 (para cima)'],
+}
+_TABS = ['Resumo','Custos','Impostos & Margem','Simulações','BOM / Itens','Relatório']
+
+PrecificacaoProdutoPage._TRANSLATIONS = _TRANSLATIONS
+PrecificacaoProdutoPage._TREE_HEADINGS = _TREE_HEADINGS
+PrecificacaoProdutoPage._PLACEHOLDERS = _PLACEHOLDERS
+PrecificacaoProdutoPage._COMBOS = _COMBOS
+PrecificacaoProdutoPage._TABS = _TABS
+
+PrecificacaoProdutoPage._ml_translate = _ml_translate
+PrecificacaoProdutoPage._ml_translate_list = _ml_translate_list
+PrecificacaoProdutoPage.refresh_texts = _ml_refresh_texts
+PrecificacaoProdutoPage.on_language_changed = _ml_on_language_changed

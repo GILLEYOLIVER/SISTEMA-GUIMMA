@@ -295,11 +295,6 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         # carrega dados iniciais
         self.pesquisar_finalizados()
-        try:
-            self.refresh_texts()
-        except Exception:
-            pass
-
 
         # evita múltiplos reencaixes visíveis na abertura
         self._last_fit_signature = None
@@ -3876,112 +3871,6 @@ class PagamentoServicosPage(PagamentoModernUI):
         super().__init__(master, host=sistema_ref, sistema=sistema_ref, *args, **kwargs)
 
 
-    _I18N_MAP = {'en_US': {'PAGAMENTO DE SERVIÇOS': 'SERVICE PAYMENT', 'Origem:': 'Source:', 'Setor / Serviço:': 'Sector / Service:', 'Pesquisar...': 'Search...', 'Finalizações / Entradas': 'Completions / Entries', 'Marcar Pago': 'Mark as Paid', 'Resumo de Pagamento': 'Payment Summary', 'Base (R$)': 'Base ($)', 'Desconto (R$)': 'Discount ($)', 'Total a Pagar': 'Total to Pay', 'Total a pagar': 'Total to pay', '1. Identificação / Quantidades': '1. Identification / Quantities', '2. Ajustes Financeiros': '2. Financial Adjustments', 'Não': 'No', 'Sim': 'Yes', '3. Defeitos & Adiantamento': '3. Defects & Advance', 'Adiantamento Registrado': 'Registered Advance', 'Valor:': 'Value:', 'Parcelas:': 'Installments:', 'Saldo:': 'Balance:', 'Valor atual:': 'Current value:', 'Valor a descontar:': 'Amount to deduct:', 'Aplicar': 'Apply', 'Descontar 1 parcela': 'Deduct 1 installment', '4. Dados Bancários': '4. Bank Data', '💾 Salvar': '💾 Save', '📤 Exportar CSV': '📤 Export CSV', '🔁 Recalcular': '🔁 Recalculate', '🖨️ Imprimir': '🖨️ Print', 'Carregando': 'Loading', 'Pagamento - PostgreSQL': 'Payment - PostgreSQL', 'Todos': 'All', 'Facção': 'Outsourcing', 'Bordado': 'Embroidery', 'Caseador': 'Buttonhole', 'Botões': 'Buttons', 'Estamparia': 'Printing', 'Tingimento': 'Dyeing', 'Outros Trabalhos': 'Other Services', 'Cortes a Pagar': 'Cuts to Pay', 'Cortes Pagos': 'Paid Cuts', 'Finalizados': 'Completed', 'Aviso': 'Warning', 'Erro': 'Error'}, 'es_ES': {'PAGAMENTO DE SERVIÇOS': 'PAGO DE SERVICIOS', 'Origem:': 'Origen:', 'Setor / Serviço:': 'Sector / Servicio:', 'Pesquisar...': 'Buscar...', 'Finalizações / Entradas': 'Finalizaciones / Entradas', 'Marcar Pago': 'Marcar Pagado', 'Resumo de Pagamento': 'Resumen de Pago', 'Base (R$)': 'Base ($)', 'Desconto (R$)': 'Descuento ($)', 'Total a Pagar': 'Total a Pagar', 'Total a pagar': 'Total a pagar', '1. Identificação / Quantidades': '1. Identificación / Cantidades', '2. Ajustes Financeiros': '2. Ajustes Financieros', 'Não': 'No', 'Sim': 'Sí', '3. Defeitos & Adiantamento': '3. Defectos y Adelanto', 'Adiantamento Registrado': 'Adelanto Registrado', 'Valor:': 'Valor:', 'Parcelas:': 'Cuotas:', 'Saldo:': 'Saldo:', 'Valor atual:': 'Valor actual:', 'Valor a descontar:': 'Valor a descontar:', 'Aplicar': 'Aplicar', 'Descontar 1 parcela': 'Descontar 1 cuota', '4. Dados Bancários': '4. Datos Bancarios', '💾 Salvar': '💾 Guardar', '📤 Exportar CSV': '📤 Exportar CSV', '🔁 Recalcular': '🔁 Recalcular', '🖨️ Imprimir': '🖨️ Imprimir', 'Carregando': 'Cargando', 'Pagamento - PostgreSQL': 'Pago - PostgreSQL', 'Todos': 'Todos', 'Facção': 'Facción', 'Bordado': 'Bordado', 'Caseador': 'Ojales', 'Botões': 'Botones', 'Estamparia': 'Estampado', 'Tingimento': 'Teñido', 'Outros Trabalhos': 'Otros Trabajos', 'Cortes a Pagar': 'Cortes a Pagar', 'Cortes Pagos': 'Cortes Pagados', 'Finalizados': 'Finalizados', 'Aviso': 'Aviso', 'Erro': 'Error'}}
-
-    def _get_idioma_atual(self):
-        try:
-            if getattr(self, "sistema", None) is not None:
-                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
-        except Exception:
-            pass
-        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
-
-    def _canonical_i18n_text(self, text):
-        if text is None:
-            return text
-        s = str(text)
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        if s in maps.get("pt_BR", {}):
-            return s
-        for _lang, table in maps.items():
-            for pt_key, translated in table.items():
-                if s == translated:
-                    return pt_key
-        return s
-
-    def _translate_i18n_text(self, text):
-        if text is None:
-            return text
-        idioma = self._get_idioma_atual()
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        canonical = self._canonical_i18n_text(text)
-        return maps.get(idioma, {}).get(canonical, canonical)
-
-    def _translate_i18n_values(self, values):
-        if not isinstance(values, (list, tuple)):
-            return values
-        return [self._translate_i18n_text(v) for v in values]
-
-    def _refresh_widget_i18n(self, widget):
-        try:
-            if hasattr(widget, "cget"):
-                try:
-                    text = widget.cget("text")
-                    if isinstance(text, str) and text:
-                        new_text = self._translate_i18n_text(text)
-                        if new_text != text:
-                            widget.configure(text=new_text)
-                except Exception:
-                    pass
-
-                try:
-                    placeholder = widget.cget("placeholder_text")
-                    if isinstance(placeholder, str) and placeholder:
-                        new_placeholder = self._translate_i18n_text(placeholder)
-                        if new_placeholder != placeholder:
-                            widget.configure(placeholder_text=new_placeholder)
-                except Exception:
-                    pass
-
-                try:
-                    values = widget.cget("values")
-                    if isinstance(values, (list, tuple)) and values:
-                        current = None
-                        try:
-                            current = widget.get()
-                        except Exception:
-                            current = None
-                        translated_values = self._translate_i18n_values(list(values))
-                        widget.configure(values=translated_values)
-                        if current:
-                            widget.set(self._translate_i18n_text(current))
-                except Exception:
-                    pass
-
-            if isinstance(widget, ttk.Treeview):
-                try:
-                    for col in widget["columns"]:
-                        info = widget.heading(col)
-                        heading_text = info.get("text", "")
-                        if heading_text:
-                            widget.heading(col, text=self._translate_i18n_text(heading_text))
-                except Exception:
-                    pass
-
-            for child in widget.winfo_children():
-                self._refresh_widget_i18n(child)
-        except Exception:
-            pass
-
-    def refresh_texts(self):
-        try:
-            target = getattr(self, "root", None) or self
-            self._refresh_widget_i18n(target)
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "root") and self.root:
-                self.root.title(self._translate_i18n_text(self.root.title()))
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "PAGE_TITLE"):
-                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
-        except Exception:
-            pass
-
 if __name__ == "__main__":
     ok, msg = require_ready(['cortes_finalizados', 'pagamento_corte_acabamento'])
     if not ok:
@@ -4017,3 +3906,172 @@ if __name__ == "__main__":
     root.mainloop()
 
 # 31/01/2026##
+
+
+
+# ===== PATCH MULTILÍNGUE LIGADO AO MENU =====
+try:
+    import customtkinter as _ctk_ml
+    from tkinter import ttk as _ttk_ml
+except Exception:
+    _ctk_ml = None
+    _ttk_ml = None
+
+def _ml_get_lang(self):
+    return getattr(getattr(self, 'sistema', None), 'idioma_atual', 'pt_BR') or 'pt_BR'
+
+def _ml_translate(self, text):
+    if not text:
+        return text
+    lang = _ml_get_lang(self)
+    mapping = getattr(self.__class__, '_TRANSLATIONS', {})
+    current = mapping.get(lang, mapping.get('pt_BR', {}))
+    if text in current:
+        return current[text]
+    for _, mp in mapping.items():
+        if text in mp:
+            canon = mp[text]
+            return current.get(canon, canon)
+    return text
+
+def _ml_translate_list(self, values):
+    return [self._ml_translate(v) for v in values]
+
+def _ml_walk(widget):
+    try:
+        yield widget
+        for child in widget.winfo_children():
+            yield from _ml_walk(child)
+    except Exception:
+        return
+
+def _ml_refresh_texts(self):
+    if _ctk_ml is None:
+        return
+    for w in _ml_walk(self):
+        try:
+            if hasattr(w, 'cget'):
+                try:
+                    txt = w.cget('text')
+                except Exception:
+                    txt = None
+                if isinstance(txt, str) and txt:
+                    new = self._ml_translate(txt)
+                    if new != txt:
+                        try:
+                            w.configure(text=new)
+                        except Exception:
+                            pass
+                try:
+                    ph = w.cget('placeholder_text')
+                except Exception:
+                    ph = None
+                if isinstance(ph, str) and ph:
+                    new_ph = self._ml_translate(ph)
+                    if new_ph != ph:
+                        try:
+                            w.configure(placeholder_text=new_ph)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    # placeholders por atributo
+    for attr, base in getattr(self.__class__, '_PLACEHOLDERS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is not None:
+            try:
+                obj.configure(placeholder_text=self._ml_translate(base))
+            except Exception:
+                pass
+
+    # combos / option menus / segmented
+    for attr, base_values in getattr(self.__class__, '_COMBOS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is None:
+            continue
+        try:
+            current_value = obj.get()
+        except Exception:
+            current_value = None
+        new_values = self._ml_translate_list(base_values)
+        try:
+            obj.configure(values=new_values)
+        except Exception:
+            pass
+        if current_value:
+            try:
+                obj.set(self._ml_translate(current_value))
+            except Exception:
+                try:
+                    obj.set(self._ml_translate(base_values[0]))
+                except Exception:
+                    pass
+
+    # tree headings
+    for attr, cols in getattr(self.__class__, '_TREE_HEADINGS', {}).items():
+        tree = getattr(self, attr, None)
+        if tree is None:
+            continue
+        try:
+            for col, label in cols.items():
+                tree.heading(col, text=self._ml_translate(label))
+        except Exception:
+            pass
+
+    # tabview texts
+    tab_names = getattr(self.__class__, '_TABS', [])
+    for w in _ml_walk(self):
+        if _ctk_ml and isinstance(w, _ctk_ml.CTkTabview):
+            try:
+                buttons = getattr(w._segmented_button, '_buttons_dict', {})
+                for original in tab_names:
+                    btn = buttons.get(original)
+                    if btn is not None:
+                        btn.configure(text=self._ml_translate(original))
+            except Exception:
+                pass
+
+    # page title class attr
+    try:
+        if hasattr(self.__class__, 'PAGE_TITLE'):
+            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
+    except Exception:
+        pass
+
+    try:
+        self.update_idletasks()
+    except Exception:
+        pass
+
+def _ml_on_language_changed(self, *_args, **_kwargs):
+    try:
+        self.refresh_texts()
+    except Exception:
+        try:
+            _ml_refresh_texts(self)
+        except Exception:
+            pass
+
+_TRANSLATIONS = {
+ 'pt_BR': {'PAGAMENTO DE SERVIÇOS':'PAGAMENTO DE SERVIÇOS','SERVICE PAYMENT':'PAGAMENTO DE SERVIÇOS','Origem:':'Origem:','Source:':'Origem:','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes a Pagar','Cuts to Pay':'Cortes a Pagar','Cortes Pagos':'Cortes Pagos','Paid Cuts':'Cortes Pagos','Tipo de serviço:':'Tipo de serviço:','Service type:':'Tipo de serviço:','Todos':'Todos','All':'Todos','Facção':'Facção','Outsourcing':'Facção','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Caseador','Buttonhole':'Caseador','Botões':'Botões','Buttons':'Botões','Estamparia':'Estamparia','Printing':'Estamparia','Tingimento':'Tingimento','Dyeing':'Tingimento','Outros Trabalhos':'Outros Trabalhos','Other Services':'Outros Trabalhos','Pesquisar':'Pesquisar','Search':'Pesquisar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Serviço','Pay Service':'Pagar Serviço'},
+ 'en_US': {'PAGAMENTO DE SERVIÇOS':'SERVICE PAYMENT','SERVICE PAYMENT':'SERVICE PAYMENT','Origem:':'Source:','Source:':'Source:','Finalizados':'Completed','Completed':'Completed','Cortes a Pagar':'Cuts to Pay','Cuts to Pay':'Cuts to Pay','Cortes Pagos':'Paid Cuts','Paid Cuts':'Paid Cuts','Tipo de serviço:':'Service type:','Service type:':'Service type:','Todos':'All','All':'All','Facção':'Outsourcing','Outsourcing':'Outsourcing','Bordado':'Embroidery','Embroidery':'Embroidery','Caseador':'Buttonhole','Buttonhole':'Buttonhole','Botões':'Buttons','Buttons':'Buttons','Estamparia':'Printing','Printing':'Printing','Tingimento':'Dyeing','Dyeing':'Dyeing','Outros Trabalhos':'Other Services','Other Services':'Other Services','Pesquisar':'Search','Search':'Search','Exportar CSV':'Export CSV','Export CSV':'Export CSV','Pagar Serviço':'Pay Service','Pay Service':'Pay Service'},
+ 'es_ES': {'PAGAMENTO DE SERVIÇOS':'PAGO DE SERVICIOS','SERVICE PAYMENT':'PAGO DE SERVICIOS','Origem:':'Origen:','Source:':'Origen:','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes por Pagar','Cuts to Pay':'Cortes por Pagar','Cortes Pagos':'Cortes Pagados','Paid Cuts':'Cortes Pagados','Tipo de serviço:':'Tipo de servicio:','Service type:':'Tipo de servicio:','Todos':'Todos','All':'Todos','Facção':'Facción','Outsourcing':'Facción','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Ojales','Buttonhole':'Ojales','Botões':'Botones','Buttons':'Botones','Estamparia':'Estampado','Printing':'Estampado','Tingimento':'Teñido','Dyeing':'Teñido','Outros Trabalhos':'Otros Servicios','Other Services':'Otros Servicios','Pesquisar':'Buscar','Search':'Buscar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Servicio','Pay Service':'Pagar Servicio'}
+}
+_TREE_HEADINGS = {
+    'tree': {'servico':'Serviço','fornecedor':'Fornecedor','quantidade':'Quantidade','valor_unitario':'Valor Unit.','valor_total':'Valor Total','origem':'Origem','status':'Status'}
+}
+_PLACEHOLDERS = {}
+_COMBOS = {'orig_seg':['Cortes a Pagar','Cortes Pagos']}
+_TABS = []
+
+PagamentoModernUI._TRANSLATIONS = _TRANSLATIONS
+PagamentoModernUI._TREE_HEADINGS = _TREE_HEADINGS
+PagamentoModernUI._PLACEHOLDERS = _PLACEHOLDERS
+PagamentoModernUI._COMBOS = _COMBOS
+PagamentoModernUI._TABS = _TABS
+
+PagamentoModernUI._ml_translate = _ml_translate
+PagamentoModernUI._ml_translate_list = _ml_translate_list
+PagamentoModernUI.refresh_texts = _ml_refresh_texts
+PagamentoModernUI.on_language_changed = _ml_on_language_changed

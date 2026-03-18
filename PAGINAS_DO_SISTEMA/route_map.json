@@ -24,7 +24,7 @@
     "class": "FichaTecnicaApp"
   },
   "Nova Ordem": {
-    "file": "NOVA_ORDEM.py",
+    "file": "NOVA_ORDEM_usa-es-pt.py",
     "class": "OrdemCorte"
   },
   "Ordens de Corte Impressão": {
@@ -64,11 +64,11 @@
     "class": "EnvioCortes"
   },
   "MRP": {
-    "file": "MRP_PLANEJAMENTO.py",
+    "file": "MRP_PLANEJAMENTO_usa-es-pt.py",
     "class": "MRPPage"
   },
   "Planejamento de Produção": {
-    "file": "PLANEJAMENTO_PRODUCAO.py",
+    "file": "PLANEJAMENTO_PRODUCAO_usa-es-pt.py",
     "class": "PlanejamentoProducaoPage"
   },
   "Custos Reais": {
@@ -84,7 +84,7 @@
     "class": "FinalizacaoCortes"
   },
   "Pagamento de Serviços": {
-    "file": "PAGAMENTO_SERVICOS.py",
+    "file": "PAGAMENTO_SERVICOS_usa-es-pt.py",
     "class": "PagamentoModernUI"
   },
   "Recibos de Pagamentos": {
@@ -92,7 +92,7 @@
     "class": "RecibosPagamentosPage"
   },
   "Custo Produto": {
-    "file": "PRECIFICACAO_PRODUTO.py",
+    "file": "PRECIFICACAO_PRODUTO_usa-es-pt.py",
     "class": "PrecificacaoProdutoPage"
   },
   "Folha Pagamento": {
@@ -179,7 +179,7 @@
     "action": "trocar_usuario"
   },
   "Ordens Planejadas": {
-    "file": "ORDENS_PLANEJADAS.py",
+    "file": "ORDENS_PLANEJADAS_usa-es-pt.py",
     "class": "OrdensPlanejadasPage"
   }
 }

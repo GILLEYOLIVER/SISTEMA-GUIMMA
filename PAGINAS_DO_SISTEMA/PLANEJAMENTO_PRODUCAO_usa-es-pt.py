@@ -63,11 +63,6 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self._garantir_estrutura_planejamento()
         self._carregar_modelos_cache()
         self._carregar_dados_planejamento()
-        try:
-            self.refresh_texts()
-        except Exception:
-            pass
-
 
     # =========================================================
     # Construção da interface
@@ -2059,112 +2054,6 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         popup.bind("<Escape>", lambda e: popup.destroy())
 
 
-    _I18N_MAP = {'en_US': {'Planejamento de Produção': 'Production Planning', 'Nova Programação': 'New Schedule', 'Atualizar': 'Refresh', 'Reprogramar +1 dia': 'Reschedule +1 day', 'Exportar PDF': 'Export PDF', 'Imprimir': 'Print', 'Período': 'Period', 'De': 'From', 'Até': 'To', 'Coleção': 'Collection', 'Prioridade': 'Priority', 'Programação': 'Schedule', 'Filtrar': 'Filter', 'Programações / OPs': 'Schedules / WOs', 'Resumo de Materiais': 'Materials Summary', 'Detalhes da OP Selecionada': 'Selected WO Details', 'Tecidos necessários': 'Required Fabrics', 'Aviamentos necessários': 'Required Trims', 'Passo 1 - Definir período e tipo de programação': 'Step 1 - Define period and schedule type', 'Período início': 'Period start', 'Período fim': 'Period end', 'Prazo para começar': 'Start deadline', 'Passo 2 - Escolher modelo': 'Step 2 - Choose model', 'Modelo': 'Model', 'Grade disponível: -': 'Available size set: -', 'Passo 3 - Distribuir grade (porcentagem)': 'Step 3 - Distribute size set (percentage)', 'Quantidade desejada': 'Desired quantity', 'Total da porcentagem: 0%': 'Total percentage: 0%', 'Passo 4 - Conferir materiais': 'Step 4 - Check materials', 'Calcular materiais': 'Calculate materials', 'Salvar programação': 'Save schedule', 'Nova Programação de Produção': 'New Production Schedule', 'Semanal': 'Weekly', 'Mensal': 'Monthly', 'Trimestral': 'Quarterly', 'Semestral': 'Semiannual', 'Baixa': 'Low', 'Média': 'Medium', 'Alta': 'High', 'Urgente': 'Urgent', 'Todas': 'All', 'OPs em execução: 0': 'WOs in progress: 0', 'Atrasos críticos: 0': 'Critical delays: 0', 'Capacidade usada: 0%': 'Capacity used: 0%', 'Ociosidade: 0%': 'Idle time: 0%', 'OP': 'WO', 'Qtde': 'Qty', 'Início': 'Start', 'Fim': 'End', 'Status': 'Status', 'Progresso': 'Progress'}, 'es_ES': {'Planejamento de Produção': 'Planificación de Producción', 'Nova Programação': 'Nueva Programación', 'Atualizar': 'Actualizar', 'Reprogramar +1 dia': 'Reprogramar +1 día', 'Exportar PDF': 'Exportar PDF', 'Imprimir': 'Imprimir', 'Período': 'Período', 'De': 'Desde', 'Até': 'Hasta', 'Coleção': 'Colección', 'Prioridade': 'Prioridad', 'Programação': 'Programación', 'Filtrar': 'Filtrar', 'Programações / OPs': 'Programaciones / OPs', 'Resumo de Materiais': 'Resumen de Materiales', 'Detalhes da OP Selecionada': 'Detalles de la OP Seleccionada', 'Tecidos necessários': 'Tejidos necesarios', 'Aviamentos necessários': 'Avíos necesarios', 'Passo 1 - Definir período e tipo de programação': 'Paso 1 - Definir período y tipo de programación', 'Período início': 'Inicio del período', 'Período fim': 'Fin del período', 'Prazo para começar': 'Plazo para empezar', 'Passo 2 - Escolher modelo': 'Paso 2 - Elegir modelo', 'Modelo': 'Modelo', 'Grade disponível: -': 'Tallas disponibles: -', 'Passo 3 - Distribuir grade (porcentagem)': 'Paso 3 - Distribuir tallas (porcentaje)', 'Quantidade desejada': 'Cantidad deseada', 'Total da porcentagem: 0%': 'Total del porcentaje: 0%', 'Passo 4 - Conferir materiais': 'Paso 4 - Revisar materiales', 'Calcular materiais': 'Calcular materiales', 'Salvar programação': 'Guardar programación', 'Nova Programação de Produção': 'Nueva Programación de Producción', 'Semanal': 'Semanal', 'Mensal': 'Mensual', 'Trimestral': 'Trimestral', 'Semestral': 'Semestral', 'Baixa': 'Baja', 'Média': 'Media', 'Alta': 'Alta', 'Urgente': 'Urgente', 'Todas': 'Todas', 'OPs em execução: 0': 'OPs en ejecución: 0', 'Atrasos críticos: 0': 'Atrasos críticos: 0', 'Capacidade usada: 0%': 'Capacidad usada: 0%', 'Ociosidade: 0%': 'Ociosidad: 0%', 'OP': 'OP', 'Qtde': 'Cant', 'Início': 'Inicio', 'Fim': 'Fin', 'Status': 'Estado', 'Progresso': 'Progreso'}}
-
-    def _get_idioma_atual(self):
-        try:
-            if getattr(self, "sistema", None) is not None:
-                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
-        except Exception:
-            pass
-        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
-
-    def _canonical_i18n_text(self, text):
-        if text is None:
-            return text
-        s = str(text)
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        if s in maps.get("pt_BR", {}):
-            return s
-        for _lang, table in maps.items():
-            for pt_key, translated in table.items():
-                if s == translated:
-                    return pt_key
-        return s
-
-    def _translate_i18n_text(self, text):
-        if text is None:
-            return text
-        idioma = self._get_idioma_atual()
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        canonical = self._canonical_i18n_text(text)
-        return maps.get(idioma, {}).get(canonical, canonical)
-
-    def _translate_i18n_values(self, values):
-        if not isinstance(values, (list, tuple)):
-            return values
-        return [self._translate_i18n_text(v) for v in values]
-
-    def _refresh_widget_i18n(self, widget):
-        try:
-            if hasattr(widget, "cget"):
-                try:
-                    text = widget.cget("text")
-                    if isinstance(text, str) and text:
-                        new_text = self._translate_i18n_text(text)
-                        if new_text != text:
-                            widget.configure(text=new_text)
-                except Exception:
-                    pass
-
-                try:
-                    placeholder = widget.cget("placeholder_text")
-                    if isinstance(placeholder, str) and placeholder:
-                        new_placeholder = self._translate_i18n_text(placeholder)
-                        if new_placeholder != placeholder:
-                            widget.configure(placeholder_text=new_placeholder)
-                except Exception:
-                    pass
-
-                try:
-                    values = widget.cget("values")
-                    if isinstance(values, (list, tuple)) and values:
-                        current = None
-                        try:
-                            current = widget.get()
-                        except Exception:
-                            current = None
-                        translated_values = self._translate_i18n_values(list(values))
-                        widget.configure(values=translated_values)
-                        if current:
-                            widget.set(self._translate_i18n_text(current))
-                except Exception:
-                    pass
-
-            if isinstance(widget, ttk.Treeview):
-                try:
-                    for col in widget["columns"]:
-                        info = widget.heading(col)
-                        heading_text = info.get("text", "")
-                        if heading_text:
-                            widget.heading(col, text=self._translate_i18n_text(heading_text))
-                except Exception:
-                    pass
-
-            for child in widget.winfo_children():
-                self._refresh_widget_i18n(child)
-        except Exception:
-            pass
-
-    def refresh_texts(self):
-        try:
-            target = getattr(self, "root", None) or self
-            self._refresh_widget_i18n(target)
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "root") and self.root:
-                self.root.title(self._translate_i18n_text(self.root.title()))
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "PAGE_TITLE"):
-                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
-        except Exception:
-            pass
-
 if __name__ == "__main__":
     app = ctk.CTk()
     app.geometry("1500x820")
@@ -2172,3 +2061,171 @@ if __name__ == "__main__":
     pagina = PlanejamentoProducaoPage(app)
     pagina.pack(fill="both", expand=True)
     app.mainloop()
+
+
+
+
+# ===== PATCH MULTILÍNGUE LIGADO AO MENU =====
+try:
+    import customtkinter as _ctk_ml
+    from tkinter import ttk as _ttk_ml
+except Exception:
+    _ctk_ml = None
+    _ttk_ml = None
+
+def _ml_get_lang(self):
+    return getattr(getattr(self, 'sistema', None), 'idioma_atual', 'pt_BR') or 'pt_BR'
+
+def _ml_translate(self, text):
+    if not text:
+        return text
+    lang = _ml_get_lang(self)
+    mapping = getattr(self.__class__, '_TRANSLATIONS', {})
+    current = mapping.get(lang, mapping.get('pt_BR', {}))
+    if text in current:
+        return current[text]
+    for _, mp in mapping.items():
+        if text in mp:
+            canon = mp[text]
+            return current.get(canon, canon)
+    return text
+
+def _ml_translate_list(self, values):
+    return [self._ml_translate(v) for v in values]
+
+def _ml_walk(widget):
+    try:
+        yield widget
+        for child in widget.winfo_children():
+            yield from _ml_walk(child)
+    except Exception:
+        return
+
+def _ml_refresh_texts(self):
+    if _ctk_ml is None:
+        return
+    for w in _ml_walk(self):
+        try:
+            if hasattr(w, 'cget'):
+                try:
+                    txt = w.cget('text')
+                except Exception:
+                    txt = None
+                if isinstance(txt, str) and txt:
+                    new = self._ml_translate(txt)
+                    if new != txt:
+                        try:
+                            w.configure(text=new)
+                        except Exception:
+                            pass
+                try:
+                    ph = w.cget('placeholder_text')
+                except Exception:
+                    ph = None
+                if isinstance(ph, str) and ph:
+                    new_ph = self._ml_translate(ph)
+                    if new_ph != ph:
+                        try:
+                            w.configure(placeholder_text=new_ph)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    # placeholders por atributo
+    for attr, base in getattr(self.__class__, '_PLACEHOLDERS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is not None:
+            try:
+                obj.configure(placeholder_text=self._ml_translate(base))
+            except Exception:
+                pass
+
+    # combos / option menus / segmented
+    for attr, base_values in getattr(self.__class__, '_COMBOS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is None:
+            continue
+        try:
+            current_value = obj.get()
+        except Exception:
+            current_value = None
+        new_values = self._ml_translate_list(base_values)
+        try:
+            obj.configure(values=new_values)
+        except Exception:
+            pass
+        if current_value:
+            try:
+                obj.set(self._ml_translate(current_value))
+            except Exception:
+                try:
+                    obj.set(self._ml_translate(base_values[0]))
+                except Exception:
+                    pass
+
+    # tree headings
+    for attr, cols in getattr(self.__class__, '_TREE_HEADINGS', {}).items():
+        tree = getattr(self, attr, None)
+        if tree is None:
+            continue
+        try:
+            for col, label in cols.items():
+                tree.heading(col, text=self._ml_translate(label))
+        except Exception:
+            pass
+
+    # tabview texts
+    tab_names = getattr(self.__class__, '_TABS', [])
+    for w in _ml_walk(self):
+        if _ctk_ml and isinstance(w, _ctk_ml.CTkTabview):
+            try:
+                buttons = getattr(w._segmented_button, '_buttons_dict', {})
+                for original in tab_names:
+                    btn = buttons.get(original)
+                    if btn is not None:
+                        btn.configure(text=self._ml_translate(original))
+            except Exception:
+                pass
+
+    # page title class attr
+    try:
+        if hasattr(self.__class__, 'PAGE_TITLE'):
+            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
+    except Exception:
+        pass
+
+    try:
+        self.update_idletasks()
+    except Exception:
+        pass
+
+def _ml_on_language_changed(self, *_args, **_kwargs):
+    try:
+        self.refresh_texts()
+    except Exception:
+        try:
+            _ml_refresh_texts(self)
+        except Exception:
+            pass
+
+_TRANSLATIONS = {
+ 'pt_BR': {'Planejamento de Produção':'Planejamento de Produção','Production Planning':'Planejamento de Produção','Crie OPs por período, modelo, grade e prioridade. Os materiais são calculados a partir do cadastro do modelo.':'Crie OPs por período, modelo, grade e prioridade. Os materiais são calculados a partir do cadastro do modelo.','Nova Programação':'Nova Programação','New Plan':'Nova Programação','Atualizar':'Atualizar','Refresh':'Atualizar','Reprogramar +1 dia':'Reprogramar +1 dia','Reschedule +1 day':'Reprogramar +1 dia','Exportar PDF':'Exportar PDF','Export PDF':'Exportar PDF','Imprimir':'Imprimir','Print':'Imprimir','Período':'Período','Period':'Período','De':'De','From':'De','Até':'Até','To':'Até','Coleção':'Coleção','Collection':'Coleção','Prioridade':'Prioridade','Priority':'Prioridade','Programação':'Programação','Schedule':'Programação','Filtrar':'Filtrar','Filter':'Filtrar','Todas':'Todas','All':'Todas','Baixa':'Baixa','Low':'Baixa','Média':'Média','Medium':'Média','Alta':'Alta','High':'Alta','Urgente':'Urgente','Urgent':'Urgente','Semanal':'Semanal','Weekly':'Semanal','Mensal':'Mensal','Monthly':'Mensal','Trimestral':'Trimestral','Quarterly':'Trimestral','Semestral':'Semestral','Semiannual':'Semestral','OPs em execução: 0':'OPs em execução: 0','Ops in progress: 0':'OPs em execução: 0','Atrasos críticos: 0':'Atrasos críticos: 0','Critical delays: 0':'Atrasos críticos: 0','Capacidade usada: 0%':'Capacidade usada: 0%','Used capacity: 0%':'Capacidade usada: 0%','Ociosidade: 0%':'Ociosidade: 0%','Idle time: 0%':'Ociosidade: 0%','Programações / OPs':'Programações / OPs','Plans / Ops':'Programações / OPs','Resumo de Materiais':'Resumo de Materiais','Materials Summary':'Resumo de Materiais'},
+ 'en_US': {'Planejamento de Produção':'Production Planning','Production Planning':'Production Planning','Crie OPs por período, modelo, grade e prioridade. Os materiais são calculados a partir do cadastro do modelo.':'Create ops by period, model, size mix and priority. Materials are calculated from the model registration.','Nova Programação':'New Plan','New Plan':'New Plan','Atualizar':'Refresh','Refresh':'Refresh','Reprogramar +1 dia':'Reschedule +1 day','Reschedule +1 day':'Reschedule +1 day','Exportar PDF':'Export PDF','Export PDF':'Export PDF','Imprimir':'Print','Print':'Print','Período':'Period','Period':'Period','De':'From','From':'From','Até':'To','To':'To','Coleção':'Collection','Collection':'Collection','Prioridade':'Priority','Priority':'Priority','Programação':'Schedule','Schedule':'Schedule','Filtrar':'Filter','Filter':'Filter','Todas':'All','All':'All','Baixa':'Low','Low':'Low','Média':'Medium','Medium':'Medium','Alta':'High','High':'High','Urgente':'Urgent','Urgent':'Urgent','Semanal':'Weekly','Weekly':'Weekly','Mensal':'Monthly','Monthly':'Monthly','Trimestral':'Quarterly','Quarterly':'Quarterly','Semestral':'Semiannual','Semiannual':'Semiannual','OPs em execução: 0':'Ops in progress: 0','Ops in progress: 0':'Ops in progress: 0','Atrasos críticos: 0':'Critical delays: 0','Critical delays: 0':'Critical delays: 0','Capacidade usada: 0%':'Used capacity: 0%','Used capacity: 0%':'Used capacity: 0%','Ociosidade: 0%':'Idle time: 0%','Idle time: 0%':'Idle time: 0%','Programações / OPs':'Plans / Ops','Plans / Ops':'Plans / Ops','Resumo de Materiais':'Materials Summary','Materials Summary':'Materials Summary'},
+ 'es_ES': {'Planejamento de Produção':'Planificación de Producción','Production Planning':'Planificación de Producción','Crie OPs por período, modelo, grade e prioridade. Os materiais são calculados a partir do cadastro do modelo.':'Cree OPs por período, modelo, tallas y prioridad. Los materiales se calculan a partir del registro del modelo.','Nova Programação':'Nueva Programación','New Plan':'Nueva Programación','Atualizar':'Actualizar','Refresh':'Actualizar','Reprogramar +1 dia':'Reprogramar +1 día','Reschedule +1 day':'Reprogramar +1 día','Exportar PDF':'Exportar PDF','Export PDF':'Exportar PDF','Imprimir':'Imprimir','Print':'Imprimir','Período':'Período','Period':'Período','De':'Desde','From':'Desde','Até':'Hasta','To':'Hasta','Coleção':'Colección','Collection':'Colección','Prioridade':'Prioridad','Priority':'Prioridad','Programação':'Programación','Schedule':'Programación','Filtrar':'Filtrar','Filter':'Filtrar','Todas':'Todas','All':'Todas','Baixa':'Baja','Low':'Baja','Média':'Media','Medium':'Media','Alta':'Alta','High':'Alta','Urgente':'Urgente','Urgent':'Urgente','Semanal':'Semanal','Weekly':'Semanal','Mensal':'Mensual','Monthly':'Mensual','Trimestral':'Trimestral','Quarterly':'Trimestral','Semestral':'Semestral','Semiannual':'Semestral','OPs em execução: 0':'OPs en ejecución: 0','Ops in progress: 0':'OPs en ejecución: 0','Atrasos críticos: 0':'Retrasos críticos: 0','Critical delays: 0':'Retrasos críticos: 0','Capacidade usada: 0%':'Capacidad usada: 0%','Used capacity: 0%':'Capacidad usada: 0%','Ociosidade: 0%':'Ociosidad: 0%','Idle time: 0%':'Ociosidad: 0%','Programações / OPs':'Programaciones / OPs','Plans / Ops':'Programaciones / OPs','Resumo de Materiais':'Resumen de Materiales','Materials Summary':'Resumen de Materiales'}
+}
+_TREE_HEADINGS = {'tree_ops': {'op':'OP','modelo':'Modelo','qtde':'Qtde','inicio':'Início','fim':'Fim','status':'Status','progresso':'Progresso','programacao':'Programação','colecao':'Coleção'}, 'tree_capacidade': {'recurso':'Recurso','capacidade':'Capacidade','ocupacao':'Ocupação','saldo':'Saldo'}, 'tree_tecidos': {'codigo':'Código','descricao':'Descrição','necessario':'Necessário','estoque':'Estoque','saldo':'Saldo'}, 'tree_aviamentos': {'codigo':'Código','descricao':'Descrição','necessario':'Necessário','estoque':'Estoque','saldo':'Saldo'}}
+_PLACEHOLDERS = {'plan_inicio_entry':'De','plan_fim_entry':'Até'}
+_COMBOS = {'filtro_colecao':['Todas'], 'filtro_prioridade':['Todas','Baixa','Média','Alta','Urgente'], 'filtro_programacao':['Todas','Semanal','Mensal','Trimestral','Semestral','Coleção']}
+_TABS = []
+
+PlanejamentoProducaoPage._TRANSLATIONS = _TRANSLATIONS
+PlanejamentoProducaoPage._TREE_HEADINGS = _TREE_HEADINGS
+PlanejamentoProducaoPage._PLACEHOLDERS = _PLACEHOLDERS
+PlanejamentoProducaoPage._COMBOS = _COMBOS
+PlanejamentoProducaoPage._TABS = _TABS
+
+PlanejamentoProducaoPage._ml_translate = _ml_translate
+PlanejamentoProducaoPage._ml_translate_list = _ml_translate_list
+PlanejamentoProducaoPage.refresh_texts = _ml_refresh_texts
+PlanejamentoProducaoPage.on_language_changed = _ml_on_language_changed

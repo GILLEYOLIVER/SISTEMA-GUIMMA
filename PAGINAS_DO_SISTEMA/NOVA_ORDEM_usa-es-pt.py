@@ -320,11 +320,6 @@ class OrdemCorte(ctk.CTkFrame):
         self.criar_widgets()
         self._op_planejada_data = None
         self.after(100, self.carregar_modelos_combo)
-        try:
-            self.after(150, self.refresh_texts)
-        except Exception:
-            pass
-
 
     def _is_dark_color(self, hex_color):
         try:
@@ -2007,112 +2002,6 @@ class OrdemCorte(ctk.CTkFrame):
             pass
 
 
-    _I18N_MAP = {'en_US': {'ORDEM DE CORTE': 'CUTTING ORDER', 'DATA ': 'DATE ', 'Buscar Modelo:': 'Search Model:', 'Código ou descrição...': 'Code or description...', 'Buscar': 'Search', 'CÓDIGO:': 'CODE:', 'MODELO:': 'MODEL:', 'CORTADOR:': 'CUTTER:', 'AUXILIAR:': 'ASSISTANT:', 'FINALIZAÇÃO:': 'FINISHING:', 'Imprimir Pré-visualização': 'Print Preview', 'Salvar Ordem': 'Save Order', 'GRADE DE CORTE': 'SIZE SET', 'Preferência de grade:': 'Size set preference:', 'Salvar grade como preferência': 'Save size set as preference', 'Excluir preferência': 'Delete preference', 'PORCENTAGEM': 'PERCENTAGE', 'QUANTIDADE DESEJADA:': 'DESIRED QUANTITY:', 'Ex: 500': 'Ex: 500', 'DIAS ESTIMADOS:': 'ESTIMATED DAYS:', 'Ex: 3': 'Ex: 3', 'HORAS ESTIMADAS:': 'ESTIMATED HOURS:', 'Ex: 6': 'Ex: 6', 'Informe um nome para esta preferência de grade:': 'Enter a name for this size set preference:', 'LARGURA/MTS': 'WIDTH/METERS', 'Ordem de Corte': 'Cutting Order', 'Banco de Dados': 'Database', 'Aviso': 'Warning', 'Erro': 'Error'}, 'es_ES': {'ORDEM DE CORTE': 'ORDEN DE CORTE', 'DATA ': 'FECHA ', 'Buscar Modelo:': 'Buscar Modelo:', 'Código ou descrição...': 'Código o descripción...', 'Buscar': 'Buscar', 'CÓDIGO:': 'CÓDIGO:', 'MODELO:': 'MODELO:', 'CORTADOR:': 'CORTADOR:', 'AUXILIAR:': 'AUXILIAR:', 'FINALIZAÇÃO:': 'FINALIZACIÓN:', 'Imprimir Pré-visualização': 'Imprimir Vista previa', 'Salvar Ordem': 'Guardar Orden', 'GRADE DE CORTE': 'TALLAS DE CORTE', 'Preferência de grade:': 'Preferencia de tallas:', 'Salvar grade como preferência': 'Guardar tallas como preferencia', 'Excluir preferência': 'Eliminar preferencia', 'PORCENTAGEM': 'PORCENTAJE', 'QUANTIDADE DESEJADA:': 'CANTIDAD DESEADA:', 'Ex: 500': 'Ej: 500', 'DIAS ESTIMADOS:': 'DÍAS ESTIMADOS:', 'Ex: 3': 'Ej: 3', 'HORAS ESTIMADAS:': 'HORAS ESTIMADAS:', 'Ex: 6': 'Ej: 6', 'Informe um nome para esta preferência de grade:': 'Ingrese un nombre para esta preferencia de tallas:', 'LARGURA/MTS': 'ANCHO/MTS', 'Ordem de Corte': 'Orden de Corte', 'Banco de Dados': 'Base de Datos', 'Aviso': 'Aviso', 'Erro': 'Error'}}
-
-    def _get_idioma_atual(self):
-        try:
-            if getattr(self, "sistema", None) is not None:
-                return getattr(self.sistema, "idioma_atual", "pt_BR") or "pt_BR"
-        except Exception:
-            pass
-        return getattr(self, "idioma_atual", "pt_BR") or "pt_BR"
-
-    def _canonical_i18n_text(self, text):
-        if text is None:
-            return text
-        s = str(text)
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        if s in maps.get("pt_BR", {}):
-            return s
-        for _lang, table in maps.items():
-            for pt_key, translated in table.items():
-                if s == translated:
-                    return pt_key
-        return s
-
-    def _translate_i18n_text(self, text):
-        if text is None:
-            return text
-        idioma = self._get_idioma_atual()
-        maps = getattr(self, "_I18N_MAP", {}) or {}
-        canonical = self._canonical_i18n_text(text)
-        return maps.get(idioma, {}).get(canonical, canonical)
-
-    def _translate_i18n_values(self, values):
-        if not isinstance(values, (list, tuple)):
-            return values
-        return [self._translate_i18n_text(v) for v in values]
-
-    def _refresh_widget_i18n(self, widget):
-        try:
-            if hasattr(widget, "cget"):
-                try:
-                    text = widget.cget("text")
-                    if isinstance(text, str) and text:
-                        new_text = self._translate_i18n_text(text)
-                        if new_text != text:
-                            widget.configure(text=new_text)
-                except Exception:
-                    pass
-
-                try:
-                    placeholder = widget.cget("placeholder_text")
-                    if isinstance(placeholder, str) and placeholder:
-                        new_placeholder = self._translate_i18n_text(placeholder)
-                        if new_placeholder != placeholder:
-                            widget.configure(placeholder_text=new_placeholder)
-                except Exception:
-                    pass
-
-                try:
-                    values = widget.cget("values")
-                    if isinstance(values, (list, tuple)) and values:
-                        current = None
-                        try:
-                            current = widget.get()
-                        except Exception:
-                            current = None
-                        translated_values = self._translate_i18n_values(list(values))
-                        widget.configure(values=translated_values)
-                        if current:
-                            widget.set(self._translate_i18n_text(current))
-                except Exception:
-                    pass
-
-            if isinstance(widget, ttk.Treeview):
-                try:
-                    for col in widget["columns"]:
-                        info = widget.heading(col)
-                        heading_text = info.get("text", "")
-                        if heading_text:
-                            widget.heading(col, text=self._translate_i18n_text(heading_text))
-                except Exception:
-                    pass
-
-            for child in widget.winfo_children():
-                self._refresh_widget_i18n(child)
-        except Exception:
-            pass
-
-    def refresh_texts(self):
-        try:
-            target = getattr(self, "root", None) or self
-            self._refresh_widget_i18n(target)
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "root") and self.root:
-                self.root.title(self._translate_i18n_text(self.root.title()))
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "PAGE_TITLE"):
-                self.PAGE_TITLE = self._translate_i18n_text(self.PAGE_TITLE)
-        except Exception:
-            pass
-
 if __name__ == "__main__":
     try:
         try:
@@ -2143,3 +2032,171 @@ if __name__ == "__main__":
         print(f"Erro inesperado ao iniciar a aplicação: {e}")
 
 # 31/01/2026##
+
+
+
+
+# ===== PATCH MULTILÍNGUE LIGADO AO MENU =====
+try:
+    import customtkinter as _ctk_ml
+    from tkinter import ttk as _ttk_ml
+except Exception:
+    _ctk_ml = None
+    _ttk_ml = None
+
+def _ml_get_lang(self):
+    return getattr(getattr(self, 'sistema', None), 'idioma_atual', 'pt_BR') or 'pt_BR'
+
+def _ml_translate(self, text):
+    if not text:
+        return text
+    lang = _ml_get_lang(self)
+    mapping = getattr(self.__class__, '_TRANSLATIONS', {})
+    current = mapping.get(lang, mapping.get('pt_BR', {}))
+    if text in current:
+        return current[text]
+    for _, mp in mapping.items():
+        if text in mp:
+            canon = mp[text]
+            return current.get(canon, canon)
+    return text
+
+def _ml_translate_list(self, values):
+    return [self._ml_translate(v) for v in values]
+
+def _ml_walk(widget):
+    try:
+        yield widget
+        for child in widget.winfo_children():
+            yield from _ml_walk(child)
+    except Exception:
+        return
+
+def _ml_refresh_texts(self):
+    if _ctk_ml is None:
+        return
+    for w in _ml_walk(self):
+        try:
+            if hasattr(w, 'cget'):
+                try:
+                    txt = w.cget('text')
+                except Exception:
+                    txt = None
+                if isinstance(txt, str) and txt:
+                    new = self._ml_translate(txt)
+                    if new != txt:
+                        try:
+                            w.configure(text=new)
+                        except Exception:
+                            pass
+                try:
+                    ph = w.cget('placeholder_text')
+                except Exception:
+                    ph = None
+                if isinstance(ph, str) and ph:
+                    new_ph = self._ml_translate(ph)
+                    if new_ph != ph:
+                        try:
+                            w.configure(placeholder_text=new_ph)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    # placeholders por atributo
+    for attr, base in getattr(self.__class__, '_PLACEHOLDERS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is not None:
+            try:
+                obj.configure(placeholder_text=self._ml_translate(base))
+            except Exception:
+                pass
+
+    # combos / option menus / segmented
+    for attr, base_values in getattr(self.__class__, '_COMBOS', {}).items():
+        obj = getattr(self, attr, None)
+        if obj is None:
+            continue
+        try:
+            current_value = obj.get()
+        except Exception:
+            current_value = None
+        new_values = self._ml_translate_list(base_values)
+        try:
+            obj.configure(values=new_values)
+        except Exception:
+            pass
+        if current_value:
+            try:
+                obj.set(self._ml_translate(current_value))
+            except Exception:
+                try:
+                    obj.set(self._ml_translate(base_values[0]))
+                except Exception:
+                    pass
+
+    # tree headings
+    for attr, cols in getattr(self.__class__, '_TREE_HEADINGS', {}).items():
+        tree = getattr(self, attr, None)
+        if tree is None:
+            continue
+        try:
+            for col, label in cols.items():
+                tree.heading(col, text=self._ml_translate(label))
+        except Exception:
+            pass
+
+    # tabview texts
+    tab_names = getattr(self.__class__, '_TABS', [])
+    for w in _ml_walk(self):
+        if _ctk_ml and isinstance(w, _ctk_ml.CTkTabview):
+            try:
+                buttons = getattr(w._segmented_button, '_buttons_dict', {})
+                for original in tab_names:
+                    btn = buttons.get(original)
+                    if btn is not None:
+                        btn.configure(text=self._ml_translate(original))
+            except Exception:
+                pass
+
+    # page title class attr
+    try:
+        if hasattr(self.__class__, 'PAGE_TITLE'):
+            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
+    except Exception:
+        pass
+
+    try:
+        self.update_idletasks()
+    except Exception:
+        pass
+
+def _ml_on_language_changed(self, *_args, **_kwargs):
+    try:
+        self.refresh_texts()
+    except Exception:
+        try:
+            _ml_refresh_texts(self)
+        except Exception:
+            pass
+
+_TRANSLATIONS = {
+ 'pt_BR': {'Nova Ordem':'Nova Ordem','New Order':'Nova Ordem','Ordem de Corte':'Ordem de Corte','Cut Order':'Ordem de Corte','Salvar':'Salvar','Save':'Salvar','Imprimir':'Imprimir','Print':'Imprimir','Modelo':'Modelo','Model':'Modelo','Descrição':'Descrição','Description':'Descrição','Quantidade':'Quantidade','Quantity':'Quantidade','Grade':'Grade','Size Mix':'Grade','Observações':'Observações','Notes':'Observações','Gerar PDF':'Gerar PDF','Generate PDF':'Gerar PDF'},
+ 'en_US': {'Nova Ordem':'New Order','New Order':'New Order','Ordem de Corte':'Cut Order','Cut Order':'Cut Order','Salvar':'Save','Save':'Save','Imprimir':'Print','Print':'Print','Modelo':'Model','Model':'Model','Descrição':'Description','Description':'Description','Quantidade':'Quantity','Quantity':'Quantity','Grade':'Size Mix','Size Mix':'Size Mix','Observações':'Notes','Notes':'Notes','Gerar PDF':'Generate PDF','Generate PDF':'Generate PDF'},
+ 'es_ES': {'Nova Ordem':'Nueva Orden','New Order':'Nueva Orden','Ordem de Corte':'Orden de Corte','Cut Order':'Orden de Corte','Salvar':'Guardar','Save':'Guardar','Imprimir':'Imprimir','Print':'Imprimir','Modelo':'Modelo','Model':'Modelo','Descrição':'Descripción','Description':'Descripción','Quantidade':'Cantidad','Quantity':'Cantidad','Grade':'Tallas','Size Mix':'Tallas','Observações':'Observaciones','Notes':'Observaciones','Gerar PDF':'Generar PDF','Generate PDF':'Generar PDF'}
+}
+_TREE_HEADINGS = {}
+_PLACEHOLDERS = {}
+_COMBOS = {}
+_TABS = []
+
+OrdemCorte._TRANSLATIONS = _TRANSLATIONS
+OrdemCorte._TREE_HEADINGS = _TREE_HEADINGS
+OrdemCorte._PLACEHOLDERS = _PLACEHOLDERS
+OrdemCorte._COMBOS = _COMBOS
+OrdemCorte._TABS = _TABS
+
+OrdemCorte._ml_translate = _ml_translate
+OrdemCorte._ml_translate_list = _ml_translate_list
+OrdemCorte.refresh_texts = _ml_refresh_texts
+OrdemCorte.on_language_changed = _ml_on_language_changed

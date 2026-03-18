@@ -279,3 +279,19 @@ Traceback (most recent call last):
   File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 468, in _create_connection
     raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
 Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-18 15:48:17 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA.py", line 703, in mostrar_status_conexao
+    base = self._get_base_window()
+           ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'GerenciadorBancoDados' object has no attribute '_get_base_window'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA.py", line 640, in conectar_como_admin
+    self.mostrar_status_conexao("🔐 CONECTADO COMO SUPER ADMINISTRADOR")
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA.py", line 764, in mostrar_status_conexao
+    print(self._tr("show_status_error", erro=e))
+          ^^^^^^^^
+AttributeError: 'GerenciadorBancoDados' object has no attribute '_tr'
