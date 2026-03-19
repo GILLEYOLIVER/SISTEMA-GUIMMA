@@ -2130,15 +2130,143 @@ class OperaMenuApp(ctk.CTk):
         frame = getattr(self, "_current_frame", None)
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
             return
+        idioma = getattr(self, "idioma_atual", "pt_BR")
+        mapa_traducao = {}
         try:
-            if hasattr(frame, "sistema"):
-                frame.sistema = self
-            if hasattr(frame, "app"):
-                frame.app = self
-            if hasattr(frame, "refresh_texts"):
-                frame.refresh_texts()
-            elif hasattr(frame, "on_language_changed"):
-                frame.on_language_changed(self.idioma_atual)
+            all_maps = getattr(frame.__class__, "_TRANSLATIONS", {}) or getattr(frame, "_TRANSLATIONS", {})
+            if isinstance(all_maps, dict):
+                base = all_maps.get("pt_BR", {}) if isinstance(all_maps.get("pt_BR", {}), dict) else {}
+                atual = all_maps.get(idioma, {}) if isinstance(all_maps.get(idioma, {}), dict) else {}
+                mapa_traducao = dict(base)
+                mapa_traducao.update(atual)
+        except Exception:
+            mapa_traducao = {}
+
+        def _resolve_mapa_widget(widget):
+            try:
+                wm = getattr(widget.__class__, "_TRANSLATIONS", {}) or getattr(widget, "_TRANSLATIONS", {})
+                if isinstance(wm, dict) and (idioma in wm or "pt_BR" in wm):
+                    base = wm.get("pt_BR", {}) if isinstance(wm.get("pt_BR", {}), dict) else {}
+                    atual = wm.get(idioma, {}) if isinstance(wm.get(idioma, {}), dict) else {}
+                    mp = dict(base)
+                    mp.update(atual)
+                    if mp:
+                        return mp
+            except Exception:
+                pass
+            return mapa_traducao
+
+        def _traduzir_texto(valor, widget=None):
+            if not isinstance(valor, str):
+                return valor
+            texto = valor.strip()
+            if not texto:
+                return valor
+            mp = _resolve_mapa_widget(widget) if widget is not None else mapa_traducao
+            return mp.get(texto, mp.get(valor, valor))
+
+        def _traduzir_widget(widget):
+            # Textos comuns em widgets TK/CTK
+            for opt in ("text", "placeholder_text"):
+                try:
+                    atual = widget.cget(opt)
+                except Exception:
+                    continue
+                novo = _traduzir_texto(atual, widget)
+                if novo != atual:
+                    try:
+                        widget.configure(**{opt: novo})
+                    except Exception:
+                        pass
+
+            # Combobox / OptionMenu: valores exibidos
+            for opt in ("values",):
+                try:
+                    valores = widget.cget(opt)
+                except Exception:
+                    continue
+                if isinstance(valores, (list, tuple)):
+                    novos = [_traduzir_texto(v, widget) for v in valores]
+                    if list(novos) != list(valores):
+                        try:
+                            widget.configure(**{opt: novos})
+                        except Exception:
+                            pass
+
+            # Treeviews: cabeçalhos de colunas + coluna árvore
+            if isinstance(widget, ttk.Treeview):
+                try:
+                    texto_tree = widget.heading("#0").get("text", "")
+                    novo_tree = _traduzir_texto(texto_tree, widget)
+                    if novo_tree != texto_tree:
+                        widget.heading("#0", text=novo_tree)
+                except Exception:
+                    pass
+                try:
+                    for col in widget["columns"]:
+                        heading = widget.heading(col)
+                        atual = heading.get("text", "")
+                        novo = _traduzir_texto(atual, widget)
+                        if novo != atual:
+                            widget.heading(col, text=novo)
+                except Exception:
+                    pass
+
+            # Menus clássicos do Tk
+            if isinstance(widget, tk.Menu):
+                try:
+                    end = widget.index("end")
+                except Exception:
+                    end = None
+                if end is not None:
+                    for idx in range(end + 1):
+                        try:
+                            label = widget.entrycget(idx, "label")
+                        except Exception:
+                            continue
+                        novo = _traduzir_texto(label, widget)
+                        if novo != label:
+                            try:
+                                widget.entryconfigure(idx, label=novo)
+                            except Exception:
+                                pass
+
+        def _aplicar_idioma(widget):
+            try:
+                if hasattr(widget, "sistema"):
+                    widget.sistema = self
+                if hasattr(widget, "app"):
+                    widget.app = self
+                if hasattr(widget, "idioma_atual"):
+                    widget.idioma_atual = idioma
+            except Exception:
+                pass
+
+            for metodo in ("set_idioma", "on_language_changed", "refresh_texts"):
+                try:
+                    if not hasattr(widget, metodo):
+                        continue
+                    fn = getattr(widget, metodo)
+                    if not callable(fn):
+                        continue
+                    if metodo in ("set_idioma", "on_language_changed"):
+                        fn(idioma)
+                    else:
+                        fn()
+                except Exception as err:
+                    _dprint(f"⚠️ {widget.__class__.__name__}.{metodo} falhou: {err}")
+            try:
+                _traduzir_widget(widget)
+            except Exception:
+                pass
+            try:
+                for child in widget.winfo_children():
+                    _aplicar_idioma(child)
+            except Exception:
+                pass
+
+        try:
+            _aplicar_idioma(frame)
         except Exception as e:
             _dprint(f"⚠️ Erro ao atualizar idioma da página atual: {e}")
 
@@ -3209,7 +3337,7 @@ class OperaMenuApp(ctk.CTk):
             pass
         try:
             route = self.routes.get("Backup", {})
-            file_rel = route.get("file", "BACKUP.py")
+            file_rel = route.get("file", "BACKUP_usa-es-pt.py")
             file_path = os.path.join(APP_DIR, file_rel)
             if not os.path.exists(file_path):
                 file_path = os.path.join(ROOT_DIR, file_rel)

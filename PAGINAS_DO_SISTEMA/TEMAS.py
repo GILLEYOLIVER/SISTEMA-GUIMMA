@@ -2471,3 +2471,10 @@ if __name__ == '__main__':
     print("=" * 60)
 
     app.mainloop()
+
+# --- Adaptador global de idioma (injeção automática) ---
+try:
+    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
+    attach_i18n_support(TemasPage)
+except Exception:
+    pass
