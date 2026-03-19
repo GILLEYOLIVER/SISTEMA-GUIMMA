@@ -152,19 +152,19 @@
     "class": "AtualizarSistemaPage"
   },
   "Interna": {
-    "file": "PRODUCAO_INTERNA.py",
+    "file": "PRODUCAO_INTERNA_usa-es-pt.py",
     "class": "ProducaoInternaPage"
   },
   "Enviados": {
-    "file": "PRODUCAO_ENVIADOS.py",
+    "file": "PRODUCAO_ENVIADOS_usa-es-pt.py",
     "class": "ProducaoEnviadosPage"
   },
   "Retorno": {
-    "file": "PRODUCAO_RETORNO.py",
+    "file": "PRODUCAO_RETORNO_usa-es-pt.py",
     "class": "ProducaoRetornoPage"
   },
   "Finalizados": {
-    "file": "PRODUCAO_FINALIZADOS.py",
+    "file": "PRODUCAO_FINALIZADOS_usa-es-pt.py",
     "class": "ProducaoFinalizadosPage"
   },
   "Gerenciar": {
