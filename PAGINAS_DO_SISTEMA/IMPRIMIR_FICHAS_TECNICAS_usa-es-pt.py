@@ -57,12 +57,28 @@ if filedialog is None:
 
 # === Usa o MESMO gerador de PDF do seu módulo ===
 try:
-    from CADASTRAR_MODELO import gerar_pdf_cadastro_modelo as gerar_pdf_cadastro_modelo_exato
+    import importlib.util
+    from pathlib import Path
+
+    _base_dir = Path(__file__).resolve().parent
+    _modelo_candidates = [
+        _base_dir / "CADASTRAR_MODELO_usa-es-pt.py",
+        _base_dir / "CADASTRAR_MODELO.py",
+    ]
+    _modelo_path = next((p for p in _modelo_candidates if p.exists()), None)
+    if _modelo_path is None:
+        raise FileNotFoundError("CADASTRAR_MODELO*.py não encontrado")
+
+    _spec = importlib.util.spec_from_file_location("opera_cadastrar_modelo", str(_modelo_path))
+    if _spec is None or _spec.loader is None:
+        raise ImportError(f"Spec inválido para {_modelo_path}")
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    gerar_pdf_cadastro_modelo_exato = _mod.gerar_pdf_cadastro_modelo
 except Exception as e:
     raise ImportError(
-        "Não foi possível importar 'gerar_pdf_cadastro_modelo' de CADASTRAR_MODELO.py.\n"
-        "Garanta que o arquivo CADASTRAR_MODELO.py está no mesmo diretório do projeto "
-        "e que não possui erros de sintaxe.\n"
+        "Não foi possível importar 'gerar_pdf_cadastro_modelo' de CADASTRAR_MODELO_usa-es-pt.py.\n"
+        "Garanta que o arquivo existe e não possui erros de sintaxe.\n"
         f"Erro original: {e}"
     )
 
