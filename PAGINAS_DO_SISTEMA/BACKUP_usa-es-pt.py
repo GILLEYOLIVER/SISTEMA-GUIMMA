@@ -1678,3 +1678,21 @@ if __name__ == "__main__":
     root.mainloop()
 
 #teste saber se esta igual
+
+# --- AUTO_PAGE_TRANSLATIONS (gerado automaticamente) ---
+from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support as _attach_i18n_support
+
+AUTO_PAGE_TRANSLATIONS = {
+    "BackupPage": {
+        "pt_BR": {"title": "Backup", "Atualizar": "Atualizar", "Filtrar": "Filtrar", "Salvar": "Salvar", "Cancelar": "Cancelar"},
+        "en_US": {"title": "Backup", "Atualizar": "Refresh", "Filtrar": "Filter", "Salvar": "Save", "Cancelar": "Cancel"},
+        "es_ES": {"title": "Backup", "Atualizar": "Actualizar", "Filtrar": "Filtrar", "Salvar": "Guardar", "Cancelar": "Cancelar"},
+    },
+}
+
+for _cls_name, _map in AUTO_PAGE_TRANSLATIONS.items():
+    _cls = globals().get(_cls_name)
+    if isinstance(_cls, type):
+        if not hasattr(_cls, "TRANSLATIONS") and not hasattr(_cls, "_TRANSLATIONS"):
+            _cls.TRANSLATIONS = _map
+        _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))
