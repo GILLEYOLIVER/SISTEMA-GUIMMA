@@ -1,9 +1,11 @@
 # Migração i18n por etapas (para facilitar edição no navegador)
 
-## Etapa 1 (este commit)
-- Restaurar páginas mais conflituosas para o formato original (sem shim), mantendo os arquivos `_usa-es-pt.py` como referência.
-- Arquivos restaurados:
-  - `ATUALIZAR_SISTEMA.py`
+## Etapa 1 (um arquivo por PR)
+- Restaurar **somente 1 página conflituosa por PR** para o formato original (sem shim), mantendo o arquivo `_usa-es-pt.py` como referência.
+- Neste PR: `ATUALIZAR_SISTEMA.py`.
+
+## Etapa 1b, 1c, 1d...
+- Repetir o mesmo padrão em PRs separados para:
   - `BACKUP.py`
   - `BANCO_DADOS_FABRICA.py`
   - `CADASTRAR_MODELO.py`
