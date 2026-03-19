@@ -18,4 +18,8 @@ for _name in dir(_mod):
         continue
     globals()[_name] = getattr(_mod, _name)
 
+# Reexports explícitos (melhora análise estática/IDE)
+registrar_log_db = getattr(_mod, "registrar_log_db", None)
+UsuariosPage = getattr(_mod, "UsuariosPage", None)
+
 __all__ = getattr(_mod, "__all__", [n for n in globals() if not n.startswith("_")])

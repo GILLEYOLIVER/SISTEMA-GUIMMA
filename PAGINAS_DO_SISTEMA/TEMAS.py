@@ -18,4 +18,13 @@ for _name in dir(_mod):
         continue
     globals()[_name] = getattr(_mod, _name)
 
+# Reexports explícitos (melhora análise estática/IDE)
+TemasPage = getattr(_mod, "TemasPage", None)
+ModuloPaletas = getattr(_mod, "ModuloPaletas", None)
+aplicar_estilo_treeview = getattr(_mod, "aplicar_estilo_treeview", None)
+get_contraste_texto = getattr(_mod, "get_contraste_texto", None)
+is_dark_color = getattr(_mod, "is_dark_color", None)
+padronizar_treeview = getattr(_mod, "padronizar_treeview", None)
+remover_bordas_botoes_tema = getattr(_mod, "remover_bordas_botoes_tema", None)
+
 __all__ = getattr(_mod, "__all__", [n for n in globals() if not n.startswith("_")])
