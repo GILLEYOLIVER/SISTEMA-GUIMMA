@@ -486,3 +486,10 @@ if __name__ == "__main__":
     app.mainloop()
 
 #03/02/2025
+
+# --- Adaptador global de idioma (injeção automática) ---
+try:
+    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
+    attach_i18n_support(RelatorioAcabamentoPage)
+except Exception:
+    pass

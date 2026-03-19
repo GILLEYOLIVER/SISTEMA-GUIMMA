@@ -563,3 +563,11 @@ if __name__ == "__main__":
     page = RelatorioCustosReaisPage(master=app)
     page.pack(fill="both", expand=True)
     app.mainloop()
+
+
+# --- Adaptador global de idioma (injeção automática) ---
+try:
+    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
+    attach_i18n_support(RelatorioCustosReaisPage)
+except Exception:
+    pass
