@@ -1,0 +1,3 @@
+{"timestamp": "2026-03-19 13:04:02.705", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "admin", "hierarquia": "ADMINISTRADOR", "pagina": "BANCO_DADOS_FABRICA", "mensagem": "Conectado com privilégios de SUPER ADMIN", "detalhes": {}}
+{"timestamp": "2026-03-19 13:04:02.791", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "admin", "hierarquia": "ADMINISTRADOR", "pagina": "BANCO_DADOS_FABRICA", "mensagem": "Lista de tabelas atualizada", "detalhes": {"total": 65}}
+{"timestamp": "2026-03-19 13:05:15.247", "nivel": "INFO", "categoria": "SISTEMA", "usuario": "admin", "hierarquia": "ADMINISTRADOR", "pagina": "BANCO_DADOS_FABRICA", "mensagem": "[PAGINA] Entrada de Estoque: inicialização concluída com sucesso.", "detalhes": {}}

@@ -666,7 +666,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         version = self._extract_version(self.current_manifest)
         deseja = messagebox.askyesno(
             self._get_text("update_all_title"),
-            f"Deseja atualizar todo o pacote?\n\nVersão: {version or self._get_text("not_informed")}"
+            f"Deseja atualizar todo o pacote?\n\nVersão: {version or self._get_text('not_informed')}"
         )
         if not deseja:
             self.status_var.set(self._get_text("update_cancelled"))
@@ -1154,21 +1154,3 @@ if __name__ == "__main__":
     page.pack(fill="both", expand=True)
 
     root.mainloop()
-
-# --- AUTO_PAGE_TRANSLATIONS (gerado automaticamente) ---
-from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support as _attach_i18n_support
-
-AUTO_PAGE_TRANSLATIONS = {
-    "AtualizarSistemaPage": {
-        "pt_BR": {"title": "Atualizar Sistema", "Atualizar": "Atualizar", "Filtrar": "Filtrar", "Salvar": "Salvar", "Cancelar": "Cancelar"},
-        "en_US": {"title": "Atualizar Sistema", "Atualizar": "Refresh", "Filtrar": "Filter", "Salvar": "Save", "Cancelar": "Cancel"},
-        "es_ES": {"title": "Atualizar Sistema", "Atualizar": "Actualizar", "Filtrar": "Filtrar", "Salvar": "Guardar", "Cancelar": "Cancelar"},
-    },
-}
-
-for _cls_name, _map in AUTO_PAGE_TRANSLATIONS.items():
-    _cls = globals().get(_cls_name)
-    if isinstance(_cls, type):
-        if not hasattr(_cls, "TRANSLATIONS") and not hasattr(_cls, "_TRANSLATIONS"):
-            _cls.TRANSLATIONS = _map
-        _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))
