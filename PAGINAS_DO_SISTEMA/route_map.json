@@ -12,7 +12,7 @@
     "class": "SaidaEstoquePage"
   },
   "Relatórios": {
-    "file": "RELATORIO_ESTOQUE.py",
+    "file": "RELATORIO_ESTOQUE_usa-es-pt.py",
     "class": "AdvancedStockReport"
   },
   "Cadastrar Modelo": {
@@ -28,7 +28,7 @@
     "class": "OrdemCorte"
   },
   "Ordens de Corte Impressão": {
-    "file": "REIMPRIMIR-ORDENS-DE-CORTE.py",
+    "file": "REIMPRIMIR-ORDENS-DE-CORTE_usa-es-pt.py",
     "class": "OrdensCorteImpressao"
   },
   "Cadastrar Corte": {
@@ -56,7 +56,7 @@
     "class": "ClientesPage"
   },
   "Retrabalho de Defeitos": {
-    "file": "RETRABALHO_DEFEITOS.py",
+    "file": "RETRABALHO_DEFEITOS_usa-es-pt.py",
     "class": "RetrabalhoDefeitosPage"
   },
   "Controle de Mão de Obra": {
@@ -72,7 +72,7 @@
     "class": "PlanejamentoProducaoPage"
   },
   "Custos Reais": {
-    "file": "RELATORIO_CUSTOS_REAIS.py",
+    "file": "RELATORIO_CUSTOS_REAIS_usa-es-pt.py",
     "class": "RelatorioCustosReaisPage"
   },
   "Registro Acabamento": {
@@ -88,7 +88,7 @@
     "class": "PagamentoModernUI"
   },
   "Recibos de Pagamentos": {
-    "file": "RECIBOS_PAGAMENTOS.py",
+    "file": "RECIBOS_PAGAMENTOS_usa-es-pt.py",
     "class": "RecibosPagamentosPage"
   },
   "Custo Produto": {
@@ -116,27 +116,27 @@
     "class": "AdiantamentosPendentesPage"
   },
   "Produção": {
-    "file": "RELATORIO_ENVIO_DETALHADO.py",
+    "file": "RELATORIO_ENVIO_DETALHADO_usa-es-pt.py",
     "class": "RelatorioEnvioDetalhado"
   },
   "Serviços Externos": {
-    "file": "RELATORIO_SERVICOS_EXTERNOS.py",
+    "file": "RELATORIO_SERVICOS_EXTERNOS_usa-es-pt.py",
     "class": "RelatorioServicosExternosPage"
   },
   "Modelos Produzidos": {
-    "file": "RELATORIO_MODELOS_PRODUZIDOS.py",
+    "file": "RELATORIO_MODELOS_PRODUZIDOS_usa-es-pt.py",
     "class": "RelatorioModelosProduzidosPage"
   },
   "Acabamento": {
-    "file": "RELATORIO_ACABAMENTO.py",
+    "file": "RELATORIO_ACABAMENTO_usa-es-pt.py",
     "class": "RelatorioAcabamentoPage"
   },
   "Logs e Atividades": {
-    "file": "USUARIOS.py",
+    "file": "USUARIOS_usa-es-pt.py",
     "class": "UsuariosPage"
   },
   "Usuários": {
-    "file": "USUARIOS.py",
+    "file": "USUARIOS_usa-es-pt.py",
     "class": "UsuariosPage"
   },
   "Backup": {
@@ -144,7 +144,7 @@
     "class": "BackupPage"
   },
   "Temas": {
-    "file": "TEMAS.py",
+    "file": "TEMAS_usa-es-pt.py",
     "class": "TemasPage"
   },
   "Atualizar Sistema": {
@@ -172,7 +172,7 @@
     "class": "BancoDadosFabricaApp"
   },
   "RELATORIOS": {
-    "file": "RELATORIO_ENVIO_DETALHADO.py",
+    "file": "RELATORIO_ENVIO_DETALHADO_usa-es-pt.py",
     "class": "RelatorioEnvioDetalhado"
   },
   "Trocar Usuário": {

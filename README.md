@@ -73,7 +73,7 @@ SISTEMA-GUIMMA/
 #### Banco, usuários e administração
 - `BANCO_DE_DADOS_PG.py`: conexão/operações com PostgreSQL.
 - `BANCO_DADOS_FABRICA_usa-es-pt.py`: rotinas de banco vinculadas ao contexto de fábrica.
-- `USUARIOS.py`: cadastro/gestão de usuários.
+- `USUARIOS_usa-es-pt.py`: cadastro/gestão de usuários.
 - `ATUALIZAR_SISTEMA_usa-es-pt.py`: rotinas de atualização do sistema.
 - `BACKUP_usa-es-pt.py`: rotinas de backup.
 
@@ -90,12 +90,12 @@ SISTEMA-GUIMMA/
 - `FINALIZAR_CORTE_ACABAMENTO_usa-es-pt.py`: finalização de corte/acabamento.
 - `CONTROLE_ENVIO_CORTES_usa-es-pt.py`: controle de envio de cortes.
 - `CONTROLE_RETORNO_CORTE_usa-es-pt.py`: controle de retorno de cortes.
-- `RETRABALHO_DEFEITOS.py`: gestão de retrabalho e defeitos.
+- `RETRABALHO_DEFEITOS_usa-es-pt.py`: gestão de retrabalho e defeitos.
 
 #### Estoque, compras e financeiro
 - `ENTRADA_ESTOQUE_usa-es-pt.py`: entradas de estoque.
 - `SAIDA_ESTOQUE_usa-es-pt.py`: saídas de estoque.
-- `RELATORIO_ESTOQUE.py`: relatórios de estoque.
+- `RELATORIO_ESTOQUE_usa-es-pt.py`: relatórios de estoque.
 - `COMPRAS_usa-es-pt.py`: processo de compras.
 - `CONTAS_A_PAGAR_usa-es-pt.py`: contas a pagar.
 - `ADIANTAMENTO_PAGE_usa-es-pt.py`: registro/controle de adiantamentos.
@@ -108,19 +108,19 @@ SISTEMA-GUIMMA/
 #### Consultas, relatórios e impressão
 - `CONSULTAR_ORDENS_usa-es-pt.py`: consulta de ordens.
 - `CONSULTAR_SERVICOS_usa-es-pt.py`: consulta de serviços.
-- `RELATORIO_ACABAMENTO.py`: relatório de acabamento.
-- `RELATORIO_CUSTOS_REAIS.py`: relatório de custos reais.
-- `RELATORIO_ENVIO_DETALHADO.py`: relatório detalhado de envios.
-- `RELATORIO_MODELOS_PRODUZIDOS.py`: relatório de modelos produzidos.
-- `RELATORIO_SERVICOS_EXTERNOS.py`: relatório de serviços externos.
+- `RELATORIO_ACABAMENTO_usa-es-pt.py`: relatório de acabamento.
+- `RELATORIO_CUSTOS_REAIS_usa-es-pt.py`: relatório de custos reais.
+- `RELATORIO_ENVIO_DETALHADO_usa-es-pt.py`: relatório detalhado de envios.
+- `RELATORIO_MODELOS_PRODUZIDOS_usa-es-pt.py`: relatório de modelos produzidos.
+- `RELATORIO_SERVICOS_EXTERNOS_usa-es-pt.py`: relatório de serviços externos.
 - `IMPRIMIR_FICHAS_TECNICAS_usa-es-pt.py`: impressão de fichas técnicas.
-- `REIMPRIMIR-ORDENS-DE-CORTE.py`: reimpressão de ordens de corte.
-- `RECIBOS_PAGAMENTOS.py`: emissão/controle de recibos de pagamentos.
+- `REIMPRIMIR-ORDENS-DE-CORTE_usa-es-pt.py`: reimpressão de ordens de corte.
+- `RECIBOS_PAGAMENTOS_usa-es-pt.py`: emissão/controle de recibos de pagamentos.
 - `UI_TREEVIEW_OPERA.py`: componente de visualização em árvore (treeview).
 - `DASHBOARD_usa-es-pt.py`: painel/indicadores do sistema.
 
 #### Tema, aparência e configuração
-- `TEMAS.py`: temas ativos da interface.
+- `TEMAS_usa-es-pt.py`: temas ativos da interface.
 - `TEMAS-anterior.py`: versão anterior de temas.
 - `tema_database.py`: tema/estilo aplicado a telas de banco.
 - `route_map.json`: mapeamento de rotas/telas.
