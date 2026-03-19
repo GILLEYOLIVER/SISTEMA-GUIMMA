@@ -675,7 +675,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             return
 
         schema = get_schema()
-        valores = ["Todas"]
+        valores_base = ["Todas"]
 
         try:
             with get_conn() as conn, conn.cursor() as cur:
@@ -692,19 +692,28 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                     if str(row[0] or "").strip()
                 ]
                 if encontrados:
-                    valores.extend(encontrados)
+                    valores_base.extend(encontrados)
         except Exception:
             pass
 
-        self._colecoes_cache = valores
+        self._colecoes_cache = valores_base
 
         try:
             atual = self.filtro_colecao.get().strip()
         except Exception:
             atual = "Todas"
 
-        self.filtro_colecao.configure(values=valores)
-        self.filtro_colecao.set(atual if atual in valores else "Todas")
+        try:
+            traduz = self._t if hasattr(self, "_t") else self._ml_translate
+        except Exception:
+            traduz = lambda x: x
+
+        valores_exibicao = [traduz(v) if v == "Todas" else v for v in valores_base]
+        atual_base = "Todas" if atual in ("Todas", "All", "Todas") else atual
+        atual_exibicao = traduz(atual_base) if atual_base == "Todas" else atual_base
+
+        self.filtro_colecao.configure(values=valores_exibicao)
+        self.filtro_colecao.set(atual_exibicao if atual_exibicao in valores_exibicao else traduz("Todas"))
 
     def _limpar_tree(self):
         for item in self.tree.get_children():
@@ -1164,3 +1173,402 @@ OrdensPlanejadasPage._ml_translate = _ml_translate
 OrdensPlanejadasPage._ml_translate_list = _ml_translate_list
 OrdensPlanejadasPage.refresh_texts = _ml_refresh_texts
 OrdensPlanejadasPage.on_language_changed = _ml_on_language_changed
+
+
+# ===== PATCH MULTILÍNGUE REFORÇADO V2 =====
+
+def _ml2_get_lang(self):
+    return getattr(getattr(self, "sistema", None), "idioma_atual", "pt_BR") or "pt_BR"
+
+def _ml2_translate(self, text):
+    if text is None:
+        return text
+    text = str(text)
+    mapping = getattr(self.__class__, "_TRANSLATIONS", {})
+    lang = _ml2_get_lang(self)
+    current = mapping.get(lang, mapping.get("pt_BR", {}))
+
+    if text in current:
+        return current[text]
+
+    for _lang, mp in mapping.items():
+        if text in mp:
+            canonical = mp[text]
+            return current.get(canonical, canonical)
+
+    return text
+
+def _ml2_translate_list(self, values):
+    return [self._t(v) for v in (values or [])]
+
+def _ml2_refresh_texts(self):
+    try:
+        for w in _ml_walk(self):
+            try:
+                if hasattr(w, "cget"):
+                    try:
+                        txt = w.cget("text")
+                    except Exception:
+                        txt = None
+                    if isinstance(txt, str) and txt:
+                        new_txt = self._t(txt)
+                        if new_txt != txt:
+                            try:
+                                w.configure(text=new_txt)
+                            except Exception:
+                                pass
+
+                    try:
+                        ph = w.cget("placeholder_text")
+                    except Exception:
+                        ph = None
+                    if isinstance(ph, str) and ph:
+                        new_ph = self._t(ph)
+                        if new_ph != ph:
+                            try:
+                                w.configure(placeholder_text=new_ph)
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
+        for attr, base in getattr(self.__class__, "_PLACEHOLDERS", {}).items():
+            obj = getattr(self, attr, None)
+            if obj is not None:
+                try:
+                    obj.configure(placeholder_text=self._t(base))
+                except Exception:
+                    pass
+
+        for attr, base_values in getattr(self.__class__, "_COMBOS", {}).items():
+            obj = getattr(self, attr, None)
+            if obj is None:
+                continue
+
+            try:
+                current_value = obj.get()
+            except Exception:
+                current_value = None
+
+            new_values = self._t_list(base_values)
+            try:
+                obj.configure(values=new_values)
+            except Exception:
+                pass
+
+            if current_value:
+                translated_current = self._t(current_value)
+                try:
+                    obj.set(translated_current)
+                except Exception:
+                    try:
+                        if new_values:
+                            obj.set(new_values[0])
+                    except Exception:
+                        pass
+
+        for attr, cols in getattr(self.__class__, "_TREE_HEADINGS", {}).items():
+            tree = getattr(self, attr, None)
+            if tree is None:
+                continue
+            try:
+                for col, label in cols.items():
+                    tree.heading(col, text=self._t(label))
+            except Exception:
+                pass
+
+        try:
+            self.update_idletasks()
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+def _ml2_on_language_changed(self, *_args, **_kwargs):
+    try:
+        self.refresh_texts()
+    except Exception:
+        pass
+
+_TRANSLATIONS_V2 = {
+    "pt_BR": {
+        "Ordens Planejadas": "Ordens Planejadas",
+        "Planned Orders": "Ordens Planejadas",
+        "Atualizar": "Atualizar",
+        "Refresh": "Atualizar",
+        "Abrir na Nova Ordem": "Abrir na Nova Ordem",
+        "Open in New Order": "Abrir na Nova Ordem",
+        "Tempo": "Tempo",
+        "Time": "Tempo",
+        "Coleção": "Coleção",
+        "Collection": "Coleção",
+        "Cód. Modelo": "Cód. Modelo",
+        "Model Code": "Cód. Modelo",
+        "Descrição": "Descrição",
+        "Description": "Descrição",
+        "Filtrar": "Filtrar",
+        "Filter": "Filtrar",
+        "Limpar Filtros": "Limpar Filtros",
+        "Clear Filters": "Limpar Filtros",
+        "Data de": "Data de",
+        "Date from": "Data de",
+        "Data até": "Data até",
+        "Date to": "Data até",
+        "Hora de": "Hora de",
+        "Start time": "Hora de",
+        "Hora até": "Hora até",
+        "End time": "Hora até",
+        "Código": "Código",
+        "Code": "Código",
+        "Descrição do modelo": "Descrição do modelo",
+        "Model description": "Descrição do modelo",
+        "dd/mm/aaaa": "dd/mm/aaaa",
+        "mm/dd/yyyy": "dd/mm/aaaa",
+        "hh:mm": "hh:mm",
+        "Todas": "Todas",
+        "All": "Todas",
+        "Semanal": "Semanal",
+        "Weekly": "Semanal",
+        "Mensal": "Mensal",
+        "Monthly": "Mensal",
+        "Trimestral": "Trimestral",
+        "Quarterly": "Trimestral",
+        "Semestral": "Semestral",
+        "Semiannual": "Semestral",
+        "A data/hora usa atualizado_em; se vazio, usa criado_em.": "A data/hora usa atualizado_em; se vazio, usa criado_em.",
+        "The date/time uses atualizado_em; if empty, it uses criado_em.": "A data/hora usa atualizado_em; se vazio, usa criado_em.",
+        "OP": "OP",
+        "Modelo": "Modelo",
+        "Model": "Modelo",
+        "Qtde": "Qtde",
+        "Qty": "Qtde",
+        "Início": "Início",
+        "Start": "Início",
+        "Fim": "Fim",
+        "End": "Fim",
+        "Status": "Status",
+        "Progresso": "Progresso",
+        "Progress": "Progresso",
+        "Atualizado em": "Atualizado em",
+        "Updated at": "Atualizado em",
+        "Ordens Planejadas|title": "Ordens Planejadas",
+        "Hora inicial inválida. Use o formato hh:mm.": "Hora inicial inválida. Use o formato hh:mm.",
+        "Hora final inválida. Use o formato hh:mm.": "Hora final inválida. Use o formato hh:mm.",
+        "Data inicial inválida. Use o formato dd/mm/aaaa.": "Data inicial inválida. Use o formato dd/mm/aaaa.",
+        "Data final inválida. Use o formato dd/mm/aaaa.": "Data final inválida. Use o formato dd/mm/aaaa.",
+        "O intervalo de data/hora está inválido.": "O intervalo de data/hora está inválido.",
+        "Erro ao carregar OPs: {erro}": "Erro ao carregar OPs: {erro}",
+        "Selecione uma OP para abrir na Nova Ordem.": "Selecione uma OP para abrir na Nova Ordem.",
+        "Não foi possível localizar a OP selecionada.": "Não foi possível localizar a OP selecionada.",
+        "Não foi possível localizar os dados da OP selecionada.": "Não foi possível localizar os dados da OP selecionada.",
+        "Teste isolado: os dados da OP foram carregados.\nNo sistema completo, esta ação abrirá a página Nova Ordem.": "Teste isolado: os dados da OP foram carregados.\nNo sistema completo, esta ação abrirá a página Nova Ordem.",
+        "Calendário": "Calendário",
+        "Calendar": "Calendário",
+        "Limpar": "Limpar",
+        "Clear": "Limpar",
+        "Hoje": "Hoje",
+        "Today": "Hoje",
+        "Confirmar": "Confirmar",
+        "Confirm": "Confirmar",
+    },
+    "en_US": {
+        "Ordens Planejadas": "Planned Orders",
+        "Planned Orders": "Planned Orders",
+        "Atualizar": "Refresh",
+        "Refresh": "Refresh",
+        "Abrir na Nova Ordem": "Open in New Order",
+        "Open in New Order": "Open in New Order",
+        "Tempo": "Time",
+        "Time": "Time",
+        "Coleção": "Collection",
+        "Collection": "Collection",
+        "Cód. Modelo": "Model Code",
+        "Model Code": "Model Code",
+        "Descrição": "Description",
+        "Description": "Description",
+        "Filtrar": "Filter",
+        "Filter": "Filter",
+        "Limpar Filtros": "Clear Filters",
+        "Clear Filters": "Clear Filters",
+        "Data de": "Date from",
+        "Date from": "Date from",
+        "Data até": "Date to",
+        "Date to": "Date to",
+        "Hora de": "Start time",
+        "Start time": "Start time",
+        "Hora até": "End time",
+        "End time": "End time",
+        "Código": "Code",
+        "Code": "Code",
+        "Descrição do modelo": "Model description",
+        "Model description": "Model description",
+        "dd/mm/aaaa": "mm/dd/yyyy",
+        "mm/dd/yyyy": "mm/dd/yyyy",
+        "hh:mm": "hh:mm",
+        "Todas": "All",
+        "All": "All",
+        "Semanal": "Weekly",
+        "Weekly": "Weekly",
+        "Mensal": "Monthly",
+        "Monthly": "Monthly",
+        "Trimestral": "Quarterly",
+        "Quarterly": "Quarterly",
+        "Semestral": "Semiannual",
+        "Semiannual": "Semiannual",
+        "A data/hora usa atualizado_em; se vazio, usa criado_em.": "The date/time uses atualizado_em; if empty, it uses criado_em.",
+        "The date/time uses atualizado_em; if empty, it uses criado_em.": "The date/time uses atualizado_em; if empty, it uses criado_em.",
+        "OP": "OP",
+        "Modelo": "Model",
+        "Model": "Model",
+        "Qtde": "Qty",
+        "Qty": "Qty",
+        "Início": "Start",
+        "Start": "Start",
+        "Fim": "End",
+        "End": "End",
+        "Status": "Status",
+        "Progresso": "Progress",
+        "Progress": "Progress",
+        "Atualizado em": "Updated at",
+        "Updated at": "Updated at",
+        "Ordens Planejadas|title": "Planned Orders",
+        "Hora inicial inválida. Use o formato hh:mm.": "Invalid start time. Use the hh:mm format.",
+        "Hora final inválida. Use o formato hh:mm.": "Invalid end time. Use the hh:mm format.",
+        "Data inicial inválida. Use o formato dd/mm/aaaa.": "Invalid start date. Use the mm/dd/yyyy format.",
+        "Data final inválida. Use o formato dd/mm/aaaa.": "Invalid end date. Use the mm/dd/yyyy format.",
+        "O intervalo de data/hora está inválido.": "The date/time range is invalid.",
+        "Erro ao carregar OPs: {erro}": "Error loading production orders: {erro}",
+        "Selecione uma OP para abrir na Nova Ordem.": "Select a production order to open in New Order.",
+        "Não foi possível localizar a OP selecionada.": "Could not find the selected production order.",
+        "Não foi possível localizar os dados da OP selecionada.": "Could not find the selected production order data.",
+        "Teste isolado: os dados da OP foram carregados.\nNo sistema completo, esta ação abrirá a página Nova Ordem.": "Standalone test: the production order data was loaded.\nIn the full system, this action will open the New Order page.",
+        "Calendário": "Calendar",
+        "Calendar": "Calendar",
+        "Limpar": "Clear",
+        "Clear": "Clear",
+        "Hoje": "Today",
+        "Today": "Today",
+        "Confirmar": "Confirm",
+        "Confirm": "Confirm",
+    },
+    "es_ES": {
+        "Ordens Planejadas": "Órdenes Planificadas",
+        "Planned Orders": "Órdenes Planificadas",
+        "Atualizar": "Actualizar",
+        "Refresh": "Actualizar",
+        "Abrir na Nova Ordem": "Abrir en Nueva Orden",
+        "Open in New Order": "Abrir en Nueva Orden",
+        "Tempo": "Tiempo",
+        "Time": "Tiempo",
+        "Coleção": "Colección",
+        "Collection": "Colección",
+        "Cód. Modelo": "Cód. Modelo",
+        "Model Code": "Cód. Modelo",
+        "Descrição": "Descripción",
+        "Description": "Descripción",
+        "Filtrar": "Filtrar",
+        "Filter": "Filtrar",
+        "Limpar Filtros": "Limpiar Filtros",
+        "Clear Filters": "Limpiar Filtros",
+        "Data de": "Fecha desde",
+        "Date from": "Fecha desde",
+        "Data até": "Fecha hasta",
+        "Date to": "Fecha hasta",
+        "Hora de": "Hora desde",
+        "Start time": "Hora desde",
+        "Hora até": "Hora hasta",
+        "End time": "Hora hasta",
+        "Código": "Código",
+        "Code": "Código",
+        "Descrição do modelo": "Descripción del modelo",
+        "Model description": "Descripción del modelo",
+        "dd/mm/aaaa": "dd/mm/aaaa",
+        "mm/dd/yyyy": "dd/mm/aaaa",
+        "hh:mm": "hh:mm",
+        "Todas": "Todas",
+        "All": "Todas",
+        "Semanal": "Semanal",
+        "Weekly": "Semanal",
+        "Mensal": "Mensual",
+        "Monthly": "Mensual",
+        "Trimestral": "Trimestral",
+        "Quarterly": "Trimestral",
+        "Semestral": "Semestral",
+        "Semiannual": "Semestral",
+        "A data/hora usa atualizado_em; se vazio, usa criado_em.": "La fecha/hora usa atualizado_em; si está vacío, usa criado_em.",
+        "The date/time uses atualizado_em; if empty, it uses criado_em.": "La fecha/hora usa atualizado_em; si está vacío, usa criado_em.",
+        "OP": "OP",
+        "Modelo": "Modelo",
+        "Model": "Modelo",
+        "Qtde": "Cant.",
+        "Qty": "Cant.",
+        "Início": "Inicio",
+        "Start": "Inicio",
+        "Fim": "Fin",
+        "End": "Fin",
+        "Status": "Estado",
+        "Progresso": "Progreso",
+        "Progress": "Progreso",
+        "Atualizado em": "Actualizado en",
+        "Updated at": "Actualizado en",
+        "Ordens Planejadas|title": "Órdenes Planificadas",
+        "Hora inicial inválida. Use o formato hh:mm.": "Hora inicial inválida. Use el formato hh:mm.",
+        "Hora final inválida. Use o formato hh:mm.": "Hora final inválida. Use el formato hh:mm.",
+        "Data inicial inválida. Use o formato dd/mm/aaaa.": "Fecha inicial inválida. Use el formato dd/mm/aaaa.",
+        "Data final inválida. Use o formato dd/mm/aaaa.": "Fecha final inválida. Use el formato dd/mm/aaaa.",
+        "O intervalo de data/hora está inválido.": "El rango de fecha/hora no es válido.",
+        "Erro ao carregar OPs: {erro}": "Error al cargar las órdenes planificadas: {erro}",
+        "Selecione uma OP para abrir na Nova Ordem.": "Seleccione una OP para abrir en Nueva Orden.",
+        "Não foi possível localizar a OP selecionada.": "No fue posible localizar la OP seleccionada.",
+        "Não foi possível localizar os dados da OP selecionada.": "No fue posible localizar los datos de la OP seleccionada.",
+        "Teste isolado: os dados da OP foram carregados.\nNo sistema completo, esta ação abrirá a página Nova Ordem.": "Prueba aislada: los datos de la OP fueron cargados.\nEn el sistema completo, esta acción abrirá la página Nueva Orden.",
+        "Calendário": "Calendario",
+        "Calendar": "Calendario",
+        "Limpar": "Limpiar",
+        "Clear": "Limpiar",
+        "Hoje": "Hoy",
+        "Today": "Hoy",
+        "Confirmar": "Confirmar",
+        "Confirm": "Confirmar",
+    },
+}
+
+_TREE_HEADINGS_V2 = {
+    "tree": {
+        "op": "OP",
+        "codigo": "Cód. Modelo",
+        "modelo": "Modelo",
+        "programacao": "Tempo",
+        "colecao": "Coleção",
+        "qtd": "Qtde",
+        "inicio": "Início",
+        "fim": "Fim",
+        "status": "Status",
+        "progresso": "Progresso",
+        "atualizado_em": "Atualizado em",
+    }
+}
+
+_PLACEHOLDERS_V2 = {
+    "filtro_codigo": "Código",
+    "filtro_modelo": "Descrição do modelo",
+    "filtro_data_de": "dd/mm/aaaa",
+    "filtro_data_ate": "dd/mm/aaaa",
+    "filtro_hora_de": "hh:mm",
+    "filtro_hora_ate": "hh:mm",
+}
+
+_COMBOS_V2 = {
+    "filtro_programacao": ["Todas", "Semanal", "Mensal", "Trimestral", "Semestral", "Coleção"],
+    "filtro_colecao": ["Todas"],
+}
+
+OrdensPlanejadasPage._TRANSLATIONS = _TRANSLATIONS_V2
+OrdensPlanejadasPage._TREE_HEADINGS = _TREE_HEADINGS_V2
+OrdensPlanejadasPage._PLACEHOLDERS = _PLACEHOLDERS_V2
+OrdensPlanejadasPage._COMBOS = _COMBOS_V2
+OrdensPlanejadasPage._TABS = []
+OrdensPlanejadasPage._t = _ml2_translate
+OrdensPlanejadasPage._t_list = _ml2_translate_list
+OrdensPlanejadasPage.refresh_texts = _ml2_refresh_texts
+OrdensPlanejadasPage.on_language_changed = _ml2_on_language_changed

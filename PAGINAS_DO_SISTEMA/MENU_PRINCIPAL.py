@@ -443,17 +443,60 @@ class ThemeManager:
                     widget.configure(fg_color=cor_fundo, border_color=cor_borda)
                     parar_recursao = False
                 elif isinstance(widget, ctk.CTkButton):
-                    widget.configure(
-                        border_width=0,
-                        bg_color="transparent",
-                        text_color=cor_texto,
-                        font=fonts["button"],
-                        corner_radius=getattr(widget, "corner_radius", 8),
-                        hover=False,
-                    )
-                    # FORÇA texto nunca mudar de cor no hover
-                    widget.bind("<Enter>", lambda e, w=widget, c=cor_texto: w.configure(text_color=c))
-                    widget.bind("<Leave>", lambda e, w=widget, c=cor_texto: w.configure(text_color=c))
+                    try:
+                        fg_atual = None
+                        hover_atual = None
+                        border_atual = None
+                        text_atual = None
+
+                        try:
+                            fg_atual = widget.cget("fg_color")
+                        except Exception:
+                            pass
+
+                        try:
+                            hover_atual = widget.cget("hover_color")
+                        except Exception:
+                            pass
+
+                        try:
+                            border_atual = widget.cget("border_color")
+                        except Exception:
+                            pass
+
+                        try:
+                            text_atual = widget.cget("text_color")
+                        except Exception:
+                            pass
+
+                        preservar_cores = getattr(widget, "_opera_preserve_colors", True)
+
+                        if preservar_cores:
+                            widget.configure(
+                                bg_color="transparent",
+                                text_color=text_atual if text_atual else cor_texto,
+                                font=fonts["button"],
+                                corner_radius=getattr(widget, "corner_radius", 8),
+                                fg_color=fg_atual,
+                                hover_color=hover_atual if hover_atual is not None else fg_atual,
+                                border_color=border_atual if border_atual is not None else cor_borda,
+                                hover=True,
+                            )
+                        else:
+                            widget.configure(
+                                border_width=0,
+                                bg_color="transparent",
+                                text_color=cor_texto,
+                                font=fonts["button"],
+                                corner_radius=getattr(widget, "corner_radius", 8),
+                                hover=False,
+                            )
+
+                        cor_texto_hover = text_atual if text_atual else cor_texto
+                        widget.bind("<Enter>", lambda e, w=widget, c=cor_texto_hover: w.configure(text_color=c))
+                        widget.bind("<Leave>", lambda e, w=widget, c=cor_texto_hover: w.configure(text_color=c))
+                    except Exception as e:
+                        _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkButton: {e}")
                     parar_recursao = True
                 elif isinstance(widget, ctk.CTkLabel):
                     widget.configure(
@@ -652,13 +695,11 @@ class ThemeManager:
         try:
             self._apply_palette_to_widget(self.app, palette, self.fonts)
             from PAGINAS_DO_SISTEMA.TEMAS import (
-                padronizar_botoes_container,
                 padronizar_treeviews_container,
                 remover_bordas_botoes_tema,
             )
             remover_bordas_botoes_tema(self.app)
             padronizar_treeviews_container(self.app)
-            padronizar_botoes_container(self.app)
         except Exception as e:
             _dprint(f"[Tema] Erro ao aplicar tema global: {e}")
 
@@ -673,10 +714,9 @@ class ThemeManager:
             _dprint("[Tema] Nenhuma paleta disponível para aplicar no widget.")
             return
         try:
-            from PAGINAS_DO_SISTEMA.TEMAS import padronizar_botoes_container, padronizar_treeviews_container
+            from PAGINAS_DO_SISTEMA.TEMAS import padronizar_treeviews_container
             self._apply_palette_to_widget(widget, palette, self.fonts)
             padronizar_treeviews_container(widget)
-            padronizar_botoes_container(widget)
             _dprint(f"[Tema] Tema '{self.current_theme_name}' aplicado ao widget {widget.__class__.__name__}.")
         except Exception as e:
             _dprint(f"[Tema] Não foi possível aplicar tema ao widget {widget}: {e}")
@@ -1593,7 +1633,7 @@ class OperaMenuApp(ctk.CTk):
                         self.open_page(pagina)
                         break
         except Exception as e:
-            _dprint(f"⚠️ Erro ao abrir Dashboard: {e}")
+            _dprint(f"⚠️ Erro ao abrir página inicial: {e}")
 
     def _smart_preload_pages(self):
         """Pré-carrega a última página usada sem bloquear a abertura inicial."""
@@ -2272,25 +2312,83 @@ class OperaMenuApp(ctk.CTk):
 
     def _change_language(self, selected_value=None):
         novo_idioma = selected_value if selected_value in self.SUPPORTED_LANGUAGES else None
+
         if novo_idioma is None:
             for codigo, nome in self.SUPPORTED_LANGUAGES.items():
                 if nome == selected_value:
                     novo_idioma = codigo
                     break
+
         if not novo_idioma:
             novo_idioma = "pt_BR"
-        if novo_idioma == getattr(self, "idioma_atual", "pt_BR"):
+
+        idioma_atual = getattr(self, "idioma_atual", "pt_BR")
+        pagina_atual = getattr(self, "current_page", None)
+        frame_atual = getattr(self, "_current_frame", None)
+        submenu_ativo = getattr(self, "_active_submenu", None)
+
+        if novo_idioma == idioma_atual:
             if hasattr(self, "language_status_label") and self.language_status_label.winfo_exists():
                 self.language_status_label.configure(text=self._get_language_display_name())
             return
+
         self.idioma_atual = novo_idioma
         self._save_language_preference()
-        self._clear_page_cache_except_current()
-        self._refresh_language_widgets()
-        self._refresh_current_page_language()
-        if getattr(self, "current_page", None) and hasattr(self, "title_label"):
-            self.title_label.configure(text=self._translate_page_name(self.current_page))
-        self._show_temporary_message(self._get_text("language_changed", language=self._get_language_display_name()))
+
+        try:
+            self.settings["language"] = novo_idioma
+            ConfigManager.save_settings(self.settings)
+        except Exception:
+            pass
+
+        try:
+            self._refresh_language_widgets()
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao atualizar widgets de idioma: {e}")
+
+        try:
+            if pagina_atual and hasattr(self, "title_label") and self.title_label.winfo_exists():
+                self.title_label.configure(text=self._translate_page_name(pagina_atual))
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao atualizar título da página: {e}")
+
+        try:
+            if pagina_atual:
+                if frame_atual and frame_atual.winfo_exists():
+                    try:
+                        frame_atual.place_forget()
+                    except Exception:
+                        pass
+
+                try:
+                    frame_cache = self._page_cache.get(pagina_atual)
+                    if frame_cache:
+                        try:
+                            frame_cache.destroy()
+                        except Exception:
+                            pass
+                        self._page_cache.pop(pagina_atual, None)
+                except Exception:
+                    pass
+
+                self._current_frame = None
+                self._page_loading = False
+                self.open_page(pagina_atual)
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao recarregar página atual no novo idioma: {e}")
+
+        try:
+            if submenu_ativo:
+                self._active_submenu = submenu_ativo
+            self._update_menu_buttons_colors()
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao restaurar submenu ativo: {e}")
+
+        try:
+            if hasattr(self, "language_status_label") and self.language_status_label.winfo_exists():
+                self.language_status_label.configure(text=self._get_language_display_name())
+        except Exception:
+            pass
 
     def _add_language_selector_to_topbar(self):
         if hasattr(self, "language_frame") and self.language_frame.winfo_exists():
@@ -2556,25 +2654,32 @@ class OperaMenuApp(ctk.CTk):
         try:
             if hasattr(self, "sidebar_title_label") and self.sidebar_title_label.winfo_exists():
                 self.sidebar_title_label.configure(text=self._get_text("system_title"))
+
             if hasattr(self, "sidebar_subtitle_label") and self.sidebar_subtitle_label.winfo_exists():
                 self.sidebar_subtitle_label.configure(text=self._get_text("main_menu"))
+
             if hasattr(self, "language_label") and self.language_label.winfo_exists():
                 self.language_label.configure(text=f"🌐 {self._get_text('language')}")
+
             if hasattr(self, "language_status_label") and self.language_status_label.winfo_exists():
                 self.language_status_label.configure(text=self._get_language_display_name())
+
             if hasattr(self, "language_var"):
                 self.language_var.set(self._get_language_display_name())
+
             if hasattr(self, "language_menu") and self.language_menu.winfo_exists():
                 self.language_menu.configure(values=list(self.SUPPORTED_LANGUAGES.values()))
+
             if hasattr(self, "user_info_label") and self.user_info_label.winfo_exists():
                 self._update_user_info_once()
+
             if hasattr(self, "current_page") and self.current_page and hasattr(self,
                                                                                "title_label") and self.title_label.winfo_exists():
                 self.title_label.configure(text=self._translate_page_name(self.current_page))
-            elif hasattr(self, "title_label") and self.title_label.winfo_exists():
-                self.title_label.configure(text=self._translate_page_name("Dashboard"))
+
             self._build_menu_content()
             self._update_menu_buttons_colors()
+
         except Exception as e:
             _dprint(f"⚠️ Erro ao atualizar widgets de idioma: {e}")
 

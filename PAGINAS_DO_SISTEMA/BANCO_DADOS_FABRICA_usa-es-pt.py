@@ -1920,3 +1920,263 @@ if __name__ == "__main__":
     gerenciador = GerenciadorBancoDados(sistema=root, frame=frame)
 
     root.mainloop()
+
+# =================== PATCH MULTILÍNGUE COMPLEMENTAR ===================
+
+def _bfd_extend_translations():
+    t = GerenciadorBancoDados.TRANSLATIONS
+    extra = {
+        'pt_BR': {
+            'connected_title': '✅ Conexão Estabelecida',
+            'create_table_title': 'Criar Nova Tabela',
+            'table_name': 'Nome da Tabela:',
+            'columns_name_type': 'Colunas (nome:tipo):',
+            'create': 'Criar',
+            'cancel': 'Cancelar',
+            'table_name_required': 'O nome da tabela é obrigatório',
+            'define_one_column': 'Defina pelo menos uma coluna',
+            'table_created_success': 'Tabela {nome} criada!',
+            'confirm': 'Confirmar',
+            'confirm_delete_table': 'Tem certeza que deseja excluir a tabela {nome}?\nTodos os dados serão perdidos!',
+            'table_deleted_success': 'Tabela {nome} excluída!',
+            'add_column_title': 'Adicionar Coluna',
+            'column_name': 'Nome da Coluna:',
+            'data_type': 'Tipo de Dados:',
+            'name_type_required': 'Nome e tipo são obrigatórios',
+            'column_added_success': "Coluna '{nome}' adicionada com sucesso!",
+            'rename_column_title': 'Renomear Coluna {nome}',
+            'new_name_for': "Novo nome para '{nome}':",
+            'name_cannot_be_empty': 'Nome não pode ser vazio',
+            'column_renamed_success': 'Coluna renomeada!',
+            'add_record_title': 'Adicionar Registro - {nome}',
+            'save': 'Salvar',
+            'record_added_success': 'Registro adicionado!',
+            'edit_record_title': 'Editar Registro - {nome}',
+            'record_updated_success': 'Registro atualizado!',
+            'could_not_get_table_info': 'Não foi possível obter informações da tabela',
+            'could_not_determine_ids': 'Não foi possível determinar os IDs dos registros selecionados.',
+            'records_deleted_success': '{total} registro(s) excluído(s) com sucesso!',
+            'save_as_csv': 'Salvar como CSV',
+            'data_exported_to': 'Dados exportados para:\n{arquivo}',
+            'sql_console_title': 'Console SQL Avançado — Banco Conectado',
+            'sql_console': '💻 Console SQL',
+            'ready': 'Pronto.',
+            'results': 'Resultados:',
+            'type_sql_command': 'Digite um comando SQL.',
+            'running': 'Executando...',
+            'execution_error': 'Erro de execução',
+            'save_script': '💾 Salvar',
+            'open_script': '📂 Abrir',
+            'export_csv': '📤 Exportar CSV',
+            'close': '❌ Fechar',
+            'no_results_available': 'Nenhum resultado disponível.',
+            'export_title': 'Exportar',
+            'saved_in': 'Salvo em {arquivo}',
+            'loaded_from': 'Carregado de {arquivo}',
+            'results_exported_to': 'Resultados exportados para:\n{arquivo}',
+            'execute_ctrl_enter': '▶ Executar (Ctrl+Enter)',
+            'admin_ops_title': 'Operações Administrativas Avançadas',
+            'admin_ops_header': '🔧 OPERAÇÕES ADMINISTRATIVAS',
+            'recreate_schema': '🔄 Recriar Schema',
+            'db_stats': '📊 Estatísticas do BD',
+            'view_connections': '🔍 Ver Conexões',
+            'quick_backup': '💾 Backup Rápido',
+            'manage_schemas': '🗃️ Gerenciar Schemas',
+            'manage_users': '👥 Gerenciar Usuários',
+            'connected_as_superadmin': '🔐 CONECTADO COMO SUPER ADMINISTRADOR',
+            'connected_without_admin': '⚠️ Conectado SEM privilégios de admin',
+            'database_and_user': 'Banco: {banco} | Usuário: {usuario}',
+        },
+        'en_US': {
+            'connected_title': '✅ Connection Established',
+            'create_table_title': 'Create New Table',
+            'table_name': 'Table Name:',
+            'columns_name_type': 'Columns (name:type):',
+            'create': 'Create',
+            'cancel': 'Cancel',
+            'table_name_required': 'The table name is required',
+            'define_one_column': 'Define at least one column',
+            'table_created_success': 'Table {nome} created!',
+            'confirm': 'Confirm',
+            'confirm_delete_table': 'Are you sure you want to delete table {nome}?\nAll data will be lost!',
+            'table_deleted_success': 'Table {nome} deleted!',
+            'add_column_title': 'Add Column',
+            'column_name': 'Column Name:',
+            'data_type': 'Data Type:',
+            'name_type_required': 'Name and type are required',
+            'column_added_success': "Column '{nome}' added successfully!",
+            'rename_column_title': 'Rename Column {nome}',
+            'new_name_for': "New name for '{nome}':",
+            'name_cannot_be_empty': 'Name cannot be empty',
+            'column_renamed_success': 'Column renamed!',
+            'add_record_title': 'Add Record - {nome}',
+            'save': 'Save',
+            'record_added_success': 'Record added!',
+            'edit_record_title': 'Edit Record - {nome}',
+            'record_updated_success': 'Record updated!',
+            'could_not_get_table_info': 'Could not obtain table information',
+            'could_not_determine_ids': 'Could not determine IDs of selected records.',
+            'records_deleted_success': '{total} record(s) deleted successfully!',
+            'save_as_csv': 'Save as CSV',
+            'data_exported_to': 'Data exported to:\n{arquivo}',
+            'sql_console_title': 'Advanced SQL Console — Connected Database',
+            'sql_console': '💻 SQL Console',
+            'ready': 'Ready.',
+            'results': 'Results:',
+            'type_sql_command': 'Enter an SQL command.',
+            'running': 'Running...',
+            'execution_error': 'Execution error',
+            'save_script': '💾 Save',
+            'open_script': '📂 Open',
+            'export_csv': '📤 Export CSV',
+            'close': '❌ Close',
+            'no_results_available': 'No results available.',
+            'export_title': 'Export',
+            'saved_in': 'Saved in {arquivo}',
+            'loaded_from': 'Loaded from {arquivo}',
+            'results_exported_to': 'Results exported to:\n{arquivo}',
+            'execute_ctrl_enter': '▶ Run (Ctrl+Enter)',
+            'admin_ops_title': 'Advanced Administrative Operations',
+            'admin_ops_header': '🔧 ADMINISTRATIVE OPERATIONS',
+            'recreate_schema': '🔄 Recreate Schema',
+            'db_stats': '📊 DB Statistics',
+            'view_connections': '🔍 View Connections',
+            'quick_backup': '💾 Quick Backup',
+            'manage_schemas': '🗃️ Manage Schemas',
+            'manage_users': '👥 Manage Users',
+            'connected_as_superadmin': '🔐 CONNECTED AS SUPER ADMINISTRATOR',
+            'connected_without_admin': '⚠️ Connected WITHOUT admin privileges',
+            'database_and_user': 'Database: {banco} | User: {usuario}',
+        },
+        'es_ES': {
+            'connected_title': '✅ Conexión Establecida',
+            'create_table_title': 'Crear Nueva Tabla',
+            'table_name': 'Nombre de la Tabla:',
+            'columns_name_type': 'Columnas (nombre:tipo):',
+            'create': 'Crear',
+            'cancel': 'Cancelar',
+            'table_name_required': 'El nombre de la tabla es obligatorio',
+            'define_one_column': 'Defina al menos una columna',
+            'table_created_success': 'Tabla {nome} creada!',
+            'confirm': 'Confirmar',
+            'confirm_delete_table': '¿Está seguro de que desea eliminar la tabla {nome}?\n¡Todos los datos se perderán!',
+            'table_deleted_success': 'Tabla {nome} eliminada!',
+            'add_column_title': 'Agregar Columna',
+            'column_name': 'Nombre de la Columna:',
+            'data_type': 'Tipo de Datos:',
+            'name_type_required': 'Nombre y tipo son obligatorios',
+            'column_added_success': "Columna '{nome}' agregada correctamente!",
+            'rename_column_title': 'Renombrar Columna {nome}',
+            'new_name_for': "Nuevo nombre para '{nome}':",
+            'name_cannot_be_empty': 'El nombre no puede estar vacío',
+            'column_renamed_success': '¡Columna renombrada!',
+            'add_record_title': 'Agregar Registro - {nome}',
+            'save': 'Guardar',
+            'record_added_success': '¡Registro agregado!',
+            'edit_record_title': 'Editar Registro - {nome}',
+            'record_updated_success': '¡Registro actualizado!',
+            'could_not_get_table_info': 'No fue posible obtener información de la tabla',
+            'could_not_determine_ids': 'No fue posible determinar los IDs de los registros seleccionados.',
+            'records_deleted_success': '¡{total} registro(s) eliminados correctamente!',
+            'save_as_csv': 'Guardar como CSV',
+            'data_exported_to': 'Datos exportados a:\n{arquivo}',
+            'sql_console_title': 'Consola SQL Avanzada — Base Conectada',
+            'sql_console': '💻 Consola SQL',
+            'ready': 'Listo.',
+            'results': 'Resultados:',
+            'type_sql_command': 'Ingrese un comando SQL.',
+            'running': 'Ejecutando...',
+            'execution_error': 'Error de ejecución',
+            'save_script': '💾 Guardar',
+            'open_script': '📂 Abrir',
+            'export_csv': '📤 Exportar CSV',
+            'close': '❌ Cerrar',
+            'no_results_available': 'No hay resultados disponibles.',
+            'export_title': 'Exportar',
+            'saved_in': 'Guardado en {arquivo}',
+            'loaded_from': 'Cargado desde {arquivo}',
+            'results_exported_to': 'Resultados exportados a:\n{arquivo}',
+            'execute_ctrl_enter': '▶ Ejecutar (Ctrl+Enter)',
+            'admin_ops_title': 'Operaciones Administrativas Avanzadas',
+            'admin_ops_header': '🔧 OPERACIONES ADMINISTRATIVAS',
+            'recreate_schema': '🔄 Recrear Schema',
+            'db_stats': '📊 Estadísticas de la BD',
+            'view_connections': '🔍 Ver Conexiones',
+            'quick_backup': '💾 Respaldo Rápido',
+            'manage_schemas': '🗃️ Gestionar Schemas',
+            'manage_users': '👥 Gestionar Usuarios',
+            'connected_as_superadmin': '🔐 CONECTADO COMO SUPER ADMINISTRADOR',
+            'connected_without_admin': '⚠️ Conectado SIN privilegios de admin',
+            'database_and_user': 'Base: {banco} | Usuario: {usuario}',
+        },
+    }
+    for lang, vals in extra.items():
+        t.setdefault(lang, {}).update(vals)
+
+_bfd_extend_translations()
+
+_old_mostrar_status_conexao = GerenciadorBancoDados.mostrar_status_conexao
+
+def _bfd_mostrar_status_conexao(self, mensagem):
+    try:
+        self.cursor.execute("SELECT current_database(), current_user, version()")
+        info = self.cursor.fetchone()
+        top = ctk.CTkToplevel(self.root)
+        top.title(self._get_text('connected_title'))
+        top.geometry('500x200')
+        top.resizable(False, False)
+        top.attributes('-topmost', True)
+        x = self.root.winfo_x() + (self.root.winfo_width() // 2) - 250
+        y = self.root.winfo_y() + (self.root.winfo_height() // 2) - 100
+        top.geometry(f'+{x}+{y}')
+        frame = ctk.CTkFrame(top, fg_color='transparent')
+        frame.pack(pady=20, padx=20, fill='both', expand=True)
+        ctk.CTkLabel(frame, text=mensagem, font=('Arial', 14, 'bold'), text_color='red').pack(pady=10)
+        ctk.CTkLabel(frame, text=self._get_text('database_and_user', banco=info['current_database'], usuario=info['current_user']), font=('Arial', 12)).pack(pady=5)
+        progress = ctk.CTkProgressBar(frame, width=400, progress_color='red')
+        progress.pack(pady=10)
+        progress.set(0)
+        def animar_progresso():
+            for i in range(1, 101):
+                top.after(i * 5, lambda i=i: progress.set(i / 100))
+            top.after(600, top.destroy)
+        animar_progresso()
+    except Exception:
+        return _old_mostrar_status_conexao(self, mensagem)
+
+GerenciadorBancoDados.mostrar_status_conexao = _bfd_mostrar_status_conexao
+
+_old_conectar = GerenciadorBancoDados.conectar_como_admin
+
+def _bfd_conectar(self):
+    try:
+        if self.conn:
+            try:
+                self.cursor.close(); self.conn.close()
+            except Exception:
+                pass
+        self.conn = db.get_connection()
+        self.cursor = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        self.cursor.execute("SELECT current_user, (SELECT rolsuper FROM pg_roles WHERE rolname = current_user) as is_superuser")
+        user_info = self.cursor.fetchone()
+        is_admin = user_info['is_superuser'] if user_info else False
+        if is_admin:
+            self.logger.info('Conectado com privilégios de SUPER ADMIN')
+            self.mostrar_status_conexao(self._get_text('connected_as_superadmin'))
+        else:
+            self.logger.warning('Conectado mas SEM privilégios administrativos')
+            self.mostrar_status_conexao(self._get_text('connected_without_admin'))
+        if not self.tree:
+            self.tree = ttk.Treeview(self.tree_frame, selectmode='extended')
+            style = ttk.Style()
+            style.configure('Treeview', rowheight=25, font=('Arial', 12))
+            style.configure('Treeview.Heading', font=('Arial', 12, 'bold'))
+            self.tree.pack(fill='both', expand=True)
+        self.atualizar_lista_tabelas()
+    except Exception as e:
+        self.logger.error('Erro ao conectar como administrador', detalhes={'erro': str(e)})
+        messagebox.showerror(self._get_text('connection_error'), self._get_text('connection_failed', erro=e), parent=self.root)
+        self.conn = None
+        self.cursor = None
+
+GerenciadorBancoDados.conectar_como_admin = _bfd_conectar

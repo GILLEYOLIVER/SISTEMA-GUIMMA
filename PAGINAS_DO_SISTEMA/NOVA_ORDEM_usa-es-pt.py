@@ -51,12 +51,12 @@ if not logger.handlers:
 
 # ===================== Acesso ao PostgreSQL =====================
 try:
-    from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
+    from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as _BANCO_DE_DADOS_PG
 
-    try:
-        from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import PASTA_ORDENS_CORTE
-    except Exception:
-        PASTA_ORDENS_CORTE = None
+    get_conn = _BANCO_DE_DADOS_PG.get_conn
+    get_schema = _BANCO_DE_DADOS_PG.get_schema
+    require_ready = _BANCO_DE_DADOS_PG.require_ready
+    PASTA_ORDENS_CORTE = getattr(_BANCO_DE_DADOS_PG, "PASTA_ORDENS_CORTE", None)
 except Exception as e:
     print(f"⚠️ Módulo de banco não disponível: {e}")
 
@@ -411,12 +411,12 @@ class OrdemCorte(ctk.CTkFrame):
 
         self.modelos_combo = ctk.CTkComboBox(
             busca,
-            values=["Carregando..."],
+            values=[self._ml_translate("Carregando...")],
             width=360,
             height=28,
             command=self._on_combo_modelo
         )
-        self.modelos_combo.set("Selecione um modelo")
+        self.modelos_combo.set(self._ml_translate("Selecione um modelo"))
         self.modelos_combo.pack(side="left", padx=(0, 0), fill="x", expand=True)
 
         # ===================== DADOS DO CABEÇALHO (ALINHADOS / 2 LINHAS) =====================
@@ -563,7 +563,7 @@ class OrdemCorte(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(grade_frame, fg_color=self.cor_fundo)
         header_frame.pack(fill="x", pady=3)
 
-        tamanhos = ["TAMANHOS", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "CONSUMO PEÇA"]
+        tamanhos = [self._t("TAMANHOS"), "PP", "P", "M", "G", "GG", "G1", "G2", "G3", self._t("CONSUMO PEÇA")]
         for i, tamanho in enumerate(tamanhos):
             largura = 70 if i > 0 else 100
             ctk.CTkLabel(
@@ -752,7 +752,7 @@ class OrdemCorte(ctk.CTkFrame):
             # Sem usuário, não carrega nada
             if hasattr(self, "combo_grade"):
                 self.combo_grade.configure(values=[])
-                self.combo_grade.set("Nenhuma preferência")
+                self.combo_grade.set(self._ml_translate("Nenhuma preferência"))
             return
 
         try:
@@ -769,15 +769,15 @@ class OrdemCorte(ctk.CTkFrame):
             if hasattr(self, "combo_grade"):
                 self.combo_grade.configure(values=valores)
                 if not valores:
-                    self.combo_grade.set("Nenhuma preferência")
+                    self.combo_grade.set(self._ml_translate("Nenhuma preferência"))
                 else:
-                    self.combo_grade.set("Selecione uma preferência")
+                    self.combo_grade.set(self._ml_translate("Selecione uma preferência"))
         except Exception as e:
             print("⚠️ Erro ao carregar preferências de grade:", e)
             logger.error(f"Erro ao carregar preferências de grade: {e}")
             if hasattr(self, "combo_grade"):
-                self.combo_grade.configure(values=["Erro ao carregar"])
-                self.combo_grade.set("Erro ao carregar")
+                self.combo_grade.configure(values=[self._ml_translate("Erro ao carregar")])
+                self.combo_grade.set(self._ml_translate("Erro ao carregar"))
 
     def salvar_preferencia_grade(self):
         """Salva a grade atual (porcentagens PP–G3) como uma preferência nomeada do usuário."""
@@ -788,8 +788,8 @@ class OrdemCorte(ctk.CTkFrame):
 
         if not getattr(self, "usuario_id", None):
             messagebox.showwarning(
-                "Usuário não definido",
-                "Não foi possível identificar o usuário logado para salvar a preferência."
+                self._ml_translate("Usuário não definido"),
+                self._ml_translate("Não foi possível identificar o usuário logado para salvar a preferência.")
             )
             return
 
@@ -797,8 +797,8 @@ class OrdemCorte(ctk.CTkFrame):
         try:
             from customtkinter import CTkInputDialog
             dialog = CTkInputDialog(
-                text="Informe um nome para esta preferência de grade:",
-                title="Salvar preferência de grade"
+                text=self._ml_translate("Informe um nome para esta preferência de grade:"),
+                title=self._ml_translate("Salvar preferência de grade")
             )
             # Centralizar a janela
             dialog.update_idletasks()
@@ -812,8 +812,8 @@ class OrdemCorte(ctk.CTkFrame):
             # Fallback caso CTkInputDialog não esteja disponível
             import tkinter.simpledialog as simpledialog
             nome = simpledialog.askstring(
-                "Salvar preferência de grade",
-                "Informe um nome para esta preferência de grade:"
+                self._ml_translate("Salvar preferência de grade"),
+                self._ml_translate("Informe um nome para esta preferência de grade:")
             )
 
         if not nome:
@@ -875,16 +875,16 @@ class OrdemCorte(ctk.CTkFrame):
                 self.combo_grade.set(nome)
 
             messagebox.showinfo(
-                "Preferência salva",
-                f"A preferência de grade '{nome}' foi salva com sucesso!\n\nAs porcentagens serão automaticamente preenchidas quando você selecionar esta preferência."
+                self._ml_translate("Preferência salva"),
+                self._ml_translate("A preferência de grade '{nome}' foi salva com sucesso!\n\nAs porcentagens serão automaticamente preenchidas quando você selecionar esta preferência.").format(nome=nome)
             )
 
         except Exception as e:
             # Log detalhado do erro
             logger.error(f"Erro ao salvar preferência de grade: {e}")
             messagebox.showerror(
-                "Erro ao salvar preferência",
-                f"Falha ao salvar preferência de grade:\n{str(e)[:200]}"
+                self._ml_translate("Erro ao salvar preferência"),
+                self._ml_translate("Falha ao salvar preferência de grade:\n{erro}").format(erro=str(e)[:200])
             )
 
     def excluir_preferencia_grade(self):
@@ -894,8 +894,8 @@ class OrdemCorte(ctk.CTkFrame):
             return
 
         if messagebox.askyesno(
-                "Excluir preferência",
-                f"Tem certeza que deseja excluir a preferência de grade '{nome}'?"
+                self._ml_translate("Excluir preferência"),
+                self._ml_translate("Tem certeza que deseja excluir a preferência de grade '{nome}'?").format(nome=nome)
         ):
             try:
                 ensure_grade_pref_table()
@@ -911,11 +911,11 @@ class OrdemCorte(ctk.CTkFrame):
                 if hasattr(self, "combo_grade"):
                     self.combo_grade.set("")
                 self.carregar_preferencias_grade()
-                messagebox.showinfo("Sucesso", f"Preferência '{nome}' excluída com sucesso.")
+                messagebox.showinfo(self._ml_translate("Sucesso"), self._ml_translate("Preferência '{nome}' excluída com sucesso.").format(nome=nome))
             except Exception as e:
                 messagebox.showerror(
-                    "Erro ao excluir preferência",
-                    f"Não foi possível excluir a preferência '{nome}':\n{e}"
+                    self._ml_translate("Erro ao excluir preferência"),
+                    self._ml_translate("Não foi possível excluir a preferência '{nome}':\n{erro}").format(nome=nome, erro=e)
                 )
 
     def criar_secao_tecidos(self):
@@ -1088,9 +1088,9 @@ class OrdemCorte(ctk.CTkFrame):
                 valores.append(f"{codigo} - {desc}".strip(" -"))
 
             self.modelos_combo.configure(values=valores or ["(nenhum modelo)"])
-            self.modelos_combo.set("Selecione um modelo")
+            self.modelos_combo.set(self._ml_translate("Selecione um modelo"))
         except Exception as e:
-            messagebox.showerror("Erro no Banco de Dados", f"Erro ao carregar modelos:\n{e}")
+            messagebox.showerror(self._ml_translate("Erro no Banco de Dados"), self._ml_translate("Erro ao carregar modelos:\n{erro}").format(erro=e))
 
     def _on_combo_modelo(self, escolha: str):
         """Quando o usuário seleciona um item no ComboBox."""
@@ -1148,7 +1148,7 @@ class OrdemCorte(ctk.CTkFrame):
             """, (codigo,))
 
             if not row:
-                messagebox.showinfo("Resultado", "Modelo não encontrado.")
+                messagebox.showinfo(self._ml_translate("Resultado"), self._ml_translate("Modelo não encontrado."))
                 return
 
             # Processa os resultados
@@ -1176,7 +1176,7 @@ class OrdemCorte(ctk.CTkFrame):
                 self.preencher_porcentagens_do_banco(row[idx_porcentagens:])
 
         except Exception as e:
-            messagebox.showerror("Erro no Banco de Dados", f"Erro ao buscar modelo:\n{e}")
+            messagebox.showerror(self._ml_translate("Erro no Banco de Dados"), self._ml_translate("Erro ao buscar modelo:\n{erro}").format(erro=e))
 
     def preencher_porcentagens_do_banco(self, valores_porcentagem):
         """Preenche os campos de porcentagem com valores do banco."""
@@ -1319,7 +1319,7 @@ class OrdemCorte(ctk.CTkFrame):
         """
         termo = self.busca_entry.get().strip()
         if not termo:
-            messagebox.showwarning("Atenção", "Digite um código ou descrição para buscar.")
+            messagebox.showwarning(self._ml_translate("Atenção"), self._ml_translate("Digite um código ou descrição para buscar."))
             return
 
         try:
@@ -1368,7 +1368,7 @@ class OrdemCorte(ctk.CTkFrame):
             """, tuple(params))
 
             if not row:
-                messagebox.showinfo("Resultado", "Nenhum modelo encontrado com esse termo.")
+                messagebox.showinfo(self._ml_translate("Resultado"), self._ml_translate("Nenhum modelo encontrado com esse termo."))
                 return
 
             # Processa resultados
@@ -1405,7 +1405,7 @@ class OrdemCorte(ctk.CTkFrame):
                 pass
 
         except Exception as e:
-            messagebox.showerror("Erro no Banco de Dados", f"Erro ao buscar modelo:\n{e}")
+            messagebox.showerror(self._ml_translate("Erro no Banco de Dados"), self._ml_translate("Erro ao buscar modelo:\n{erro}").format(erro=e))
 
     def atualizar_campos_grade(self):
         """Atualiza os campos de porcentagem conforme a grade disponível"""
@@ -1427,7 +1427,7 @@ class OrdemCorte(ctk.CTkFrame):
                         campo.delete(0, "end")
                         campo.configure(state="disabled")
         except Exception as e:
-            messagebox.showerror("Erro na Interface", f"Falha ao atualizar campos:\n{str(e)}")
+            messagebox.showerror(self._ml_translate("Erro na Interface"), self._ml_translate("Falha ao atualizar campos:\n{erro}").format(erro=str(e)))
 
     # =================== PDF / Impressão ===================
     def previsualizar_impressao(self):
@@ -1502,14 +1502,14 @@ class OrdemCorte(ctk.CTkFrame):
         for i, titulo in enumerate(col_titulos):
             c.rect(col_x[i], y_tamanhos - altura_linha, col_w, altura_linha)
             c.drawCentredString(col_x[i] + col_w // 2, y_tamanhos - altura_linha + 3, titulo)
-        c.drawCentredString(margem_esq + 32, y_tamanhos - altura_linha + 3, "TAMANHOS")
+        c.drawCentredString(margem_esq + 32, y_tamanhos - altura_linha + 3, self._t("TAMANHOS"))
 
         consumo_x = col_x[-1] + col_w + 15
         consumo_w = 80
         consumo_h = altura_linha * 2
         c.rect(consumo_x, y_tamanhos - consumo_h, consumo_w, consumo_h)
         c.setFont("Helvetica-Bold", 7)
-        c.drawCentredString(consumo_x + consumo_w / 2, y_tamanhos - altura_linha + 2, "CONSUMO PEÇA")
+        c.drawCentredString(consumo_x + consumo_w / 2, y_tamanhos - altura_linha + 2, self._t("CONSUMO PEÇA"))
         c.setFont("Helvetica", 8)
         c.drawCentredString(consumo_x + consumo_w / 2, y_tamanhos - consumo_h + 3,
                             self.campos_grade["consumo_peca"].get())
@@ -1882,7 +1882,7 @@ class OrdemCorte(ctk.CTkFrame):
             if ordem_id:
                 self._registrar_movimento_planejamento(ordem_id)
 
-            messagebox.showinfo("Sucesso", "Ordem de corte salva com sucesso!")
+            messagebox.showinfo(self._ml_translate("Sucesso"), self._ml_translate("Ordem de corte salva com sucesso!"))
 
             deseja_imprimir = messagebox.askyesno(
                 "Imprimir ordem",
@@ -1894,7 +1894,7 @@ class OrdemCorte(ctk.CTkFrame):
             self.limpar_campos()
 
         except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao salvar ordem:\n{e}")
+            messagebox.showerror(self._ml_translate("Erro"), self._ml_translate("Erro ao salvar ordem:\n{erro}").format(erro=e))
 
     def limpar_campos(self):
         self.codigo_entry.delete(0, "end")
@@ -2013,7 +2013,7 @@ if __name__ == "__main__":
 
         if not ok:
             try:
-                messagebox.showwarning("Banco de Dados", f"Problema ao conectar ao PostgreSQL:\n{msg}")
+                messagebox.showwarning(_ml_translate_any("Banco de Dados"), _ml_translate_any("Problema ao conectar ao PostgreSQL:\n{erro}").format(erro=msg))
             except Exception:
                 print(f"Problema ao conectar ao PostgreSQL: {msg}")
 
@@ -2044,11 +2044,27 @@ except Exception:
     _ctk_ml = None
     _ttk_ml = None
 
+_ml_active_instance = None
+_ml_original_messagebox = {
+    "showinfo": getattr(messagebox, "showinfo", None),
+    "showwarning": getattr(messagebox, "showwarning", None),
+    "showerror": getattr(messagebox, "showerror", None),
+    "askyesno": getattr(messagebox, "askyesno", None),
+}
+
+
 def _ml_get_lang(self):
     return getattr(getattr(self, 'sistema', None), 'idioma_atual', 'pt_BR') or 'pt_BR'
 
+
+def _ml_set_active_instance(self):
+    global _ml_active_instance
+    _ml_active_instance = self
+    return self
+
+
 def _ml_translate(self, text):
-    if not text:
+    if text is None or not isinstance(text, str) or not text:
         return text
     lang = _ml_get_lang(self)
     mapping = getattr(self.__class__, '_TRANSLATIONS', {})
@@ -2061,8 +2077,20 @@ def _ml_translate(self, text):
             return current.get(canon, canon)
     return text
 
+
+def _ml_translate_any(text):
+    inst = _ml_active_instance
+    if inst is None:
+        return text
+    try:
+        return inst._ml_translate(text)
+    except Exception:
+        return text
+
+
 def _ml_translate_list(self, values):
     return [self._ml_translate(v) for v in values]
+
 
 def _ml_walk(widget):
     try:
@@ -2072,38 +2100,87 @@ def _ml_walk(widget):
     except Exception:
         return
 
+
+def _ml_patch_messageboxes():
+    def _wrap(name):
+        original = _ml_original_messagebox.get(name)
+        if original is None:
+            return None
+        def _inner(title, message=None, *args, **kwargs):
+            return original(_ml_translate_any(title), _ml_translate_any(message), *args, **kwargs)
+        return _inner
+    for _name in ('showinfo', 'showwarning', 'showerror', 'askyesno'):
+        _wrapped = _wrap(_name)
+        if _wrapped is not None:
+            setattr(messagebox, _name, _wrapped)
+
+
+_ml_patch_messageboxes()
+
+try:
+    _orig_ctk_input_dialog_init = _ctk_ml.CTkInputDialog.__init__ if _ctk_ml else None
+except Exception:
+    _orig_ctk_input_dialog_init = None
+
+if _orig_ctk_input_dialog_init is not None and not getattr(_ctk_ml.CTkInputDialog, '_ml_patched', False):
+    def _ml_input_dialog_init(self, *args, **kwargs):
+        if 'text' in kwargs:
+            kwargs['text'] = _ml_translate_any(kwargs['text'])
+        if 'title' in kwargs:
+            kwargs['title'] = _ml_translate_any(kwargs['title'])
+        return _orig_ctk_input_dialog_init(self, *args, **kwargs)
+    _ctk_ml.CTkInputDialog.__init__ = _ml_input_dialog_init
+    _ctk_ml.CTkInputDialog._ml_patched = True
+
+
 def _ml_refresh_texts(self):
     if _ctk_ml is None:
         return
+    _ml_set_active_instance(self)
     for w in _ml_walk(self):
         try:
             if hasattr(w, 'cget'):
+                for opt in ('text', 'placeholder_text'):
+                    try:
+                        val = w.cget(opt)
+                    except Exception:
+                        continue
+                    if isinstance(val, str) and val:
+                        new_val = self._ml_translate(val)
+                        if opt == 'text' and new_val == val and (val.startswith('DATA ') or val.startswith('DATE ') or val.startswith('FECHA ')):
+                            sufixo = val.split(' ', 1)[1] if ' ' in val else ''
+                            new_val = f"{self._ml_translate('DATA')} {sufixo}".rstrip()
+                        if new_val != val:
+                            try:
+                                w.configure(**{opt: new_val})
+                            except Exception:
+                                pass
                 try:
-                    txt = w.cget('text')
+                    vals = w.cget('values')
                 except Exception:
-                    txt = None
-                if isinstance(txt, str) and txt:
-                    new = self._ml_translate(txt)
-                    if new != txt:
+                    vals = None
+                if isinstance(vals, (list, tuple)) and vals:
+                    new_vals = [self._ml_translate(v) for v in vals]
+                    if list(new_vals) != list(vals):
                         try:
-                            w.configure(text=new)
+                            w.configure(values=new_vals)
                         except Exception:
                             pass
+            if hasattr(w, 'get') and hasattr(w, 'set'):
                 try:
-                    ph = w.cget('placeholder_text')
+                    current_value = w.get()
                 except Exception:
-                    ph = None
-                if isinstance(ph, str) and ph:
-                    new_ph = self._ml_translate(ph)
-                    if new_ph != ph:
+                    current_value = None
+                if isinstance(current_value, str) and current_value:
+                    new_current = self._ml_translate(current_value)
+                    if new_current != current_value:
                         try:
-                            w.configure(placeholder_text=new_ph)
+                            w.set(new_current)
                         except Exception:
                             pass
         except Exception:
             pass
 
-    # placeholders por atributo
     for attr, base in getattr(self.__class__, '_PLACEHOLDERS', {}).items():
         obj = getattr(self, attr, None)
         if obj is not None:
@@ -2112,7 +2189,6 @@ def _ml_refresh_texts(self):
             except Exception:
                 pass
 
-    # combos / option menus / segmented
     for attr, base_values in getattr(self.__class__, '_COMBOS', {}).items():
         obj = getattr(self, attr, None)
         if obj is None:
@@ -2121,48 +2197,30 @@ def _ml_refresh_texts(self):
             current_value = obj.get()
         except Exception:
             current_value = None
-        new_values = self._ml_translate_list(base_values)
         try:
-            obj.configure(values=new_values)
+            obj.configure(values=self._ml_translate_list(base_values))
         except Exception:
             pass
         if current_value:
             try:
                 obj.set(self._ml_translate(current_value))
             except Exception:
-                try:
-                    obj.set(self._ml_translate(base_values[0]))
-                except Exception:
-                    pass
-
-    # tree headings
-    for attr, cols in getattr(self.__class__, '_TREE_HEADINGS', {}).items():
-        tree = getattr(self, attr, None)
-        if tree is None:
-            continue
-        try:
-            for col, label in cols.items():
-                tree.heading(col, text=self._ml_translate(label))
-        except Exception:
-            pass
-
-    # tabview texts
-    tab_names = getattr(self.__class__, '_TABS', [])
-    for w in _ml_walk(self):
-        if _ctk_ml and isinstance(w, _ctk_ml.CTkTabview):
-            try:
-                buttons = getattr(w._segmented_button, '_buttons_dict', {})
-                for original in tab_names:
-                    btn = buttons.get(original)
-                    if btn is not None:
-                        btn.configure(text=self._ml_translate(original))
-            except Exception:
                 pass
 
-    # page title class attr
     try:
-        if hasattr(self.__class__, 'PAGE_TITLE'):
-            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
+        if hasattr(self, 'lbl_data_topo') and self.lbl_data_topo.winfo_exists():
+            self.lbl_data_topo.configure(text=f"{self._ml_translate('DATA')} {datetime.now().strftime('%d/%m/%Y')}")
+    except Exception:
+        pass
+
+    try:
+        master = getattr(self, 'master', None)
+        if master is not None and hasattr(master, 'title'):
+            current_title = master.title()
+            if current_title:
+                translated_title = self._ml_translate(current_title)
+                if translated_title != current_title:
+                    master.title(translated_title)
     except Exception:
         pass
 
@@ -2171,23 +2229,295 @@ def _ml_refresh_texts(self):
     except Exception:
         pass
 
+
 def _ml_on_language_changed(self, *_args, **_kwargs):
+    _ml_set_active_instance(self)
     try:
         self.refresh_texts()
     except Exception:
-        try:
-            _ml_refresh_texts(self)
-        except Exception:
-            pass
+        _ml_refresh_texts(self)
 
-_TRANSLATIONS = {
- 'pt_BR': {'Nova Ordem':'Nova Ordem','New Order':'Nova Ordem','Ordem de Corte':'Ordem de Corte','Cut Order':'Ordem de Corte','Salvar':'Salvar','Save':'Salvar','Imprimir':'Imprimir','Print':'Imprimir','Modelo':'Modelo','Model':'Modelo','Descrição':'Descrição','Description':'Descrição','Quantidade':'Quantidade','Quantity':'Quantidade','Grade':'Grade','Size Mix':'Grade','Observações':'Observações','Notes':'Observações','Gerar PDF':'Gerar PDF','Generate PDF':'Gerar PDF'},
- 'en_US': {'Nova Ordem':'New Order','New Order':'New Order','Ordem de Corte':'Cut Order','Cut Order':'Cut Order','Salvar':'Save','Save':'Save','Imprimir':'Print','Print':'Print','Modelo':'Model','Model':'Model','Descrição':'Description','Description':'Description','Quantidade':'Quantity','Quantity':'Quantity','Grade':'Size Mix','Size Mix':'Size Mix','Observações':'Notes','Notes':'Notes','Gerar PDF':'Generate PDF','Generate PDF':'Generate PDF'},
- 'es_ES': {'Nova Ordem':'Nueva Orden','New Order':'Nueva Orden','Ordem de Corte':'Orden de Corte','Cut Order':'Orden de Corte','Salvar':'Guardar','Save':'Guardar','Imprimir':'Imprimir','Print':'Imprimir','Modelo':'Modelo','Model':'Modelo','Descrição':'Descripción','Description':'Descripción','Quantidade':'Cantidad','Quantity':'Cantidad','Grade':'Tallas','Size Mix':'Tallas','Observações':'Observaciones','Notes':'Observaciones','Gerar PDF':'Generar PDF','Generate PDF':'Generar PDF'}
-}
+
+def _ml_set_idioma(self, idioma):
+    try:
+        if hasattr(self, 'sistema') and self.sistema is not None:
+            self.sistema.idioma_atual = idioma
+    except Exception:
+        pass
+    _ml_set_active_instance(self)
+    self.on_language_changed(idioma)
+
+
+_TRANSLATIONS = {'pt_BR': {'Nova Ordem': 'Nova Ordem',
+           'New Order': 'Nova Ordem',
+           'Nueva Orden': 'Nova Ordem',
+           'Ordem de Corte': 'Ordem de Corte',
+           'Cut Order': 'Ordem de Corte',
+           'Orden de Corte': 'Ordem de Corte',
+           'ORDEM DE CORTE': 'ORDEM DE CORTE',
+           'DATA': 'DATA',
+           'Buscar Modelo:': 'Buscar Modelo:',
+           'Código ou descrição...': 'Código ou descrição...',
+           'Buscar': 'Buscar',
+           'Carregando...': 'Carregando...',
+           'Selecione um modelo': 'Selecione um modelo',
+           'CÓDIGO:': 'CÓDIGO:',
+           'MODELO:': 'MODELO:',
+           'CORTADOR:': 'CORTADOR:',
+           'AUXILIAR:': 'AUXILIAR:',
+           'FINALIZAÇÃO:': 'FINALIZAÇÃO:',
+           'Imprimir Pré-visualização': 'Imprimir Pré-visualização',
+           'Salvar Ordem': 'Salvar Ordem',
+           'GRADE DE CORTE': 'GRADE DE CORTE',
+           'Preferência de grade:': 'Preferência de grade:',
+           'Salvar grade como preferência': 'Salvar grade como preferência',
+           'Excluir preferência': 'Excluir preferência',
+           'TAMANHOS': 'TAMANHOS',
+           'CONSUMO PEÇA': 'CONSUMO PEÇA',
+           'PORCENTAGEM': 'PORCENTAGEM',
+           'QUANTIDADE DESEJADA:': 'QUANTIDADE DESEJADA:',
+           'Ex: 500': 'Ex: 500',
+           'DIAS ESTIMADOS:': 'DIAS ESTIMADOS:',
+           'Ex: 3': 'Ex: 3',
+           'HORAS ESTIMADAS:': 'HORAS ESTIMADAS:',
+           'Ex: 6': 'Ex: 6',
+           'Nenhuma preferência': 'Nenhuma preferência',
+           'Selecione uma preferência': 'Selecione uma preferência',
+           'Erro ao carregar': 'Erro ao carregar',
+           'Usuário não definido': 'Usuário não definido',
+           'Não foi possível identificar o usuário logado para salvar a preferência.': 'Não foi possível identificar o usuário logado para salvar a preferência.',
+           'Informe um nome para esta preferência de grade:': 'Informe um nome para esta preferência de grade:',
+           'Salvar preferência de grade': 'Salvar preferência de grade',
+           'Preferência salva': 'Preferência salva',
+           "A preferência de grade '{nome}' foi salva com sucesso!\n\nAs porcentagens serão automaticamente preenchidas quando você selecionar esta preferência.": "A preferência de grade '{nome}' "
+                                                                                                                                                                   'foi salva com sucesso!\n'
+                                                                                                                                                                   '\n'
+                                                                                                                                                                   'As porcentagens serão '
+                                                                                                                                                                   'automaticamente preenchidas quando '
+                                                                                                                                                                   'você selecionar esta preferência.',
+           'Erro ao salvar preferência': 'Erro ao salvar preferência',
+           'Falha ao salvar preferência de grade:\n{erro}': 'Falha ao salvar preferência de grade:\n{erro}',
+           'Sucesso': 'Sucesso',
+           "Tem certeza que deseja excluir a preferência de grade '{nome}'?": "Tem certeza que deseja excluir a preferência de grade '{nome}'?",
+           "Preferência '{nome}' excluída com sucesso.": "Preferência '{nome}' excluída com sucesso.",
+           'Erro ao excluir preferência': 'Erro ao excluir preferência',
+           "Não foi possível excluir a preferência '{nome}':\n{erro}": "Não foi possível excluir a preferência '{nome}':\n{erro}",
+           'TECIDO 1': 'TECIDO 1',
+           'TECIDO 2': 'TECIDO 2',
+           'TECIDO 3': 'TECIDO 3',
+           'FORRO': 'FORRO',
+           'CÓDIGO': 'CÓDIGO',
+           'NOME': 'NOME',
+           'COMPOSIÇÃO': 'COMPOSIÇÃO',
+           'LARGURA/MTS': 'LARGURA/MTS',
+           '(nenhum modelo)': '(nenhum modelo)',
+           'Erro no Banco de Dados': 'Erro no Banco de Dados',
+           'Erro ao carregar modelos:\n{erro}': 'Erro ao carregar modelos:\n{erro}',
+           'Resultado': 'Resultado',
+           'Modelo não encontrado.': 'Modelo não encontrado.',
+           'Erro ao buscar modelo:\n{erro}': 'Erro ao buscar modelo:\n{erro}',
+           'Atenção': 'Atenção',
+           'Digite um código ou descrição para buscar.': 'Digite um código ou descrição para buscar.',
+           'Nenhum modelo encontrado com esse termo.': 'Nenhum modelo encontrado com esse termo.',
+           'Erro na Interface': 'Erro na Interface',
+           'Falha ao atualizar campos:\n{erro}': 'Falha ao atualizar campos:\n{erro}',
+           'Ordem de corte salva com sucesso!': 'Ordem de corte salva com sucesso!',
+           'Imprimir ordem': 'Imprimir ordem',
+           'Deseja imprimir ordem agora?': 'Deseja imprimir ordem agora?',
+           'Erro': 'Erro',
+           'Erro ao salvar ordem:\n{erro}': 'Erro ao salvar ordem:\n{erro}',
+           'Banco de Dados': 'Banco de Dados',
+           'Problema ao conectar ao PostgreSQL:\n{erro}': 'Problema ao conectar ao PostgreSQL:\n{erro}',
+           'Modelo': 'Modelo',
+           'Descrição': 'Descrição',
+           'Quantidade': 'Quantidade',
+           'Grade': 'Grade',
+           'Observações': 'Observações',
+           'Gerar PDF': 'Gerar PDF'},
+ 'en_US': {'Nova Ordem': 'New Order',
+           'New Order': 'New Order',
+           'Nueva Orden': 'New Order',
+           'Ordem de Corte': 'Cut Order',
+           'Cut Order': 'Cut Order',
+           'Orden de Corte': 'Cut Order',
+           'ORDEM DE CORTE': 'CUT ORDER',
+           'DATA': 'DATE',
+           'Buscar Modelo:': 'Search Model:',
+           'Código ou descrição...': 'Code or description...',
+           'Buscar': 'Search',
+           'Carregando...': 'Loading...',
+           'Selecione um modelo': 'Select a model',
+           'CÓDIGO:': 'CODE:',
+           'MODELO:': 'MODEL:',
+           'CORTADOR:': 'CUTTER:',
+           'AUXILIAR:': 'ASSISTANT:',
+           'FINALIZAÇÃO:': 'FINISH DATE:',
+           'Imprimir Pré-visualização': 'Print Preview',
+           'Salvar Ordem': 'Save Order',
+           'GRADE DE CORTE': 'CUT SIZE MIX',
+           'Preferência de grade:': 'Size mix preference:',
+           'Salvar grade como preferência': 'Save size mix as preference',
+           'Excluir preferência': 'Delete preference',
+           'TAMANHOS': 'SIZES',
+           'CONSUMO PEÇA': 'PIECE CONSUMPTION',
+           'PORCENTAGEM': 'PERCENTAGE',
+           'QUANTIDADE DESEJADA:': 'DESIRED QUANTITY:',
+           'Ex: 500': 'Ex: 500',
+           'DIAS ESTIMADOS:': 'ESTIMATED DAYS:',
+           'Ex: 3': 'Ex: 3',
+           'HORAS ESTIMADAS:': 'ESTIMATED HOURS:',
+           'Ex: 6': 'Ex: 6',
+           'Nenhuma preferência': 'No preference',
+           'Selecione uma preferência': 'Select a preference',
+           'Erro ao carregar': 'Error loading',
+           'Usuário não definido': 'User not defined',
+           'Não foi possível identificar o usuário logado para salvar a preferência.': 'Could not identify the logged-in user to save the preference.',
+           'Informe um nome para esta preferência de grade:': 'Enter a name for this size mix preference:',
+           'Salvar preferência de grade': 'Save size mix preference',
+           'Preferência salva': 'Preference saved',
+           "A preferência de grade '{nome}' foi salva com sucesso!\n\nAs porcentagens serão automaticamente preenchidas quando você selecionar esta preferência.": "The size mix preference '{nome}' "
+                                                                                                                                                                   'was saved successfully!\n'
+                                                                                                                                                                   '\n'
+                                                                                                                                                                   'Percentages will be filled '
+                                                                                                                                                                   'automatically when you select this '
+                                                                                                                                                                   'preference.',
+           'Erro ao salvar preferência': 'Error saving preference',
+           'Falha ao salvar preferência de grade:\n{erro}': 'Failed to save size mix preference:\n{erro}',
+           'Sucesso': 'Success',
+           "Tem certeza que deseja excluir a preferência de grade '{nome}'?": "Are you sure you want to delete the size mix preference '{nome}'?",
+           "Preferência '{nome}' excluída com sucesso.": "Preference '{nome}' deleted successfully.",
+           'Erro ao excluir preferência': 'Error deleting preference',
+           "Não foi possível excluir a preferência '{nome}':\n{erro}": "Could not delete preference '{nome}':\n{erro}",
+           'TECIDO 1': 'FABRIC 1',
+           'TECIDO 2': 'FABRIC 2',
+           'TECIDO 3': 'FABRIC 3',
+           'FORRO': 'LINING',
+           'CÓDIGO': 'CODE',
+           'NOME': 'NAME',
+           'COMPOSIÇÃO': 'COMPOSITION',
+           'LARGURA/MTS': 'WIDTH/METERS',
+           '(nenhum modelo)': '(no model)',
+           'Erro no Banco de Dados': 'Database Error',
+           'Erro ao carregar modelos:\n{erro}': 'Error loading models:\n{erro}',
+           'Resultado': 'Result',
+           'Modelo não encontrado.': 'Model not found.',
+           'Erro ao buscar modelo:\n{erro}': 'Error searching model:\n{erro}',
+           'Atenção': 'Attention',
+           'Digite um código ou descrição para buscar.': 'Enter a code or description to search.',
+           'Nenhum modelo encontrado com esse termo.': 'No model found with this term.',
+           'Erro na Interface': 'Interface Error',
+           'Falha ao atualizar campos:\n{erro}': 'Failed to update fields:\n{erro}',
+           'Ordem de corte salva com sucesso!': 'Cut order saved successfully!',
+           'Imprimir ordem': 'Print order',
+           'Deseja imprimir ordem agora?': 'Do you want to print the order now?',
+           'Erro': 'Error',
+           'Erro ao salvar ordem:\n{erro}': 'Error saving order:\n{erro}',
+           'Banco de Dados': 'Database',
+           'Problema ao conectar ao PostgreSQL:\n{erro}': 'Problem connecting to PostgreSQL:\n{erro}',
+           'Modelo': 'Model',
+           'Descrição': 'Description',
+           'Quantidade': 'Quantity',
+           'Grade': 'Size Mix',
+           'Observações': 'Notes',
+           'Gerar PDF': 'Generate PDF'},
+ 'es_ES': {'Nova Ordem': 'Nueva Orden',
+           'New Order': 'Nueva Orden',
+           'Nueva Orden': 'Nueva Orden',
+           'Ordem de Corte': 'Orden de Corte',
+           'Cut Order': 'Orden de Corte',
+           'Orden de Corte': 'Orden de Corte',
+           'ORDEM DE CORTE': 'ORDEN DE CORTE',
+           'DATA': 'FECHA',
+           'Buscar Modelo:': 'Buscar Modelo:',
+           'Código ou descrição...': 'Código o descripción...',
+           'Buscar': 'Buscar',
+           'Carregando...': 'Cargando...',
+           'Selecione um modelo': 'Seleccione un modelo',
+           'CÓDIGO:': 'CÓDIGO:',
+           'MODELO:': 'MODELO:',
+           'CORTADOR:': 'CORTADOR:',
+           'AUXILIAR:': 'AUXILIAR:',
+           'FINALIZAÇÃO:': 'FINALIZACIÓN:',
+           'Imprimir Pré-visualização': 'Imprimir vista previa',
+           'Salvar Ordem': 'Guardar Orden',
+           'GRADE DE CORTE': 'TABLA DE CORTE',
+           'Preferência de grade:': 'Preferencia de tallas:',
+           'Salvar grade como preferência': 'Guardar tallas como preferencia',
+           'Excluir preferência': 'Eliminar preferencia',
+           'TAMANHOS': 'TALLAS',
+           'CONSUMO PEÇA': 'CONSUMO POR PIEZA',
+           'PORCENTAGEM': 'PORCENTAJE',
+           'QUANTIDADE DESEJADA:': 'CANTIDAD DESEADA:',
+           'Ex: 500': 'Ej: 500',
+           'DIAS ESTIMADOS:': 'DÍAS ESTIMADOS:',
+           'Ex: 3': 'Ej: 3',
+           'HORAS ESTIMADAS:': 'HORAS ESTIMADAS:',
+           'Ex: 6': 'Ej: 6',
+           'Nenhuma preferência': 'Ninguna preferencia',
+           'Selecione uma preferência': 'Seleccione una preferencia',
+           'Erro ao carregar': 'Error al cargar',
+           'Usuário não definido': 'Usuario no definido',
+           'Não foi possível identificar o usuário logado para salvar a preferência.': 'No fue posible identificar al usuario conectado para guardar la preferencia.',
+           'Informe um nome para esta preferência de grade:': 'Ingrese un nombre para esta preferencia de tallas:',
+           'Salvar preferência de grade': 'Guardar preferencia de tallas',
+           'Preferência salva': 'Preferencia guardada',
+           "A preferência de grade '{nome}' foi salva com sucesso!\n\nAs porcentagens serão automaticamente preenchidas quando você selecionar esta preferência.": "¡La preferencia de tallas '{nome}' "
+                                                                                                                                                                   'se guardó correctamente!\n'
+                                                                                                                                                                   '\n'
+                                                                                                                                                                   'Los porcentajes se completarán '
+                                                                                                                                                                   'automáticamente cuando seleccione '
+                                                                                                                                                                   'esta preferencia.',
+           'Erro ao salvar preferência': 'Error al guardar preferencia',
+           'Falha ao salvar preferência de grade:\n{erro}': 'Error al guardar la preferencia de tallas:\n{erro}',
+           'Sucesso': 'Éxito',
+           "Tem certeza que deseja excluir a preferência de grade '{nome}'?": "¿Está seguro de que desea eliminar la preferencia de tallas '{nome}'?",
+           "Preferência '{nome}' excluída com sucesso.": "La preferencia '{nome}' fue eliminada correctamente.",
+           'Erro ao excluir preferência': 'Error al eliminar preferencia',
+           "Não foi possível excluir a preferência '{nome}':\n{erro}": "No fue posible eliminar la preferencia '{nome}':\n{erro}",
+           'TECIDO 1': 'TELA 1',
+           'TECIDO 2': 'TELA 2',
+           'TECIDO 3': 'TELA 3',
+           'FORRO': 'FORRO',
+           'CÓDIGO': 'CÓDIGO',
+           'NOME': 'NOMBRE',
+           'COMPOSIÇÃO': 'COMPOSICIÓN',
+           'LARGURA/MTS': 'ANCHO/MTS',
+           '(nenhum modelo)': '(ningún modelo)',
+           'Erro no Banco de Dados': 'Error en la Base de Datos',
+           'Erro ao carregar modelos:\n{erro}': 'Error al cargar modelos:\n{erro}',
+           'Resultado': 'Resultado',
+           'Modelo não encontrado.': 'Modelo no encontrado.',
+           'Erro ao buscar modelo:\n{erro}': 'Error al buscar modelo:\n{erro}',
+           'Atenção': 'Atención',
+           'Digite um código ou descrição para buscar.': 'Escriba un código o descripción para buscar.',
+           'Nenhum modelo encontrado com esse termo.': 'No se encontró ningún modelo con ese término.',
+           'Erro na Interface': 'Error en la Interfaz',
+           'Falha ao atualizar campos:\n{erro}': 'Error al actualizar campos:\n{erro}',
+           'Ordem de corte salva com sucesso!': '¡Orden de corte guardada correctamente!',
+           'Imprimir ordem': 'Imprimir orden',
+           'Deseja imprimir ordem agora?': '¿Desea imprimir la orden ahora?',
+           'Erro': 'Error',
+           'Erro ao salvar ordem:\n{erro}': 'Error al guardar la orden:\n{erro}',
+           'Banco de Dados': 'Base de Datos',
+           'Problema ao conectar ao PostgreSQL:\n{erro}': 'Problema al conectar con PostgreSQL:\n{erro}',
+           'Modelo': 'Modelo',
+           'Descrição': 'Descripción',
+           'Quantidade': 'Cantidad',
+           'Grade': 'Tallas',
+           'Observações': 'Observaciones',
+           'Gerar PDF': 'Generar PDF'}}
 _TREE_HEADINGS = {}
-_PLACEHOLDERS = {}
-_COMBOS = {}
+_PLACEHOLDERS = {
+    'busca_entry': 'Código ou descrição...',
+    'data_final_entry': '__/__/____',
+    'quantidade_entry': 'Ex: 500',
+    'dias_estimados_entry': 'Ex: 3',
+    'horas_estimadas_entry': 'Ex: 6',
+}
+_COMBOS = {
+    'modelos_combo': ['Carregando...', 'Selecione um modelo', '(nenhum modelo)'],
+    'combo_grade': ['Nenhuma preferência', 'Selecione uma preferência', 'Erro ao carregar'],
+}
 _TABS = []
 
 OrdemCorte._TRANSLATIONS = _TRANSLATIONS
@@ -2200,3 +2530,6 @@ OrdemCorte._ml_translate = _ml_translate
 OrdemCorte._ml_translate_list = _ml_translate_list
 OrdemCorte.refresh_texts = _ml_refresh_texts
 OrdemCorte.on_language_changed = _ml_on_language_changed
+OrdemCorte.set_idioma = _ml_set_idioma
+
+OrdemCorte._t = _ml_translate
