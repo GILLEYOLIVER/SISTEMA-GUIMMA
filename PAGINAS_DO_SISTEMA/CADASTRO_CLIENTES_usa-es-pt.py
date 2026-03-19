@@ -546,3 +546,21 @@ class ClientesPage(ctk.CTkFrame):
                     widget.insert(0, data.get(key) or "")
         except Exception as exc:
             messagebox.showerror(self._get_text("clients_title"), self._get_text("load_error", erro=exc))
+
+# --- AUTO_PAGE_TRANSLATIONS (gerado automaticamente) ---
+from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support as _attach_i18n_support
+
+AUTO_PAGE_TRANSLATIONS = {
+    "ClientesPage": {
+        "pt_BR": {"title": "Clientes", "Atualizar": "Atualizar", "Filtrar": "Filtrar", "Salvar": "Salvar", "Cancelar": "Cancelar"},
+        "en_US": {"title": "Clientes", "Atualizar": "Refresh", "Filtrar": "Filter", "Salvar": "Save", "Cancelar": "Cancel"},
+        "es_ES": {"title": "Clientes", "Atualizar": "Actualizar", "Filtrar": "Filtrar", "Salvar": "Guardar", "Cancelar": "Cancelar"},
+    },
+}
+
+for _cls_name, _map in AUTO_PAGE_TRANSLATIONS.items():
+    _cls = globals().get(_cls_name)
+    if isinstance(_cls, type):
+        if not hasattr(_cls, "TRANSLATIONS") and not hasattr(_cls, "_TRANSLATIONS"):
+            _cls.TRANSLATIONS = _map
+        _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))

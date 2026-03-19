@@ -724,3 +724,21 @@ if __name__ == "__main__":
     pagina = SaidaEstoqueApp(app, sistema=SistemaMock())
     pagina.pack(fill="both", expand=True)
     app.mainloop()
+
+# --- AUTO_PAGE_TRANSLATIONS (gerado automaticamente) ---
+from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support as _attach_i18n_support
+
+AUTO_PAGE_TRANSLATIONS = {
+    "SaidaEstoqueApp": {
+        "pt_BR": {"title": "Saida Estoque", "Atualizar": "Atualizar", "Filtrar": "Filtrar", "Salvar": "Salvar", "Cancelar": "Cancelar"},
+        "en_US": {"title": "Saida Estoque", "Atualizar": "Refresh", "Filtrar": "Filter", "Salvar": "Save", "Cancelar": "Cancel"},
+        "es_ES": {"title": "Saida Estoque", "Atualizar": "Actualizar", "Filtrar": "Filtrar", "Salvar": "Guardar", "Cancelar": "Cancelar"},
+    },
+}
+
+for _cls_name, _map in AUTO_PAGE_TRANSLATIONS.items():
+    _cls = globals().get(_cls_name)
+    if isinstance(_cls, type):
+        if not hasattr(_cls, "TRANSLATIONS") and not hasattr(_cls, "_TRANSLATIONS"):
+            _cls.TRANSLATIONS = _map
+        _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))
