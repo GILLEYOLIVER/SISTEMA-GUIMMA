@@ -1054,9 +1054,55 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Adaptador global de idioma (injeção automática) ---
+# --- Suporte trilíngue individual desta página ---
+OrdensCorteImpressao_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Reimprimir Ordens de Corte",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Reprint Cut Orders",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Reimprimir Órdenes de Corte",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
+
+
+def _apply_ordenscorteimpressao_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in OrdensCorteImpressao_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
+        try:
+            self.titulo.configure(text=OrdensCorteImpressao_TRANSLATIONS[idioma]["title"])
+        except Exception:
+            pass
+
+
 try:
     from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    attach_i18n_support(OrdensCorteImpressao)
+    OrdensCorteImpressao.TRANSLATIONS = OrdensCorteImpressao_TRANSLATIONS
+    if not hasattr(OrdensCorteImpressao, "apply_page_translations"):
+        OrdensCorteImpressao.apply_page_translations = _apply_ordenscorteimpressao_translations
+    attach_i18n_support(OrdensCorteImpressao, OrdensCorteImpressao_TRANSLATIONS)
 except Exception:
     pass

@@ -3255,50 +3255,83 @@ class OperaMenuApp(ctk.CTk):
         if not page_class:
             raise RuntimeError(f"Classe não encontrada em {file_path}")
         last_error = None
+        try:
+            from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
+        except Exception:
+            attach_i18n_support = None
+
+        def _finalize_frame(frame_obj):
+            """Padroniza integração da página com host e i18n global."""
+            if frame_obj is None:
+                return frame_obj
+            try:
+                if hasattr(frame_obj, "sistema"):
+                    frame_obj.sistema = self
+                if hasattr(frame_obj, "app"):
+                    frame_obj.app = self
+                if hasattr(frame_obj, "host"):
+                    frame_obj.host = self
+            except Exception:
+                pass
+            if callable(attach_i18n_support):
+                try:
+                    attach_i18n_support(frame_obj.__class__)
+                except Exception:
+                    pass
+            try:
+                if hasattr(frame_obj, "set_idioma"):
+                    frame_obj.set_idioma(getattr(self, "idioma_atual", "pt_BR"))
+                elif hasattr(frame_obj, "on_language_changed"):
+                    frame_obj.on_language_changed(getattr(self, "idioma_atual", "pt_BR"))
+                elif hasattr(frame_obj, "refresh_texts"):
+                    frame_obj.refresh_texts()
+            except Exception:
+                pass
+            return frame_obj
 
         # 1) padrão principal do sistema
         try:
-            return page_class(master=self.content, sistema=self)
+            return _finalize_frame(page_class(master=self.content, sistema=self))
         except Exception as e:
             last_error = e
 
         # 2) algumas páginas usam "app"
         try:
-            return page_class(master=self.content, app=self)
+            return _finalize_frame(page_class(master=self.content, app=self))
         except Exception as e:
             last_error = e
 
         # 3) algumas páginas antigas usam "host"
         try:
-            return page_class(master=self.content, host=self)
+            return _finalize_frame(page_class(master=self.content, host=self))
         except Exception as e:
             last_error = e
 
         # 4) algumas páginas antigas usam "parent" em vez de "master"
         try:
-            return page_class(self.content, sistema=self)
+            return _finalize_frame(page_class(self.content, sistema=self))
         except Exception as e:
             last_error = e
 
         # 5) fallback ainda mais compatível
         try:
-            return page_class(self.content, app=self)
+            return _finalize_frame(page_class(self.content, app=self))
         except Exception as e:
             last_error = e
 
         try:
-            return page_class(self.content, host=self)
+            return _finalize_frame(page_class(self.content, host=self))
         except Exception as e:
             last_error = e
 
         # 6) sem referência ao sistema
         try:
-            return page_class(master=self.content)
+            return _finalize_frame(page_class(master=self.content))
         except Exception as e:
             last_error = e
 
         try:
-            return page_class(self.content)
+            return _finalize_frame(page_class(self.content))
         except Exception as e:
             last_error = e
 

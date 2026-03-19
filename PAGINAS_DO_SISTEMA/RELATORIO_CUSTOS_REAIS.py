@@ -564,10 +564,55 @@ if __name__ == "__main__":
     page.pack(fill="both", expand=True)
     app.mainloop()
 
+# --- Suporte trilíngue individual desta página ---
+RelatorioCustosReaisPage_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Custos Reais",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Actual Costs",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Costos Reales",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
 
-# --- Adaptador global de idioma (injeção automática) ---
+
+def _apply_relatoriocustosreaispage_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in RelatorioCustosReaisPage_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
+        try:
+            self.titulo.configure(text=RelatorioCustosReaisPage_TRANSLATIONS[idioma]["title"])
+        except Exception:
+            pass
+
+
 try:
     from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    attach_i18n_support(RelatorioCustosReaisPage)
+    RelatorioCustosReaisPage.TRANSLATIONS = RelatorioCustosReaisPage_TRANSLATIONS
+    if not hasattr(RelatorioCustosReaisPage, "apply_page_translations"):
+        RelatorioCustosReaisPage.apply_page_translations = _apply_relatoriocustosreaispage_translations
+    attach_i18n_support(RelatorioCustosReaisPage, RelatorioCustosReaisPage_TRANSLATIONS)
 except Exception:
     pass

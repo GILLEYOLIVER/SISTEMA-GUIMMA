@@ -2553,9 +2553,55 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Adaptador global de idioma (injeção automática) ---
+# --- Suporte trilíngue individual desta página ---
+AdvancedStockReport_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Relatórios de Estoque",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Stock Reports",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Reportes de Inventario",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
+
+
+def _apply_advancedstockreport_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in AdvancedStockReport_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
+        try:
+            self.titulo.configure(text=AdvancedStockReport_TRANSLATIONS[idioma]["title"])
+        except Exception:
+            pass
+
+
 try:
     from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    attach_i18n_support(AdvancedStockReport)
+    AdvancedStockReport.TRANSLATIONS = AdvancedStockReport_TRANSLATIONS
+    if not hasattr(AdvancedStockReport, "apply_page_translations"):
+        AdvancedStockReport.apply_page_translations = _apply_advancedstockreport_translations
+    attach_i18n_support(AdvancedStockReport, AdvancedStockReport_TRANSLATIONS)
 except Exception:
     pass

@@ -447,9 +447,55 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Adaptador global de idioma (injeção automática) ---
+# --- Suporte trilíngue individual desta página ---
+RelatorioModelosProduzidosPage_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Modelos Produzidos",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Produced Models",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Modelos Producidos",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
+
+
+def _apply_relatoriomodelosproduzidospage_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in RelatorioModelosProduzidosPage_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
+        try:
+            self.titulo.configure(text=RelatorioModelosProduzidosPage_TRANSLATIONS[idioma]["title"])
+        except Exception:
+            pass
+
+
 try:
     from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    attach_i18n_support(RelatorioModelosProduzidosPage)
+    RelatorioModelosProduzidosPage.TRANSLATIONS = RelatorioModelosProduzidosPage_TRANSLATIONS
+    if not hasattr(RelatorioModelosProduzidosPage, "apply_page_translations"):
+        RelatorioModelosProduzidosPage.apply_page_translations = _apply_relatoriomodelosproduzidospage_translations
+    attach_i18n_support(RelatorioModelosProduzidosPage, RelatorioModelosProduzidosPage_TRANSLATIONS)
 except Exception:
     pass
