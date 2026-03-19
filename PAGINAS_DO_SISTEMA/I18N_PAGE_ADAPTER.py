@@ -15,65 +15,71 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
-COMMON_PAGE_TRANSLATIONS = {
-    "pt_BR": {
-        "Atualizar": "Atualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpar",
-        "Exportar": "Exportar",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-        "Pesquisar": "Pesquisar",
-        "Data": "Data",
-        "Início": "Início",
-        "Fim": "Fim",
-        "Status": "Status",
-        "Modelo": "Modelo",
-        "Descrição": "Descrição",
-        "Código": "Código",
-        "Quantidade": "Quantidade",
-        "Valor": "Valor",
-        "Total": "Total",
-    },
-    "en_US": {
-        "Atualizar": "Refresh",
-        "Filtrar": "Filter",
-        "Limpar": "Clear",
-        "Exportar": "Export",
-        "Imprimir": "Print",
-        "Buscar": "Search",
-        "Pesquisar": "Search",
-        "Data": "Date",
-        "Início": "Start",
-        "Fim": "End",
-        "Status": "Status",
-        "Modelo": "Model",
-        "Descrição": "Description",
-        "Código": "Code",
-        "Quantidade": "Quantity",
-        "Valor": "Value",
-        "Total": "Total",
-    },
-    "es_ES": {
-        "Atualizar": "Actualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpiar",
-        "Exportar": "Exportar",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-        "Pesquisar": "Buscar",
-        "Data": "Fecha",
-        "Início": "Inicio",
-        "Fim": "Fin",
-        "Status": "Estado",
-        "Modelo": "Modelo",
-        "Descrição": "Descripción",
-        "Código": "Código",
-        "Quantidade": "Cantidad",
-        "Valor": "Valor",
-        "Total": "Total",
-    },
-}
+_TERM_TRIPLETS = [
+    ("Atualizar", "Refresh", "Actualizar"),
+    ("Filtrar", "Filter", "Filtrar"),
+    ("Limpar", "Clear", "Limpiar"),
+    ("Exportar", "Export", "Exportar"),
+    ("Exportar PDF", "Export PDF", "Exportar PDF"),
+    ("Imprimir", "Print", "Imprimir"),
+    ("Buscar", "Search", "Buscar"),
+    ("Pesquisar", "Search", "Buscar"),
+    ("Pesquisar Ordem", "Search Order", "Buscar Orden"),
+    ("Data", "Date", "Fecha"),
+    ("Data de", "Date from", "Fecha desde"),
+    ("Data até", "Date to", "Fecha hasta"),
+    ("Início", "Start", "Inicio"),
+    ("Fim", "End", "Fin"),
+    ("Status", "Status", "Estado"),
+    ("Modelo", "Model", "Modelo"),
+    ("Descrição", "Description", "Descripción"),
+    ("Código", "Code", "Código"),
+    ("Quantidade", "Quantity", "Cantidad"),
+    ("Valor", "Value", "Valor"),
+    ("Total", "Total", "Total"),
+    ("Fornecedor", "Supplier", "Proveedor"),
+    ("Entrega Prevista", "Expected Delivery", "Entrega Prevista"),
+    ("Observações", "Notes", "Observaciones"),
+    ("Salvar", "Save", "Guardar"),
+    ("Cancelar", "Cancel", "Cancelar"),
+    ("Novo", "New", "Nuevo"),
+    ("Aprovar", "Approve", "Aprobar"),
+    ("Receber", "Receive", "Recibir"),
+    ("Compras", "Purchases", "Compras"),
+    ("Consultar Ordens", "Consult Orders", "Consultar Órdenes"),
+    ("Cadastrar Corte", "Register Cut", "Registrar Corte"),
+    ("Planejamento", "Planning", "Planificación"),
+    ("Ordens Planejadas", "Planned Orders", "Órdenes Planificadas"),
+    ("Controle de Mão de Obra", "Labor Control", "Control de Mano de Obra"),
+    ("Registro Acabamento", "Finishing Record", "Registro de Acabado"),
+    ("Pagamento de Serviços", "Service Payments", "Pago de Servicios"),
+    ("Recibos de Pagamentos", "Payment Receipts", "Recibos de Pago"),
+    ("Custos Reais", "Actual Costs", "Costos Reales"),
+    ("Relatórios", "Reports", "Reportes"),
+    ("Temas", "Themes", "Temas"),
+    ("Usuários", "Users", "Usuarios"),
+    ("Nº Ordem", "Order No.", "Nº Orden"),
+    ("N° Ordem", "Order No.", "N° Orden"),
+    ("Comprimento", "Length", "Longitud"),
+    ("Largura", "Width", "Ancho"),
+    ("Cortador", "Cutter", "Cortador"),
+    ("Auxiliar", "Assistant", "Auxiliar"),
+    ("Composição", "Composition", "Composición"),
+]
+
+
+def _build_common_map():
+    maps = {"pt_BR": {}, "en_US": {}, "es_ES": {}}
+    for pt, en, es in _TERM_TRIPLETS:
+        variants = {pt, en, es}
+        for v in variants:
+            maps["pt_BR"][v] = pt
+            maps["en_US"][v] = en
+            maps["es_ES"][v] = es
+    return maps
+
+
+COMMON_PAGE_TRANSLATIONS = _build_common_map()
 
 
 def _language_of(owner) -> str:
@@ -148,6 +154,25 @@ def _translate_widget_tree(root, translate_fn):
                     if nt != ht:
                         widget.heading(col, text=nt)
             except Exception:
+                    pass
+
+        if isinstance(widget, ttk.Notebook):
+            try:
+                for tab_id in widget.tabs():
+                    current = widget.tab(tab_id, "text")
+                    new_text = _translate(current)
+                    if new_text != current:
+                        widget.tab(tab_id, text=new_text)
+            except Exception:
+                pass
+
+        if isinstance(widget, (tk.Toplevel, tk.Tk)):
+            try:
+                title = widget.title()
+                new_title = _translate(title)
+                if new_title != title:
+                    widget.title(new_title)
+            except Exception:
                 pass
 
         if isinstance(widget, tk.Menu):
@@ -217,4 +242,3 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
     page_cls.refresh_texts = _refresh_texts
     page_cls.set_idioma = getattr(page_cls, "set_idioma", _set_idioma)
     page_cls.on_language_changed = getattr(page_cls, "on_language_changed", _set_idioma)
-

@@ -14,7 +14,26 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from PAGINAS_DO_SISTEMA.NOVA_ORDEM import OrdemCorte
+try:
+    import importlib.util as _importlib_util
+    from pathlib import Path as _Path
+
+    _nova_ordem_path = _Path(__file__).with_name("NOVA_ORDEM_usa-es-pt.py")
+    if _nova_ordem_path.exists():
+        _spec_no = _importlib_util.spec_from_file_location("opera_nova_ordem_i18n", str(_nova_ordem_path))
+        if _spec_no and _spec_no.loader:
+            _mod_no = _importlib_util.module_from_spec(_spec_no)
+            _spec_no.loader.exec_module(_mod_no)
+            OrdemCorte = getattr(_mod_no, "OrdemCorte", None)
+        else:
+            OrdemCorte = None
+    else:
+        from PAGINAS_DO_SISTEMA.NOVA_ORDEM import OrdemCorte  # compat legado
+except Exception:
+    try:
+        from PAGINAS_DO_SISTEMA.NOVA_ORDEM import OrdemCorte
+    except Exception:
+        OrdemCorte = None
 import json
 from datetime import date, datetime
 
@@ -800,6 +819,10 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         dos dados salvos em ordem_corte_ficha.
         """
         try:
+            if OrdemCorte is None:
+                raise RuntimeError(
+                    "Módulo de Nova Ordem indisponível (NOVA_ORDEM_usa-es-pt.py / NOVA_ORDEM.py)."
+                )
             # Janela oculta só para gerar o PDF
             dummy = ctk.CTk()
             dummy.withdraw()
