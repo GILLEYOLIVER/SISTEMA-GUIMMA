@@ -304,9 +304,55 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Adaptador global de idioma (injeção automática) ---
+# --- Suporte trilíngue individual desta página ---
+RelatorioServicosExternosPage_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Serviços Externos",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "External Services",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Servicios Externos",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
+
+
+def _apply_relatorioservicosexternospage_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in RelatorioServicosExternosPage_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
+        try:
+            self.titulo.configure(text=RelatorioServicosExternosPage_TRANSLATIONS[idioma]["title"])
+        except Exception:
+            pass
+
+
 try:
     from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    attach_i18n_support(RelatorioServicosExternosPage)
+    RelatorioServicosExternosPage.TRANSLATIONS = RelatorioServicosExternosPage_TRANSLATIONS
+    if not hasattr(RelatorioServicosExternosPage, "apply_page_translations"):
+        RelatorioServicosExternosPage.apply_page_translations = _apply_relatorioservicosexternospage_translations
+    attach_i18n_support(RelatorioServicosExternosPage, RelatorioServicosExternosPage_TRANSLATIONS)
 except Exception:
     pass

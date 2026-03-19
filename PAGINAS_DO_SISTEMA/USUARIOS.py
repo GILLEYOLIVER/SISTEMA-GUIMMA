@@ -5183,9 +5183,55 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Adaptador global de idioma (injeção automática) ---
+# --- Suporte trilíngue individual desta página ---
+UsuariosPage_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Usuários",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Users",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Usuarios",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
+
+
+def _apply_usuariospage_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in UsuariosPage_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
+        try:
+            self.titulo.configure(text=UsuariosPage_TRANSLATIONS[idioma]["title"])
+        except Exception:
+            pass
+
+
 try:
     from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    attach_i18n_support(UsuariosPage)
+    UsuariosPage.TRANSLATIONS = UsuariosPage_TRANSLATIONS
+    if not hasattr(UsuariosPage, "apply_page_translations"):
+        UsuariosPage.apply_page_translations = _apply_usuariospage_translations
+    attach_i18n_support(UsuariosPage, UsuariosPage_TRANSLATIONS)
 except Exception:
     pass

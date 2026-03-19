@@ -1650,9 +1650,55 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Adaptador global de idioma (injeção automática) ---
+# --- Suporte trilíngue individual desta página ---
+RetrabalhoDefeitosPage_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Retrabalho de Defeitos",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Defect Rework",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Retrabajo de Defectos",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
+
+
+def _apply_retrabalhodefeitospage_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in RetrabalhoDefeitosPage_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
+        try:
+            self.titulo.configure(text=RetrabalhoDefeitosPage_TRANSLATIONS[idioma]["title"])
+        except Exception:
+            pass
+
+
 try:
     from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    attach_i18n_support(RetrabalhoDefeitosPage)
+    RetrabalhoDefeitosPage.TRANSLATIONS = RetrabalhoDefeitosPage_TRANSLATIONS
+    if not hasattr(RetrabalhoDefeitosPage, "apply_page_translations"):
+        RetrabalhoDefeitosPage.apply_page_translations = _apply_retrabalhodefeitospage_translations
+    attach_i18n_support(RetrabalhoDefeitosPage, RetrabalhoDefeitosPage_TRANSLATIONS)
 except Exception:
     pass
