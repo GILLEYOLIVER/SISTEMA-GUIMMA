@@ -1744,6 +1744,24 @@ class OperaMenuApp(ctk.CTk):
             card = ctk.CTkFrame(dlg, fg_color=self.cor_secundaria, corner_radius=12, border_width=1, border_color=self.cor_borda)
             card.pack(fill="both", expand=True, padx=14, pady=14)
 
+            header = ctk.CTkFrame(card, fg_color="transparent")
+            header.pack(fill="x", padx=18, pady=(16, 4))
+            try:
+                if os.path.exists(ICONE_SISTEMA):
+                    img = Image.open(ICONE_SISTEMA).convert("RGBA")
+                    logo = ctk.CTkImage(light_image=img, dark_image=img, size=(26, 26))
+                    dlg._exit_logo = logo
+                    ctk.CTkLabel(header, image=logo, text="").pack(side="left", padx=(0, 8))
+            except Exception:
+                pass
+
+            ctk.CTkLabel(
+                header,
+                text=titulo,
+                font=("Arial", 16, "bold"),
+                text_color=self.cor_texto,
+            ).pack(side="left")
+
             ctk.CTkLabel(
                 card,
                 text=mensagem,
@@ -1751,7 +1769,7 @@ class OperaMenuApp(ctk.CTk):
                 text_color=self.cor_texto,
                 wraplength=400,
                 justify="center",
-            ).pack(fill="x", padx=20, pady=(30, 22))
+            ).pack(fill="x", padx=20, pady=(8, 22))
 
             botoes = ctk.CTkFrame(card, fg_color="transparent")
             botoes.pack(pady=(0, 16))
@@ -1766,17 +1784,19 @@ class OperaMenuApp(ctk.CTk):
                 width=140,
                 fg_color=self.cor_primaria,
                 hover_color=self.cor_hover,
-                text_color="#FFFFFF",
+                text_color=self._contrast_text_for_color(self.cor_primaria, fallback="#FFFFFF"),
                 font=("Arial", 14, "bold"),
+                border_width=1,
+                border_color=self.cor_borda,
                 command=lambda: _set(True),
             ).pack(side="left", padx=8)
             ctk.CTkButton(
                 botoes,
                 text=self._get_text("no"),
                 width=140,
-                fg_color=self.cor_secundaria,
-                hover_color=self.cor_borda,
-                text_color=self.cor_texto,
+                fg_color=self._darker(self.cor_secundaria, 0.97),
+                hover_color=self._realcar_cor(self.cor_secundaria, 1.05),
+                text_color=self._contrast_text_for_color(self.cor_secundaria, fallback=self.cor_texto),
                 border_width=1,
                 border_color=self.cor_borda,
                 font=("Arial", 14, "bold"),
