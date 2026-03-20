@@ -62,7 +62,7 @@ try:
 
     _base_dir = Path(__file__).resolve().parent
     _modelo_candidates = [
-        _base_dir / "CADASTRAR_MODELO_usa-es-pt.py",
+        _base_dir / "CADASTRAR_MODELO.py",
         _base_dir / "CADASTRAR_MODELO.py",
     ]
     _modelo_path = next((p for p in _modelo_candidates if p.exists()), None)
@@ -77,7 +77,7 @@ try:
     gerar_pdf_cadastro_modelo_exato = _mod.gerar_pdf_cadastro_modelo
 except Exception as e:
     raise ImportError(
-        "Não foi possível importar 'gerar_pdf_cadastro_modelo' de CADASTRAR_MODELO_usa-es-pt.py.\n"
+        "Não foi possível importar 'gerar_pdf_cadastro_modelo' de CADASTRAR_MODELO.py.\n"
         "Garanta que o arquivo existe e não possui erros de sintaxe.\n"
         f"Erro original: {e}"
     )

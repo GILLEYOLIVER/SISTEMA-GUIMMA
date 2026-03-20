@@ -1703,13 +1703,13 @@ try:
 except Exception:
     pass
 # -*- coding: utf-8 -*-
-"""Compatibilidade: encaminha para RETRABALHO_DEFEITOS_usa-es-pt.py."""
+"""Compatibilidade: encaminha para RETRABALHO_DEFEITOS.py."""
 
 import importlib.util
 import sys
 from pathlib import Path
 
-_target = Path(__file__).with_name("RETRABALHO_DEFEITOS_usa-es-pt.py")
+_target = Path(__file__).with_name("RETRABALHO_DEFEITOS.py")
 _spec = importlib.util.spec_from_file_location("compat_retrabalho_defeitos", str(_target))
 if _spec is None or _spec.loader is None:
     raise ImportError(f"Não foi possível carregar {_target}")

@@ -540,13 +540,13 @@ try:
 except Exception:
     pass
 # -*- coding: utf-8 -*-
-"""Compatibilidade: encaminha para RELATORIO_ACABAMENTO_usa-es-pt.py."""
+"""Compatibilidade: encaminha para RELATORIO_ACABAMENTO.py."""
 
 import importlib.util
 import sys
 from pathlib import Path
 
-_target = Path(__file__).with_name("RELATORIO_ACABAMENTO_usa-es-pt.py")
+_target = Path(__file__).with_name("RELATORIO_ACABAMENTO.py")
 _spec = importlib.util.spec_from_file_location("compat_relatorio_acabamento", str(_target))
 if _spec is None or _spec.loader is None:
     raise ImportError(f"Não foi possível carregar {_target}")
