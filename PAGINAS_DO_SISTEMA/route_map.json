@@ -1,185 +1,185 @@
 {
   "Dashboard": {
-    "file": "DASHBOARD_usa-es-pt.py",
+    "file": "DASHBOARD.py",
     "class": "DashboardPage"
   },
   "Entrada de Estoque": {
-    "file": "ENTRADA_ESTOQUE_usa-es-pt.py",
+    "file": "ENTRADA_ESTOQUE.py",
     "class": "EntradaEstoqueApp"
   },
   "Saída de Estoque": {
-    "file": "SAIDA_ESTOQUE_usa-es-pt.py",
+    "file": "SAIDA_ESTOQUE.py",
     "class": "SaidaEstoquePage"
   },
   "Relatórios": {
-    "file": "RELATORIO_ESTOQUE_usa-es-pt.py",
+    "file": "RELATORIO_ESTOQUE.py",
     "class": "AdvancedStockReport"
   },
   "Cadastrar Modelo": {
-    "file": "CADASTRAR_MODELO_usa-es-pt.py",
+    "file": "CADASTRAR_MODELO.py",
     "class": "CadastrarModeloPage"
   },
   "Imprimir Ficha Técnica": {
-    "file": "IMPRIMIR_FICHAS_TECNICAS_usa-es-pt.py",
+    "file": "IMPRIMIR_FICHAS_TECNICAS.py",
     "class": "FichaTecnicaApp"
   },
   "Nova Ordem": {
-    "file": "NOVA_ORDEM_usa-es-pt.py",
+    "file": "NOVA_ORDEM.py",
     "class": "OrdemCorte"
   },
   "Ordens de Corte Impressão": {
-    "file": "REIMPRIMIR-ORDENS-DE-CORTE_usa-es-pt.py",
+    "file": "REIMPRIMIR-ORDENS-DE-CORTE.py",
     "class": "OrdensCorteImpressao"
   },
   "Cadastrar Corte": {
-    "file": "CADASTRO_DE_CORTE_usa-es-pt.py",
+    "file": "CADASTRO_DE_CORTE.py",
     "class": "CadastroOrdemCorte"
   },
   "Consultar Ordens": {
-    "file": "CONSULTAR_ORDENS_usa-es-pt.py",
+    "file": "CONSULTAR_ORDENS.py",
     "class": "ConsultarOrdensPage"
   },
   "Compras": {
-    "file": "COMPRAS_usa-es-pt.py",
+    "file": "COMPRAS.py",
     "class": "ComprasPage"
   },
   "Cadastro de Prestadores": {
-    "file": "CADASTRO_FACCOES_usa-es-pt.py",
+    "file": "CADASTRO_FACCOES.py",
     "class": "CadastroFaccoesView"
   },
   "Pesquisar Serviço": {
-    "file": "CONSULTAR_SERVICOS_usa-es-pt.py",
+    "file": "CONSULTAR_SERVICOS.py",
     "class": "PesquisaServicosPage"
   },
   "Clientes": {
-    "file": "CADASTRO_CLIENTES_usa-es-pt.py",
+    "file": "CADASTRO_CLIENTES.py",
     "class": "ClientesPage"
   },
   "Retrabalho de Defeitos": {
-    "file": "RETRABALHO_DEFEITOS_usa-es-pt.py",
+    "file": "RETRABALHO_DEFEITOS.py",
     "class": "RetrabalhoDefeitosPage"
   },
   "Controle de Mão de Obra": {
-    "file": "CONTROLE_ENVIO_CORTES_usa-es-pt.py",
+    "file": "CONTROLE_ENVIO_CORTES.py",
     "class": "EnvioCortes"
   },
   "MRP": {
-    "file": "MRP_PLANEJAMENTO_usa-es-pt.py",
+    "file": "MRP_PLANEJAMENTO.py",
     "class": "MRPPage"
   },
   "Planejamento de Produção": {
-    "file": "PLANEJAMENTO_PRODUCAO_usa-es-pt.py",
+    "file": "PLANEJAMENTO_PRODUCAO.py",
     "class": "PlanejamentoProducaoPage"
   },
   "Custos Reais": {
-    "file": "RELATORIO_CUSTOS_REAIS_usa-es-pt.py",
+    "file": "RELATORIO_CUSTOS_REAIS.py",
     "class": "RelatorioCustosReaisPage"
   },
   "Registro Acabamento": {
-    "file": "CONTROLE_RETORNO_CORTE_usa-es-pt.py",
+    "file": "CONTROLE_RETORNO_CORTE.py",
     "class": "RetornoCorteControlPage"
   },
   "Finalizar Corte / Acabamento": {
-    "file": "FINALIZAR_CORTE_ACABAMENTO_usa-es-pt.py",
+    "file": "FINALIZAR_CORTE_ACABAMENTO.py",
     "class": "FinalizacaoCortes"
   },
   "Pagamento de Serviços": {
-    "file": "PAGAMENTO_SERVICOS_usa-es-pt.py",
+    "file": "PAGAMENTO_SERVICOS.py",
     "class": "PagamentoModernUI"
   },
   "Recibos de Pagamentos": {
-    "file": "RECIBOS_PAGAMENTOS_usa-es-pt.py",
+    "file": "RECIBOS_PAGAMENTOS.py",
     "class": "RecibosPagamentosPage"
   },
   "Custo Produto": {
-    "file": "PRECIFICACAO_PRODUTO_usa-es-pt.py",
+    "file": "PRECIFICACAO_PRODUTO.py",
     "class": "PrecificacaoProdutoPage"
   },
   "Folha Pagamento": {
-    "file": "FOLHA_PAGAMENTO_SERVICOS_usa-es-pt.py",
+    "file": "FOLHA_PAGAMENTO_SERVICOS.py",
     "class": "FolhaPagamentoServicosPage"
   },
   "Fechamento Mensal": {
-    "file": "FECHAMENTO_MENSAL_usa-es-pt.py",
+    "file": "FECHAMENTO_MENSAL.py",
     "class": "FechamentoMensalPage"
   },
   "Contas a Pagar": {
-    "file": "CONTAS_A_PAGAR_usa-es-pt.py",
+    "file": "CONTAS_A_PAGAR.py",
     "class": "ContasAPagarPage"
   },
   "Adiantamento": {
-    "file": "ADIANTAMENTO_PAGE_usa-es-pt.py",
+    "file": "ADIANTAMENTO_PAGE.py",
     "class": "PagamentoAdiantamentoPage"
   },
   "Adiantamentos Pendentes": {
-    "file": "ADIANTAMENTO_PENDENTE_usa-es-pt.py",
+    "file": "ADIANTAMENTO_PENDENTE.py",
     "class": "AdiantamentosPendentesPage"
   },
   "Produção": {
-    "file": "RELATORIO_ENVIO_DETALHADO_usa-es-pt.py",
+    "file": "RELATORIO_ENVIO_DETALHADO.py",
     "class": "RelatorioEnvioDetalhado"
   },
   "Serviços Externos": {
-    "file": "RELATORIO_SERVICOS_EXTERNOS_usa-es-pt.py",
+    "file": "RELATORIO_SERVICOS_EXTERNOS.py",
     "class": "RelatorioServicosExternosPage"
   },
   "Modelos Produzidos": {
-    "file": "RELATORIO_MODELOS_PRODUZIDOS_usa-es-pt.py",
+    "file": "RELATORIO_MODELOS_PRODUZIDOS.py",
     "class": "RelatorioModelosProduzidosPage"
   },
   "Acabamento": {
-    "file": "RELATORIO_ACABAMENTO_usa-es-pt.py",
+    "file": "RELATORIO_ACABAMENTO.py",
     "class": "RelatorioAcabamentoPage"
   },
   "Logs e Atividades": {
-    "file": "USUARIOS_usa-es-pt.py",
+    "file": "USUARIOS.py",
     "class": "UsuariosPage"
   },
   "Usuários": {
-    "file": "USUARIOS_usa-es-pt.py",
+    "file": "USUARIOS.py",
     "class": "UsuariosPage"
   },
   "Backup": {
-    "file": "BACKUP_usa-es-pt.py",
+    "file": "BACKUP.py",
     "class": "BackupPage"
   },
   "Temas": {
-    "file": "TEMAS_usa-es-pt.py",
+    "file": "TEMAS.py",
     "class": "TemasPage"
   },
   "Atualizar Sistema": {
-    "file": "ATUALIZAR_SISTEMA_usa-es-pt.py",
+    "file": "ATUALIZAR_SISTEMA.py",
     "class": "AtualizarSistemaPage"
   },
   "Interna": {
-    "file": "PRODUCAO_INTERNA_usa-es-pt.py",
+    "file": "PRODUCAO_INTERNA.py",
     "class": "ProducaoInternaPage"
   },
   "Enviados": {
-    "file": "PRODUCAO_ENVIADOS_usa-es-pt.py",
+    "file": "PRODUCAO_ENVIADOS.py",
     "class": "ProducaoEnviadosPage"
   },
   "Retorno": {
-    "file": "PRODUCAO_RETORNO_usa-es-pt.py",
+    "file": "PRODUCAO_RETORNO.py",
     "class": "ProducaoRetornoPage"
   },
   "Finalizados": {
-    "file": "PRODUCAO_FINALIZADOS_usa-es-pt.py",
+    "file": "PRODUCAO_FINALIZADOS.py",
     "class": "ProducaoFinalizadosPage"
   },
   "Gerenciar": {
-    "file": "BANCO_DADOS_FABRICA_usa-es-pt.py",
+    "file": "BANCO_DADOS_FABRICA.py",
     "class": "BancoDadosFabricaApp"
   },
   "RELATORIOS": {
-    "file": "RELATORIO_ENVIO_DETALHADO_usa-es-pt.py",
+    "file": "RELATORIO_ENVIO_DETALHADO.py",
     "class": "RelatorioEnvioDetalhado"
   },
   "Trocar Usuário": {
     "action": "trocar_usuario"
   },
   "Ordens Planejadas": {
-    "file": "ORDENS_PLANEJADAS_usa-es-pt.py",
+    "file": "ORDENS_PLANEJADAS.py",
     "class": "OrdensPlanejadasPage"
   }
 }
