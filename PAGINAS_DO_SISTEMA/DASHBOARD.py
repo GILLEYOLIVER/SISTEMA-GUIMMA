@@ -457,7 +457,7 @@ class DashboardPage(ctk.CTkFrame):
         card_atr, self.lbl_painel_atrasos, self.pb_painel_atrasos = _card(self._title_text("critical_delays"), "#EF4444")
         card_atr.grid(row=0, column=1, sticky="nsew", padx=6)
 
-        card_efi, self.lbl_painel_eficiencia, self.pb_painel_eficiencia = _card("Eficiência diária", "#10B981")
+        card_efi, self.lbl_painel_eficiencia, self.pb_painel_eficiencia = _card(self._title_text("daily_efficiency"), "#10B981")
         card_efi.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
 
         self.painel_prod_chart = ctk.CTkCanvas(area_extra, bg="#FFFFFF", highlightthickness=0, height=chart_h)
@@ -809,7 +809,14 @@ class DashboardPage(ctk.CTkFrame):
     def _buscar_dados_fluxo(self, dias: int = 7):
         """Busca dados do fluxo de produção."""
         dados = {
-            "etapas": ["Ordem Corte", "Corte Pronto", "Enviado", "Conferência", "Pendente", "Pago"],
+            "etapas": [
+                self._get_text("cut_order"),
+                self._get_text("cut_ready"),
+                self._get_text("sent"),
+                self._get_text("conference"),
+                self._get_text("pending"),
+                self._get_text("paid"),
+            ],
             "quantidades": [0, 0, 0, 0, 0, 0],
             "pecas": [0, 0, 0, 0, 0, 0],
             "evolucao": {"datas": [], "finalizados": [], "enviados": []}

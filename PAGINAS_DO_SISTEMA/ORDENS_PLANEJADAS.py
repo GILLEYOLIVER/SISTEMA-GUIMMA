@@ -31,6 +31,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         self.cor_fundo = getattr(sistema, "cor_fundo", "#F5F5F5")
         self.cor_texto = getattr(sistema, "cor_texto", "#111827")
         self.cor_primaria = getattr(sistema, "cor_primaria", "#3A7EBF")
+        self.cor_secundaria = getattr(sistema, "cor_secundaria", "#E5E7EB")
         self.cor_hover = getattr(sistema, "cor_hover", "#2E4A66")
         self.cor_borda = getattr(sistema, "cor_borda", "#CBD5E1")
 
@@ -98,9 +99,12 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             filtros,
             values=PROGRAMACOES,
             width=145,
-            fg_color=self.cor_primaria,
+            fg_color=self.cor_secundaria,
             button_color=self.cor_primaria,
             button_hover_color=self._hover(self.cor_primaria),
+            text_color=self._contrast_text_for_color(self.cor_secundaria),
+            dropdown_text_color=self._contrast_text_for_color(self.cor_secundaria),
+            dropdown_fg_color=self.cor_secundaria,
         )
         self.filtro_programacao.set("Todas")
         self.filtro_programacao.grid(row=0, column=1, padx=(0, 10), pady=4)
@@ -342,6 +346,17 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             "border_width": 1,
             "border_color": self.cor_borda,
         }
+
+    def _contrast_text_for_color(self, cor_hex: str) -> str:
+        try:
+            cor = cor_hex.lstrip("#")
+            r = int(cor[0:2], 16)
+            g = int(cor[2:4], 16)
+            b = int(cor[4:6], 16)
+            luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+            return "#111827" if luminancia > 0.6 else "#FFFFFF"
+        except Exception:
+            return "#111827"
 
     def _get_calendar_locale(self):
         idioma = getattr(self.sistema, "idioma_atual", "pt_BR")
