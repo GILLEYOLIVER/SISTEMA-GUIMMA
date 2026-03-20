@@ -1557,6 +1557,55 @@ class ColorPickerWidget(ctk.CTkFrame):
     def get_color(self) -> str:
         return self.current_color
 
+
+def aplicar_tema_atalho(app, nome_tema: str) -> bool:
+    """
+    Atalho de aplicação de tema reutilizando a mesma base da página Temas.
+    """
+    try:
+        paletas = ModuloPaletas()
+        tema = paletas.obter_tema(nome_tema)
+        if not tema:
+            return False
+
+        theme_manager = getattr(app, "theme_manager", None)
+        modo_anterior = getattr(app, "tema_modo", None)
+        modo_novo = "dark" if is_dark_color(tema.get("fundo", "#111111")) else "light"
+        rebuild_interface = (modo_anterior is not None and modo_anterior != modo_novo)
+
+        if theme_manager:
+            theme_manager.apply_theme(nome_tema, tema, rebuild_interface=rebuild_interface)
+        else:
+            for campo, valor in tema.items():
+                setattr(app, f"cor_{campo}", valor)
+
+        for attr in ("tema_atual", "current_theme_name", "tema_preferido_inicial"):
+            if hasattr(app, attr):
+                setattr(app, attr, nome_tema)
+        if hasattr(app, "tema_modo"):
+            app.tema_modo = modo_novo
+
+        user_manager = getattr(app, "user_manager", None)
+        if user_manager and hasattr(user_manager, "save_user_theme"):
+            user_manager.save_user_theme(nome_tema)
+
+        try:
+            if hasattr(app, "_update_menu_buttons_colors"):
+                app._update_menu_buttons_colors()
+            if hasattr(app, "update_idletasks"):
+                app.update_idletasks()
+            if rebuild_interface and hasattr(app, "reload_current_page"):
+                app.after(120, app.reload_current_page)
+        except Exception:
+            pass
+
+        return True
+    except Exception as e:
+        if LOGGER:
+            LOGGER.error(f"Erro ao aplicar tema via atalho ('{nome_tema}'): {e}")
+        return False
+
+
 class TemasPage(ctk.CTkFrame):
     MAX_COLS = 3
 
