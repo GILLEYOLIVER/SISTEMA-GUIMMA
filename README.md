@@ -10,10 +10,10 @@ Este repositório contém o aplicativo desktop **Sistema Opera**, scripts de bui
 Com base nos commits mais recentes da branch `work` (especialmente os de **2026-03-17** e **2026-03-18**), os principais avanços foram:
 
 - **Evolução do fluxo de planejamento/OP**:
-  - criação/uso da tela **Ordens Planejadas** (`ORDENS_PLANEJADAS_usa-es-pt.py`);
+  - criação/uso da tela **Ordens Planejadas** (`ORDENS_PLANEJADAS.py`);
   - ajuste de KPI de execução e correção de avanço indevido de OP;
   - cálculo de progresso por etapas do processo e destaque visual de ordens concluídas.
-- **Padronização de arquivos funcionais para sufixo `*_usa-es-pt.py`** em módulos críticos (ex.: planejamento, nova ordem, pagamentos, MRP, entrada/saída de estoque e adiantamentos).
+- **Padronização de arquivos funcionais para nomes canônicos (`*.py`, sem sufixo de localidade)** em módulos críticos (ex.: planejamento, nova ordem, pagamentos, MRP, entrada/saída de estoque e adiantamentos).
 - **Atualização do roteamento de telas** em `PAGINAS_DO_SISTEMA/route_map.json` para refletir os novos nomes de arquivo.
 - **Fortalecimento do banco para o planejamento** em `SCRIPTS/3_CRIAR_TABELAS.sql` (e espelho em `data/INSTAL_BANCO_APP/scripts/3_CRIAR_TABELAS.sql`), com campos como `etapa_atual`, `percentual_progresso` e tabelas auxiliares de planejamento (grade, tecidos, aviamentos e vínculo com ordens geradas).
 
@@ -72,55 +72,55 @@ SISTEMA-GUIMMA/
 
 #### Banco, usuários e administração
 - `BANCO_DE_DADOS_PG.py`: conexão/operações com PostgreSQL.
-- `BANCO_DADOS_FABRICA_usa-es-pt.py`: rotinas de banco vinculadas ao contexto de fábrica.
-- `USUARIOS_usa-es-pt.py`: cadastro/gestão de usuários.
-- `ATUALIZAR_SISTEMA_usa-es-pt.py`: rotinas de atualização do sistema.
-- `BACKUP_usa-es-pt.py`: rotinas de backup.
+- `BANCO_DADOS_FABRICA.py`: rotinas de banco vinculadas ao contexto de fábrica.
+- `USUARIOS.py`: cadastro/gestão de usuários.
+- `ATUALIZAR_SISTEMA.py`: rotinas de atualização do sistema.
+- `BACKUP.py`: rotinas de backup.
 
 #### Cadastros e produção
-- `CADASTRAR_MODELO_usa-es-pt.py`: cadastro de modelos.
+- `CADASTRAR_MODELO.py`: cadastro de modelos.
 - `NOVA CADASTRO MODELOS.py`: versão/fluxo alternativo de cadastro de modelos.
-- `CADASTRO_CLIENTES_usa-es-pt.py`: cadastro de clientes.
-- `CADASTRO_FACCOES_usa-es-pt.py`: cadastro de facções.
-- `CADASTRO_DE_CORTE_usa-es-pt.py`: cadastro de ordens/informações de corte.
-- `NOVA_ORDEM_usa-es-pt.py`: criação de nova ordem.
-- `ORDENS_PLANEJADAS_usa-es-pt.py`: painel de ordens planejadas com filtros de período/modelo/coleção e atalho para geração da Nova Ordem.
-- `PLANEJAMENTO_PRODUCAO_usa-es-pt.py`: planejamento de produção.
-- `MRP_PLANEJAMENTO_usa-es-pt.py`: MRP e planejamento de materiais.
-- `FINALIZAR_CORTE_ACABAMENTO_usa-es-pt.py`: finalização de corte/acabamento.
-- `CONTROLE_ENVIO_CORTES_usa-es-pt.py`: controle de envio de cortes.
-- `CONTROLE_RETORNO_CORTE_usa-es-pt.py`: controle de retorno de cortes.
-- `RETRABALHO_DEFEITOS_usa-es-pt.py`: gestão de retrabalho e defeitos.
+- `CADASTRO_CLIENTES.py`: cadastro de clientes.
+- `CADASTRO_FACCOES.py`: cadastro de facções.
+- `CADASTRO_DE_CORTE.py`: cadastro de ordens/informações de corte.
+- `NOVA_ORDEM.py`: criação de nova ordem.
+- `ORDENS_PLANEJADAS.py`: painel de ordens planejadas com filtros de período/modelo/coleção e atalho para geração da Nova Ordem.
+- `PLANEJAMENTO_PRODUCAO.py`: planejamento de produção.
+- `MRP_PLANEJAMENTO.py`: MRP e planejamento de materiais.
+- `FINALIZAR_CORTE_ACABAMENTO.py`: finalização de corte/acabamento.
+- `CONTROLE_ENVIO_CORTES.py`: controle de envio de cortes.
+- `CONTROLE_RETORNO_CORTE.py`: controle de retorno de cortes.
+- `RETRABALHO_DEFEITOS.py`: gestão de retrabalho e defeitos.
 
 #### Estoque, compras e financeiro
-- `ENTRADA_ESTOQUE_usa-es-pt.py`: entradas de estoque.
-- `SAIDA_ESTOQUE_usa-es-pt.py`: saídas de estoque.
-- `RELATORIO_ESTOQUE_usa-es-pt.py`: relatórios de estoque.
-- `COMPRAS_usa-es-pt.py`: processo de compras.
-- `CONTAS_A_PAGAR_usa-es-pt.py`: contas a pagar.
-- `ADIANTAMENTO_PAGE_usa-es-pt.py`: registro/controle de adiantamentos.
-- `ADIANTAMENTO_PENDENTE_usa-es-pt.py`: pendências de adiantamentos.
-- `PAGAMENTO_SERVICOS_usa-es-pt.py`: pagamento de serviços.
-- `FOLHA_PAGAMENTO_SERVICOS_usa-es-pt.py`: folha/pagamentos de serviços.
-- `FECHAMENTO_MENSAL_usa-es-pt.py`: fechamento mensal financeiro.
-- `PRECIFICACAO_PRODUTO_usa-es-pt.py`: precificação de produto.
+- `ENTRADA_ESTOQUE.py`: entradas de estoque.
+- `SAIDA_ESTOQUE.py`: saídas de estoque.
+- `RELATORIO_ESTOQUE.py`: relatórios de estoque.
+- `COMPRAS.py`: processo de compras.
+- `CONTAS_A_PAGAR.py`: contas a pagar.
+- `ADIANTAMENTO_PAGE.py`: registro/controle de adiantamentos.
+- `ADIANTAMENTO_PENDENTE.py`: pendências de adiantamentos.
+- `PAGAMENTO_SERVICOS.py`: pagamento de serviços.
+- `FOLHA_PAGAMENTO_SERVICOS.py`: folha/pagamentos de serviços.
+- `FECHAMENTO_MENSAL.py`: fechamento mensal financeiro.
+- `PRECIFICACAO_PRODUTO.py`: precificação de produto.
 
 #### Consultas, relatórios e impressão
-- `CONSULTAR_ORDENS_usa-es-pt.py`: consulta de ordens.
-- `CONSULTAR_SERVICOS_usa-es-pt.py`: consulta de serviços.
-- `RELATORIO_ACABAMENTO_usa-es-pt.py`: relatório de acabamento.
-- `RELATORIO_CUSTOS_REAIS_usa-es-pt.py`: relatório de custos reais.
-- `RELATORIO_ENVIO_DETALHADO_usa-es-pt.py`: relatório detalhado de envios.
-- `RELATORIO_MODELOS_PRODUZIDOS_usa-es-pt.py`: relatório de modelos produzidos.
-- `RELATORIO_SERVICOS_EXTERNOS_usa-es-pt.py`: relatório de serviços externos.
-- `IMPRIMIR_FICHAS_TECNICAS_usa-es-pt.py`: impressão de fichas técnicas.
-- `REIMPRIMIR-ORDENS-DE-CORTE_usa-es-pt.py`: reimpressão de ordens de corte.
-- `RECIBOS_PAGAMENTOS_usa-es-pt.py`: emissão/controle de recibos de pagamentos.
+- `CONSULTAR_ORDENS.py`: consulta de ordens.
+- `CONSULTAR_SERVICOS.py`: consulta de serviços.
+- `RELATORIO_ACABAMENTO.py`: relatório de acabamento.
+- `RELATORIO_CUSTOS_REAIS.py`: relatório de custos reais.
+- `RELATORIO_ENVIO_DETALHADO.py`: relatório detalhado de envios.
+- `RELATORIO_MODELOS_PRODUZIDOS.py`: relatório de modelos produzidos.
+- `RELATORIO_SERVICOS_EXTERNOS.py`: relatório de serviços externos.
+- `IMPRIMIR_FICHAS_TECNICAS.py`: impressão de fichas técnicas.
+- `REIMPRIMIR-ORDENS-DE-CORTE.py`: reimpressão de ordens de corte.
+- `RECIBOS_PAGAMENTOS.py`: emissão/controle de recibos de pagamentos.
 - `UI_TREEVIEW_OPERA.py`: componente de visualização em árvore (treeview).
-- `DASHBOARD_usa-es-pt.py`: painel/indicadores do sistema.
+- `DASHBOARD.py`: painel/indicadores do sistema.
 
 #### Tema, aparência e configuração
-- `TEMAS_usa-es-pt.py`: temas ativos da interface.
+- `TEMAS.py`: temas ativos da interface.
 - `TEMAS-anterior.py`: versão anterior de temas.
 - `tema_database.py`: tema/estilo aplicado a telas de banco.
 - `route_map.json`: mapeamento de rotas/telas.
@@ -380,7 +380,7 @@ A tabela `schema_version` e o registro central da versao aplicada por modulo. O 
 
 ## Fluxo de atualizacao do sistema
 
-A tela `PAGINAS_DO_SISTEMA/ATUALIZAR_SISTEMA_usa-es-pt.py` passou a ser tratada como um atualizador hibrido, com duas origens de pacote:
+A tela `PAGINAS_DO_SISTEMA/ATUALIZAR_SISTEMA.py` passou a ser tratada como um atualizador hibrido, com duas origens de pacote:
 
 - **Local**: selecao de uma pasta no computador.
 - **Online**: pacote ZIP hospedado no Google Drive.
