@@ -529,13 +529,15 @@ class ThemeManager:
                     parar_recursao = True
                 elif isinstance(widget, ctk.CTkOptionMenu):
                     try:
+                        option_texto = self._contrast_text_for_color(cor_secundaria, fallback=cor_texto)
                         widget.configure(
                             fg_color=cor_secundaria,
                             button_color=cor_primaria,
                             button_hover=False,
-                            text_color=cor_texto,
+                            text_color=option_texto,
                             dropdown_fg_color=cor_secundaria,
-                            dropdown_text_color=cor_texto,
+                            dropdown_text_color=option_texto,
+                            dropdown_hover_color=cor_hover,
                             dropdown_hover=False,
                         )
                     except Exception as e:
@@ -2414,6 +2416,7 @@ class OperaMenuApp(ctk.CTk):
         self.language_status_label.pack(side="left", padx=(0, 8))
 
         self.language_var = ctk.StringVar(value=self._get_language_display_name())
+        idioma_menu_texto = self._contrast_text_for_color(self.cor_secundaria, fallback=self.cor_texto)
         self.language_menu = ctk.CTkOptionMenu(
             self.language_frame,
             variable=self.language_var,
@@ -2423,9 +2426,9 @@ class OperaMenuApp(ctk.CTk):
             fg_color=self.cor_secundaria,
             button_color=self.cor_primaria,
             button_hover_color=self.cor_hover,
-            text_color=self.cor_texto,
+            text_color=idioma_menu_texto,
             dropdown_fg_color=self.cor_secundaria,
-            dropdown_text_color=self.cor_texto,
+            dropdown_text_color=idioma_menu_texto,
             dropdown_hover_color=self.cor_hover,
         )
         self.language_menu.pack(side="left")
