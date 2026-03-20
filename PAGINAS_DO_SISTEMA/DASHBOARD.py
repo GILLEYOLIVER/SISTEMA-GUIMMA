@@ -186,9 +186,9 @@ def _to_datetime_any(v):
 # ===================== DASHBOARD UI =====================
 class DashboardPage(ctk.CTkFrame):
     TRANSLATIONS = {
-        "pt_BR": {"stock":"ESTOQUE","type":"Tipo:","fabrics":"Tecidos","supplies":"Aviamentos","inputs":"Insumos","office":"Escritorio","cleaning":"Limpeza","others":"Outros","production_panel":"Painel de produção (indicadores visuais)","all":"Todos","cut_order":"Ordem Corte","cut_ready":"Corte Pronto","sent":"Enviado","conference":"Conferência","pending":"Pendente","paid":"Pago","days_7":"7 dias","days_15":"15 dias","days_30":"30 dias","bars":"Barras","line":"Linha","donut":"Rosca","in_progress_orders":"Ordens em andamento"},
-        "en_US": {"stock":"STOCK","type":"Type:","fabrics":"Fabrics","supplies":"Trims","inputs":"Inputs","office":"Office","cleaning":"Cleaning","others":"Others","production_panel":"Production panel (visual indicators)","all":"All","cut_order":"Cut Order","cut_ready":"Cut Ready","sent":"Sent","conference":"Conference","pending":"Pending","paid":"Paid","days_7":"7 days","days_15":"15 days","days_30":"30 days","bars":"Bars","line":"Line","donut":"Donut","in_progress_orders":"Orders in progress"},
-        "es_ES": {"stock":"INVENTARIO","type":"Tipo:","fabrics":"Tejidos","supplies":"Avíos","inputs":"Insumos","office":"Oficina","cleaning":"Limpieza","others":"Otros","production_panel":"Panel de producción (indicadores visuales)","all":"Todos","cut_order":"Orden de Corte","cut_ready":"Corte Listo","sent":"Enviado","conference":"Conferencia","pending":"Pendiente","paid":"Pagado","days_7":"7 días","days_15":"15 días","days_30":"30 días","bars":"Barras","line":"Línea","donut":"Rosca","in_progress_orders":"Órdenes en progreso"}
+        "pt_BR": {"stock":"ESTOQUE","type":"Tipo:","fabrics":"Tecidos","supplies":"Aviamentos","inputs":"Insumos","office":"Escritorio","cleaning":"Limpeza","others":"Outros","production_panel":"Painel de produção (indicadores visuais)","all":"Todos","cut_order":"Ordem Corte","cut_ready":"Corte Pronto","sent":"Enviado","conference":"Conferência","pending":"Pendente","paid":"Pago","days_7":"7 dias","days_15":"15 dias","days_30":"30 dias","bars":"Barras","line":"Linha","donut":"Rosca","in_progress_orders":"Ordens em andamento","critical_delays":"Atrasos críticos","daily_efficiency":"Eficiência diária","flow":"Fluxo","evolution":"Evolução","no_data":"Sem dados","cuts":"Cortes","pieces":"Peças","department":"Departamento:","in_progress_production":"Produção em andamento","in_progress":"Em Andamento","finished_7d":"Finalizados (7d)","weekly_production":"Produção Semanal","monthly_production":"Produção Mensal","stock_id":"ID","stock_item_number":"Número Item","stock_description":"Descrição","stock_code":"Código","stock_entry_date":"Data Entrada","stock_quantity":"Quantidade","and_code":"Código","and_description":"Descrição","and_cutter":"Cortador","and_record_date":"Data Registro","and_desired_qty":"Qtd. Desejada","and_estimated_days":"Dias Estimados","and_estimated_hours":"Horas Estimadas","and_origin":"Origem","last_finished_paid":"ÚLTIMOS FINALIZADOS (PAGOS)","none_paid_cut":"Nenhum corte pago","code_short":"Cód"},
+        "en_US": {"stock":"STOCK","type":"Type:","fabrics":"Fabrics","supplies":"Trims","inputs":"Inputs","office":"Office","cleaning":"Cleaning","others":"Others","production_panel":"Production panel (visual indicators)","all":"All","cut_order":"Cut Order","cut_ready":"Cut Ready","sent":"Sent","conference":"Conference","pending":"Pending","paid":"Paid","days_7":"7 days","days_15":"15 days","days_30":"30 days","bars":"Bars","line":"Line","donut":"Donut","in_progress_orders":"Orders in progress","critical_delays":"Critical delays","daily_efficiency":"Daily efficiency","flow":"Flow","evolution":"Evolution","no_data":"No data","cuts":"Cuts","pieces":"Pieces","department":"Department:","in_progress_production":"Production in progress","in_progress":"In Progress","finished_7d":"Finished (7d)","weekly_production":"Weekly Production","monthly_production":"Monthly Production","stock_id":"ID","stock_item_number":"Item Number","stock_description":"Description","stock_code":"Code","stock_entry_date":"Entry Date","stock_quantity":"Quantity","and_code":"Code","and_description":"Description","and_cutter":"Cutter","and_record_date":"Record Date","and_desired_qty":"Desired Qty","and_estimated_days":"Estimated Days","and_estimated_hours":"Estimated Hours","and_origin":"Origin","last_finished_paid":"LAST FINISHED (PAID)","none_paid_cut":"No paid cut","code_short":"Code"},
+        "es_ES": {"stock":"INVENTARIO","type":"Tipo:","fabrics":"Tejidos","supplies":"Avíos","inputs":"Insumos","office":"Oficina","cleaning":"Limpieza","others":"Otros","production_panel":"Panel de producción (indicadores visuales)","all":"Todos","cut_order":"Orden de Corte","cut_ready":"Corte Listo","sent":"Enviado","conference":"Conferencia","pending":"Pendiente","paid":"Pagado","days_7":"7 días","days_15":"15 días","days_30":"30 días","bars":"Barras","line":"Línea","donut":"Rosca","in_progress_orders":"Órdenes en progreso","critical_delays":"Atrasos críticos","daily_efficiency":"Eficiencia diaria","flow":"Flujo","evolution":"Evolución","no_data":"Sin datos","cuts":"Cortes","pieces":"Piezas","department":"Departamento:","in_progress_production":"Producción en progreso","in_progress":"En Progreso","finished_7d":"Finalizados (7d)","weekly_production":"Producción Semanal","monthly_production":"Producción Mensual","stock_id":"ID","stock_item_number":"Número Ítem","stock_description":"Descripción","stock_code":"Código","stock_entry_date":"Fecha Entrada","stock_quantity":"Cantidad","and_code":"Código","and_description":"Descripción","and_cutter":"Cortador","and_record_date":"Fecha Registro","and_desired_qty":"Cant. Deseada","and_estimated_days":"Días Estimados","and_estimated_hours":"Horas Estimadas","and_origin":"Origen","last_finished_paid":"ÚLTIMOS FINALIZADOS (PAGADOS)","none_paid_cut":"Ningún corte pagado","code_short":"Cód"}
     }
 
     def _get_idioma_atual(self):
@@ -200,14 +200,18 @@ class DashboardPage(ctk.CTkFrame):
         base = self.TRANSLATIONS.get('pt_BR', {})
         return self.TRANSLATIONS.get(idioma, {}).get(chave, base.get(chave, default if default is not None else chave))
 
+    def _title_text(self, chave, default=None):
+        return str(self._get_text(chave, default)).upper()
+
     def refresh_texts(self):
         try:
             self.tipos_estoque = [self._get_text('fabrics'), self._get_text('supplies'), self._get_text('inputs'), self._get_text('office'), self._get_text('cleaning'), self._get_text('others')]
             if getattr(self,'_ui_refs',None):
-                for k,v in {"stock_title":"stock","lbl_type":"type","production_panel":"production_panel"}.items():
+                for k,v in {"stock_title":"stock","lbl_type":"type","production_panel":"production_panel","in_progress_production_title":"in_progress_production","department_label":"department"}.items():
                     w=self._ui_refs.get(k)
                     if w:
-                        w.configure(text=self._get_text(v))
+                        txt = self._title_text(v) if k in {"stock_title","production_panel","in_progress_production_title","department_label"} else self._get_text(v)
+                        w.configure(text=txt)
                 for cb_key, vals in {
                     'combo_tipo_estoque':['fabrics','supplies','inputs','office','cleaning','others'],
                     'combo_painel_setor':['all','cut_order','cut_ready','sent','conference','pending','paid'],
@@ -216,7 +220,23 @@ class DashboardPage(ctk.CTkFrame):
                 }.items():
                     cb=getattr(self, cb_key, None)
                     if cb:
+                        atual = cb.get() if hasattr(cb, "get") else ""
                         cb.configure(values=[self._get_text(x) for x in vals])
+                        if cb_key in {"combo_tipo_estoque", "combo_painel_setor", "combo_painel_periodo", "combo_painel_grafico"}:
+                            interno = None
+                            for k in vals:
+                                if atual == self._get_text(k):
+                                    interno = k
+                                    break
+                            if interno is None:
+                                interno = vals[0]
+                            cb.set(self._get_text(interno))
+            if hasattr(self, "tree_est"):
+                for col in self.cols_estoque:
+                    self.tree_est.heading(col, text=self._title_text(self.cols_estoque_i18n.get(col, col), col))
+            if hasattr(self, "tree_and") and hasattr(self, "and_cols_i18n"):
+                for col in self.and_cols_i18n:
+                    self.tree_and.heading(col, text=self._title_text(self.and_cols_i18n.get(col, col), col))
         except Exception:
             pass
 
@@ -257,7 +277,7 @@ class DashboardPage(ctk.CTkFrame):
         self.selected_depart = ctk.StringVar(value=self._get_text("all"))
         self.painel_prod_periodo_var = ctk.StringVar(value=self._get_text("days_7"))
         self.painel_prod_grafico_var = ctk.StringVar(value=self._get_text("bars"))
-        self.painel_prod_setor_var = ctk.StringVar(value="Todos")
+        self.painel_prod_setor_var = ctk.StringVar(value=self._get_text("all"))
         self.ui_scale = float(getattr(sistema, "ui_scale", 1.0) or 1.0)
 
         # Estado gráfico
@@ -306,6 +326,14 @@ class DashboardPage(ctk.CTkFrame):
 
         self.tipos_estoque = [self._get_text("fabrics"), self._get_text("supplies"), self._get_text("inputs"), self._get_text("office"), self._get_text("cleaning"), self._get_text("others")]
         self.cols_estoque = ("ID", "Número Item", "Descrição", "Código", "Data Entrada", "Quantidade")
+        self.cols_estoque_i18n = {
+            "ID": "stock_id",
+            "Número Item": "stock_item_number",
+            "Descrição": "stock_description",
+            "Código": "stock_code",
+            "Data Entrada": "stock_entry_date",
+            "Quantidade": "stock_quantity",
+        }
 
         self.frame_cards.pack(fill="x", pady=(0, 2))
 
@@ -340,7 +368,7 @@ class DashboardPage(ctk.CTkFrame):
             fg_color=self.cor_combobox_fundo, text_color=self.cor_combobox_texto,
             button_color=self.cor_combobox_botao, button_hover_color=self.cor_combobox_botao_hover)
         self.combo_tipo_estoque.grid(row=0, column=1, sticky="ew")
-        self.combo_tipo_estoque.set("Tecidos")
+        self.combo_tipo_estoque.set(self._get_text("fabrics"))
 
         tabela_frame = ctk.CTkFrame(frame_est, fg_color="#F8F9FA")
         tabela_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(4, 2))
@@ -349,7 +377,7 @@ class DashboardPage(ctk.CTkFrame):
 
         self.tree_est = ttk.Treeview(tabela_frame, columns=self.cols_estoque, show="headings", height=5)
         for col in self.cols_estoque:
-            self.tree_est.heading(col, text=col)
+            self.tree_est.heading(col, text=self._title_text(self.cols_estoque_i18n.get(col, col), col))
             self.tree_est.column(col, anchor="w", width=100, stretch=True)
 
         sb_e = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.tree_est.yview)
@@ -415,7 +443,7 @@ class DashboardPage(ctk.CTkFrame):
 
         def _card(titulo, cor):
             card = ctk.CTkFrame(indicadores_frame, fg_color="#FFFFFF", corner_radius=10)
-            ctk.CTkLabel(card, text=titulo, font=("Arial", 11), text_color="#6B7280").pack(anchor="w", padx=10, pady=(6, 0))
+            ctk.CTkLabel(card, text=titulo, font=("Arial", 11, "bold"), text_color="#6B7280").pack(anchor="w", padx=10, pady=(6, 0))
             valor_lbl = ctk.CTkLabel(card, text="0", font=("Arial", 15, "bold"), text_color="#2C3E50")
             valor_lbl.pack(anchor="w", padx=10, pady=(2, 2))
             barra = ctk.CTkProgressBar(card, progress_color=cor, height=6)
@@ -423,13 +451,13 @@ class DashboardPage(ctk.CTkFrame):
             barra.pack(fill="x", padx=10, pady=(0, 8))
             return card, valor_lbl, barra
 
-        card_and, self.lbl_painel_andamento, self.pb_painel_andamento = _card("Ordens em andamento", "#3B82F6")
+        card_and, self.lbl_painel_andamento, self.pb_painel_andamento = _card(self._title_text("in_progress_orders"), "#3B82F6")
         card_and.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
-        card_atr, self.lbl_painel_atrasos, self.pb_painel_atrasos = _card("Atrasos críticos", "#EF4444")
+        card_atr, self.lbl_painel_atrasos, self.pb_painel_atrasos = _card(self._title_text("critical_delays"), "#EF4444")
         card_atr.grid(row=0, column=1, sticky="nsew", padx=6)
 
-        card_efi, self.lbl_painel_eficiencia, self.pb_painel_eficiencia = _card("Eficiência diária", "#10B981")
+        card_efi, self.lbl_painel_eficiencia, self.pb_painel_eficiencia = _card(self._title_text("daily_efficiency"), "#10B981")
         card_efi.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
 
         self.painel_prod_chart = ctk.CTkCanvas(area_extra, bg="#FFFFFF", highlightthickness=0, height=chart_h)
@@ -468,16 +496,22 @@ class DashboardPage(ctk.CTkFrame):
         frame_and = ctk.CTkFrame(self.scroll_body, fg_color=self.cor_fundo)
         frame_and.pack(fill="x", pady=(0, 2))
 
-        ctk.CTkLabel(frame_and, text="PRODUÇÃO EM ANDAMENTO", font=("Arial", 15, "bold"),
-                     text_color=self.cor_texto).pack(pady=(2, 2))
+        self._ui_refs["in_progress_production_title"] = ctk.CTkLabel(
+            frame_and, text=self._title_text("in_progress_production"), font=("Arial", 15, "bold"),
+            text_color=self.cor_texto
+        )
+        self._ui_refs["in_progress_production_title"].pack(pady=(2, 2))
 
         filtro_frame = ctk.CTkFrame(frame_and, fg_color="#F8F9FA", corner_radius=6)
         filtro_frame.pack(fill="x", pady=(2, 1))
 
-        ctk.CTkLabel(filtro_frame, text="Departamento:", font=("Arial", 12),
-                     text_color="#2C3E50").pack(side="left", padx=(6, 6))
+        self._ui_refs["department_label"] = ctk.CTkLabel(
+            filtro_frame, text=self._title_text("department"), font=("Arial", 12, "bold"),
+            text_color="#2C3E50"
+        )
+        self._ui_refs["department_label"].pack(side="left", padx=(6, 6))
 
-        valores = ["Todos", "Corte", "CORTES P/ ENVIAR", "Enviado", "Conferência", "Finalizado"] + list(
+        valores = [self._get_text("all"), self._get_text("cut_order"), self._get_text("cut_ready"), self._get_text("sent"), self._get_text("conference"), self._get_text("paid")] + list(
             self.departamentos)
 
         self.combo_depart = ctk.CTkComboBox(
@@ -493,11 +527,21 @@ class DashboardPage(ctk.CTkFrame):
 
         cols = ("Código", "Descrição", "Cortador", "Data Registro",
                 "Qtd. Desejada", "Dias Estimados", "Horas Estimadas", "Origem")
+        self.and_cols_i18n = {
+            "Código": "and_code",
+            "Descrição": "and_description",
+            "Cortador": "and_cutter",
+            "Data Registro": "and_record_date",
+            "Qtd. Desejada": "and_desired_qty",
+            "Dias Estimados": "and_estimated_days",
+            "Horas Estimadas": "and_estimated_hours",
+            "Origem": "and_origin",
+        }
 
         self.tree_and = ttk.Treeview(tree_container, columns=cols, show="headings", height=3)
 
         for c in cols:
-            self.tree_and.heading(c, text=c)
+            self.tree_and.heading(c, text=self._title_text(self.and_cols_i18n.get(c, c), c))
             if c == "Descrição":
                 self.tree_and.column(c, anchor="w", width=max(130, int(170 * scale)), stretch=True)
             elif c in ("Código", "Cortador", "Origem"):
@@ -601,8 +645,8 @@ class DashboardPage(ctk.CTkFrame):
 
             self.ax_barras.set_yticks(y_pos)
             self.ax_barras.set_yticklabels(etapas, fontsize=9, color=self.cor_texto)
-            self.ax_barras.set_xlabel("Cortes", fontsize=9, color=self.cor_texto)
-            self.ax_barras.set_title(f"Fluxo ({dias}d)", fontsize=11, color=self.cor_texto, fontweight='bold')
+            self.ax_barras.set_xlabel(self._title_text("cuts"), fontsize=9, color=self.cor_texto)
+            self.ax_barras.set_title(f"{self._title_text('flow')} ({dias}d)", fontsize=11, color=self.cor_texto, fontweight='bold')
 
             for i, (bar, qtd, pcs) in enumerate(zip(bars, quantidades, pecas)):
                 label = f"{qtd}" if qtd > 0 else ""
@@ -624,22 +668,22 @@ class DashboardPage(ctk.CTkFrame):
 
                 if finalizados:
                     self.ax_linha.plot(x, finalizados, marker='o', linewidth=2, markersize=5,
-                                       color="#22C55E", label="Finalizados")
+                                       color="#22C55E", label=self._title_text("finished_7d"))
                     self.ax_linha.fill_between(x, finalizados, alpha=0.3, color="#22C55E")
 
                 if enviados and any(v > 0 for v in enviados):
                     self.ax_linha.plot(x, enviados, marker='s', linewidth=2, markersize=4,
-                                       color="#F59E0B", label="Enviados")
+                                       color="#F59E0B", label=self._title_text("sent"))
 
                 self.ax_linha.set_xticks(x)
                 self.ax_linha.set_xticklabels(datas_fmt, fontsize=7, color=self.cor_texto, rotation=45)
                 self.ax_linha.legend(fontsize=7, loc='upper left', facecolor=self.cor_secundaria,
                                      labelcolor=self.cor_texto, framealpha=0.8)
             else:
-                self.ax_linha.text(0.5, 0.5, "Sem dados", ha='center', va='center',
+                self.ax_linha.text(0.5, 0.5, self._title_text("no_data"), ha='center', va='center',
                                    fontsize=10, color=self.cor_texto, transform=self.ax_linha.transAxes)
 
-            self.ax_linha.set_title(f"Evolução ({dias}d)", fontsize=11, color=self.cor_texto, fontweight='bold')
+            self.ax_linha.set_title(f"{self._title_text('evolution')} ({dias}d)", fontsize=11, color=self.cor_texto, fontweight='bold')
             self.ax_linha.grid(True, alpha=0.3, color=self.cor_borda)
 
             self._apply_figure_layout()
@@ -649,7 +693,7 @@ class DashboardPage(ctk.CTkFrame):
             total_pecas = sum(pecas)
             if hasattr(self, "lbl_info_grafico"):
                 self.lbl_info_grafico.configure(
-                    text=f"Total: {total_cortes} cortes | {total_pecas} peças ({dias} dias)")
+                    text=f"{self._title_text('all')}: {total_cortes} {self._title_text('cuts')} | {total_pecas} {self._title_text('pieces')} ({dias}D)")
 
         except Exception as e:
             print(f"Erro gráfico produção: {e}")
@@ -765,7 +809,14 @@ class DashboardPage(ctk.CTkFrame):
     def _buscar_dados_fluxo(self, dias: int = 7):
         """Busca dados do fluxo de produção."""
         dados = {
-            "etapas": ["Ordem Corte", "Corte Pronto", "Enviado", "Conferência", "Pendente", "Pago"],
+            "etapas": [
+                self._get_text("cut_order"),
+                self._get_text("cut_ready"),
+                self._get_text("sent"),
+                self._get_text("conference"),
+                self._get_text("pending"),
+                self._get_text("paid"),
+            ],
             "quantidades": [0, 0, 0, 0, 0, 0],
             "pecas": [0, 0, 0, 0, 0, 0],
             "evolucao": {"datas": [], "finalizados": [], "enviados": []}
@@ -1012,17 +1063,17 @@ class DashboardPage(ctk.CTkFrame):
             self.after(100, lambda: self._desenhar_grafico_painel(dados_fluxo))
             return
 
-        setor = self.painel_prod_setor_var.get() or "Todos"
-        tipo = self.painel_prod_grafico_var.get() or "Barras"
+        setor = self.painel_prod_setor_var.get() or self._get_text("all")
+        tipo = self.painel_prod_grafico_var.get() or self._get_text("bars")
 
         etapas = dados_fluxo.get("etapas", [])
         valores = dados_fluxo.get("quantidades", [])
 
-        if setor != "Todos" and setor in etapas:
+        if setor != self._get_text("all") and setor in etapas:
             idx = etapas.index(setor)
             valor_setor = valores[idx] if idx < len(valores) else 0
             total = sum(valores)
-            etapas = [setor, "Outros"]
+            etapas = [setor, self._get_text("others")]
             valores = [valor_setor, max(0, total - valor_setor)]
 
         if not valores:
@@ -1031,7 +1082,7 @@ class DashboardPage(ctk.CTkFrame):
         max_val = max(valores) if max(valores) > 0 else 1
         cores = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#0EA5E9", "#64748B"]
 
-        if tipo == "Rosca":
+        if tipo == self._get_text("donut"):
             total = sum(valores)
             start = 0
             cx, cy = largura / 2, altura / 2
@@ -1045,7 +1096,7 @@ class DashboardPage(ctk.CTkFrame):
                 start += ext
             canvas.create_oval(cx - raio * 0.7, cy - raio * 0.7, cx + raio * 0.7, cy + raio * 0.7,
                                fill="#FFFFFF", outline="")
-        elif tipo == "Linha":
+        elif tipo == self._get_text("line"):
             padding = 12
             step = (largura - 2 * padding) / max(1, len(valores) - 1)
             pontos = []
@@ -1109,6 +1160,15 @@ class DashboardPage(ctk.CTkFrame):
 
     def _buscar_cortes_por_setor(self, setor: str):
         setor_norm = (setor or "").strip().lower()
+        mapa_setor = {
+            self._get_text("all").strip().lower(): "todos",
+            self._get_text("cut_order").strip().lower(): "ordem corte",
+            self._get_text("cut_ready").strip().lower(): "cortes p/ enviar",
+            self._get_text("sent").strip().lower(): "enviado",
+            self._get_text("conference").strip().lower(): "conferência",
+            self._get_text("paid").strip().lower(): "finalizado",
+        }
+        setor_norm = mapa_setor.get(setor_norm, setor_norm)
         resultados = []
 
         if not self.POSTGRES_DISPONIVEL:
@@ -1154,8 +1214,14 @@ class DashboardPage(ctk.CTkFrame):
 
     def _atualizar_tabela_estoque(self):
         setor = self.combo_tipo_estoque.get()
-        tabelas = {"Tecidos": "estoque_tecidos", "Aviamentos": "estoque_aviamentos", "Insumos": "estoque_insumos",
-                   "Escritorio": "estoque_escritorio", "Limpeza": "estoque_limpeza", "Outros": "estoque_outros"}
+        tabelas = {
+            self._get_text("fabrics"): "estoque_tecidos",
+            self._get_text("supplies"): "estoque_aviamentos",
+            self._get_text("inputs"): "estoque_insumos",
+            self._get_text("office"): "estoque_escritorio",
+            self._get_text("cleaning"): "estoque_limpeza",
+            self._get_text("others"): "estoque_outros",
+        }
         nome_tabela = tabelas.get(setor)
         if not nome_tabela:
             return
@@ -1163,14 +1229,14 @@ class DashboardPage(ctk.CTkFrame):
         cols = _columns_pg(nome_tabela)
         if not cols:
             cols = ["id", "numero_item", "descricao", "codigo", "data_entrada",
-                    "metros" if setor == "Tecidos" else "quantidade"]
+                    "metros" if setor == self._get_text("fabrics") else "quantidade"]
 
         col_id = _pick(cols, "id", default="id")
         col_num = _pick(cols, "numero_item", "numero", default=None)
         col_desc = _pick(cols, "descricao", default=None)
         col_cod = _pick(cols, "codigo", default=None)
         col_data = _pick(cols, "data_entrada", "data", default=None)
-        col_qtd = _pick(cols, "metros", "quantidade", default="quantidade") if setor == "Tecidos" else _pick(cols,
+        col_qtd = _pick(cols, "metros", "quantidade", default="quantidade") if setor == self._get_text("fabrics") else _pick(cols,
                                                                                                              "quantidade",
                                                                                                              default=None)
 
@@ -1201,11 +1267,11 @@ class DashboardPage(ctk.CTkFrame):
             return
 
         try:
-            setor = self.selected_depart.get() or "Todos"
+            setor = self.selected_depart.get() or self._get_text("all")
             linhas = self._buscar_cortes_por_setor(setor)
 
             if not linhas:
-                self.tree_and.insert("", "end", values=("Sem dados", "-", "-", "-", "0", "0", "0", "-"))
+                self.tree_and.insert("", "end", values=(self._title_text("no_data"), "-", "-", "-", "0", "0", "0", "-"))
                 return
 
             for linha in linhas:
@@ -1291,10 +1357,10 @@ class DashboardPage(ctk.CTkFrame):
             setattr(self, f"{lbl_attr}_bar", barra)
             setattr(self, lbl_attr, lbl)
 
-        mk_card(0, "Em Andamento", "lbl_card_andamento", self.cor_destaque)
-        mk_card(1, "Finalizados (7d)", "lbl_card_finalizadas_7d", self.cor_sucesso)
-        mk_card(2, "Produção Semanal", "lbl_card_prod_semanal", self.cor_destaque)
-        mk_card(3, "Produção Mensal", "lbl_card_prod_mensal", self.cor_destaque)
+        mk_card(0, self._title_text("in_progress"), "lbl_card_andamento", self.cor_destaque)
+        mk_card(1, self._title_text("finished_7d"), "lbl_card_finalizadas_7d", self.cor_sucesso)
+        mk_card(2, self._title_text("weekly_production"), "lbl_card_prod_semanal", self.cor_destaque)
+        mk_card(3, self._title_text("monthly_production"), "lbl_card_prod_mensal", self.cor_destaque)
 
         self.atualizar_cards_resumo()
 
@@ -1316,7 +1382,7 @@ class DashboardPage(ctk.CTkFrame):
 
         try:
             prod_sem = self._sum_producao_periodo("semana")
-            self.lbl_card_prod_semanal.configure(text=f"Cortes: {prod_sem['cortes']}\nPeças: {prod_sem['pecas']}")
+            self.lbl_card_prod_semanal.configure(text=f"{self._title_text('cuts')}: {prod_sem['cortes']}\n{self._title_text('pieces')}: {prod_sem['pecas']}")
             if hasattr(self, "lbl_card_prod_semanal_bar"):
                 self.lbl_card_prod_semanal_bar.set(min(1.0, prod_sem["cortes"] / 100.0))
         except:
@@ -1324,7 +1390,7 @@ class DashboardPage(ctk.CTkFrame):
 
         try:
             prod_mes = self._sum_producao_periodo("mes")
-            self.lbl_card_prod_mensal.configure(text=f"Cortes: {prod_mes['cortes']}\nPeças: {prod_mes['pecas']}")
+            self.lbl_card_prod_mensal.configure(text=f"{self._title_text('cuts')}: {prod_mes['cortes']}\n{self._title_text('pieces')}: {prod_mes['pecas']}")
             if hasattr(self, "lbl_card_prod_mensal_bar"):
                 self.lbl_card_prod_mensal_bar.set(min(1.0, prod_mes["cortes"] / 100.0))
         except:
@@ -1340,7 +1406,7 @@ class DashboardPage(ctk.CTkFrame):
         for w in self.frame_ultimos.winfo_children():
             w.destroy()
 
-        ctk.CTkLabel(self.frame_ultimos, text="ÚLTIMOS FINALIZADOS (PAGOS)", font=ctk.CTkFont(size=15, weight="bold"),
+        ctk.CTkLabel(self.frame_ultimos, text=self._title_text("last_finished_paid"), font=ctk.CTkFont(size=15, weight="bold"),
                      text_color=self.cor_texto).pack(anchor="w", padx=10, pady=(0, 4))
 
         row = ctk.CTkFrame(self.frame_ultimos, fg_color="transparent")
@@ -1348,7 +1414,7 @@ class DashboardPage(ctk.CTkFrame):
 
         dados = self._ultimos_finalizados_from_db(limite=limite)
         if not dados:
-            dados = [{"codigo": "-", "descricao": "Nenhum corte pago", "qtd": 0, "data_str": "-"}]
+            dados = [{"codigo": "-", "descricao": self._get_text("none_paid_cut"), "qtd": 0, "data_str": "-"}]
         while len(dados) < 3:
             dados.append({"codigo": "-", "descricao": "-", "qtd": 0, "data_str": "-"})
 
@@ -1358,14 +1424,14 @@ class DashboardPage(ctk.CTkFrame):
             card.grid(row=0, column=i, sticky="nsew", padx=8, pady=4)
             card.pack_propagate(False)
 
-            ctk.CTkLabel(card, text=f"Cód: {it.get('codigo', '-')}", font=ctk.CTkFont(size=13, weight="bold"),
+            ctk.CTkLabel(card, text=f"{self._title_text('code_short')}: {it.get('codigo', '-')}", font=ctk.CTkFont(size=13, weight="bold"),
                          text_color=self.cor_destaque).pack(pady=(6, 0))
 
             desc = it.get('descricao', '-')
             ctk.CTkLabel(card, text=desc[:30] + "..." if len(desc) > 30 else desc, font=ctk.CTkFont(size=12),
                          text_color=self.cor_texto).pack(pady=(2, 0))
 
-            ctk.CTkLabel(card, text=f"Peças: {it.get('qtd', 0)}", font=ctk.CTkFont(size=16, weight="bold"),
+            ctk.CTkLabel(card, text=f"{self._title_text('pieces')}: {it.get('qtd', 0)}", font=ctk.CTkFont(size=16, weight="bold"),
                          text_color="#40A9FF").pack(pady=(2, 0))
 
             ctk.CTkLabel(card, text=it.get("data_str", "-"), font=ctk.CTkFont(size=12), text_color=self.cor_texto).pack(
