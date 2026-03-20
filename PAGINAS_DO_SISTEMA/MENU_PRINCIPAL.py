@@ -2495,10 +2495,11 @@ class OperaMenuApp(ctk.CTk):
         )
 
         # sincroniza estado VISUAL sem executar lógica extra
+        # (neste switch, o estado selecionado representa "dia/claro")
         if is_dark_mode:
-            self.theme_switch.select()
-        else:
             self.theme_switch.deselect()
+        else:
+            self.theme_switch.select()
 
         self.theme_switch.pack(side="left")
 
@@ -2616,7 +2617,8 @@ class OperaMenuApp(ctk.CTk):
         if getattr(self, "_theme_switch_syncing", False):
             return
 
-        is_dark = (self.theme_switch.get() == 1)
+        # neste switch, 1 = dia/claro e 0 = noite/escuro
+        is_dark = (self.theme_switch.get() == 0)
         tema_nome = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
 
         if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
@@ -2650,9 +2652,9 @@ class OperaMenuApp(ctk.CTk):
             is_dark_mode = self._theme_mode_from_name(getattr(self, "current_theme_name", "")) == "dark"
             self._theme_switch_syncing = True
             if is_dark_mode:
-                self.theme_switch.select()
-            else:
                 self.theme_switch.deselect()
+            else:
+                self.theme_switch.select()
             if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
                 self.icon_theme.configure(text="🌙" if is_dark_mode else "☀️")
         except Exception:
