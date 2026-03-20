@@ -1593,6 +1593,14 @@ class OperaMenuApp(ctk.CTk):
         cor_borda = self._resolve_theme_color(pal.get("borda", self.cor_borda), self.cor_borda)
         cor_fundo = getattr(self, "cor_fundo", "#111827")
         tema_escuro = self._is_dark_tk_color(cor_secundaria) or self._is_dark_tk_color(cor_fundo)
+        try:
+            tema_escuro = tema_escuro or (self._theme_mode_from_name(getattr(self, "current_theme_name", "")) == "dark")
+        except Exception:
+            pass
+        try:
+            tema_escuro = tema_escuro or (ctk.get_appearance_mode().lower() == "dark")
+        except Exception:
+            pass
 
         if tema_escuro:
             menu_bg = self._realcar_cor(cor_secundaria, 1.06)
