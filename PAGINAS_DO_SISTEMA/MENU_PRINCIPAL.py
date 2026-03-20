@@ -2632,6 +2632,26 @@ class OperaMenuApp(ctk.CTk):
         except Exception:
             pass
 
+        # garante posição visual da chave conforme o tema efetivamente aplicado
+        self.after(20, self._sync_theme_switch_with_current_theme)
+
+    def _sync_theme_switch_with_current_theme(self):
+        try:
+            if not hasattr(self, "theme_switch") or not self.theme_switch.winfo_exists():
+                return
+            is_dark_mode = self._theme_mode_from_name(getattr(self, "current_theme_name", "")) == "dark"
+            self._theme_switch_syncing = True
+            if is_dark_mode:
+                self.theme_switch.select()
+            else:
+                self.theme_switch.deselect()
+            if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
+                self.icon_theme.configure(text="🌙" if is_dark_mode else "☀️")
+        except Exception:
+            pass
+        finally:
+            self._theme_switch_syncing = False
+
     def _build_user_widget(self):
         user_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
         user_frame.grid(row=0, column=4, padx=18, sticky="e")
