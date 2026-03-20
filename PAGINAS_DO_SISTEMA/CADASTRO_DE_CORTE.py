@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from tkinter import ttk, messagebox
+import tkinter.font as tkfont
 
 import customtkinter as ctk
 from PIL import Image, ImageTk
@@ -137,8 +138,17 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 "date": "DATA:", "add_fabric": "Adicionar Tecido", "remove_fabric": "Remover Tecido", "clear_table": "Limpar Tabela",
                 "total_pieces": "TOTAL DE PEÇAS:", "sheets": "FOLHAS:", "meters": "METROS:", "yield": "RENDIMENTO:",
                 "notes": "OBSERVAÇÕES:", "clear_all": "Limpar Tudo", "save_order": "Salvar Ordem",
-                "search_fabric": "Buscar Tecido (código/nome/composicao):", "available_color": "Cor Disponível:",
-                "bobbins": "Bobinas:", "sheets_short": "Folhas:", "qty_by_size": "Quantidades por Tamanho:",
+                "search_fabric": "Buscar Tecido (código/nome/composição):", "search_fabric_dialog": "Buscar tecido:",
+                "available_color": "Cor Disponível:", "bobbins": "Bobinas:", "bobbins_col": "BOBINAS",
+                "sheets_short": "Folhas:", "sheets_col": "FOLHAS", "qty_by_size": "Quantidades por Tamanho:",
+                "fabric": "TECIDO", "color": "COR", "composition": "COMPOSIÇÃO", "number": "NÚMERO",
+                "total_pieces_col": "TOTAL PEÇAS", "total_lot": "TOTAL LOTE",
+                "select_model": "select_model", "select_color": "Selecione a cor", "loading_colors": "Carregando cores...",
+                "no_fabric_selected": "Nenhum tecido selecionado", "no_color_found": "Nenhuma cor encontrada",
+                "no_models_found": "Nenhum modelo encontrado", "load_models_fail": "Falha ao carregar modelos:\n{erro}",
+                "initialization_problem": "Problema de inicialização", "diagnostic": "Diagnóstico", "all_widgets_initialized": "Todos os widgets foram inicializados",
+                "select_valid_model_before_add": "Selecione um modelo válido antes de adicionar tecido.",
+                "select_fabric_remove": "Selecione um tecido para remover.",
                 "confirm": "Confirmar", "cancel": "Cancelar", "search": "Buscar",
                 "warn": "Aviso", "error": "Erro", "confirm_title": "Confirmar", "table_not_found": "Tabela não encontrada",
                 "db_error": "Erro no Banco de Dados", "fill_order_before_save": "Informe o Nº ORDEM antes de salvar.",
@@ -153,8 +163,17 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 "date": "DATE:", "add_fabric": "Add Fabric", "remove_fabric": "Remove Fabric", "clear_table": "Clear Table",
                 "total_pieces": "TOTAL PIECES:", "sheets": "SHEETS:", "meters": "METERS:", "yield": "YIELD:",
                 "notes": "NOTES:", "clear_all": "Clear All", "save_order": "Save Order",
-                "search_fabric": "Search Fabric (code/name/composition):", "available_color": "Available Color:",
-                "bobbins": "Rolls:", "sheets_short": "Sheets:", "qty_by_size": "Quantities by Size:",
+                "search_fabric": "Search Fabric (code/name/composition):", "search_fabric_dialog": "Search fabric:",
+                "available_color": "Available Color:", "bobbins": "Rolls:", "bobbins_col": "ROLLS",
+                "sheets_short": "Sheets:", "sheets_col": "SHEETS", "qty_by_size": "Quantities by Size:",
+                "fabric": "FABRIC", "color": "COLOR", "composition": "COMPOSITION", "number": "NUMBER",
+                "total_pieces_col": "TOTAL PIECES", "total_lot": "TOTAL LOT",
+                "select_model": "select_model", "select_color": "Select color", "loading_colors": "Loading colors...",
+                "no_fabric_selected": "No fabric selected", "no_color_found": "No color found",
+                "no_models_found": "No models found", "load_models_fail": "Failed to load models:\n{erro}",
+                "initialization_problem": "Initialization problem", "diagnostic": "Diagnostic", "all_widgets_initialized": "All widgets were initialized",
+                "select_valid_model_before_add": "Select a valid model before adding fabric.",
+                "select_fabric_remove": "Select a fabric to remove.",
                 "confirm": "Confirm", "cancel": "Cancel", "search": "Search",
                 "warn": "Warning", "error": "Error", "confirm_title": "Confirm", "table_not_found": "Table not found",
                 "db_error": "Database Error", "fill_order_before_save": "Enter the ORDER NO. before saving.",
@@ -169,8 +188,17 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 "date": "FECHA:", "add_fabric": "Agregar Tela", "remove_fabric": "Quitar Tela", "clear_table": "Limpiar Tabla",
                 "total_pieces": "TOTAL DE PIEZAS:", "sheets": "HOJAS:", "meters": "METROS:", "yield": "RENDIMIENTO:",
                 "notes": "OBSERVACIONES:", "clear_all": "Limpiar Todo", "save_order": "Guardar Orden",
-                "search_fabric": "Buscar Tela (código/nombre/composición):", "available_color": "Color disponible:",
-                "bobbins": "Bobinas:", "sheets_short": "Hojas:", "qty_by_size": "Cantidades por Talla:",
+                "search_fabric": "Buscar Tela (código/nombre/composición):", "search_fabric_dialog": "Buscar tela:",
+                "available_color": "Color disponible:", "bobbins": "Bobinas:", "bobbins_col": "BOBINAS",
+                "sheets_short": "Hojas:", "sheets_col": "HOJAS", "qty_by_size": "Cantidades por Talla:",
+                "fabric": "TELA", "color": "COLOR", "composition": "COMPOSICIÓN", "number": "NÚMERO",
+                "total_pieces_col": "TOTAL PIEZAS", "total_lot": "TOTAL LOTE",
+                "select_model": "select_model", "select_color": "Seleccione el color", "loading_colors": "Cargando colores...",
+                "no_fabric_selected": "Ninguna tela seleccionada", "no_color_found": "No se encontró color",
+                "no_models_found": "No se encontraron modelos", "load_models_fail": "Error al cargar modelos:\n{erro}",
+                "initialization_problem": "Problema de inicialización", "diagnostic": "Diagnóstico", "all_widgets_initialized": "Todos los widgets fueron inicializados",
+                "select_valid_model_before_add": "Seleccione un modelo válido antes de agregar tela.",
+                "select_fabric_remove": "Seleccione una tela para quitar.",
                 "confirm": "Confirmar", "cancel": "Cancelar", "search": "Buscar",
                 "warn": "Aviso", "error": "Error", "confirm_title": "Confirmar", "table_not_found": "Tabla no encontrada",
                 "db_error": "Error de base de datos", "fill_order_before_save": "Informe el N.º ORDEN antes de guardar.",
@@ -715,8 +743,17 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             scrollbar=scrollbar,
             columns=columns,
             min_widths={
-                "tecido": 120, "cor": 90, "composicao": 120, "BOBINAS": 60, "folhas": 60, "total": 70,
-                "col1": 6, "col2": 6, "col3": 6, "col4": 6, "col5": 6
+                "tecido": self._minwidth_por_header(self.tree, "tecido", 130),
+                "cor": self._minwidth_por_header(self.tree, "cor", 95),
+                "composicao": self._minwidth_por_header(self.tree, "composicao", 130),
+                "BOBINAS": self._minwidth_por_header(self.tree, "BOBINAS", 80),
+                "folhas": self._minwidth_por_header(self.tree, "folhas", 80),
+                "total": self._minwidth_por_header(self.tree, "total", 90),
+                "col1": 6, "col2": 6, "col3": 6, "col4": 6, "col5": 6,
+                "PP": self._minwidth_por_header(self.tree, "PP", 48), "P": self._minwidth_por_header(self.tree, "P", 48),
+                "M": self._minwidth_por_header(self.tree, "M", 48), "G": self._minwidth_por_header(self.tree, "G", 48),
+                "GG": self._minwidth_por_header(self.tree, "GG", 52), "G1": self._minwidth_por_header(self.tree, "G1", 52),
+                "G2": self._minwidth_por_header(self.tree, "G2", 52), "G3": self._minwidth_por_header(self.tree, "G3", 52)
             },
             weights={
                 "tecido": 4.5, "cor": 2.2, "composicao": 3.2, "BOBINAS": 1.3, "folhas": 1.3, "total": 1.6,
@@ -819,8 +856,18 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             scrollbar=scrollbar_lotes,
             columns=lote_columns,
             min_widths={
-                "numero": 70, "tecido": 120, "cor": 90, "composicao": 120, "bobinas": 60, "folhas": 60, "total": 70,
-                "col1": 6, "col2": 6, "col3": 6, "col4": 6, "col5": 6
+                "numero": self._minwidth_por_header(self.lotes_tree, "numero", 80),
+                "tecido": self._minwidth_por_header(self.lotes_tree, "tecido", 130),
+                "cor": self._minwidth_por_header(self.lotes_tree, "cor", 95),
+                "composicao": self._minwidth_por_header(self.lotes_tree, "composicao", 130),
+                "bobinas": self._minwidth_por_header(self.lotes_tree, "bobinas", 80),
+                "folhas": self._minwidth_por_header(self.lotes_tree, "folhas", 80),
+                "total": self._minwidth_por_header(self.lotes_tree, "total", 90),
+                "col1": 6, "col2": 6, "col3": 6, "col4": 6, "col5": 6,
+                "PP": self._minwidth_por_header(self.lotes_tree, "PP", 48), "P": self._minwidth_por_header(self.lotes_tree, "P", 48),
+                "M": self._minwidth_por_header(self.lotes_tree, "M", 48), "G": self._minwidth_por_header(self.lotes_tree, "G", 48),
+                "GG": self._minwidth_por_header(self.lotes_tree, "GG", 52), "G1": self._minwidth_por_header(self.lotes_tree, "G1", 52),
+                "G2": self._minwidth_por_header(self.lotes_tree, "G2", 52), "G3": self._minwidth_por_header(self.lotes_tree, "G3", 52)
             },
             weights={
                 "numero": 1.4, "tecido": 4.0, "cor": 2.2, "composicao": 3.0, "bobinas": 1.2, "folhas": 1.2,
@@ -981,6 +1028,24 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.after(100, self.carregar_tecidos)
         self.after(100, self.verificar_inicializacao_widgets)
 
+    def _medir_texto_treeview(self, texto, bold=False):
+        try:
+            familia = "Arial"
+            tamanho = 10
+            peso = "bold" if bold else "normal"
+            fonte = tkfont.Font(family=familia, size=tamanho, weight=peso)
+            return int(fonte.measure(str(texto or "")))
+        except Exception:
+            return int(len(str(texto or "")) * (9 if bold else 8))
+
+    def _minwidth_por_header(self, tree, col, fallback=40):
+        try:
+            header_text = tree.heading(col).get("text", "")
+        except Exception:
+            header_text = ""
+        largura_texto = self._medir_texto_treeview(header_text, bold=True)
+        return max(int(fallback), largura_texto + 28)
+
     def _configurar_treeview_responsiva_generic(
             self,
             container,
@@ -1069,23 +1134,37 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
             widths = {}
             for c in columns:
+                min_w = int(min_widths.get(c, 40))
                 w = int(avail * (weights.get(c, 1.0) / wsum))
-                w = max(int(min_widths.get(c, 40)), w)
-                widths[c] = w
+                widths[c] = max(min_w, w)
 
-            # ajusta diferença de arredondamento: joga no maior peso (ou na primeira coluna)
             used = sum(widths.values())
-            diff = avail - used
-            if diff != 0:
-                alvo = None
-                maior = -1
-                for c in columns:
-                    p = weights.get(c, 1.0)
-                    if p > maior:
-                        maior = p
-                        alvo = c
-                alvo = alvo or columns[0]
-                widths[alvo] = max(int(min_widths.get(alvo, 40)), widths[alvo] + diff)
+            if used > avail:
+                excesso = used - avail
+                redutiveis = [c for c in columns if widths[c] > int(min_widths.get(c, 40))]
+                while excesso > 0 and redutiveis:
+                    mudou = False
+                    for c in redutiveis:
+                        min_w = int(min_widths.get(c, 40))
+                        if widths[c] > min_w and excesso > 0:
+                            widths[c] -= 1
+                            excesso -= 1
+                            mudou = True
+                    if not mudou:
+                        break
+                    redutiveis = [c for c in columns if widths[c] > int(min_widths.get(c, 40))]
+            else:
+                diff = avail - used
+                if diff != 0:
+                    alvo = None
+                    maior = -1
+                    for c in columns:
+                        p = weights.get(c, 1.0)
+                        if p > maior:
+                            maior = p
+                            alvo = c
+                    alvo = alvo or columns[0]
+                    widths[alvo] = max(int(min_widths.get(alvo, 40)), widths[alvo] + diff)
 
             # aplica
             for c in columns:
