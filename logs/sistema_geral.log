@@ -586,3 +586,143 @@ AttributeError: 'GerenciadorBancoDados' object has no attribute '_tr'
 2026-03-19 18:30:30 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
 2026-03-19 18:32:23 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
 2026-03-19 18:32:24 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-19 18:49:42 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-19 18:49:42 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-19 18:49:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-19 18:49:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-19 18:49:50 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-19 18:49:50 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-19 18:49:56 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-19 18:49:56 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 08:54:18 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 601, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:54:37 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 601, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:55:07 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 601, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:55:48 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 601, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:56:22 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 597, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:58:13 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 724, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:59:52 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 600, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 09:21:17 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:21:18 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:22:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:22:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:22:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:22:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:23:06 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:23:06 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:23:16 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:23:16 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:23:25 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:24:10 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:24:10 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:24:22 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:24:22 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:30:29 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:30:29 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:30:38 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:30:38 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:30:41 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:30:41 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:30:55 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:30:55 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:39:00 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 09:39:00 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 09:39:34 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-20 11:06:37 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 11:06:37 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 11:07:19 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-03-20 11:07:36 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-20 11:20:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 11:20:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 11:21:14 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-03-20 11:21:27 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-20 11:21:38 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 11:21:38 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 11:21:41 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 11:21:41 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 11:21:44 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-20 11:23:05 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-20 12:12:37 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Atalho
+2026-03-20 12:12:37 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Atalho
+2026-03-20 12:55:09 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 12:55:09 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 12:55:26 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 12:55:26 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 12:55:30 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-20 12:55:38 | INFO     | OPERA_SYSTEM | [SISTEMA] Execução SQL finalizada
+2026-03-20 12:55:52 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 12:55:52 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 12:55:53 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-20 12:56:02 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-20 12:56:02 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-20 12:56:03 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Clique
+2026-03-20 12:56:04 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto

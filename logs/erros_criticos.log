@@ -295,3 +295,80 @@ Traceback (most recent call last):
     print(self._tr("show_status_error", erro=e))
           ^^^^^^^^
 AttributeError: 'GerenciadorBancoDados' object has no attribute '_tr'
+2026-03-20 08:54:18 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 601, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:54:37 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 601, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:55:07 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 601, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:55:48 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 601, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:56:22 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 597, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:58:13 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 724, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-20 08:59:52 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro ao conectar como administrador
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DADOS_FABRICA_usa-es-pt.py", line 600, in conectar_como_admin
+    self.conn = db.get_connection()
+                ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 525, in get_connection
+    _cached_conn = _create_connection()
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
+    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+Exception: Não foi possível conectar. Portas testadas: [5432]

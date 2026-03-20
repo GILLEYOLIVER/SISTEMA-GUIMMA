@@ -74,7 +74,43 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             "pdf_preview_unavailable": "Não foi possível renderizar a pré-visualização do PDF neste computador. O arquivo será aberto externamente.",
             "open_pdf_error": "Não foi possível abrir o PDF:\n{erro}",
             "schema_validation_error": "Não foi possível validar o schema:\n{erro}",
-            "query_order": "Consultar Ordens de Corte"
+            "query_order": "Consultar Ordens de Corte",
+            "order_number": "Nº ORDEM:",
+            "code": "CÓDIGO:",
+            "description": "DESCRIÇÃO:",
+            "length": "COMPRIMENTO (m):",
+            "width": "LARGURA (m):",
+            "cutter": "CORTADOR:",
+            "assistant": "AJUDANTE:",
+            "date": "DATA:",
+            "fabric": "TECIDO",
+            "color": "COR",
+            "composition": "COMPOSIÇÃO",
+            "rolls": "BOBINAS",
+            "sheets_short": "FOLHAS",
+            "pp": "PP",
+            "p": "P",
+            "m": "M",
+            "g": "G",
+            "gg": "GG",
+            "g1": "G1",
+            "g2": "G2",
+            "g3": "G3",
+            "total": "TOTAL",
+            "lot": "LOTE",
+            "lot_number": "Nº",
+            "cut_information": "INFORMAÇÕES DO CORTE",
+            "cut_lots": "LOTES DE CORTE",
+            "real_percentage": "PORCENTAGEM REAL",
+            "total_pieces_yield": "TOTAL DE PEÇAS E RENDIMENTO",
+            "total_pieces": "Total Peças:",
+            "yield_label": "Rendimento:",
+            "sheets_label_full": "Folhas:",
+            "meters_used": "Metros Utilizados:",
+            "observations_title": "OBSERVAÇÕES",
+            "signature": "Assinatura do Responsável",
+            "printed_on": "Impresso em: {date}",
+            "cut_order_produced": "ORDEM DE CORTE PRODUZIDA",
         },
         "en_US": {
             "search_order": "Search Order:",
@@ -117,7 +153,43 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             "pdf_preview_unavailable": "Could not render the PDF preview on this computer. The file will be opened externally.",
             "open_pdf_error": "Could not open the PDF:\n{erro}",
             "schema_validation_error": "Could not validate the schema:\n{erro}",
-            "query_order": "View Cut Orders"
+            "query_order": "View Cut Orders",
+            "order_number": "ORDER N°:",
+            "code": "CODE:",
+            "description": "DESCRIPTION:",
+            "length": "LENGTH (m):",
+            "width": "WIDTH (m):",
+            "cutter": "CUTTER:",
+            "assistant": "ASSISTANT:",
+            "date": "DATE:",
+            "fabric": "FABRIC",
+            "color": "COLOR",
+            "composition": "COMPOSITION",
+            "rolls": "ROLLS",
+            "sheets_short": "SHEETS",
+            "pp": "PP",
+            "p": "P",
+            "m": "M",
+            "g": "G",
+            "gg": "GG",
+            "g1": "G1",
+            "g2": "G2",
+            "g3": "G3",
+            "total": "TOTAL",
+            "lot": "LOT",
+            "lot_number": "N°",
+            "cut_information": "CUT INFORMATION",
+            "cut_lots": "CUT LOTS",
+            "real_percentage": "REAL PERCENTAGE",
+            "total_pieces_yield": "TOTAL PIECES AND YIELD",
+            "total_pieces": "Total Pieces:",
+            "yield_label": "Yield:",
+            "sheets_label_full": "Sheets:",
+            "meters_used": "Meters Used:",
+            "observations_title": "OBSERVATIONS",
+            "signature": "Responsible Signature",
+            "printed_on": "Printed on: {date}",
+            "cut_order_produced": "CUT ORDER PRODUCED",
         },
         "es_ES": {
             "search_order": "Buscar Orden:",
@@ -160,7 +232,43 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             "pdf_preview_unavailable": "No fue posible renderizar la vista previa del PDF en este equipo. El archivo se abrirá externamente.",
             "open_pdf_error": "No fue posible abrir el PDF:\n{erro}",
             "schema_validation_error": "No fue posible validar el esquema:\n{erro}",
-            "query_order": "Consultar Órdenes de Corte"
+            "query_order": "Consultar Órdenes de Corte",
+            "order_number": "Nº ORDEN:",
+            "code": "CÓDIGO:",
+            "description": "DESCRIPCIÓN:",
+            "length": "LARGO (m):",
+            "width": "ANCHO (m):",
+            "cutter": "CORTADOR:",
+            "assistant": "AYUDANTE:",
+            "date": "FECHA:",
+            "fabric": "TELA",
+            "color": "COLOR",
+            "composition": "COMPOSICIÓN",
+            "rolls": "BOBINAS",
+            "sheets_short": "HOJAS",
+            "pp": "PP",
+            "p": "P",
+            "m": "M",
+            "g": "G",
+            "gg": "GG",
+            "g1": "G1",
+            "g2": "G2",
+            "g3": "G3",
+            "total": "TOTAL",
+            "lot": "LOTE",
+            "lot_number": "Nº",
+            "cut_information": "INFORMACIÓN DEL CORTE",
+            "cut_lots": "LOTES DE CORTE",
+            "real_percentage": "PORCENTAJE REAL",
+            "total_pieces_yield": "TOTAL DE PIEZAS Y RENDIMIENTO",
+            "total_pieces": "Total Piezas:",
+            "yield_label": "Rendimiento:",
+            "sheets_label_full": "Hojas:",
+            "meters_used": "Metros Utilizados:",
+            "observations_title": "OBSERVACIONES",
+            "signature": "Firma del Responsable",
+            "printed_on": "Impreso el: {date}",
+            "cut_order_produced": "ORDEN DE CORTE PRODUCIDA",
         },
     }
 
@@ -206,6 +314,16 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         if refs.get("obs_entry"):
             refs["obs_entry"].configure(placeholder_text=self._get_text("obs_placeholder"))
 
+        # Atualizar labels dos campos
+        for campo, entry in getattr(self, "campos", {}).items():
+            label_text = self._get_text(campo.lower().replace(" ", "_").replace("(", "").replace(")", "").replace(":", ""))
+            if label_text != campo:
+                # Encontrar o label associado
+                for widget in entry.master.winfo_children():
+                    if isinstance(widget, ctk.CTkLabel) and widget.cget("text") == campo:
+                        widget.configure(text=self._get_text(campo.lower().replace(" ", "_").replace("(", "").replace(")", "").replace(":", "")))
+                        break
+
     def __init__(self, master, sistema=None, app=None, *args, **kwargs):
         # Normaliza: funciona tanto se o menu passar 'sistema' quanto 'app'
         self.sistema = sistema or app
@@ -231,8 +349,8 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         except Exception as _e:
             # Não bloqueia a UI: apenas informa
             try:
-                messagebox.showwarning("Banco de Dados",
-                                       f"Não foi possível validar o schema:\n{_e}")
+                messagebox.showwarning(self._get_text("database"),
+                                       self._get_text("schema_validation_error", erro=_e))
             except Exception:
                 pass
 
@@ -289,8 +407,22 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                      font=("Arial", 12, "bold"), text_color=self.cor_texto)
         self._ui_refs["materials_title"].pack(pady=(0, 5))
 
-        colunas_tecido = ("TECIDO", "COR", "COMPOSIÇÃO", "BOBINAS", "FOLHAS",
-                          "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL")
+        colunas_tecido = (
+            self._get_text("fabric"),
+            self._get_text("color"),
+            self._get_text("composition"),
+            self._get_text("rolls"),
+            self._get_text("sheets_short"),
+            self._get_text("pp"),
+            self._get_text("p"),
+            self._get_text("m"),
+            self._get_text("g"),
+            self._get_text("gg"),
+            self._get_text("g1"),
+            self._get_text("g2"),
+            self._get_text("g3"),
+            self._get_text("total")
+        )
         self.tree_tecido = self._criar_tabela(frame_tecidos, colunas_tecido)
         self.tree_tecido.pack(fill="both", expand=True)
 
@@ -301,8 +433,23 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                      font=("Arial", 12, "bold"), text_color=self.cor_texto)
         self._ui_refs["lots_title"].pack(pady=(0, 5))
 
-        colunas_lote = ("LOTE", "TECIDO", "COR", "COMPOSIÇÃO", "BOBINAS", "FOLHAS",
-                        "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL")
+        colunas_lote = (
+            self._get_text("lot_number"),
+            self._get_text("fabric"),
+            self._get_text("color"),
+            self._get_text("composition"),
+            self._get_text("rolls"),
+            self._get_text("sheets_short"),
+            self._get_text("pp"),
+            self._get_text("p"),
+            self._get_text("m"),
+            self._get_text("g"),
+            self._get_text("gg"),
+            self._get_text("g1"),
+            self._get_text("g2"),
+            self._get_text("g3"),
+            self._get_text("total")
+        )
         self.tree_lote = self._criar_tabela(frame_lotes, colunas_lote)
         self.tree_lote.pack(fill="both", expand=True)
 
@@ -378,14 +525,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         setattr(self, nome, entry)
         self.campos[texto.strip(":")] = entry
 
-    def _criar_item_total(self, frame, texto, valor_default, linha, coluna):
-        ctk.CTkLabel(frame, text=texto, font=("Arial", 11, "bold"), anchor="e").grid(
-            row=linha, column=coluna, padx=(10, 5), pady=5, sticky="e"
-        )
-        valor = ctk.CTkLabel(frame, text=valor_default, font=("Arial", 11, "bold"), text_color="#4CAF50")
-        valor.grid(row=linha, column=coluna + 1, padx=(0, 20), pady=5, sticky="w")
-        return valor
-
     def _criar_label_valor(self, frame, chave_texto, valor, linha, coluna):
         texto = self._get_text(chave_texto)
         texto_label = ctk.CTkLabel(frame, text=texto, font=("Arial", 11), text_color=self.cor_texto)
@@ -395,8 +534,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         self._ui_refs[f"{chave_texto}_label"] = texto_label
         label = ctk.CTkLabel(frame, text=valor, font=("Arial", 11, "bold"), text_color=self.cor_sucesso)
         label.grid(row=linha, column=coluna + 1, padx=(0, 20), sticky="w")
-        nome = chave_texto.strip(":").lower() + "_valor"
-        setattr(self, nome, label)
         return label
 
     def _criar_tabela(self, frame, colunas):
@@ -486,7 +623,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                 self._carregar_ordem(resultados[0])
 
         except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao buscar ordem:\n{e}")
+            messagebox.showerror(self._get_text("error"), self._get_text("search_error", erro=e))
 
     def _escolher_ordem(self, ordens):
         def criar_callback(ordem):
@@ -685,7 +822,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             self._atualizar_porcentagem_real()
 
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao carregar ordem:\n{str(e)}")
+            messagebox.showerror(self._get_text("error"), self._get_text("load_order_error", erro=e))
 
     # --- Helper para montar nome de arquivo padrão ------------------------------
     def _nome_pdf_padrao(self):
@@ -782,7 +919,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         try:
             self._gerar_pdf_ordem_de_corte(dados_pdf, temp_pdf)
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao gerar PDF temporário:\n{e}")
+            messagebox.showerror(self._get_text("error"), self._get_text("temp_pdf_error", erro=e))
             return
 
         self._ultimo_pdf_temp = temp_pdf
@@ -831,13 +968,13 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                     return  # não mostra preview interno se abriu externo
                 except Exception:
                     messagebox.showerror(
-                        "Erro",
-                        f"Não foi possível pré-visualizar o PDF:\n{e}",
+                        self._get_text("error"),
+                        self._get_text("pdf_preview_unavailable")
                     )
                     return
 
         if img is None:
-            messagebox.showerror("Erro", "Não foi possível gerar a imagem de pré-visualização.")
+            messagebox.showerror(self._get_text("error"), self._get_text("pdf_preview_unavailable"))
             return
 
         # -------- 2) Redimensiona para caber inteiro --------
@@ -855,7 +992,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         # -------- 3) Janela de preview --------
         janela = ctk.CTkToplevel(self)
-        janela.title("Pré-visualização – Ordem de Corte")
+        janela.title(self._get_text("preview_title"))
         janela.geometry("850x750")
         janela.minsize(850, 750)
         janela.configure(fg_color=getattr(self, "cor_fundo", "#0E1525"))
@@ -1024,7 +1161,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         if caminho_arquivo:
             self._gerar_pdf_ordem_de_corte(dados_pdf, caminho_arquivo)
-            messagebox.showinfo("Sucesso", f"PDF salvo com sucesso em:\n{caminho_arquivo}")
+            messagebox.showinfo(self._get_text("success"), self._get_text("pdf_saved_success", caminho=caminho_arquivo))
 
     # -------------------- Impressora/Salvar usados pelo preview --------------------
     def _salvar_pdf(self):
@@ -1085,13 +1222,13 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         caminho_arquivo = filedialog.asksaveasfilename(
             initialdir=desktop,
             defaultextension=".pdf",
-            filetypes=[("Arquivos PDF", "*.pdf")],
+            filetypes=[(self._get_text("pdf_files"), "*.pdf")],
             initialfile=nome_padrao
         )
 
         if caminho_arquivo:
             self._gerar_pdf_ordem_de_corte(dados_pdf, caminho_arquivo)
-            messagebox.showinfo("Sucesso", f"PDF salvo com sucesso em:\n{caminho_arquivo}")
+            messagebox.showinfo(self._get_text("success"), self._get_text("pdf_saved_success", caminho=caminho_arquivo))
 
     def _imprimir_pdf(self):
         import os, sys, tempfile, shutil
@@ -1152,36 +1289,36 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         try:
             self._gerar_pdf_ordem_de_corte(dados_pdf, temp_path)
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao gerar PDF temporário:\n{e}")
+            messagebox.showerror(self._get_text("error"), self._get_text("temp_pdf_error", erro=e))
             return
 
         # Oferece salvar com nome padrão
-        if messagebox.askyesno("Salvar", "Deseja salvar uma cópia do PDF antes de imprimir?"):
+        if messagebox.askyesno(self._get_text("save_pdf"), self._get_text("pdf_saved_success", caminho="?").replace("?", "")):
             desktop = os.path.join(os.path.expanduser("~"), "Desktop")
             nome_padrao = self._nome_pdf_padrao()
             destino = filedialog.asksaveasfilename(
                 initialdir=desktop,
                 defaultextension=".pdf",
-                filetypes=[("Arquivos PDF", "*.pdf")],
+                filetypes=[(self._get_text("pdf_files"), "*.pdf")],
                 initialfile=nome_padrao
             )
             if destino:
                 try:
                     shutil.copyfile(temp_path, destino)
-                    messagebox.showinfo("Sucesso", f"PDF salvo em:\n{destino}")
+                    messagebox.showinfo(self._get_text("success"), self._get_text("pdf_saved_success", caminho=destino))
                 except Exception as e:
-                    messagebox.showerror("Erro", f"Falha ao salvar o PDF:\n{e}")
+                    messagebox.showerror(self._get_text("error"), f"Falha ao salvar o PDF:\n{e}")
 
         # Envia para impressora (Windows)
         if sys.platform.startswith("win"):
             try:
                 os.startfile(temp_path, "print")
-                messagebox.showinfo("Impressão", "Arquivo enviado para a impressora.")
+                messagebox.showinfo(self._get_text("print"), "Arquivo enviado para a impressora.")
             except Exception as e:
-                messagebox.showerror("Erro", f"Falha ao imprimir:\n{e}")
+                messagebox.showerror(self._get_text("error"), f"Falha ao imprimir:\n{e}")
         else:
             messagebox.showinfo(
-                "Imprimir",
+                self._get_text("print"),
                 "Impressão direta é suportada no Windows. Abra o PDF salvo e imprima pelo visualizador do sistema."
             )
 
@@ -1225,7 +1362,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         c.setFont("Helvetica-Bold", 14)
         c.setFillColorRGB(1, 1, 1)
-        c.drawCentredString(largura / 2, y - 1.1 * cm, "ORDEM DE CORTE PRODUZIDA")
+        c.drawCentredString(largura / 2, y - 1.1 * cm, self._get_text("cut_order_produced"))
         y -= 2.8 * cm
 
         c.setFillColorRGB(0, 0, 0)
@@ -1233,12 +1370,12 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         # 1) DADOS BÁSICOS (duas colunas)
         c.setFont("Helvetica", 9)
         pares = [
-            ("Nº ORDEM:", dados.get("numero_ordem", "")),
-            ("CÓDIGO:", dados.get("codigo", "")),
-            ("DESCRIÇÃO:", dados.get("descricao", "")),
-            ("DATA:", dados.get("data", "")),
-            ("CORTADOR:", dados.get("cortador", "")),
-            ("AJUDANTE:", dados.get("ajudante", "")),
+            (self._get_text("order_number"), dados.get("numero_ordem", "")),
+            (self._get_text("code"), dados.get("codigo", "")),
+            (self._get_text("description"), dados.get("descricao", "")),
+            (self._get_text("date"), dados.get("data", "")),
+            (self._get_text("cutter"), dados.get("cortador", "")),
+            (self._get_text("assistant"), dados.get("ajudante", "")),
         ]
         for i in range(0, len(pares), 2):
             c.drawString(margem, y, f"{pares[i][0]:<12} {pares[i][1]}")
@@ -1259,11 +1396,26 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             return x0, table_w / ncols
 
         # 2) INFORMAÇÕES DO CORTE (tecidos)
-        cols_t = ["TECIDOS", "COR", "COMP.", "BOB", "FOLHAS", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL"]
+        cols_t = [
+            self._get_text("fabric"),
+            self._get_text("color"),
+            self._get_text("composition"),
+            self._get_text("rolls"),
+            self._get_text("sheets_short"),
+            self._get_text("pp"),
+            self._get_text("p"),
+            self._get_text("m"),
+            self._get_text("g"),
+            self._get_text("gg"),
+            self._get_text("g1"),
+            self._get_text("g2"),
+            self._get_text("g3"),
+            self._get_text("total")
+        ]
         original_larguras_t = [90, 45, 80, 35, 40, 22, 22, 22, 22, 22, 22, 22, 22, 45]
         scale_t = available_width / sum(original_larguras_t)
         larguras_t = [w * scale_t for w in original_larguras_t]
-        x0_t, w_t = tabela_header("INFORMAÇÕES DO CORTE", len(cols_t))
+        x0_t, w_t = tabela_header(self._get_text("cut_information"), len(cols_t))
         c.setFont("Helvetica-Bold", 7)
         x = x0_t
         row_height = 0.5 * cm
@@ -1290,11 +1442,27 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         # 3) LOTES DE CORTE (tabela)
         y -= 0.5 * cm
-        cols_l = ["Nº", "TECIDOS", "COR", "COMP.", "BOB", "FOLHAS", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL"]
+        cols_l = [
+            self._get_text("lot_number"),
+            self._get_text("fabric"),
+            self._get_text("color"),
+            self._get_text("composition"),
+            self._get_text("rolls"),
+            self._get_text("sheets_short"),
+            self._get_text("pp"),
+            self._get_text("p"),
+            self._get_text("m"),
+            self._get_text("g"),
+            self._get_text("gg"),
+            self._get_text("g1"),
+            self._get_text("g2"),
+            self._get_text("g3"),
+            self._get_text("total")
+        ]
         original_larguras_l = [30, 60, 45, 80, 35, 40, 22, 22, 22, 22, 22, 22, 22, 22, 45]
         scale_l = available_width / sum(original_larguras_l)
         larguras_l = [w * scale_l for w in original_larguras_l]
-        x0_l, w_l = tabela_header("LOTES DE CORTE", len(cols_l))
+        x0_l, w_l = tabela_header(self._get_text("cut_lots"), len(cols_l))
         c.setFont("Helvetica-Bold", 7)
         x = x0_l
         for col, w in zip(cols_l, larguras_l):
@@ -1322,7 +1490,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         # 4) PORCENTAGEM REAL
         y -= 0.5 * cm
         cols_pr = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
-        x0_pr, w_pr = tabela_header("PORCENTAGEM REAL", len(cols_pr))
+        x0_pr, w_pr = tabela_header(self._get_text("real_percentage"), len(cols_pr))
 
         keys = [k.lower() for k in cols_pr]
         totais = {k: sum(int(l.get(k, 0) or 0) for l in dados.get("lotes", [])) for k in keys}
@@ -1350,13 +1518,13 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         y -= 0.4 * cm
         c.setFont("Helvetica-Bold", 10)
         c.line((largura - available_width) / 2, y, (largura + available_width) / 2, y)
-        c.drawString(margem, y - 0.3 * cm, "TOTAL DE PEÇAS E RENDIMENTO")
+        c.drawString(margem, y - 0.3 * cm, self._get_text("total_pieces_yield"))
         y -= 0.8 * cm
         totais_lbl = [
-            ("Total Peças:", str(dados.get("total_pecas", ""))),
-            ("Rendimento:", str(dados.get("rendimento", ""))),
-            ("Folhas:", str(dados.get("folhas", ""))),
-            ("Metros Utilizados:", str(dados.get("metros_utilizados", "")))
+            (self._get_text("total_pieces"), str(dados.get("total_pecas", ""))),
+            (self._get_text("yield_label"), str(dados.get("rendimento", ""))),
+            (self._get_text("sheets_label_full"), str(dados.get("folhas", ""))),
+            (self._get_text("meters_used"), str(dados.get("metros_utilizados", "")))
         ]
         c.setFont("Helvetica", 9)
         for lbl, val in totais_lbl:
@@ -1367,7 +1535,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         y -= 0.4 * cm
         c.setFont("Helvetica-Bold", 10)
         c.line((largura - available_width) / 2, y, (largura + available_width) / 2, y)
-        c.drawString(margem, y - 0.3 * cm, "OBSERVAÇÕES")
+        c.drawString(margem, y - 0.3 * cm, self._get_text("observations_title"))
         y -= 0.8 * cm
         obs_h = 2 * cm
         x0_obs = (largura - available_width) / 2
@@ -1377,7 +1545,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         y -= obs_h + 0.4 * cm
 
         # 7) ASSINATURA
-        texto = "Assinatura do Responsável"
+        texto = self._get_text("signature")
         tamanho_fonte = 9
         c.setFont("Helvetica", tamanho_fonte)
         text_w = c.stringWidth(texto, "Helvetica", tamanho_fonte)
@@ -1396,7 +1564,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         # 8) RODAPÉ
         c.setFont("Helvetica-Oblique", 7)
         c.drawRightString(largura - margem, 0.5 * cm,
-                          f"Impresso em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+                          self._get_text("printed_on", date=datetime.now().strftime('%d/%m/%Y %H:%M')))
         c.save()
 
     # -------------------- utilitários --------------------

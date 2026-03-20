@@ -579,7 +579,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             button_hover_color=self.cor_hover
         )
         self.modelo_ocf_cb.pack(side="left", padx=5)
-        self.modelo_ocf_cb.set("Selecione um modelo")
+        self.modelo_ocf_cb.set(self._tr("select_model"))
 
         ctk.CTkButton(
             sel_frame,
@@ -685,8 +685,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         columns = ["tecido", "col1", "cor", "col2", "composicao", "col3", "BOBINAS", "col4", "folhas",
                    "col5"] + self.tamanhos + ["total"]
-        headers = ["TECIDO", "", "COR", "", "COMPOSIÇÃO", "", "BOBINAS", "", "FOLHAS", ""] + self.tamanhos + [
-            "TOTAL PEÇAS"]
+        headers = [self._tr("fabric"), "", self._tr("color"), "", self._tr("composition"), "", self._tr("bobbins_col"), "", self._tr("sheets_col"), ""] + self.tamanhos + [
+            self._tr("total_pieces_col")]
 
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=4, style="Custom.Treeview")
 
@@ -780,8 +780,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         lote_columns = ["numero", "tecido", "col1", "cor", "col2", "composicao", "col3", "bobinas", "col4", "folhas",
                         "col5"] + self.tamanhos + ["total"]
-        lote_headers = ["NUMERO", "TECIDO", "", "COR", "", "COMPOSIÇÃO", "", "BOBINAS", "", "FOLHAS",
-                        ""] + self.tamanhos + ["TOTAL LOTE"]
+        lote_headers = [self._tr("number"), self._tr("fabric"), "", self._tr("color"), "", self._tr("composition"), "", self._tr("bobbins_col"), "", self._tr("sheets_col"),
+                        ""] + self.tamanhos + [self._tr("total_lot")]
 
         self.lotes_tree = ttk.Treeview(lotes_frame, columns=lote_columns, show="headings", height=4,
                                        style="Custom.Treeview")
@@ -1128,9 +1128,9 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         if problemas:
             message = "Widgets não inicializados:\n- " + "\n- ".join(problemas)
-            messagebox.showerror("Problema de Inicialização", message)
+            messagebox.showerror(self._tr("initialization_problem"), message)
         else:
-            messagebox.showinfo("Diagnóstico", "Todos os widgets foram inicializados corretamente")
+            messagebox.showinfo(self._tr("diagnostic"), self._tr("all_widgets_initialized"))
 
     def verificar_inicializacao_widgets(self):
         widgets_essenciais = [
@@ -1174,7 +1174,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 self.modelos_disponiveis = cursor.fetchall()
             conn.close()
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao carregar modelos: {str(e)}")
+            messagebox.showerror(self._tr("error"), self._tr("load_models_fail", erro=str(e)))
             self.modelos_disponiveis = []
 
     def _formatar_metros(self, valor) -> str:
@@ -1379,7 +1379,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             combobox_cor.configure(values=cores_disponiveis)
 
             if not cores_disponiveis:
-                combobox_cor.set("Nenhuma cor encontrada")
+                combobox_cor.set(self._tr("no_color_found"))
                 return False
 
             selecionada = None
@@ -1446,8 +1446,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
     def adicionar_tecido(self):
         if not self.grade_disponivel:
-            messagebox.showwarning("Aviso",
-                                   "Selecione um modelo válido antes de adicionar tecidos!")
+            messagebox.showwarning(self._tr("warn"),
+                                   self._tr("select_valid_model_before_add"))
             return
 
         dialog = ctk.CTkToplevel(self)
@@ -1467,7 +1467,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         search_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         search_frame.pack(fill="x", pady=5)
 
-        ctk.CTkLabel(search_frame, text="Buscar Tecido (código/nome/composicao):",
+        ctk.CTkLabel(search_frame, text=self._tr("search_fabric_dialog"),
                      width=150, anchor="w", text_color=self.cor_texto).pack(side="left", padx=5)
 
         search_entry = ctk.CTkEntry(search_frame,
@@ -1507,7 +1507,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         cor_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         cor_frame.pack(fill="x", pady=5)
 
-        ctk.CTkLabel(cor_frame, text="Cor Disponível:",
+        ctk.CTkLabel(cor_frame, text=self._tr("available_color"),
                      width=150, anchor="w", text_color=self.cor_texto).pack(side="left", padx=5)
 
         self.cor_cb_add = ctk.CTkComboBox(cor_frame, state="readonly",
@@ -1516,7 +1516,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                                           text_color=self.cor_texto,
                                           button_color=self.cor_primaria,
                                           button_hover_color=self.cor_hover)
-        self.cor_cb_add.set("Selecione uma cor")
+        self.cor_cb_add.set(self._tr("select_color"))
         self.cor_cb_add.pack(side="left", fill="x", expand=True, padx=5)
 
         info_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
@@ -1527,7 +1527,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         quant_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         quant_frame.pack(fill="x", pady=10)
 
-        ctk.CTkLabel(quant_frame, text="Bobinas:", text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(quant_frame, text=self._tr("bobbins"), text_color=self.cor_texto).pack(side="left", padx=5)
         bobinas_entry = ctk.CTkEntry(quant_frame, width=80,
                                      fg_color=self.cor_secundaria,
                                      border_color=self.cor_borda,
@@ -1535,7 +1535,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         bobinas_entry.pack(side="left", padx=5)
         bobinas_entry.insert(0, "1")
 
-        ctk.CTkLabel(quant_frame, text="Folhas:", text_color=self.cor_texto).pack(side="left", padx=5)
+        ctk.CTkLabel(quant_frame, text=self._tr("sheets_short"), text_color=self.cor_texto).pack(side="left", padx=5)
         folhas_entry = ctk.CTkEntry(quant_frame, width=80,
                                     fg_color=self.cor_secundaria,
                                     border_color=self.cor_borda,
@@ -1546,7 +1546,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         grade_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         grade_frame.pack(fill="x", pady=5)
 
-        ctk.CTkLabel(grade_frame, text="Quantidades por Tamanho:", text_color=self.cor_texto).pack(anchor="w")
+        ctk.CTkLabel(grade_frame, text=self._tr("qty_by_size"), text_color=self.cor_texto).pack(anchor="w")
 
         scroll_grade = ctk.CTkScrollableFrame(grade_frame, orientation="horizontal", fg_color=self.cor_fundo)
         scroll_grade.pack(fill="x", expand=True)
@@ -1613,15 +1613,15 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 f"Selecionado: {codigo} - {descricao} | Cor atual: {cor_atual} | Estoque: {metros_disp} ({status})"
             )
             # Evita manter cores antigas enquanto recarrega
-            self.cor_cb_add.set("Carregando cores...")
+            self.cor_cb_add.set(self._tr("loading_colors"))
             self.cor_cb_add.configure(values=[])
 
             self._carregar_cores_por_codigo(codigo, self.cor_cb_add, cor_atual, tecido_tree, descricao)
 
         def do_busca():
-            self.cor_cb_add.set("Selecione uma cor")
+            self.cor_cb_add.set(self._tr("select_color"))
             self.cor_cb_add.configure(values=[])
-            selecionado_var.set("Nenhum tecido selecionado")
+            selecionado_var.set(self._tr("no_fabric_selected"))
 
             self._buscar_tecidos_para_adicao(search_entry, tecido_tree)
 
@@ -1631,7 +1631,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 tecido_tree.focus(itens[0])
                 on_tecido_select()
 
-        btn_buscar = ctk.CTkButton(search_frame, text="Buscar", width=80, command=do_busca,
+        btn_buscar = ctk.CTkButton(search_frame, text=self._tr("search"), width=80, command=do_busca,
                                    fg_color=self.cor_primaria, hover_color=self.cor_hover,
                                    text_color=self.cor_texto)
         btn_buscar.pack(side="left", padx=5)
@@ -1822,7 +1822,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 )
 
             if not tecido_tree.get_children():
-                messagebox.showinfo("Informação", "Nenhum tecido encontrado com o termo buscado.")
+                messagebox.showinfo(self._tr("info"), self._tr("search_no_results"))
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha na busca:\n{str(e)}")
@@ -1983,7 +1983,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
     def remover_tecido(self):
         selecionado = self.tree.selection()
         if not selecionado:
-            messagebox.showwarning("Aviso", "Selecione um tecido para remover!")
+            messagebox.showwarning(self._tr("warn"), self._tr("select_fabric_remove"))
             return
 
         valores = self.tree.item(selecionado[0], "values")
@@ -2544,7 +2544,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
                 self.btn_adicionar_tecido.configure(state="normal")
             else:
-                messagebox.showinfo("Não encontrado", f"Nenhum modelo com código '{codigo}'")
+                messagebox.showinfo(self._tr("not_found"), self._tr("model_not_found_by_code", codigo=codigo))
                 self.grade_disponivel = []
                 self.btn_adicionar_tecido.configure(state="disabled")
 
@@ -2694,7 +2694,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         except ValueError as e:
             from tkinter import messagebox
-            messagebox.showerror("Erro de Validação", str(e))
+            messagebox.showerror(self._tr("validation_error"), str(e))
         except Exception as e:
             if conn:
                 try:
@@ -2741,8 +2741,8 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
             if not col_cod:
                 if hasattr(self, "modelo_ocf_cb"):
-                    self.modelo_ocf_cb.configure(values=["[Nenhum modelo encontrado]"])
-                    self.modelo_ocf_cb.set("Selecione um modelo")
+                    self.modelo_ocf_cb.configure(values=[f"[{self._tr("no_models_found")}]"])
+                    self.modelo_ocf_cb.set(self._tr("select_model"))
                 return
 
             campos = [c for c in (col_id, col_cod, col_desc, col_cort, col_aux) if c]
@@ -2781,9 +2781,9 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         if hasattr(self, "modelo_ocf_cb") and self.modelo_ocf_cb is not None:
             self.modelo_ocf_cb.configure(values=opcoes)
             if opcoes and opcoes[0] != "[Erro ao carregar modelos]":
-                self.modelo_ocf_cb.set("Selecione um modelo")
+                self.modelo_ocf_cb.set(self._tr("select_model"))
             else:
-                self.modelo_ocf_cb.set(opcoes[0] if opcoes else "Nenhum modelo")
+                self.modelo_ocf_cb.set(opcoes[0] if opcoes else self._tr("no_models_found"))
 
     def _on_modelo_ocf_selected(self, value: str):
         try:
