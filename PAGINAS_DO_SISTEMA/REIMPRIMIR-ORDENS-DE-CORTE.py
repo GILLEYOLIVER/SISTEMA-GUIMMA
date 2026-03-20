@@ -18,7 +18,7 @@ try:
     import importlib.util as _importlib_util
     from pathlib import Path as _Path
 
-    _nova_ordem_path = _Path(__file__).with_name("NOVA_ORDEM_usa-es-pt.py")
+    _nova_ordem_path = _Path(__file__).with_name("NOVA_ORDEM.py")
     if _nova_ordem_path.exists():
         _spec_no = _importlib_util.spec_from_file_location("opera_nova_ordem_i18n", str(_nova_ordem_path))
         if _spec_no and _spec_no.loader:
@@ -821,7 +821,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         try:
             if OrdemCorte is None:
                 raise RuntimeError(
-                    "Módulo de Nova Ordem indisponível (NOVA_ORDEM_usa-es-pt.py / NOVA_ORDEM.py)."
+                    "Módulo de Nova Ordem indisponível (NOVA_ORDEM.py / NOVA_ORDEM.py)."
                 )
             # Janela oculta só para gerar o PDF
             dummy = ctk.CTk()

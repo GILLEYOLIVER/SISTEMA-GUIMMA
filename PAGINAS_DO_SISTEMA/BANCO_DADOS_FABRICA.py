@@ -1,4 +1,4 @@
-# BANCO_DADOS_FABRICA_usa-es-pt.py
+# BANCO_DADOS_FABRICA.py
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
 
 _cfg = db.load_config()

@@ -3475,7 +3475,7 @@ class OperaMenuApp(ctk.CTk):
             pass
         try:
             route = self.routes.get("Backup", {})
-            file_rel = route.get("file", "BACKUP_usa-es-pt.py")
+            file_rel = route.get("file", "BACKUP.py")
             file_path = os.path.join(APP_DIR, file_rel)
             if not os.path.exists(file_path):
                 file_path = os.path.join(ROOT_DIR, file_rel)
