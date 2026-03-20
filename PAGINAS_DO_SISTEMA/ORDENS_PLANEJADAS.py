@@ -31,6 +31,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         self.cor_fundo = getattr(sistema, "cor_fundo", "#F5F5F5")
         self.cor_texto = getattr(sistema, "cor_texto", "#111827")
         self.cor_primaria = getattr(sistema, "cor_primaria", "#3A7EBF")
+        self.cor_secundaria = getattr(sistema, "cor_secundaria", "#E5E7EB")
         self.cor_hover = getattr(sistema, "cor_hover", "#2E4A66")
         self.cor_borda = getattr(sistema, "cor_borda", "#CBD5E1")
 
@@ -72,9 +73,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="Atualizar",
             width=135,
             command=self._carregar_ops,
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         ).grid(row=0, column=0, padx=(0, 8), pady=4)
 
         ctk.CTkButton(
@@ -82,9 +81,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="Abrir na Nova Ordem",
             width=170,
             command=self._abrir_na_nova_ordem,
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         ).grid(row=0, column=1, padx=(0, 8), pady=4)
 
         filtros = ctk.CTkFrame(box, fg_color="transparent")
@@ -102,9 +99,12 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             filtros,
             values=PROGRAMACOES,
             width=145,
-            fg_color=self.cor_primaria,
+            fg_color=self.cor_secundaria,
             button_color=self.cor_primaria,
             button_hover_color=self._hover(self.cor_primaria),
+            text_color=self._contrast_text_for_color(self.cor_secundaria),
+            dropdown_text_color=self._contrast_text_for_color(self.cor_secundaria),
+            dropdown_fg_color=self.cor_secundaria,
         )
         self.filtro_programacao.set("Todas")
         self.filtro_programacao.grid(row=0, column=1, padx=(0, 10), pady=4)
@@ -148,9 +148,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="Filtrar",
             width=100,
             command=self._carregar_ops,
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         ).grid(row=0, column=8, padx=(0, 6), pady=4)
 
         ctk.CTkButton(
@@ -158,9 +156,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="Limpar Filtros",
             width=120,
             command=self._limpar_filtros,
-            fg_color="#6B7280",
-            hover_color=self._hover("#6B7280"),
-            text_color="white",
+            **self._button_style("#6B7280"),
         ).grid(row=0, column=9, padx=(0, 6), pady=4)
 
         # Linha 2
@@ -184,9 +180,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="📅",
             width=34,
             command=lambda: self._abrir_calendario(self.filtro_data_de),
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         )
         self.btn_data_de.pack(side="left")
 
@@ -210,9 +204,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="📅",
             width=34,
             command=lambda: self._abrir_calendario(self.filtro_data_ate),
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         )
         self.btn_data_ate.pack(side="left")
 
@@ -280,7 +272,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         )
 
         for col, txt, w, anc in colunas:
-            self.tree.heading(col, text=txt)
+            self.tree.heading(col, text=str(txt).upper())
             self.tree.column(col, width=w, anchor=anc)
 
         self.tree.grid(row=2, column=0, sticky="nsew", padx=(10, 0), pady=(0, 10))
@@ -318,7 +310,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
     def _db_ready(self):
         ok, msg = require_ready()
         if not ok:
-            messagebox.showerror("Ordens Planejadas", msg)
+            messagebox.showerror(self._msgbox_title(), msg)
         return ok
 
     def _hover(self, cor_hex):
@@ -331,6 +323,38 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             return f"#{int(r * fator):02x}{int(g * fator):02x}{int(b * fator):02x}"
         except Exception:
             return "#2E4A66"
+
+    def _button_style(self, base_color=None):
+        cor = (base_color or self.cor_primaria or "#3A7EBF").strip()
+        if not cor.startswith("#") or len(cor) != 7:
+            cor = "#3A7EBF"
+        try:
+            texto = self._contrast_text_for_color(cor)
+            borda = self._hover(cor)
+            hover = self._hover(borda)
+        except Exception:
+            texto = "#FFFFFF"
+            borda = self.cor_borda
+            hover = self._hover(cor)
+        return {
+            "fg_color": cor,
+            "hover_color": hover,
+            "text_color": texto,
+            "font": ctk.CTkFont(size=12, weight="bold"),
+            "border_width": 1,
+            "border_color": borda,
+        }
+
+    def _contrast_text_for_color(self, cor_hex: str) -> str:
+        try:
+            cor = cor_hex.lstrip("#")
+            r = int(cor[0:2], 16)
+            g = int(cor[2:4], 16)
+            b = int(cor[4:6], 16)
+            luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+            return "#111827" if luminancia > 0.6 else "#FFFFFF"
+        except Exception:
+            return "#111827"
 
     def _get_calendar_locale(self):
         idioma = getattr(self.sistema, "idioma_atual", "pt_BR")
@@ -380,6 +404,17 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                 "confirm": "Confirmar",
                 "calendar_missing": "A biblioteca tkcalendar não está instalada.\n\nInstale com:\npip install tkcalendar",
                 "calendar_error": "Erro ao selecionar data: {erro}",
+                "window_title": "Ordens Planejadas",
+                "invalid_start_time": "Hora inicial inválida. Use o formato hh:mm.",
+                "invalid_end_time": "Hora final inválida. Use o formato hh:mm.",
+                "invalid_start_date": "Data inicial inválida. Use o formato dd/mm/aaaa.",
+                "invalid_end_date": "Data final inválida. Use o formato dd/mm/aaaa.",
+                "invalid_range": "O intervalo de data/hora está inválido.",
+                "load_error": "Erro ao carregar OPs: {erro}",
+                "select_op": "Selecione uma OP para abrir na Nova Ordem.",
+                "missing_op": "Não foi possível localizar a OP selecionada.",
+                "missing_op_data": "Não foi possível localizar os dados da OP selecionada.",
+                "test_info": "Teste isolado: os dados da OP foram carregados.\nNo sistema completo, esta ação abrirá a página Nova Ordem.",
             },
             "pt_BR": {
                 "clear": "Limpar",
@@ -387,6 +422,17 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                 "confirm": "Confirmar",
                 "calendar_missing": "A biblioteca tkcalendar não está instalada.\n\nInstale com:\npip install tkcalendar",
                 "calendar_error": "Erro ao selecionar data: {erro}",
+                "window_title": "Ordens Planejadas",
+                "invalid_start_time": "Hora inicial inválida. Use o formato hh:mm.",
+                "invalid_end_time": "Hora final inválida. Use o formato hh:mm.",
+                "invalid_start_date": "Data inicial inválida. Use o formato dd/mm/aaaa.",
+                "invalid_end_date": "Data final inválida. Use o formato dd/mm/aaaa.",
+                "invalid_range": "O intervalo de data/hora está inválido.",
+                "load_error": "Erro ao carregar OPs: {erro}",
+                "select_op": "Selecione uma OP para abrir na Nova Ordem.",
+                "missing_op": "Não foi possível localizar a OP selecionada.",
+                "missing_op_data": "Não foi possível localizar os dados da OP selecionada.",
+                "test_info": "Teste isolado: os dados da OP foram carregados.\nNo sistema completo, esta ação abrirá a página Nova Ordem.",
             },
             "en": {
                 "clear": "Clear",
@@ -394,6 +440,17 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                 "confirm": "Confirm",
                 "calendar_missing": "The tkcalendar library is not installed.\n\nInstall with:\npip install tkcalendar",
                 "calendar_error": "Error selecting date: {erro}",
+                "window_title": "Planned Orders",
+                "invalid_start_time": "Invalid start time. Use hh:mm format.",
+                "invalid_end_time": "Invalid end time. Use hh:mm format.",
+                "invalid_start_date": "Invalid start date. Use mm/dd/yyyy format.",
+                "invalid_end_date": "Invalid end date. Use mm/dd/yyyy format.",
+                "invalid_range": "The date/time range is invalid.",
+                "load_error": "Error loading production orders: {erro}",
+                "select_op": "Select a production order to open in New Order.",
+                "missing_op": "Could not find the selected production order.",
+                "missing_op_data": "Could not find the selected production order data.",
+                "test_info": "Isolated test: production order data loaded.\nIn the full system, this action will open the New Order page.",
             },
             "en_US": {
                 "clear": "Clear",
@@ -401,6 +458,17 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                 "confirm": "Confirm",
                 "calendar_missing": "The tkcalendar library is not installed.\n\nInstall with:\npip install tkcalendar",
                 "calendar_error": "Error selecting date: {erro}",
+                "window_title": "Planned Orders",
+                "invalid_start_time": "Invalid start time. Use hh:mm format.",
+                "invalid_end_time": "Invalid end time. Use hh:mm format.",
+                "invalid_start_date": "Invalid start date. Use mm/dd/yyyy format.",
+                "invalid_end_date": "Invalid end date. Use mm/dd/yyyy format.",
+                "invalid_range": "The date/time range is invalid.",
+                "load_error": "Error loading production orders: {erro}",
+                "select_op": "Select a production order to open in New Order.",
+                "missing_op": "Could not find the selected production order.",
+                "missing_op_data": "Could not find the selected production order data.",
+                "test_info": "Isolated test: production order data loaded.\nIn the full system, this action will open the New Order page.",
             },
             "es": {
                 "clear": "Limpiar",
@@ -408,6 +476,17 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                 "confirm": "Confirmar",
                 "calendar_missing": "La biblioteca tkcalendar no está instalada.\n\nInstala con:\npip install tkcalendar",
                 "calendar_error": "Error al seleccionar fecha: {erro}",
+                "window_title": "Órdenes Planificadas",
+                "invalid_start_time": "Hora inicial inválida. Use el formato hh:mm.",
+                "invalid_end_time": "Hora final inválida. Use el formato hh:mm.",
+                "invalid_start_date": "Fecha inicial inválida. Use el formato dd/mm/aaaa.",
+                "invalid_end_date": "Fecha final inválida. Use el formato dd/mm/aaaa.",
+                "invalid_range": "El rango de fecha/hora no es válido.",
+                "load_error": "Error al cargar OPs: {erro}",
+                "select_op": "Seleccione una OP para abrir en Nueva Orden.",
+                "missing_op": "No se pudo localizar la OP seleccionada.",
+                "missing_op_data": "No se pudieron localizar los datos de la OP seleccionada.",
+                "test_info": "Prueba aislada: se cargaron los datos de la OP.\nEn el sistema completo, esta acción abrirá la página Nueva Orden.",
             },
             "es_ES": {
                 "clear": "Limpiar",
@@ -415,11 +494,25 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                 "confirm": "Confirmar",
                 "calendar_missing": "La biblioteca tkcalendar no está instalada.\n\nInstala con:\npip install tkcalendar",
                 "calendar_error": "Error al seleccionar fecha: {erro}",
+                "window_title": "Órdenes Planificadas",
+                "invalid_start_time": "Hora inicial inválida. Use el formato hh:mm.",
+                "invalid_end_time": "Hora final inválida. Use el formato hh:mm.",
+                "invalid_start_date": "Fecha inicial inválida. Use el formato dd/mm/aaaa.",
+                "invalid_end_date": "Fecha final inválida. Use el formato dd/mm/aaaa.",
+                "invalid_range": "El rango de fecha/hora no es válido.",
+                "load_error": "Error al cargar OPs: {erro}",
+                "select_op": "Seleccione una OP para abrir en Nueva Orden.",
+                "missing_op": "No se pudo localizar la OP seleccionada.",
+                "missing_op_data": "No se pudieron localizar los datos de la OP seleccionada.",
+                "test_info": "Prueba aislada: se cargaron los datos de la OP.\nEn el sistema completo, esta acción abrirá la página Nueva Orden.",
             },
         }
 
         idioma_textos = textos.get(idioma, textos["pt_BR"])
         return idioma_textos.get(chave, chave)
+
+    def _msgbox_title(self):
+        return self._get_text("window_title")
 
     @staticmethod
     def _fmt_data(d):
@@ -756,36 +849,36 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
 
         if self.filtro_hora_de.get().strip() and not hora_de:
             messagebox.showwarning(
-                "Ordens Planejadas",
-                "Hora inicial inválida. Use o formato hh:mm."
+                self._msgbox_title(),
+                self._get_text("invalid_start_time")
             )
             return
 
         if self.filtro_hora_ate.get().strip() and not hora_ate:
             messagebox.showwarning(
-                "Ordens Planejadas",
-                "Hora final inválida. Use o formato hh:mm."
+                self._msgbox_title(),
+                self._get_text("invalid_end_time")
             )
             return
 
         if self.filtro_data_de.get().strip() and not data_de:
             messagebox.showwarning(
-                "Ordens Planejadas",
-                "Data inicial inválida. Use o formato dd/mm/aaaa."
+                self._msgbox_title(),
+                self._get_text("invalid_start_date")
             )
             return
 
         if self.filtro_data_ate.get().strip() and not data_ate:
             messagebox.showwarning(
-                "Ordens Planejadas",
-                "Data final inválida. Use o formato dd/mm/aaaa."
+                self._msgbox_title(),
+                self._get_text("invalid_end_date")
             )
             return
 
         if dt_de and dt_ate and dt_ate < dt_de:
             messagebox.showwarning(
-                "Ordens Planejadas",
-                "O intervalo de data/hora está inválido."
+                self._msgbox_title(),
+                self._get_text("invalid_range")
             )
             return
 
@@ -928,7 +1021,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
                     )
 
         except Exception as exc:
-            messagebox.showerror("Ordens Planejadas", f"Erro ao carregar OPs: {exc}")
+            messagebox.showerror(self._msgbox_title(), self._get_text("load_error").format(erro=exc))
 
     # =========================================================
     # Fluxo para Nova Ordem
@@ -942,16 +1035,16 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
 
         if not item:
             messagebox.showwarning(
-                "Ordens Planejadas",
-                "Selecione uma OP para abrir na Nova Ordem."
+                self._msgbox_title(),
+                self._get_text("select_op")
             )
             return
 
         valores = self.tree.item(item).get("values", [])
         if not valores:
             messagebox.showwarning(
-                "Ordens Planejadas",
-                "Não foi possível localizar a OP selecionada."
+                self._msgbox_title(),
+                self._get_text("missing_op")
             )
             return
 
@@ -960,8 +1053,8 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
 
         if not dados:
             messagebox.showwarning(
-                "Ordens Planejadas",
-                "Não foi possível localizar os dados da OP selecionada."
+                self._msgbox_title(),
+                self._get_text("missing_op_data")
             )
             return
 
@@ -971,9 +1064,8 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             return
 
         messagebox.showinfo(
-            "Ordens Planejadas",
-            "Teste isolado: os dados da OP foram carregados.\n"
-            "No sistema completo, esta ação abrirá a página Nova Ordem."
+            self._msgbox_title(),
+            self._get_text("test_info")
         )
 
 
@@ -1115,7 +1207,7 @@ def _ml_refresh_texts(self):
             continue
         try:
             for col, label in cols.items():
-                tree.heading(col, text=self._ml_translate(label))
+                tree.heading(col, text=str(self._ml_translate(label)).upper())
         except Exception:
             pass
 
@@ -1273,7 +1365,7 @@ def _ml2_refresh_texts(self):
                 continue
             try:
                 for col, label in cols.items():
-                    tree.heading(col, text=self._t(label))
+                    tree.heading(col, text=str(self._t(label)).upper())
             except Exception:
                 pass
 

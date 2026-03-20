@@ -120,6 +120,13 @@ CREATE TABLE IF NOT EXISTS opera._schema_info (
     atualizado_em TIMESTAMP DEFAULT NOW()
 );
 
+-- [TABELA 01A] schema_version - Controle de versão por módulo (compatível com SCHEMA_MANAGER.py)
+CREATE TABLE IF NOT EXISTS opera.schema_version (
+    modulo        VARCHAR(100) PRIMARY KEY,
+    versao        INTEGER NOT NULL DEFAULT 0,
+    atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 ----------------------------------------
 -- 4. TABELAS DE USUÁRIOS E PERMISSÕES
 ----------------------------------------
@@ -149,7 +156,7 @@ CREATE TABLE IF NOT EXISTS opera.usuario_preferencias (
     sidebar_recolhida BOOLEAN DEFAULT FALSE,
     usar_animacoes BOOLEAN DEFAULT TRUE,
     mostrar_dicas BOOLEAN DEFAULT TRUE,
-    idioma VARCHAR(20) DEFAULT 'pt-BR',
+    idioma VARCHAR(20) DEFAULT 'pt_BR',
     notificacoes BOOLEAN DEFAULT TRUE,
     atualizado_em TIMESTAMP DEFAULT NOW()
 );
@@ -1282,7 +1289,7 @@ BEGIN
     ) VALUES (
         admin_id,
         'AZUL_NOTURNO',
-        TRUE, FALSE, FALSE, TRUE, TRUE, 'pt-BR', TRUE
+        TRUE, FALSE, FALSE, TRUE, TRUE, 'pt_BR', TRUE
     );
 
     -- 4. PERMISSÕES TOTAIS
@@ -1619,6 +1626,7 @@ CREATE INDEX IF NOT EXISTS idx_planejamento_ops_modelo ON opera.planejamento_ops
 CREATE INDEX IF NOT EXISTS idx_planejamento_ops_programacao ON opera.planejamento_ops(programacao);
 CREATE INDEX IF NOT EXISTS idx_planejamento_ops_colecao ON opera.planejamento_ops(colecao);
 CREATE INDEX IF NOT EXISTS idx_planejamento_ordens_op ON opera.planejamento_ordens_geradas(op);
+CREATE INDEX IF NOT EXISTS idx_planejamento_ordens_ordem ON opera.planejamento_ordens_geradas(ordem_corte_id);
 -- [TABELA 55] planejamento_programacao_ops - Programações criadas passo a passo
 CREATE TABLE IF NOT EXISTS opera.planejamento_programacao_ops (
     id SERIAL PRIMARY KEY,
