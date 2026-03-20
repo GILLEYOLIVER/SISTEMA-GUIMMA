@@ -1,0 +1,354 @@
+%PDF-1.4
+%
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 2445 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 45 794 Tm
+(# DOCUMENTAO FUNCIONAL ? SISTEMA OPERA) Tj
+T*
+() Tj
+T*
+(## 1\) O que  o Sistema OPERA) Tj
+T*
+() Tj
+T*
+(O **Sistema OPERA**  uma plataforma desktop para gesto completa do ciclo de produo txtil/facc?a?o,) Tj
+T*
+(cobrindo:) Tj
+T*
+(- cadastro tcnico de modelos;) Tj
+T*
+(- planejamento e gerao de ordens;) Tj
+T*
+(- corte, envio externo, retorno e acabamento;) Tj
+T*
+(- controle de estoque e compras;) Tj
+T*
+(- custos, pagamentos, recibos e fechamento mensal;) Tj
+T*
+(- relatrios gerenciais e operao multiusurio.) Tj
+T*
+() Tj
+T*
+(Em termos prticos, o sistema conecta **PCP + Produo + Estoque + Financeiro + Administrao** em um) Tj
+T*
+(nico fluxo operacional.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## 2\) Objetivo do sistema \(para que ele serve\)) Tj
+T*
+() Tj
+T*
+(O sistema serve para:) Tj
+T*
+(1. **Padronizar o processo produtivo** \(do modelo at a finalizao\).) Tj
+T*
+(2. **Dar rastreabilidade** por OP, fase, prestador e status.) Tj
+T*
+(3. **Reduzir erros operacionais** com telas especializadas por etapa.) Tj
+T*
+(4. **Controlar custos reais e financeiros** com base no que foi produzido.) Tj
+T*
+(5. **Gerar viso executiva** por meio de dashboard e relatrios.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## 3\) Fluxo macro de funcionamento) Tj
+T*
+() Tj
+T*
+(1. **Cadastrar base tcnica** \(modelos, clientes, faces, insumos\).) Tj
+T*
+(2. **Planejar produo / MRP** \(demanda, materiais, capacidade\).) Tj
+T*
+(3. **Gerar e executar ordens de corte**.) Tj
+T*
+(4. **Controlar envio/retorno de produo externa**.) Tj
+T*
+(5. **Registrar acabamento e finalizao**.) Tj
+T*
+(6. **Apurar custos e realizar pagamentos**.) Tj
+T*
+(7. **Emitir relatrios, recibos e acompanhar indicadores**.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## 4\) Funcionalidades por mdulo \(tela a tela\)) Tj
+T*
+() Tj
+T*
+(> Fonte da lista: `PAGINAS_DO_SISTEMA/route_map.json`.) Tj
+T*
+() Tj
+T*
+(### 4.1 Dashboard e viso gerencial) Tj
+T*
+(- **Dashboard** \(`DASHBOARD.py`\): viso consolidada de KPIs de produo, evoluo e situao operacional.) Tj
+T*
+() Tj
+T*
+(### 4.2 Estoque) Tj
+T*
+(- **Entrada de Estoque** \(`ENTRADA_ESTOQUE.py`\): registra entradas de materiais e incrementa saldos.) Tj
+T*
+(- **Sada de Estoque** \(`SAIDA_ESTOQUE.py`\): registra baixas/consumos e mantm histrico de) Tj
+T*
+(movimentaes.) Tj
+T*
+(- **Relatrios** \(`RELATORIO_ESTOQUE.py`\): consultas e consolidaes de posio de estoque.) Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Length 4084 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 45 794 Tm
+() Tj
+T*
+(### 4.3 Engenharia de produto e ordens) Tj
+T*
+(- **Cadastrar Modelo** \(`CADASTRAR_MODELO.py`\): cadastro tcnico de modelos \(insumos, composio e) Tj
+T*
+(parmetros\).) Tj
+T*
+(- **Imprimir Ficha Tcnica** \(`IMPRIMIR_FICHAS_TECNICAS.py`\): emisso de ficha tcnica operacional.) Tj
+T*
+(- **Nova Ordem** \(`NOVA_ORDEM.py`\): criao de OP/ordem com vnculo aos dados de modelo/produo.) Tj
+T*
+(- **Ordens de Corte Impresso** \(`REIMPRIMIR-ORDENS-DE-CORTE.py`\): reimpresso de documentos de corte.) Tj
+T*
+(- **Cadastrar Corte** \(`CADASTRO_DE_CORTE.py`\): registro de cortes e dados produtivos iniciais.) Tj
+T*
+(- **Consultar Ordens** \(`CONSULTAR_ORDENS.py`\): busca e auditoria de ordens por filtros operacionais.) Tj
+T*
+() Tj
+T*
+(### 4.4 Compras e cadastros de apoio) Tj
+T*
+(- **Compras** \(`COMPRAS.py`\): gesto de pedidos e acompanhamento de aquisio.) Tj
+T*
+(- **Cadastro de Prestadores** \(`CADASTRO_FACCOES.py`\): cadastro de faces/prestadores externos.) Tj
+T*
+(- **Pesquisar Servio** \(`CONSULTAR_SERVICOS.py`\): consulta de servios e histrico operacional.) Tj
+T*
+(- **Clientes** \(`CADASTRO_CLIENTES.py`\): cadastro e manuteno de base de clientes.) Tj
+T*
+() Tj
+T*
+(### 4.5 Produo externa, mo de obra e retrabalho) Tj
+T*
+(- **Controle de Mo de Obra** \(`CONTROLE_ENVIO_CORTES.py`\): envio de produo para prestadores.) Tj
+T*
+(- **Registro Acabamento** \(`CONTROLE_RETORNO_CORTE.py`\): retorno da produo e conferncia.) Tj
+T*
+(- **Finalizar Corte / Acabamento** \(`FINALIZAR_CORTE_ACABAMENTO.py`\): fechamento tcnico da OP.) Tj
+T*
+(- **Retrabalho de Defeitos** \(`RETRABALHO_DEFEITOS.py`\): controle de defeitos, pendncias e reprocessos.) Tj
+T*
+() Tj
+T*
+(### 4.6 PCP e planejamento) Tj
+T*
+(- **MRP** \(`MRP_PLANEJAMENTO.py`\): planejamento de materiais e necessidade de reposio.) Tj
+T*
+(- **Planejamento de Produo** \(`PLANEJAMENTO_PRODUCAO.py`\): programao de produo e capacidade.) Tj
+T*
+(- **Ordens Planejadas** \(`ORDENS_PLANEJADAS.py`\): gesto de OP planejadas e abertura integrada na Nova) Tj
+T*
+(Ordem.) Tj
+T*
+() Tj
+T*
+(### 4.7 Custos e financeiro) Tj
+T*
+(- **Custos Reais** \(`RELATORIO_CUSTOS_REAIS.py`\): apurao de custo realizado por operao/categoria.) Tj
+T*
+(- **Pagamento de Servios** \(`PAGAMENTO_SERVICOS.py`\): processamento de pagamentos a prestadores.) Tj
+T*
+(- **Recibos de Pagamentos** \(`RECIBOS_PAGAMENTOS.py`\): emisso e rastreio de comprovantes.) Tj
+T*
+(- **Custo Produto** \(`PRECIFICACAO_PRODUTO.py`\): suporte  formao de preo por composio de custos.) Tj
+T*
+(- **Folha Pagamento** \(`FOLHA_PAGAMENTO_SERVICOS.py`\): consolidao de folha por servios/prestadores.) Tj
+T*
+(- **Fechamento Mensal** \(`FECHAMENTO_MENSAL.py`\): fechamento financeiro peridico.) Tj
+T*
+(- **Contas a Pagar** \(`CONTAS_A_PAGAR.py`\): controle de compromissos financeiros e vencimentos.) Tj
+T*
+(- **Adiantamento** \(`ADIANTAMENTO_PAGE.py`\): registro de adiantamentos.) Tj
+T*
+(- **Adiantamentos Pendentes** \(`ADIANTAMENTO_PENDENTE.py`\): acompanhamento de saldos/pendncias de) Tj
+T*
+(adiantamento.) Tj
+T*
+() Tj
+T*
+(### 4.8 Relatrios operacionais de produo) Tj
+T*
+(- **Produo** \(`RELATORIO_ENVIO_DETALHADO.py`\): relatrio detalhado do fluxo de envio e status.) Tj
+T*
+(- **Servios Externos** \(`RELATORIO_SERVICOS_EXTERNOS.py`\): viso consolidada de produo externa.) Tj
+T*
+(- **Modelos Produzidos** \(`RELATORIO_MODELOS_PRODUZIDOS.py`\): produtividade por modelo.) Tj
+T*
+(- **Acabamento** \(`RELATORIO_ACABAMENTO.py`\): anlise de etapa final/acabamento.) Tj
+T*
+(- **RELATORIOS** \(`RELATORIO_ENVIO_DETALHADO.py`\): atalho adicional para relatrios operacionais.) Tj
+T*
+() Tj
+T*
+(### 4.9 Subvises de produo) Tj
+T*
+(- **Interna** \(`PRODUCAO_INTERNA.py`\): acompanhamento da produo interna.) Tj
+T*
+(- **Enviados** \(`PRODUCAO_ENVIADOS.py`\): acompanhamento de lotes enviados.) Tj
+T*
+(- **Retorno** \(`PRODUCAO_RETORNO.py`\): acompanhamento de lotes retornados.) Tj
+T*
+(- **Finalizados** \(`PRODUCAO_FINALIZADOS.py`\): acompanhamento de lotes finalizados.) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 1814 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 45 794 Tm
+(### 4.10 Administrao e suporte do sistema) Tj
+T*
+(- **Usurios** \(`USUARIOS.py`\): gesto de usurios, permisses e logs.) Tj
+T*
+(- **Logs e Atividades** \(`USUARIOS.py`\): viso/auditoria de aes no sistema.) Tj
+T*
+(- **Trocar Usurio** \(`MENU_PRINCIPAL`\): alternncia de sesso de usurio.) Tj
+T*
+(- **Temas** \(`TEMAS.py`\): personalizao visual e aplicao de temas.) Tj
+T*
+(- **Backup** \(`BACKUP.py`\): backup operacional dos dados/artefatos.) Tj
+T*
+(- **Atualizar Sistema** \(`ATUALIZAR_SISTEMA.py`\): atualizao de verso da aplicao.) Tj
+T*
+(- **Gerenciar** \(`BANCO_DADOS_FABRICA.py`\): rotinas de gesto de dados de fbrica/banco.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## 5\) Funcionalidades transversais \(presentes em vrias telas\)) Tj
+T*
+() Tj
+T*
+(- **Internacionalizao \(PT/EN/ES\)** em pginas e mensagens.) Tj
+T*
+(- **Tema claro/escuro e paletas personalizadas**.) Tj
+T*
+(- **Controle de permisses por usurio/hierarquia**.) Tj
+T*
+(- **Logs de atividade** para auditoria.) Tj
+T*
+(- **Integrao com PostgreSQL** via camada central de banco.) Tj
+T*
+(- **Roteamento por `route_map.json`** para carregamento dinmico das telas.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## 6\) Resultado prtico para a empresa) Tj
+T*
+() Tj
+T*
+(Com o Sistema OPERA, a empresa passa a ter:) Tj
+T*
+(- processo produtivo mais previsvel;) Tj
+T*
+(- viso de gargalos por etapa;) Tj
+T*
+(- melhor controle de estoque e custo;) Tj
+T*
+(- maior confiabilidade em pagamentos e fechamento;) Tj
+T*
+(- histrico operacional auditvel por usurio e por OP.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## 7\) Documento PDF demonstrativo) Tj
+T*
+() Tj
+T*
+(Este contedo tambm foi exportado em PDF para apresentao:) Tj
+T*
+() Tj
+T*
+(- `DOCUMENTACAO_FUNCIONAL_SISTEMA_OPERA.pdf`) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Pages /Kids [ 6 0 R 7 0 R 8 0 R ] /Count 3 >>
+endobj
+6 0 obj
+<< /Type /Page /Parent 5 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+7 0 obj
+<< /Type /Page /Parent 5 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+8 0 obj
+<< /Type /Page /Parent 5 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+9 0 obj
+<< /Type /Catalog /Pages 5 0 R >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000002582 00000 n 
+0000006718 00000 n 
+0000008584 00000 n 
+0000008655 00000 n 
+0000008781 00000 n 
+0000008907 00000 n 
+0000009033 00000 n 
+trailer
+<< /Size 10 /Root 9 0 R >>
+startxref
+9082
+%%EOF
