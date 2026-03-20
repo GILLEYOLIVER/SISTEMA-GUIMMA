@@ -529,13 +529,15 @@ class ThemeManager:
                     parar_recursao = True
                 elif isinstance(widget, ctk.CTkOptionMenu):
                     try:
+                        option_texto = self._contrast_text_for_color(cor_secundaria, fallback=cor_texto)
                         widget.configure(
                             fg_color=cor_secundaria,
                             button_color=cor_primaria,
                             button_hover=False,
-                            text_color=cor_texto,
+                            text_color=option_texto,
                             dropdown_fg_color=cor_secundaria,
-                            dropdown_text_color=cor_texto,
+                            dropdown_text_color=option_texto,
+                            dropdown_hover_color=cor_hover,
                             dropdown_hover=False,
                         )
                     except Exception as e:
@@ -1191,6 +1193,8 @@ class OperaMenuApp(ctk.CTk):
             "switch_user": "Trocar usuário",
             "loading": "Carregando...",
             "error": "Erro",
+            "exit_title": "Sair",
+            "exit_confirm": "Deseja realmente sair do sistema?",
             "language_changed": "Idioma alterado para {language}",
             "no_permission": "Sem permissão para acessar {page}",
             "clock_format": "%d/%m/%Y %H:%M:%S",
@@ -1205,6 +1209,8 @@ class OperaMenuApp(ctk.CTk):
             "switch_user": "Switch user",
             "loading": "Loading...",
             "error": "Error",
+            "exit_title": "Exit",
+            "exit_confirm": "Do you really want to exit the system?",
             "language_changed": "Language changed to {language}",
             "no_permission": "No permission to access {page}",
             "clock_format": "%m/%d/%Y %I:%M:%S %p",
@@ -1219,6 +1225,8 @@ class OperaMenuApp(ctk.CTk):
             "switch_user": "Cambiar usuario",
             "loading": "Cargando...",
             "error": "Error",
+            "exit_title": "Salir",
+            "exit_confirm": "¿Realmente desea salir del sistema?",
             "language_changed": "Idioma cambiado a {language}",
             "no_permission": "Sin permiso para acceder a {page}",
             "clock_format": "%d/%m/%Y %H:%M:%S",
@@ -1591,6 +1599,14 @@ class OperaMenuApp(ctk.CTk):
         cor_borda = self._resolve_theme_color(pal.get("borda", self.cor_borda), self.cor_borda)
         cor_fundo = getattr(self, "cor_fundo", "#111827")
         tema_escuro = self._is_dark_tk_color(cor_secundaria) or self._is_dark_tk_color(cor_fundo)
+        try:
+            tema_escuro = tema_escuro or (self._theme_mode_from_name(getattr(self, "current_theme_name", "")) == "dark")
+        except Exception:
+            pass
+        try:
+            tema_escuro = tema_escuro or (ctk.get_appearance_mode().lower() == "dark")
+        except Exception:
+            pass
 
         if tema_escuro:
             menu_bg = self._realcar_cor(cor_secundaria, 1.06)
@@ -1699,10 +1715,12 @@ class OperaMenuApp(ctk.CTk):
     def ask_quit(self, event=None):
         if getattr(self, "_closing", False):
             return
+        titulo_saida = self._get_text("exit_title")
+        mensagem_saida = self._get_text("exit_confirm")
         try:
-            confirmar = messagebox.askyesno("Sair", "Deseja realmente sair do sistema?", parent=self)
+            confirmar = messagebox.askyesno(titulo_saida, mensagem_saida, parent=self)
         except Exception:
-            confirmar = messagebox.askyesno("Sair", "Deseja realmente sair do sistema?")
+            confirmar = messagebox.askyesno(titulo_saida, mensagem_saida)
         if confirmar:
             self._agendar_after(1, self.destroy)
 
@@ -2414,6 +2432,7 @@ class OperaMenuApp(ctk.CTk):
         self.language_status_label.pack(side="left", padx=(0, 8))
 
         self.language_var = ctk.StringVar(value=self._get_language_display_name())
+        idioma_menu_texto = self._contrast_text_for_color(self.cor_secundaria, fallback=self.cor_texto)
         self.language_menu = ctk.CTkOptionMenu(
             self.language_frame,
             variable=self.language_var,
@@ -2423,9 +2442,9 @@ class OperaMenuApp(ctk.CTk):
             fg_color=self.cor_secundaria,
             button_color=self.cor_primaria,
             button_hover_color=self.cor_hover,
-            text_color=self.cor_texto,
+            text_color=idioma_menu_texto,
             dropdown_fg_color=self.cor_secundaria,
-            dropdown_text_color=self.cor_texto,
+            dropdown_text_color=idioma_menu_texto,
             dropdown_hover_color=self.cor_hover,
         )
         self.language_menu.pack(side="left")
@@ -2476,10 +2495,11 @@ class OperaMenuApp(ctk.CTk):
         )
 
         # sincroniza estado VISUAL sem executar lógica extra
+        # (neste switch, o estado selecionado representa "dia/claro")
         if is_dark_mode:
-            self.theme_switch.select()
-        else:
             self.theme_switch.deselect()
+        else:
+            self.theme_switch.select()
 
         self.theme_switch.pack(side="left")
 
@@ -2597,16 +2617,50 @@ class OperaMenuApp(ctk.CTk):
         if getattr(self, "_theme_switch_syncing", False):
             return
 
-        # aqui é 100% o estado real do switch, sem inverter
-        is_dark = (self.theme_switch.get() == 1)
+        # neste switch, 1 = dia/claro e 0 = noite/escuro
+        is_dark = (self.theme_switch.get() == 0)
         tema_nome = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
 
-        # ícone acompanha o estado
         if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
             self.icon_theme.configure(text="🌙" if is_dark else "☀️")
 
-        # aplica tema (rotina atual)
-        self._apply_theme_by_name(tema_nome)
+        # atalho direto para a lógica de aplicação da página TEMAS
+        from PAGINAS_DO_SISTEMA.TEMAS import aplicar_tema_atalho
+
+        ok = aplicar_tema_atalho(self, tema_nome)
+        if not ok:
+            _dprint(f"❌ Falha no atalho de tema '{tema_nome}' via TEMAS.py")
+            try:
+                messagebox.showerror("Erro", f"Falha ao aplicar tema '{tema_nome}' via atalho.", parent=self)
+            except Exception:
+                messagebox.showerror("Erro", f"Falha ao aplicar tema '{tema_nome}' via atalho.")
+            return
+
+        try:
+            if hasattr(self, "_update_menu_buttons_colors"):
+                self._update_menu_buttons_colors()
+        except Exception:
+            pass
+
+        # garante posição visual da chave conforme o tema efetivamente aplicado
+        self.after(20, self._sync_theme_switch_with_current_theme)
+
+    def _sync_theme_switch_with_current_theme(self):
+        try:
+            if not hasattr(self, "theme_switch") or not self.theme_switch.winfo_exists():
+                return
+            is_dark_mode = self._theme_mode_from_name(getattr(self, "current_theme_name", "")) == "dark"
+            self._theme_switch_syncing = True
+            if is_dark_mode:
+                self.theme_switch.deselect()
+            else:
+                self.theme_switch.select()
+            if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
+                self.icon_theme.configure(text="🌙" if is_dark_mode else "☀️")
+        except Exception:
+            pass
+        finally:
+            self._theme_switch_syncing = False
 
     def _build_user_widget(self):
         user_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
@@ -3475,7 +3529,7 @@ class OperaMenuApp(ctk.CTk):
             pass
         try:
             route = self.routes.get("Backup", {})
-            file_rel = route.get("file", "BACKUP_usa-es-pt.py")
+            file_rel = route.get("file", "BACKUP.py")
             file_path = os.path.join(APP_DIR, file_rel)
             if not os.path.exists(file_path):
                 file_path = os.path.join(ROOT_DIR, file_rel)
