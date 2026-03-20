@@ -2608,16 +2608,29 @@ class OperaMenuApp(ctk.CTk):
         if getattr(self, "_theme_switch_syncing", False):
             return
 
-        # aqui é 100% o estado real do switch, sem inverter
         is_dark = (self.theme_switch.get() == 1)
         tema_nome = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
 
-        # ícone acompanha o estado
         if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
             self.icon_theme.configure(text="🌙" if is_dark else "☀️")
 
-        # aplica tema (rotina atual)
-        self._apply_theme_by_name(tema_nome)
+        # atalho direto para a lógica de aplicação da página TEMAS
+        from PAGINAS_DO_SISTEMA.TEMAS import aplicar_tema_atalho
+
+        ok = aplicar_tema_atalho(self, tema_nome)
+        if not ok:
+            _dprint(f"❌ Falha no atalho de tema '{tema_nome}' via TEMAS.py")
+            try:
+                messagebox.showerror("Erro", f"Falha ao aplicar tema '{tema_nome}' via atalho.", parent=self)
+            except Exception:
+                messagebox.showerror("Erro", f"Falha ao aplicar tema '{tema_nome}' via atalho.")
+            return
+
+        try:
+            if hasattr(self, "_update_menu_buttons_colors"):
+                self._update_menu_buttons_colors()
+        except Exception:
+            pass
 
     def _build_user_widget(self):
         user_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
