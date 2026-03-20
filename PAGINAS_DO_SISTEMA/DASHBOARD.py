@@ -186,9 +186,9 @@ def _to_datetime_any(v):
 # ===================== DASHBOARD UI =====================
 class DashboardPage(ctk.CTkFrame):
     TRANSLATIONS = {
-        "pt_BR": {"stock":"ESTOQUE","type":"Tipo:","fabrics":"Tecidos","supplies":"Aviamentos","inputs":"Insumos","office":"Escritorio","cleaning":"Limpeza","others":"Outros","production_panel":"Painel de produção (indicadores visuais)","all":"Todos","cut_order":"Ordem Corte","cut_ready":"Corte Pronto","sent":"Enviado","conference":"Conferência","pending":"Pendente","paid":"Pago","days_7":"7 dias","days_15":"15 dias","days_30":"30 dias","bars":"Barras","line":"Linha","donut":"Rosca","in_progress_orders":"Ordens em andamento","critical_delays":"Atrasos críticos","daily_efficiency":"Eficiência diária","flow":"Fluxo","evolution":"Evolução","no_data":"Sem dados","cuts":"Cortes","pieces":"Peças","department":"Departamento:","in_progress_production":"Produção em andamento","in_progress":"Em Andamento","finished_7d":"Finalizados (7d)","weekly_production":"Produção Semanal","monthly_production":"Produção Mensal","stock_id":"ID","stock_item_number":"Número Item","stock_description":"Descrição","stock_code":"Código","stock_entry_date":"Data Entrada","stock_quantity":"Quantidade","and_code":"Código","and_description":"Descrição","and_cutter":"Cortador","and_record_date":"Data Registro","and_desired_qty":"Qtd. Desejada","and_estimated_days":"Dias Estimados","and_estimated_hours":"Horas Estimadas","and_origin":"Origem"},
-        "en_US": {"stock":"STOCK","type":"Type:","fabrics":"Fabrics","supplies":"Trims","inputs":"Inputs","office":"Office","cleaning":"Cleaning","others":"Others","production_panel":"Production panel (visual indicators)","all":"All","cut_order":"Cut Order","cut_ready":"Cut Ready","sent":"Sent","conference":"Conference","pending":"Pending","paid":"Paid","days_7":"7 days","days_15":"15 days","days_30":"30 days","bars":"Bars","line":"Line","donut":"Donut","in_progress_orders":"Orders in progress","critical_delays":"Critical delays","daily_efficiency":"Daily efficiency","flow":"Flow","evolution":"Evolution","no_data":"No data","cuts":"Cuts","pieces":"Pieces","department":"Department:","in_progress_production":"Production in progress","in_progress":"In Progress","finished_7d":"Finished (7d)","weekly_production":"Weekly Production","monthly_production":"Monthly Production","stock_id":"ID","stock_item_number":"Item Number","stock_description":"Description","stock_code":"Code","stock_entry_date":"Entry Date","stock_quantity":"Quantity","and_code":"Code","and_description":"Description","and_cutter":"Cutter","and_record_date":"Record Date","and_desired_qty":"Desired Qty","and_estimated_days":"Estimated Days","and_estimated_hours":"Estimated Hours","and_origin":"Origin"},
-        "es_ES": {"stock":"INVENTARIO","type":"Tipo:","fabrics":"Tejidos","supplies":"Avíos","inputs":"Insumos","office":"Oficina","cleaning":"Limpieza","others":"Otros","production_panel":"Panel de producción (indicadores visuales)","all":"Todos","cut_order":"Orden de Corte","cut_ready":"Corte Listo","sent":"Enviado","conference":"Conferencia","pending":"Pendiente","paid":"Pagado","days_7":"7 días","days_15":"15 días","days_30":"30 días","bars":"Barras","line":"Línea","donut":"Rosca","in_progress_orders":"Órdenes en progreso","critical_delays":"Atrasos críticos","daily_efficiency":"Eficiencia diaria","flow":"Flujo","evolution":"Evolución","no_data":"Sin datos","cuts":"Cortes","pieces":"Piezas","department":"Departamento:","in_progress_production":"Producción en progreso","in_progress":"En Progreso","finished_7d":"Finalizados (7d)","weekly_production":"Producción Semanal","monthly_production":"Producción Mensual","stock_id":"ID","stock_item_number":"Número Ítem","stock_description":"Descripción","stock_code":"Código","stock_entry_date":"Fecha Entrada","stock_quantity":"Cantidad","and_code":"Código","and_description":"Descripción","and_cutter":"Cortador","and_record_date":"Fecha Registro","and_desired_qty":"Cant. Deseada","and_estimated_days":"Días Estimados","and_estimated_hours":"Horas Estimadas","and_origin":"Origen"}
+        "pt_BR": {"stock":"ESTOQUE","type":"Tipo:","fabrics":"Tecidos","supplies":"Aviamentos","inputs":"Insumos","office":"Escritorio","cleaning":"Limpeza","others":"Outros","production_panel":"Painel de produção (indicadores visuais)","all":"Todos","cut_order":"Ordem Corte","cut_ready":"Corte Pronto","sent":"Enviado","conference":"Conferência","pending":"Pendente","paid":"Pago","days_7":"7 dias","days_15":"15 dias","days_30":"30 dias","bars":"Barras","line":"Linha","donut":"Rosca","in_progress_orders":"Ordens em andamento","critical_delays":"Atrasos críticos","daily_efficiency":"Eficiência diária","flow":"Fluxo","evolution":"Evolução","no_data":"Sem dados","cuts":"Cortes","pieces":"Peças","department":"Departamento:","in_progress_production":"Produção em andamento","in_progress":"Em Andamento","finished_7d":"Finalizados (7d)","weekly_production":"Produção Semanal","monthly_production":"Produção Mensal","stock_id":"ID","stock_item_number":"Número Item","stock_description":"Descrição","stock_code":"Código","stock_entry_date":"Data Entrada","stock_quantity":"Quantidade","and_code":"Código","and_description":"Descrição","and_cutter":"Cortador","and_record_date":"Data Registro","and_desired_qty":"Qtd. Desejada","and_estimated_days":"Dias Estimados","and_estimated_hours":"Horas Estimadas","and_origin":"Origem","last_finished_paid":"ÚLTIMOS FINALIZADOS (PAGOS)","none_paid_cut":"Nenhum corte pago","code_short":"Cód"},
+        "en_US": {"stock":"STOCK","type":"Type:","fabrics":"Fabrics","supplies":"Trims","inputs":"Inputs","office":"Office","cleaning":"Cleaning","others":"Others","production_panel":"Production panel (visual indicators)","all":"All","cut_order":"Cut Order","cut_ready":"Cut Ready","sent":"Sent","conference":"Conference","pending":"Pending","paid":"Paid","days_7":"7 days","days_15":"15 days","days_30":"30 days","bars":"Bars","line":"Line","donut":"Donut","in_progress_orders":"Orders in progress","critical_delays":"Critical delays","daily_efficiency":"Daily efficiency","flow":"Flow","evolution":"Evolution","no_data":"No data","cuts":"Cuts","pieces":"Pieces","department":"Department:","in_progress_production":"Production in progress","in_progress":"In Progress","finished_7d":"Finished (7d)","weekly_production":"Weekly Production","monthly_production":"Monthly Production","stock_id":"ID","stock_item_number":"Item Number","stock_description":"Description","stock_code":"Code","stock_entry_date":"Entry Date","stock_quantity":"Quantity","and_code":"Code","and_description":"Description","and_cutter":"Cutter","and_record_date":"Record Date","and_desired_qty":"Desired Qty","and_estimated_days":"Estimated Days","and_estimated_hours":"Estimated Hours","and_origin":"Origin","last_finished_paid":"LAST FINISHED (PAID)","none_paid_cut":"No paid cut","code_short":"Code"},
+        "es_ES": {"stock":"INVENTARIO","type":"Tipo:","fabrics":"Tejidos","supplies":"Avíos","inputs":"Insumos","office":"Oficina","cleaning":"Limpieza","others":"Otros","production_panel":"Panel de producción (indicadores visuales)","all":"Todos","cut_order":"Orden de Corte","cut_ready":"Corte Listo","sent":"Enviado","conference":"Conferencia","pending":"Pendiente","paid":"Pagado","days_7":"7 días","days_15":"15 días","days_30":"30 días","bars":"Barras","line":"Línea","donut":"Rosca","in_progress_orders":"Órdenes en progreso","critical_delays":"Atrasos críticos","daily_efficiency":"Eficiencia diaria","flow":"Flujo","evolution":"Evolución","no_data":"Sin datos","cuts":"Cortes","pieces":"Piezas","department":"Departamento:","in_progress_production":"Producción en progreso","in_progress":"En Progreso","finished_7d":"Finalizados (7d)","weekly_production":"Producción Semanal","monthly_production":"Producción Mensual","stock_id":"ID","stock_item_number":"Número Ítem","stock_description":"Descripción","stock_code":"Código","stock_entry_date":"Fecha Entrada","stock_quantity":"Cantidad","and_code":"Código","and_description":"Descripción","and_cutter":"Cortador","and_record_date":"Fecha Registro","and_desired_qty":"Cant. Deseada","and_estimated_days":"Días Estimados","and_estimated_hours":"Horas Estimadas","and_origin":"Origen","last_finished_paid":"ÚLTIMOS FINALIZADOS (PAGADOS)","none_paid_cut":"Ningún corte pagado","code_short":"Cód"}
     }
 
     def _get_idioma_atual(self):
@@ -220,7 +220,17 @@ class DashboardPage(ctk.CTkFrame):
                 }.items():
                     cb=getattr(self, cb_key, None)
                     if cb:
+                        atual = cb.get() if hasattr(cb, "get") else ""
                         cb.configure(values=[self._get_text(x) for x in vals])
+                        if cb_key in {"combo_tipo_estoque", "combo_painel_setor", "combo_painel_periodo", "combo_painel_grafico"}:
+                            interno = None
+                            for k in vals:
+                                if atual == self._get_text(k):
+                                    interno = k
+                                    break
+                            if interno is None:
+                                interno = vals[0]
+                            cb.set(self._get_text(interno))
             if hasattr(self, "tree_est"):
                 for col in self.cols_estoque:
                     self.tree_est.heading(col, text=self._title_text(self.cols_estoque_i18n.get(col, col), col))
@@ -267,7 +277,7 @@ class DashboardPage(ctk.CTkFrame):
         self.selected_depart = ctk.StringVar(value=self._get_text("all"))
         self.painel_prod_periodo_var = ctk.StringVar(value=self._get_text("days_7"))
         self.painel_prod_grafico_var = ctk.StringVar(value=self._get_text("bars"))
-        self.painel_prod_setor_var = ctk.StringVar(value="Todos")
+        self.painel_prod_setor_var = ctk.StringVar(value=self._get_text("all"))
         self.ui_scale = float(getattr(sistema, "ui_scale", 1.0) or 1.0)
 
         # Estado gráfico
@@ -358,7 +368,7 @@ class DashboardPage(ctk.CTkFrame):
             fg_color=self.cor_combobox_fundo, text_color=self.cor_combobox_texto,
             button_color=self.cor_combobox_botao, button_hover_color=self.cor_combobox_botao_hover)
         self.combo_tipo_estoque.grid(row=0, column=1, sticky="ew")
-        self.combo_tipo_estoque.set("Tecidos")
+        self.combo_tipo_estoque.set(self._get_text("fabrics"))
 
         tabela_frame = ctk.CTkFrame(frame_est, fg_color="#F8F9FA")
         tabela_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(4, 2))
@@ -501,7 +511,7 @@ class DashboardPage(ctk.CTkFrame):
         )
         self._ui_refs["department_label"].pack(side="left", padx=(6, 6))
 
-        valores = ["Todos", "Corte", "CORTES P/ ENVIAR", "Enviado", "Conferência", "Finalizado"] + list(
+        valores = [self._get_text("all"), self._get_text("cut_order"), self._get_text("cut_ready"), self._get_text("sent"), self._get_text("conference"), self._get_text("paid")] + list(
             self.departamentos)
 
         self.combo_depart = ctk.CTkComboBox(
@@ -1046,17 +1056,17 @@ class DashboardPage(ctk.CTkFrame):
             self.after(100, lambda: self._desenhar_grafico_painel(dados_fluxo))
             return
 
-        setor = self.painel_prod_setor_var.get() or "Todos"
-        tipo = self.painel_prod_grafico_var.get() or "Barras"
+        setor = self.painel_prod_setor_var.get() or self._get_text("all")
+        tipo = self.painel_prod_grafico_var.get() or self._get_text("bars")
 
         etapas = dados_fluxo.get("etapas", [])
         valores = dados_fluxo.get("quantidades", [])
 
-        if setor != "Todos" and setor in etapas:
+        if setor != self._get_text("all") and setor in etapas:
             idx = etapas.index(setor)
             valor_setor = valores[idx] if idx < len(valores) else 0
             total = sum(valores)
-            etapas = [setor, "Outros"]
+            etapas = [setor, self._get_text("others")]
             valores = [valor_setor, max(0, total - valor_setor)]
 
         if not valores:
@@ -1065,7 +1075,7 @@ class DashboardPage(ctk.CTkFrame):
         max_val = max(valores) if max(valores) > 0 else 1
         cores = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#0EA5E9", "#64748B"]
 
-        if tipo == "Rosca":
+        if tipo == self._get_text("donut"):
             total = sum(valores)
             start = 0
             cx, cy = largura / 2, altura / 2
@@ -1079,7 +1089,7 @@ class DashboardPage(ctk.CTkFrame):
                 start += ext
             canvas.create_oval(cx - raio * 0.7, cy - raio * 0.7, cx + raio * 0.7, cy + raio * 0.7,
                                fill="#FFFFFF", outline="")
-        elif tipo == "Linha":
+        elif tipo == self._get_text("line"):
             padding = 12
             step = (largura - 2 * padding) / max(1, len(valores) - 1)
             pontos = []
@@ -1143,6 +1153,15 @@ class DashboardPage(ctk.CTkFrame):
 
     def _buscar_cortes_por_setor(self, setor: str):
         setor_norm = (setor or "").strip().lower()
+        mapa_setor = {
+            self._get_text("all").strip().lower(): "todos",
+            self._get_text("cut_order").strip().lower(): "ordem corte",
+            self._get_text("cut_ready").strip().lower(): "cortes p/ enviar",
+            self._get_text("sent").strip().lower(): "enviado",
+            self._get_text("conference").strip().lower(): "conferência",
+            self._get_text("paid").strip().lower(): "finalizado",
+        }
+        setor_norm = mapa_setor.get(setor_norm, setor_norm)
         resultados = []
 
         if not self.POSTGRES_DISPONIVEL:
@@ -1188,8 +1207,14 @@ class DashboardPage(ctk.CTkFrame):
 
     def _atualizar_tabela_estoque(self):
         setor = self.combo_tipo_estoque.get()
-        tabelas = {"Tecidos": "estoque_tecidos", "Aviamentos": "estoque_aviamentos", "Insumos": "estoque_insumos",
-                   "Escritorio": "estoque_escritorio", "Limpeza": "estoque_limpeza", "Outros": "estoque_outros"}
+        tabelas = {
+            self._get_text("fabrics"): "estoque_tecidos",
+            self._get_text("supplies"): "estoque_aviamentos",
+            self._get_text("inputs"): "estoque_insumos",
+            self._get_text("office"): "estoque_escritorio",
+            self._get_text("cleaning"): "estoque_limpeza",
+            self._get_text("others"): "estoque_outros",
+        }
         nome_tabela = tabelas.get(setor)
         if not nome_tabela:
             return
@@ -1197,14 +1222,14 @@ class DashboardPage(ctk.CTkFrame):
         cols = _columns_pg(nome_tabela)
         if not cols:
             cols = ["id", "numero_item", "descricao", "codigo", "data_entrada",
-                    "metros" if setor == "Tecidos" else "quantidade"]
+                    "metros" if setor == self._get_text("fabrics") else "quantidade"]
 
         col_id = _pick(cols, "id", default="id")
         col_num = _pick(cols, "numero_item", "numero", default=None)
         col_desc = _pick(cols, "descricao", default=None)
         col_cod = _pick(cols, "codigo", default=None)
         col_data = _pick(cols, "data_entrada", "data", default=None)
-        col_qtd = _pick(cols, "metros", "quantidade", default="quantidade") if setor == "Tecidos" else _pick(cols,
+        col_qtd = _pick(cols, "metros", "quantidade", default="quantidade") if setor == self._get_text("fabrics") else _pick(cols,
                                                                                                              "quantidade",
                                                                                                              default=None)
 
@@ -1235,11 +1260,11 @@ class DashboardPage(ctk.CTkFrame):
             return
 
         try:
-            setor = self.selected_depart.get() or "Todos"
+            setor = self.selected_depart.get() or self._get_text("all")
             linhas = self._buscar_cortes_por_setor(setor)
 
             if not linhas:
-                self.tree_and.insert("", "end", values=("Sem dados", "-", "-", "-", "0", "0", "0", "-"))
+                self.tree_and.insert("", "end", values=(self._title_text("no_data"), "-", "-", "-", "0", "0", "0", "-"))
                 return
 
             for linha in linhas:
@@ -1374,7 +1399,7 @@ class DashboardPage(ctk.CTkFrame):
         for w in self.frame_ultimos.winfo_children():
             w.destroy()
 
-        ctk.CTkLabel(self.frame_ultimos, text="ÚLTIMOS FINALIZADOS (PAGOS)", font=ctk.CTkFont(size=15, weight="bold"),
+        ctk.CTkLabel(self.frame_ultimos, text=self._title_text("last_finished_paid"), font=ctk.CTkFont(size=15, weight="bold"),
                      text_color=self.cor_texto).pack(anchor="w", padx=10, pady=(0, 4))
 
         row = ctk.CTkFrame(self.frame_ultimos, fg_color="transparent")
@@ -1382,7 +1407,7 @@ class DashboardPage(ctk.CTkFrame):
 
         dados = self._ultimos_finalizados_from_db(limite=limite)
         if not dados:
-            dados = [{"codigo": "-", "descricao": "Nenhum corte pago", "qtd": 0, "data_str": "-"}]
+            dados = [{"codigo": "-", "descricao": self._get_text("none_paid_cut"), "qtd": 0, "data_str": "-"}]
         while len(dados) < 3:
             dados.append({"codigo": "-", "descricao": "-", "qtd": 0, "data_str": "-"})
 
@@ -1392,14 +1417,14 @@ class DashboardPage(ctk.CTkFrame):
             card.grid(row=0, column=i, sticky="nsew", padx=8, pady=4)
             card.pack_propagate(False)
 
-            ctk.CTkLabel(card, text=f"Cód: {it.get('codigo', '-')}", font=ctk.CTkFont(size=13, weight="bold"),
+            ctk.CTkLabel(card, text=f"{self._title_text('code_short')}: {it.get('codigo', '-')}", font=ctk.CTkFont(size=13, weight="bold"),
                          text_color=self.cor_destaque).pack(pady=(6, 0))
 
             desc = it.get('descricao', '-')
             ctk.CTkLabel(card, text=desc[:30] + "..." if len(desc) > 30 else desc, font=ctk.CTkFont(size=12),
                          text_color=self.cor_texto).pack(pady=(2, 0))
 
-            ctk.CTkLabel(card, text=f"Peças: {it.get('qtd', 0)}", font=ctk.CTkFont(size=16, weight="bold"),
+            ctk.CTkLabel(card, text=f"{self._title_text('pieces')}: {it.get('qtd', 0)}", font=ctk.CTkFont(size=16, weight="bold"),
                          text_color="#40A9FF").pack(pady=(2, 0))
 
             ctk.CTkLabel(card, text=it.get("data_str", "-"), font=ctk.CTkFont(size=12), text_color=self.cor_texto).pack(
