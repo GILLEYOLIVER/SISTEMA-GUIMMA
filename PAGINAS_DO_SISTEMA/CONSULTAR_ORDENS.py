@@ -17,10 +17,15 @@ try:
 except Exception as e:
     def get_conn():
         raise RuntimeError("BANCO_DE_DADOS_PG não disponível: %s" % e)
+
+
     def get_schema():
         return "public"
+
+
     def require_ready(essentials=None):
         return False, "BANCO_DE_DADOS_PG ausente"
+
 
 def cor_e_clara(cor):
     """Retorna True se a cor for clara"""
@@ -314,15 +319,70 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         if refs.get("obs_entry"):
             refs["obs_entry"].configure(placeholder_text=self._get_text("obs_placeholder"))
 
-        # Atualizar labels dos campos
-        for campo, entry in getattr(self, "campos", {}).items():
-            label_text = self._get_text(campo.lower().replace(" ", "_").replace("(", "").replace(")", "").replace(":", ""))
-            if label_text != campo:
-                # Encontrar o label associado
-                for widget in entry.master.winfo_children():
-                    if isinstance(widget, ctk.CTkLabel) and widget.cget("text") == campo:
-                        widget.configure(text=self._get_text(campo.lower().replace(" ", "_").replace("(", "").replace(")", "").replace(":", "")))
-                        break
+        # Atualizar os labels dos campos de entrada
+        if hasattr(self, "_label_widgets"):
+            for campo, label_widget in self._label_widgets.items():
+                if label_widget and label_widget.winfo_exists():
+                    if campo == "order_number":
+                        label_widget.configure(text=self._get_text("order_number"))
+                    elif campo == "code":
+                        label_widget.configure(text=self._get_text("code"))
+                    elif campo == "description":
+                        label_widget.configure(text=self._get_text("description"))
+                    elif campo == "length":
+                        label_widget.configure(text=self._get_text("length"))
+                    elif campo == "width":
+                        label_widget.configure(text=self._get_text("width"))
+                    elif campo == "cutter":
+                        label_widget.configure(text=self._get_text("cutter"))
+                    elif campo == "assistant":
+                        label_widget.configure(text=self._get_text("assistant"))
+                    elif campo == "date":
+                        label_widget.configure(text=self._get_text("date"))
+
+        # Atualizar cabeçalhos das tabelas
+        if hasattr(self, "tree_tecido") and self.tree_tecido.winfo_exists():
+            colunas_tecido = (
+                self._get_text("fabric"),
+                self._get_text("color"),
+                self._get_text("composition"),
+                self._get_text("rolls"),
+                self._get_text("sheets_short"),
+                self._get_text("pp"),
+                self._get_text("p"),
+                self._get_text("m"),
+                self._get_text("g"),
+                self._get_text("gg"),
+                self._get_text("g1"),
+                self._get_text("g2"),
+                self._get_text("g3"),
+                self._get_text("total")
+            )
+            self.tree_tecido["columns"] = colunas_tecido
+            for col in colunas_tecido:
+                self.tree_tecido.heading(col, text=col)
+
+        if hasattr(self, "tree_lote") and self.tree_lote.winfo_exists():
+            colunas_lote = (
+                self._get_text("lot_number"),
+                self._get_text("fabric"),
+                self._get_text("color"),
+                self._get_text("composition"),
+                self._get_text("rolls"),
+                self._get_text("sheets_short"),
+                self._get_text("pp"),
+                self._get_text("p"),
+                self._get_text("m"),
+                self._get_text("g"),
+                self._get_text("gg"),
+                self._get_text("g1"),
+                self._get_text("g2"),
+                self._get_text("g3"),
+                self._get_text("total")
+            )
+            self.tree_lote["columns"] = colunas_lote
+            for col in colunas_lote:
+                self.tree_lote.heading(col, text=col)
 
     def __init__(self, master, sistema=None, app=None, *args, **kwargs):
         # Normaliza: funciona tanto se o menu passar 'sistema' quanto 'app'
@@ -330,13 +390,13 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         # Herdar tema do sistema, com fallback seguro
         origem = self.sistema
-        self.cor_fundo    = getattr(origem, "cor_fundo",    "#0E1525")
-        self.cor_texto    = getattr(origem, "cor_texto",    "#ffffff")
-        self.cor_borda    = getattr(origem, "cor_borda",    "#347083")
+        self.cor_fundo = getattr(origem, "cor_fundo", "#0E1525")
+        self.cor_texto = getattr(origem, "cor_texto", "#ffffff")
+        self.cor_borda = getattr(origem, "cor_borda", "#347083")
         self.cor_primaria = getattr(origem, "cor_primaria", "#1F538D")
-        self.cor_hover    = getattr(origem, "cor_hover",    "#14375E")
-        self.cor_sucesso  = getattr(origem, "cor_sucesso",  "#2e7d32")
-        self.cor_alerta   = getattr(origem, "cor_alerta",   "#a83232")
+        self.cor_hover = getattr(origem, "cor_hover", "#14375E")
+        self.cor_sucesso = getattr(origem, "cor_sucesso", "#2e7d32")
+        self.cor_alerta = getattr(origem, "cor_alerta", "#a83232")
         self.cor_imprimir = getattr(origem, "cor_imprimir", "#1F538D")
 
         super().__init__(master, fg_color=self.cor_fundo, *args, **kwargs)
@@ -355,6 +415,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                 pass
 
         self.campos = {}
+        self._label_widgets = {}  # Armazena os widgets de label para atualização
         self._ui_refs = {}
         self.dados_ordem_atual = None
         self._ultimo_pdf_temp = None  # caminho do último PDF gerado para preview
@@ -363,7 +424,8 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         frame_busca = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_busca.pack(fill="x", padx=10, pady=5)
 
-        self._ui_refs["search_label"] = ctk.CTkLabel(frame_busca, text=self._get_text("search_order"), text_color=self.cor_texto)
+        self._ui_refs["search_label"] = ctk.CTkLabel(frame_busca, text=self._get_text("search_order"),
+                                                     text_color=self.cor_texto)
         self._ui_refs["search_label"].pack(side="left", padx=(0, 5))
         self.ordem_busca_entry = ctk.CTkEntry(
             frame_busca, width=250,
@@ -391,20 +453,21 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         frame_info = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_info.pack(fill="x", padx=10, pady=5)
 
-        self._criar_label_entry(frame_info, "Nº ORDEM:", 0, 0)
-        self._criar_label_entry(frame_info, "CÓDIGO:", 0, 2)
-        self._criar_label_entry(frame_info, "DESCRIÇÃO:", 0, 4, colspan=3)
-        self._criar_label_entry(frame_info, "COMPRIMENTO (m):", 1, 0)
-        self._criar_label_entry(frame_info, "LARGURA (m):", 1, 2)
-        self._criar_label_entry(frame_info, "CORTADOR:", 2, 0)
-        self._criar_label_entry(frame_info, "AJUDANTE:", 2, 2)
-        self._criar_label_entry(frame_info, "DATA:", 2, 4)
+        # Criar campos com labels que serão armazenados para tradução
+        self._criar_label_entry(frame_info, "order_number", 0, 0)
+        self._criar_label_entry(frame_info, "code", 0, 2)
+        self._criar_label_entry(frame_info, "description", 0, 4, colspan=3)
+        self._criar_label_entry(frame_info, "length", 1, 0)
+        self._criar_label_entry(frame_info, "width", 1, 2)
+        self._criar_label_entry(frame_info, "cutter", 2, 0)
+        self._criar_label_entry(frame_info, "assistant", 2, 2)
+        self._criar_label_entry(frame_info, "date", 2, 4)
 
         # ------------------------ UI: TECIDOS ------------------------
         frame_tecidos = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_tecidos.pack(fill="both", expand=True, padx=10, pady=(10, 5))
         self._ui_refs["materials_title"] = ctk.CTkLabel(frame_tecidos, text=self._get_text("materials_used"),
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto)
+                                                        font=("Arial", 12, "bold"), text_color=self.cor_texto)
         self._ui_refs["materials_title"].pack(pady=(0, 5))
 
         colunas_tecido = (
@@ -430,7 +493,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         frame_lotes = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_lotes.pack(fill="both", expand=True, padx=10, pady=5)
         self._ui_refs["lots_title"] = ctk.CTkLabel(frame_lotes, text=self._get_text("production_lots"),
-                     font=("Arial", 12, "bold"), text_color=self.cor_texto)
+                                                   font=("Arial", 12, "bold"), text_color=self.cor_texto)
         self._ui_refs["lots_title"].pack(pady=(0, 5))
 
         colunas_lote = (
@@ -456,20 +519,21 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         # ------------------------ UI: TOTAIS ------------------------
         frame_totais = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_totais.pack(fill="x", padx=10, pady=10)
-        self._ui_refs["totals_title"] = ctk.CTkLabel(frame_totais, text=self._get_text("totals"), font=("Arial", 12, "bold"),
-                     text_color=self.cor_texto)
+        self._ui_refs["totals_title"] = ctk.CTkLabel(frame_totais, text=self._get_text("totals"),
+                                                     font=("Arial", 12, "bold"),
+                                                     text_color=self.cor_texto)
         self._ui_refs["totals_title"].grid(row=0, column=0, sticky="w")
 
         self.total_pecas_valor = self._criar_label_valor(frame_totais, "pieces", "0", 0, 1)
-        self.folhas_valor      = self._criar_label_valor(frame_totais, "sheets", "0", 0, 3)
-        self.metros_valor      = self._criar_label_valor(frame_totais, "meters", "0", 0, 5)
-        self.rendimento_valor  = self._criar_label_valor(frame_totais, "yield", "0%", 0, 7)
+        self.folhas_valor = self._criar_label_valor(frame_totais, "sheets", "0", 0, 3)
+        self.metros_valor = self._criar_label_valor(frame_totais, "meters", "0", 0, 5)
+        self.rendimento_valor = self._criar_label_valor(frame_totais, "yield", "0%", 0, 7)
 
         # ------------------------ UI: % REAL ------------------------
         frame_pct = ctk.CTkFrame(frame_totais, fg_color=self.cor_fundo)
         frame_pct.grid(row=1, column=0, columnspan=8, sticky="nsew", pady=(10, 0))
         self._ui_refs["size_title"] = ctk.CTkLabel(frame_pct, text=self._get_text("size_distribution"),
-                     font=("Arial", 11, "bold"), text_color=self.cor_texto)
+                                                   font=("Arial", 11, "bold"), text_color=self.cor_texto)
         self._ui_refs["size_title"].pack()
 
         self.tree_porcentagem = ttk.Treeview(
@@ -485,7 +549,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         frame_obs = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         frame_obs.pack(fill="x", padx=10, pady=10)
         self._ui_refs["obs_label"] = ctk.CTkLabel(frame_obs, text=self._get_text("observations"), font=("Arial", 12),
-                     text_color=self.cor_texto)
+                                                  text_color=self.cor_texto)
         self._ui_refs["obs_label"].pack(anchor="w")
 
         self.obs_entry = ctk.CTkEntry(
@@ -499,21 +563,25 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         self._configurar_estilo_treeview()
         self.refresh_texts()
 
-
     # -------------------- UI helpers --------------------
-    def _criar_label_entry(self, frame, texto, linha, coluna, colspan=1):
+    def _criar_label_entry(self, frame, campo_key, linha, coluna, colspan=1):
+        """Cria um par label/entry com suporte a tradução"""
+        texto_label = self._get_text(campo_key)
         label = ctk.CTkLabel(
             frame,
-            text=texto,
+            text=texto_label,
             font=("Arial", 11),
             anchor="e",
             text_color=self.cor_texto
         )
         label.grid(row=linha, column=coluna, padx=(10, 5), pady=2, sticky="e")
 
+        # Armazena o label para atualização futura
+        self._label_widgets[campo_key] = label
+
         entry = ctk.CTkEntry(
             frame,
-            width=120 if "DESCRIÇÃO" not in texto else 300,
+            width=120 if campo_key != "description" else 300,
             font=("Arial", 11),
             text_color=self.cor_texto,
             fg_color=self.cor_fundo,
@@ -521,9 +589,8 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         )
         entry.grid(row=linha, column=coluna + 1, padx=(0, 10), pady=2, sticky="w", columnspan=colspan)
 
-        nome = texto.strip(":").lower().replace(" ", "_").replace("(", "").replace(")", "") + "_entry"
-        setattr(self, nome, entry)
-        self.campos[texto.strip(":")] = entry
+        self.campos[campo_key] = entry
+        return entry
 
     def _criar_label_valor(self, frame, chave_texto, valor, linha, coluna):
         texto = self._get_text(chave_texto)
@@ -583,11 +650,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             with get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(f"SET LOCAL search_path = {schema};")
-                    # Mantém o layout esperado pelo restante do código:
-                    # id, numero_ordem, codigo, descricao, data,
-                    # comprimento_matriz, largura_matriz, cortador, ajudante,
-                    # total_folhas, metros_utilizados, bobinas_utilizadas,
-                    # composicao_tecido, total_pecas, rendimento, observacoes
                     cur.execute(f"""
                         SELECT
                             id,
@@ -676,7 +738,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         lista_frame.pack(padx=10, pady=(0, 10), fill="both", expand=True)
 
         for o in ordens:
-            # o = tupla com 16 campos conforme SELECT da busca
             num, codigo, desc, data = o[1], o[2], o[3], o[4]
             total = o[13] or 0
             texto = f"{str(num):<8}| {str(codigo):<6}| {str(desc):<20.20}| {str(total):>4} | {str(data)}"
@@ -716,7 +777,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             schema = get_schema()
             cadastro_id = resultado[0]
 
-            # Busca dados principais com a mesma ordem de colunas esperadas
             with get_conn() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(f"SET LOCAL search_path = {schema};")
@@ -749,14 +809,14 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
                     # Preenche campos básicos
                     campos_principais = {
-                        "Nº ORDEM": dados_ordem[1],
-                        "CÓDIGO": dados_ordem[2],
-                        "DESCRIÇÃO": dados_ordem[3],
-                        "DATA": dados_ordem[4],
-                        "COMPRIMENTO (m)": dados_ordem[5],
-                        "LARGURA (m)": dados_ordem[6],
-                        "CORTADOR": dados_ordem[7],
-                        "AJUDANTE": dados_ordem[8]
+                        "order_number": dados_ordem[1],
+                        "code": dados_ordem[2],
+                        "description": dados_ordem[3],
+                        "date": dados_ordem[4],
+                        "length": dados_ordem[5],
+                        "width": dados_ordem[6],
+                        "cutter": dados_ordem[7],
+                        "assistant": dados_ordem[8]
                     }
 
                     for campo, valor in campos_principais.items():
@@ -826,7 +886,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
     # --- Helper para montar nome de arquivo padrão ------------------------------
     def _nome_pdf_padrao(self):
-        """Monta um nome seguro: CODIGO_DESCRICAO_DATA.pdf"""
         from datetime import datetime
         import re
 
@@ -834,11 +893,9 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         descricao = str(self.dados_ordem_atual.get("descricao", "SEM_DESC")).strip()
         data = str(self.dados_ordem_atual.get("data", datetime.now().strftime("%d-%m-%Y"))).strip()
 
-        # normalizações
         data = data.replace("/", "-")
         descricao = descricao.replace(" ", "_")
 
-        # remove caracteres inválidos em Windows: \ / : * ? " < > |
         inval = r'[\\/:*?"<>|]'
         codigo = re.sub(inval, "_", codigo)
         descricao = re.sub(inval, "_", descricao)
@@ -848,12 +905,10 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
     # -------------------- Pré-visualização (PDF real) --------------------
     def previsualizar_controle(self):
-        """Gera um PDF temporário com o layout original e abre a pré-visualização."""
         if not self.dados_ordem_atual:
             messagebox.showwarning(self._get_text("warning"), self._get_text("no_order_loaded"))
             return
 
-        # recalcula total_pecas a partir da tree_tecido
         def _to_int(v):
             if v is None:
                 return 0
@@ -877,7 +932,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         except Exception:
             pass
 
-        # monta dados para geração (igual ao fluxo de salvar)
         dados_pdf = {
             "numero_ordem": self.dados_ordem_atual.get("numero_ordem", ""),
             "codigo": self.dados_ordem_atual.get("codigo", ""),
@@ -926,11 +980,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         self._mostrar_previsualizacao_pdf(temp_pdf)
 
     def _mostrar_previsualizacao_pdf(self, pdf_path):
-        """
-        Pré-visualiza a 1ª página do PDF (layout fiel),
-        redimensionada para caber na janela, com CTkImage,
-        scroll do mouse e janela centralizada.
-        """
         import os
         import sys
         import subprocess
@@ -938,34 +987,30 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         from PIL import Image
         import customtkinter as ctk
 
-        # -------- 1) Renderiza PDF -> PIL.Image --------
         img = None
 
-        # 1º tentamos PyMuPDF (fitz)
         try:
-            import fitz  # PyMuPDF
+            import fitz
             doc = fitz.open(pdf_path)
             page = doc[0]
-            mat = fitz.Matrix(2.0, 2.0)  # ~150-200 dpi
+            mat = fitz.Matrix(2.0, 2.0)
             pix = page.get_pixmap(matrix=mat, alpha=False)
             img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
             doc.close()
         except Exception:
-            # 2º tentamos pdf2image
             try:
                 from pdf2image import convert_from_path
                 pages = convert_from_path(pdf_path, dpi=150)
                 img = pages[0]
             except Exception as e:
-                # 3º fallback: abre no visualizador padrão do sistema
                 try:
-                    if sys.platform.startswith("darwin"):  # macOS
+                    if sys.platform.startswith("darwin"):
                         subprocess.Popen(["open", pdf_path])
-                    elif os.name == "nt":  # Windows
-                        os.startfile(pdf_path)  # type: ignore[attr-defined]
-                    else:  # Linux
+                    elif os.name == "nt":
+                        os.startfile(pdf_path)
+                    else:
                         subprocess.Popen(["xdg-open", pdf_path])
-                    return  # não mostra preview interno se abriu externo
+                    return
                 except Exception:
                     messagebox.showerror(
                         self._get_text("error"),
@@ -977,31 +1022,26 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             messagebox.showerror(self._get_text("error"), self._get_text("pdf_preview_unavailable"))
             return
 
-        # -------- 2) Redimensiona para caber inteiro --------
-        largura_max_preview = 760  # área útil dentro da janela 850px
+        largura_max_preview = 760
         if img.width > largura_max_preview:
             fator = largura_max_preview / img.width
             nova_altura = int(img.height * fator)
             img = img.resize((largura_max_preview, nova_altura), Image.LANCZOS)
 
-        # CTkImage (evita warning e escala bem em HighDPI)
         self._preview_ctkimage = ctk.CTkImage(
             light_image=img,
             size=(img.width, img.height)
         )
 
-        # -------- 3) Janela de preview --------
         janela = ctk.CTkToplevel(self)
         janela.title(self._get_text("preview_title"))
         janela.geometry("850x750")
         janela.minsize(850, 750)
         janela.configure(fg_color=getattr(self, "cor_fundo", "#0E1525"))
 
-        # Frame principal
         main_frame = ctk.CTkFrame(janela, fg_color=getattr(self, "cor_fundo", "#0E1525"))
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Canvas e scrollbar
         canvas = Canvas(main_frame, bg=getattr(self, "cor_fundo", "#0E1525"), highlightthickness=0)
         scrollbar = ctk.CTkScrollbar(main_frame, orientation="vertical", command=canvas.yview)
         scrollable = Frame(canvas, bg=getattr(self, "cor_fundo", "#0E1525"))
@@ -1017,7 +1057,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
 
         scrollable.bind("<Configure>", configure_scrollregion)
 
-        # Imagem do PDF
         label_imagem = ctk.CTkLabel(
             scrollable,
             image=self._preview_ctkimage,
@@ -1026,20 +1065,19 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         )
         label_imagem.pack(pady=10)
 
-        # -------- 4) Scroll do mouse (bind global; unbind ao fechar) --------
         def _on_mouse_wheel(event):
-            if event.delta:  # Windows / Mac
+            if event.delta:
                 canvas.yview_scroll(-int(event.delta / 120), "units")
-            else:  # Linux (Button-4/5)
+            else:
                 if getattr(event, "num", None) == 4:
                     canvas.yview_scroll(-3, "units")
                 elif getattr(event, "num", None) == 5:
                     canvas.yview_scroll(3, "units")
 
         def _bind_scroll():
-            canvas.bind_all("<MouseWheel>", _on_mouse_wheel)  # Win/Mac
-            canvas.bind_all("<Button-4>", _on_mouse_wheel)  # Linux up
-            canvas.bind_all("<Button-5>", _on_mouse_wheel)  # Linux down
+            canvas.bind_all("<MouseWheel>", _on_mouse_wheel)
+            canvas.bind_all("<Button-4>", _on_mouse_wheel)
+            canvas.bind_all("<Button-5>", _on_mouse_wheel)
 
         def _unbind_scroll(*_):
             canvas.unbind_all("<MouseWheel>")
@@ -1049,7 +1087,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         _bind_scroll()
         janela.bind("<Destroy>", _unbind_scroll)
 
-        # -------- 5) Barra de botões --------
         botoes = ctk.CTkFrame(janela, fg_color=getattr(self, "cor_fundo", "#0E1525"))
         botoes.pack(fill="x", padx=10, pady=(0, 10))
 
@@ -1088,7 +1125,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             text_color=cor_texto,
         ).pack(side="right", padx=10)
 
-        # -------- 6) Centraliza a janela --------
         janela.update_idletasks()
         largura_monitor = janela.winfo_screenwidth()
         altura_monitor = janela.winfo_screenheight()
@@ -1100,18 +1136,15 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         janela.geometry(f"{largura_janela}x{altura_janela}+{pos_x}+{pos_y}")
         janela.grab_set()
 
-        # Mantém referência para evitar garbage collection
         self._preview_window = janela
         self._preview_canvas = canvas
 
     # -------------------- (opcional) salvar direto --------------------
     def gerar_pdf(self):
-        """Mantida caso queira apenas salvar sem pré-visualizar."""
         if not self.dados_ordem_atual:
             messagebox.showwarning(self._get_text("warning"), self._get_text("no_order_loaded"))
             return
 
-        # --- Calcula o total de peças diretamente da tree_tecido ---
         total_pecas_calc = 0
         for item in self.tree_tecido.get_children():
             valores = self.tree_tecido.item(item)['values']
@@ -1283,7 +1316,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                 "gg": v[10], "g1": v[11], "g2": v[12], "g3": v[13], "total": v[14]
             })
 
-        # Gera arquivo temporário
         tmp_dir = tempfile.gettempdir()
         temp_path = os.path.join(tmp_dir, "ORDEM_CORTE_TMP.pdf")
         try:
@@ -1292,8 +1324,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             messagebox.showerror(self._get_text("error"), self._get_text("temp_pdf_error", erro=e))
             return
 
-        # Oferece salvar com nome padrão
-        if messagebox.askyesno(self._get_text("save_pdf"), self._get_text("pdf_saved_success", caminho="?").replace("?", "")):
+        if messagebox.askyesno(self._get_text("save_pdf"), "Deseja salvar uma cópia do PDF antes de imprimir?"):
             desktop = os.path.join(os.path.expanduser("~"), "Desktop")
             nome_padrao = self._nome_pdf_padrao()
             destino = filedialog.asksaveasfilename(
@@ -1309,7 +1340,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                 except Exception as e:
                     messagebox.showerror(self._get_text("error"), f"Falha ao salvar o PDF:\n{e}")
 
-        # Envia para impressora (Windows)
         if sys.platform.startswith("win"):
             try:
                 os.startfile(temp_path, "print")
@@ -1322,7 +1352,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                 "Impressão direta é suportada no Windows. Abra o PDF salvo e imprima pelo visualizador do sistema."
             )
 
-    # -------------------- Geração do PDF (MANTIDA – layout original) --------------------
+    # -------------------- Geração do PDF --------------------
     def _gerar_pdf_ordem_de_corte(self, dados, nome_arquivo):
         from reportlab.pdfgen import canvas
         from reportlab.lib.pagesizes import A4
@@ -1330,7 +1360,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         from datetime import datetime
         import os
 
-        # Inicialização
         c = canvas.Canvas(nome_arquivo, pagesize=A4)
         largura, altura = A4
         margem = 1 * cm
@@ -1338,7 +1367,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         available_width = largura - 2 * margem
         y = altura - margem
 
-        # CABEÇALHO azul com título branco
         c.setFillColorRGB(0.11, 0.32, 0.55)
         c.rect(0, y - 1.8 * cm, largura, 2.5 * cm, fill=1, stroke=0)
         logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "LOGO.jpg")
@@ -1635,7 +1663,6 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         return y - 0.5 * cm
 
     def _atualizar_porcentagem_real(self):
-        """Calcula e atualiza a porcentagem real por tamanho"""
         tamanhos = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
         totais = {t: 0 for t in tamanhos}
         total_geral = 0
@@ -1666,6 +1693,7 @@ if __name__ == "__main__":
     root = ctk.CTk()
     root.title("Visualização da Ordem de Corte")
 
+
     class SistemaMock:
         idioma_atual = "pt_BR"
         cor_fundo = "#121212"
@@ -1676,6 +1704,7 @@ if __name__ == "__main__":
         cor_alerta = "#FFBB55"
         cor_imprimir = "#646CFF"
         cor_texto = "#E0E0E0"
+
 
     OrdemCorteFinalizada(root, SistemaMock()).pack(fill="both", expand=True, padx=20, pady=20)
     root.mainloop()
