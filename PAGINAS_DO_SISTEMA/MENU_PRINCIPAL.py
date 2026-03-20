@@ -1193,6 +1193,8 @@ class OperaMenuApp(ctk.CTk):
             "switch_user": "Trocar usuário",
             "loading": "Carregando...",
             "error": "Erro",
+            "exit_title": "Sair",
+            "exit_confirm": "Deseja realmente sair do sistema?",
             "language_changed": "Idioma alterado para {language}",
             "no_permission": "Sem permissão para acessar {page}",
             "clock_format": "%d/%m/%Y %H:%M:%S",
@@ -1207,6 +1209,8 @@ class OperaMenuApp(ctk.CTk):
             "switch_user": "Switch user",
             "loading": "Loading...",
             "error": "Error",
+            "exit_title": "Exit",
+            "exit_confirm": "Do you really want to exit the system?",
             "language_changed": "Language changed to {language}",
             "no_permission": "No permission to access {page}",
             "clock_format": "%m/%d/%Y %I:%M:%S %p",
@@ -1221,6 +1225,8 @@ class OperaMenuApp(ctk.CTk):
             "switch_user": "Cambiar usuario",
             "loading": "Cargando...",
             "error": "Error",
+            "exit_title": "Salir",
+            "exit_confirm": "¿Realmente desea salir del sistema?",
             "language_changed": "Idioma cambiado a {language}",
             "no_permission": "Sin permiso para acceder a {page}",
             "clock_format": "%d/%m/%Y %H:%M:%S",
@@ -1709,10 +1715,12 @@ class OperaMenuApp(ctk.CTk):
     def ask_quit(self, event=None):
         if getattr(self, "_closing", False):
             return
+        titulo_saida = self._get_text("exit_title")
+        mensagem_saida = self._get_text("exit_confirm")
         try:
-            confirmar = messagebox.askyesno("Sair", "Deseja realmente sair do sistema?", parent=self)
+            confirmar = messagebox.askyesno(titulo_saida, mensagem_saida, parent=self)
         except Exception:
-            confirmar = messagebox.askyesno("Sair", "Deseja realmente sair do sistema?")
+            confirmar = messagebox.askyesno(titulo_saida, mensagem_saida)
         if confirmar:
             self._agendar_after(1, self.destroy)
 
@@ -2631,6 +2639,26 @@ class OperaMenuApp(ctk.CTk):
                 self._update_menu_buttons_colors()
         except Exception:
             pass
+
+        # garante posição visual da chave conforme o tema efetivamente aplicado
+        self.after(20, self._sync_theme_switch_with_current_theme)
+
+    def _sync_theme_switch_with_current_theme(self):
+        try:
+            if not hasattr(self, "theme_switch") or not self.theme_switch.winfo_exists():
+                return
+            is_dark_mode = self._theme_mode_from_name(getattr(self, "current_theme_name", "")) == "dark"
+            self._theme_switch_syncing = True
+            if is_dark_mode:
+                self.theme_switch.select()
+            else:
+                self.theme_switch.deselect()
+            if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
+                self.icon_theme.configure(text="🌙" if is_dark_mode else "☀️")
+        except Exception:
+            pass
+        finally:
+            self._theme_switch_syncing = False
 
     def _build_user_widget(self):
         user_frame = ctk.CTkFrame(self.topbar, fg_color="transparent")
