@@ -72,9 +72,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="Atualizar",
             width=135,
             command=self._carregar_ops,
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         ).grid(row=0, column=0, padx=(0, 8), pady=4)
 
         ctk.CTkButton(
@@ -82,9 +80,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="Abrir na Nova Ordem",
             width=170,
             command=self._abrir_na_nova_ordem,
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         ).grid(row=0, column=1, padx=(0, 8), pady=4)
 
         filtros = ctk.CTkFrame(box, fg_color="transparent")
@@ -148,9 +144,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="Filtrar",
             width=100,
             command=self._carregar_ops,
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         ).grid(row=0, column=8, padx=(0, 6), pady=4)
 
         ctk.CTkButton(
@@ -158,9 +152,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="Limpar Filtros",
             width=120,
             command=self._limpar_filtros,
-            fg_color="#6B7280",
-            hover_color=self._hover("#6B7280"),
-            text_color="white",
+            **self._button_style("#6B7280"),
         ).grid(row=0, column=9, padx=(0, 6), pady=4)
 
         # Linha 2
@@ -184,9 +176,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="📅",
             width=34,
             command=lambda: self._abrir_calendario(self.filtro_data_de),
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         )
         self.btn_data_de.pack(side="left")
 
@@ -210,9 +200,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             text="📅",
             width=34,
             command=lambda: self._abrir_calendario(self.filtro_data_ate),
-            fg_color=self.cor_primaria,
-            hover_color=self._hover(self.cor_primaria),
-            text_color="white",
+            **self._button_style(self.cor_primaria),
         )
         self.btn_data_ate.pack(side="left")
 
@@ -280,7 +268,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         )
 
         for col, txt, w, anc in colunas:
-            self.tree.heading(col, text=txt)
+            self.tree.heading(col, text=str(txt).upper())
             self.tree.column(col, width=w, anchor=anc)
 
         self.tree.grid(row=2, column=0, sticky="nsew", padx=(10, 0), pady=(0, 10))
@@ -331,6 +319,29 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             return f"#{int(r * fator):02x}{int(g * fator):02x}{int(b * fator):02x}"
         except Exception:
             return "#2E4A66"
+
+    def _button_style(self, base_color=None):
+        cor = (base_color or self.cor_primaria or "#3A7EBF").strip()
+        if not cor.startswith("#") or len(cor) != 7:
+            cor = "#3A7EBF"
+        try:
+            r = int(cor[1:3], 16)
+            g = int(cor[3:5], 16)
+            b = int(cor[5:7], 16)
+            luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+            if luminancia > 0.7:
+                cor = self._hover(cor)
+            texto = "#111827" if luminancia > 0.6 else "#FFFFFF"
+        except Exception:
+            texto = "#FFFFFF"
+        return {
+            "fg_color": cor,
+            "hover_color": self._hover(cor),
+            "text_color": texto,
+            "font": ctk.CTkFont(size=12, weight="bold"),
+            "border_width": 1,
+            "border_color": self.cor_borda,
+        }
 
     def _get_calendar_locale(self):
         idioma = getattr(self.sistema, "idioma_atual", "pt_BR")
@@ -1115,7 +1126,7 @@ def _ml_refresh_texts(self):
             continue
         try:
             for col, label in cols.items():
-                tree.heading(col, text=self._ml_translate(label))
+                tree.heading(col, text=str(self._ml_translate(label)).upper())
         except Exception:
             pass
 
@@ -1273,7 +1284,7 @@ def _ml2_refresh_texts(self):
                 continue
             try:
                 for col, label in cols.items():
-                    tree.heading(col, text=self._t(label))
+                    tree.heading(col, text=str(self._t(label)).upper())
             except Exception:
                 pass
 
