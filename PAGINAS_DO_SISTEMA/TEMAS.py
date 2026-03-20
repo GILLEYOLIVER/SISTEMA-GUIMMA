@@ -1557,6 +1557,39 @@ class ColorPickerWidget(ctk.CTkFrame):
     def get_color(self) -> str:
         return self.current_color
 
+
+def aplicar_tema_atalho(app, nome_tema: str) -> bool:
+    """
+    Atalho de aplicação de tema reutilizando a mesma base da página Temas.
+    """
+    try:
+        paletas = ModuloPaletas()
+        tema = paletas.obter_tema(nome_tema)
+        if not tema:
+            return False
+
+        theme_manager = getattr(app, "theme_manager", None)
+        if theme_manager:
+            theme_manager.apply_theme(nome_tema, tema)
+        else:
+            for campo, valor in tema.items():
+                setattr(app, f"cor_{campo}", valor)
+
+        for attr in ("tema_atual", "current_theme_name", "tema_preferido_inicial"):
+            if hasattr(app, attr):
+                setattr(app, attr, nome_tema)
+
+        user_manager = getattr(app, "user_manager", None)
+        if user_manager and hasattr(user_manager, "save_user_theme"):
+            user_manager.save_user_theme(nome_tema)
+
+        return True
+    except Exception as e:
+        if LOGGER:
+            LOGGER.error(f"Erro ao aplicar tema via atalho ('{nome_tema}'): {e}")
+        return False
+
+
 class TemasPage(ctk.CTkFrame):
     MAX_COLS = 3
 
