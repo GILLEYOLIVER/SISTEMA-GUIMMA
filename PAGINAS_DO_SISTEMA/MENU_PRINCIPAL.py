@@ -1195,6 +1195,8 @@ class OperaMenuApp(ctk.CTk):
             "error": "Erro",
             "exit_title": "Sair",
             "exit_confirm": "Deseja realmente sair do sistema?",
+            "yes": "Sim",
+            "no": "Não",
             "language_changed": "Idioma alterado para {language}",
             "no_permission": "Sem permissão para acessar {page}",
             "clock_format": "%d/%m/%Y %H:%M:%S",
@@ -1211,6 +1213,8 @@ class OperaMenuApp(ctk.CTk):
             "error": "Error",
             "exit_title": "Exit",
             "exit_confirm": "Do you really want to exit the system?",
+            "yes": "Yes",
+            "no": "No",
             "language_changed": "Language changed to {language}",
             "no_permission": "No permission to access {page}",
             "clock_format": "%m/%d/%Y %I:%M:%S %p",
@@ -1227,6 +1231,8 @@ class OperaMenuApp(ctk.CTk):
             "error": "Error",
             "exit_title": "Salir",
             "exit_confirm": "¿Realmente desea salir del sistema?",
+            "yes": "Sí",
+            "no": "No",
             "language_changed": "Idioma cambiado a {language}",
             "no_permission": "Sin permiso para acceder a {page}",
             "clock_format": "%d/%m/%Y %H:%M:%S",
@@ -1717,12 +1723,74 @@ class OperaMenuApp(ctk.CTk):
             return
         titulo_saida = self._get_text("exit_title")
         mensagem_saida = self._get_text("exit_confirm")
-        try:
-            confirmar = messagebox.askyesno(titulo_saida, mensagem_saida, parent=self)
-        except Exception:
-            confirmar = messagebox.askyesno(titulo_saida, mensagem_saida)
+        confirmar = self._show_exit_dialog(titulo_saida, mensagem_saida)
         if confirmar:
             self._agendar_after(1, self.destroy)
+
+    def _show_exit_dialog(self, titulo: str, mensagem: str) -> bool:
+        resposta = {"ok": False}
+        try:
+            dlg = ctk.CTkToplevel(self)
+            dlg.title(titulo)
+            dlg.transient(self)
+            dlg.resizable(False, False)
+            dlg.grab_set()
+            dlg.configure(fg_color=self.cor_fundo)
+            w, h = 460, 230
+            x = self.winfo_rootx() + max(20, (self.winfo_width() - w) // 2)
+            y = self.winfo_rooty() + max(20, (self.winfo_height() - h) // 2)
+            dlg.geometry(f"{w}x{h}+{x}+{y}")
+
+            card = ctk.CTkFrame(dlg, fg_color=self.cor_secundaria, corner_radius=12, border_width=1, border_color=self.cor_borda)
+            card.pack(fill="both", expand=True, padx=14, pady=14)
+
+            ctk.CTkLabel(
+                card,
+                text=mensagem,
+                font=("Arial", 18, "bold"),
+                text_color=self.cor_texto,
+                wraplength=400,
+                justify="center",
+            ).pack(fill="x", padx=20, pady=(30, 22))
+
+            botoes = ctk.CTkFrame(card, fg_color="transparent")
+            botoes.pack(pady=(0, 16))
+
+            def _set(v: bool):
+                resposta["ok"] = v
+                dlg.destroy()
+
+            ctk.CTkButton(
+                botoes,
+                text=self._get_text("yes"),
+                width=140,
+                fg_color=self.cor_primaria,
+                hover_color=self.cor_hover,
+                text_color="#FFFFFF",
+                font=("Arial", 14, "bold"),
+                command=lambda: _set(True),
+            ).pack(side="left", padx=8)
+            ctk.CTkButton(
+                botoes,
+                text=self._get_text("no"),
+                width=140,
+                fg_color=self.cor_secundaria,
+                hover_color=self.cor_borda,
+                text_color=self.cor_texto,
+                border_width=1,
+                border_color=self.cor_borda,
+                font=("Arial", 14, "bold"),
+                command=lambda: _set(False),
+            ).pack(side="left", padx=8)
+
+            dlg.protocol("WM_DELETE_WINDOW", lambda: _set(False))
+            self.wait_window(dlg)
+            return bool(resposta["ok"])
+        except Exception:
+            try:
+                return messagebox.askyesno(titulo, mensagem, parent=self)
+            except Exception:
+                return messagebox.askyesno(titulo, mensagem)
 
     def destroy(self):
         if getattr(self, "_closing", False):
