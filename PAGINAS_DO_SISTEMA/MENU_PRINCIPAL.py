@@ -427,6 +427,55 @@ class ThemeManager:
         except Exception as e:
             _dprint(f"[Tema] Erro ao aplicar tema em botões ttk: {e}")
 
+        try:
+            estilo_form_ttk = ttk.Style(root_widget)
+            estilo_form_ttk.configure(
+                "Opera.TCombobox",
+                fieldbackground=cor_secundaria,
+                background=cor_secundaria,
+                foreground=cor_texto,
+                bordercolor=cor_borda,
+                arrowcolor=cor_texto,
+                insertcolor=cor_texto,
+            )
+            estilo_form_ttk.map(
+                "Opera.TCombobox",
+                fieldbackground=[("readonly", cor_secundaria), ("active", cor_secundaria)],
+                foreground=[("readonly", cor_texto), ("active", cor_texto)],
+                background=[("readonly", cor_secundaria), ("active", cor_secundaria)],
+            )
+            estilo_form_ttk.configure(
+                "Opera.TCheckbutton",
+                background=cor_fundo,
+                foreground=cor_texto,
+                indicatorcolor=cor_destaque,
+                indicatordiameter=14,
+                focuscolor=cor_fundo,
+                font=fonts["body"],
+            )
+            estilo_form_ttk.map(
+                "Opera.TCheckbutton",
+                background=[("active", cor_fundo)],
+                foreground=[("active", cor_texto)],
+                indicatorcolor=[("selected", cor_destaque), ("active", cor_hover_realcado)],
+            )
+            estilo_form_ttk.configure(
+                "Opera.TRadiobutton",
+                background=cor_fundo,
+                foreground=cor_texto,
+                indicatorcolor=cor_destaque,
+                focuscolor=cor_fundo,
+                font=fonts["body"],
+            )
+            estilo_form_ttk.map(
+                "Opera.TRadiobutton",
+                background=[("active", cor_fundo)],
+                foreground=[("active", cor_texto)],
+                indicatorcolor=[("selected", cor_destaque), ("active", cor_hover_realcado)],
+            )
+        except Exception as e:
+            _dprint(f"[Tema] Erro ao aplicar estilos ttk de formulários: {e}")
+
         def _describe_widget(widget) -> str:
             try:
                 name = widget.winfo_name()
@@ -659,6 +708,79 @@ class ThemeManager:
                         fg=cor_texto,
                         font=fonts["body"],
                     )
+                    parar_recursao = True
+                elif isinstance(widget, tk.Entry):
+                    widget.configure(
+                        bg=cor_secundaria,
+                        fg=cor_texto,
+                        insertbackground=cor_texto,
+                        disabledbackground=cor_secundaria,
+                        disabledforeground=cor_texto,
+                        readonlybackground=cor_secundaria,
+                        relief=tk.FLAT,
+                        bd=1,
+                        highlightthickness=1,
+                        highlightbackground=cor_borda,
+                        highlightcolor=cor_destaque,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, tk.Text):
+                    widget.configure(
+                        bg=cor_secundaria,
+                        fg=cor_texto,
+                        insertbackground=cor_texto,
+                        relief=tk.FLAT,
+                        bd=1,
+                        highlightthickness=1,
+                        highlightbackground=cor_borda,
+                        highlightcolor=cor_destaque,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, tk.Checkbutton):
+                    widget.configure(
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        activebackground=cor_fundo,
+                        activeforeground=cor_texto,
+                        selectcolor=cor_destaque,
+                        highlightthickness=0,
+                        bd=0,
+                        relief=tk.FLAT,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, tk.Radiobutton):
+                    widget.configure(
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        activebackground=cor_fundo,
+                        activeforeground=cor_texto,
+                        selectcolor=cor_destaque,
+                        highlightthickness=0,
+                        bd=0,
+                        relief=tk.FLAT,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, ttk.Combobox):
+                    try:
+                        widget.configure(style="Opera.TCombobox")
+                    except Exception:
+                        pass
+                    parar_recursao = True
+                elif isinstance(widget, ttk.Checkbutton):
+                    try:
+                        widget.configure(style="Opera.TCheckbutton")
+                    except Exception:
+                        pass
+                    parar_recursao = True
+                elif isinstance(widget, ttk.Radiobutton):
+                    try:
+                        widget.configure(style="Opera.TRadiobutton")
+                    except Exception:
+                        pass
                     parar_recursao = True
                 elif isinstance(widget, tk.Frame) and not widget.__class__.__module__.startswith("customtkinter"):
                     widget.configure(bg=cor_fundo)
@@ -3337,6 +3459,10 @@ class OperaMenuApp(ctk.CTk):
                 self.after(120,
                            lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.after(320,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(750,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(1500,
                            lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.current_page = page_name
                 self._current_frame = frame
