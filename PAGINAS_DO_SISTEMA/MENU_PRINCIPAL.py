@@ -427,6 +427,55 @@ class ThemeManager:
         except Exception as e:
             _dprint(f"[Tema] Erro ao aplicar tema em botões ttk: {e}")
 
+        try:
+            estilo_form_ttk = ttk.Style(root_widget)
+            estilo_form_ttk.configure(
+                "Opera.TCombobox",
+                fieldbackground=cor_secundaria,
+                background=cor_secundaria,
+                foreground=cor_texto,
+                bordercolor=cor_borda,
+                arrowcolor=cor_texto,
+                insertcolor=cor_texto,
+            )
+            estilo_form_ttk.map(
+                "Opera.TCombobox",
+                fieldbackground=[("readonly", cor_secundaria), ("active", cor_secundaria)],
+                foreground=[("readonly", cor_texto), ("active", cor_texto)],
+                background=[("readonly", cor_secundaria), ("active", cor_secundaria)],
+            )
+            estilo_form_ttk.configure(
+                "Opera.TCheckbutton",
+                background=cor_fundo,
+                foreground=cor_texto,
+                indicatorcolor=cor_destaque,
+                indicatordiameter=14,
+                focuscolor=cor_fundo,
+                font=fonts["body"],
+            )
+            estilo_form_ttk.map(
+                "Opera.TCheckbutton",
+                background=[("active", cor_fundo)],
+                foreground=[("active", cor_texto)],
+                indicatorcolor=[("selected", cor_destaque), ("active", cor_hover_realcado)],
+            )
+            estilo_form_ttk.configure(
+                "Opera.TRadiobutton",
+                background=cor_fundo,
+                foreground=cor_texto,
+                indicatorcolor=cor_destaque,
+                focuscolor=cor_fundo,
+                font=fonts["body"],
+            )
+            estilo_form_ttk.map(
+                "Opera.TRadiobutton",
+                background=[("active", cor_fundo)],
+                foreground=[("active", cor_texto)],
+                indicatorcolor=[("selected", cor_destaque), ("active", cor_hover_realcado)],
+            )
+        except Exception as e:
+            _dprint(f"[Tema] Erro ao aplicar estilos ttk de formulários: {e}")
+
         def _describe_widget(widget) -> str:
             try:
                 name = widget.winfo_name()
@@ -444,57 +493,18 @@ class ThemeManager:
                     parar_recursao = False
                 elif isinstance(widget, ctk.CTkButton):
                     try:
-                        fg_atual = None
-                        hover_atual = None
-                        border_atual = None
-                        text_atual = None
-
-                        try:
-                            fg_atual = widget.cget("fg_color")
-                        except Exception:
-                            pass
-
-                        try:
-                            hover_atual = widget.cget("hover_color")
-                        except Exception:
-                            pass
-
-                        try:
-                            border_atual = widget.cget("border_color")
-                        except Exception:
-                            pass
-
-                        try:
-                            text_atual = widget.cget("text_color")
-                        except Exception:
-                            pass
-
-                        preservar_cores = getattr(widget, "_opera_preserve_colors", True)
-
-                        if preservar_cores:
-                            widget.configure(
-                                bg_color="transparent",
-                                text_color=text_atual if text_atual else cor_texto,
-                                font=fonts["button"],
-                                corner_radius=getattr(widget, "corner_radius", 8),
-                                fg_color=fg_atual,
-                                hover_color=hover_atual if hover_atual is not None else fg_atual,
-                                border_color=border_atual if border_atual is not None else cor_borda,
-                                hover=True,
-                            )
-                        else:
-                            widget.configure(
-                                border_width=0,
-                                bg_color="transparent",
-                                text_color=cor_texto,
-                                font=fonts["button"],
-                                corner_radius=getattr(widget, "corner_radius", 8),
-                                hover=False,
-                            )
-
-                        cor_texto_hover = text_atual if text_atual else cor_texto
-                        widget.bind("<Enter>", lambda e, w=widget, c=cor_texto_hover: w.configure(text_color=c))
-                        widget.bind("<Leave>", lambda e, w=widget, c=cor_texto_hover: w.configure(text_color=c))
+                        cor_texto_botao = self._contrast_text_for_color(cor_primaria, fallback=cor_texto)
+                        widget.configure(
+                            border_width=0,
+                            bg_color="transparent",
+                            fg_color=cor_primaria,
+                            hover_color=cor_hover,
+                            border_color=cor_borda,
+                            text_color=cor_texto_botao,
+                            font=fonts["button"],
+                            corner_radius=getattr(widget, "corner_radius", 8),
+                            hover=True,
+                        )
                     except Exception as e:
                         _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkButton: {e}")
                     parar_recursao = True
@@ -519,12 +529,12 @@ class ThemeManager:
                         fg_color=cor_secundaria,
                         border_color=cor_borda,
                         button_color=cor_primaria,
-                        button_hover=False,
+                        button_hover_color=cor_hover,
                         text_color=cor_texto,
                         font=fonts["body"],
                         dropdown_fg_color=cor_secundaria,
                         dropdown_text_color=cor_texto,
-                        dropdown_hover=False,
+                        dropdown_hover_color=cor_hover,
                     )
                     parar_recursao = True
                 elif isinstance(widget, ctk.CTkOptionMenu):
@@ -533,22 +543,44 @@ class ThemeManager:
                         widget.configure(
                             fg_color=cor_secundaria,
                             button_color=cor_primaria,
-                            button_hover=False,
+                            button_hover_color=cor_hover,
                             text_color=option_texto,
                             dropdown_fg_color=cor_secundaria,
                             dropdown_text_color=option_texto,
                             dropdown_hover_color=cor_hover,
-                            dropdown_hover=False,
                         )
                     except Exception as e:
                         _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkOptionMenu {_describe_widget(widget)}: {e}")
                     parar_recursao = True
-                elif isinstance(widget, (ctk.CTkCheckBox, ctk.CTkSwitch)):
+                elif isinstance(widget, ctk.CTkCheckBox):
+                    cor_checkbox = cor_destaque or cor_primaria
+                    cor_checkmark = self._contrast_text_for_color(cor_checkbox, fallback=cor_texto)
+                    widget.configure(
+                        fg_color=cor_checkbox,
+                        hover_color=cor_hover_realcado,
+                        border_color=cor_borda,
+                        checkmark_color=cor_checkmark,
+                        text_color=cor_texto,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, ctk.CTkRadioButton):
+                    cor_radio = cor_destaque or cor_primaria
+                    widget.configure(
+                        fg_color=cor_radio,
+                        hover_color=cor_hover_realcado,
+                        border_color=cor_borda,
+                        text_color=cor_texto,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, ctk.CTkSwitch):
                     widget.configure(
                         fg_color=cor_secundaria,
+                        progress_color=cor_destaque,
+                        button_color=cor_texto,
+                        button_hover_color=cor_hover,
                         border_color=cor_borda,
-                        button_color=cor_primaria,
-                        button_hover=False,
                         text_color=cor_texto,
                         font=fonts["body"],
                     )
@@ -568,7 +600,7 @@ class ThemeManager:
                         widget.configure(
                             fg_color=cor_secundaria,
                             button_color=cor_primaria,
-                            button_hover=False,
+                            button_hover_color=cor_hover,
                             progress_color=cor_primaria,
                         )
                     except Exception as e:
@@ -591,7 +623,8 @@ class ThemeManager:
                         segmented_button_fg_color=cor_primaria,
                         segmented_button_selected_color=cor_hover_realcado,
                         segmented_button_unselected_color=cor_secundaria,
-                        segmented_button_unselected_hover=False,
+                        segmented_button_unselected_hover_color=cor_hover,
+                        segmented_button_selected_hover_color=cor_hover_realcado,
                         text_color=cor_texto,
                         font=fonts["body"],
                     )
@@ -675,6 +708,79 @@ class ThemeManager:
                         fg=cor_texto,
                         font=fonts["body"],
                     )
+                    parar_recursao = True
+                elif isinstance(widget, tk.Entry):
+                    widget.configure(
+                        bg=cor_secundaria,
+                        fg=cor_texto,
+                        insertbackground=cor_texto,
+                        disabledbackground=cor_secundaria,
+                        disabledforeground=cor_texto,
+                        readonlybackground=cor_secundaria,
+                        relief=tk.FLAT,
+                        bd=1,
+                        highlightthickness=1,
+                        highlightbackground=cor_borda,
+                        highlightcolor=cor_destaque,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, tk.Text):
+                    widget.configure(
+                        bg=cor_secundaria,
+                        fg=cor_texto,
+                        insertbackground=cor_texto,
+                        relief=tk.FLAT,
+                        bd=1,
+                        highlightthickness=1,
+                        highlightbackground=cor_borda,
+                        highlightcolor=cor_destaque,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, tk.Checkbutton):
+                    widget.configure(
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        activebackground=cor_fundo,
+                        activeforeground=cor_texto,
+                        selectcolor=cor_destaque,
+                        highlightthickness=0,
+                        bd=0,
+                        relief=tk.FLAT,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, tk.Radiobutton):
+                    widget.configure(
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        activebackground=cor_fundo,
+                        activeforeground=cor_texto,
+                        selectcolor=cor_destaque,
+                        highlightthickness=0,
+                        bd=0,
+                        relief=tk.FLAT,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, ttk.Combobox):
+                    try:
+                        widget.configure(style="Opera.TCombobox")
+                    except Exception:
+                        pass
+                    parar_recursao = True
+                elif isinstance(widget, ttk.Checkbutton):
+                    try:
+                        widget.configure(style="Opera.TCheckbutton")
+                    except Exception:
+                        pass
+                    parar_recursao = True
+                elif isinstance(widget, ttk.Radiobutton):
+                    try:
+                        widget.configure(style="Opera.TRadiobutton")
+                    except Exception:
+                        pass
                     parar_recursao = True
                 elif isinstance(widget, tk.Frame) and not widget.__class__.__module__.startswith("customtkinter"):
                     widget.configure(bg=cor_fundo)
@@ -3353,6 +3459,10 @@ class OperaMenuApp(ctk.CTk):
                 self.after(120,
                            lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.after(320,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(750,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(1500,
                            lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.current_page = page_name
                 self._current_frame = frame
