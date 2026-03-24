@@ -2045,6 +2045,8 @@ class AdvancedStockReport(ctk.CTkFrame):
                 "cat": "categoria" if "categoria" in cols else None,
                 "status": "status" if "status" in cols else None,
                 "local": next((f for f in ("localizacao", "local", "endereco", "posicao") if f in cols), None),
+                "cor": next((f for f in ("cor", "cores", "color") if f in cols), None),
+                "fornecedor": next((f for f in ("fornecedor", "fornecedor_nome", "prestador", "provider") if f in cols), None),
                 "data": next((f for f in ("data_atualizacao", "ultima_atualizacao", "atualizado_em", "updated_at")
                               if f in cols), None),
             })
@@ -2056,6 +2058,12 @@ class AdvancedStockReport(ctk.CTkFrame):
     def _ai_parse_query(self, pergunta: str) -> dict:
         q = (pergunta or "").strip().lower()
         nums = [int(x) for x in re.findall(r"(?<!\\w)(\\d+)(?!\\w)", q)]
+        stopwords = {
+            "o", "a", "os", "as", "de", "do", "da", "dos", "das", "e", "ou", "em", "no", "na", "nos", "nas",
+            "para", "por", "com", "sem", "que", "qual", "quais", "quanto", "quantos", "tem", "temos", "ia",
+            "banco", "estoque", "item", "itens", "verifique", "mostrar", "mostre", "procure", "buscar", "algo"
+        }
+        termos_livres = [t for t in re.findall(r"[a-z0-9áéíóúãõç_\\-]+", q) if len(t) >= 3 and t not in stopwords]
 
         codigo = None
         m_cod = re.search(r"c[oó]d(?:igo)?\\s*[:#]?\\s*([a-z0-9_.\\-/]+)", q)
@@ -2084,6 +2092,10 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         m_loc = re.search(r"(?:local|localiza(?:ç|c)ão|setor|dep[oó]sito)\\s+([\\w\\s\\-_/]+)", q)
         local = (m_loc.group(1).strip(" ?.,;:") if m_loc else None)
+        m_cor = re.search(r"cor(?:es)?\\s+([\\w\\s\\-_/]+)", q)
+        cor = (m_cor.group(1).strip(" ?.,;:") if m_cor else None)
+        m_forn = re.search(r"(?:fornecedor|fornecedores|prestador|prestadores)\\s+([\\w\\s\\-_/]+)", q)
+        fornecedor = (m_forn.group(1).strip(" ?.,;:") if m_forn else None)
 
         return {
             "raw": q,
@@ -2093,11 +2105,16 @@ class AdvancedStockReport(ctk.CTkFrame):
             "bottom_n": bottom_n,
             "categoria": categoria,
             "local": local,
+            "cor": cor,
+            "fornecedor": fornecedor,
+            "termos_livres": termos_livres[:6],
             "is_critico": any(k in q for k in ("crítico", "critico", "baixo estoque", "repor urgente")),
             "is_valor": any(k in q for k in ("valor", "financeiro", "patrimônio", "patrimonio")),
             "is_contagem": any(k in q for k in ("quantos", "contagem", "total itens", "total de itens")),
             "is_busca": any(k in q for k in ("buscar", "procurar", "encontrar", "detalhe", "detalhes")),
             "is_banco": any(k in q for k in ("banco", "tempo real", "agora", "atualizado")),
+            "is_cores": any(k in q for k in ("cor", "cores")),
+            "is_fornecedores": any(k in q for k in ("fornecedor", "fornecedores", "prestador", "prestadores")),
             "is_abaixo": any(k in q for k in ("abaixo", "menor")),
             "is_acima": any(k in q for k in ("acima", "maior")),
         }
@@ -2105,9 +2122,6 @@ class AdvancedStockReport(ctk.CTkFrame):
     def _ai_query_database(self, pergunta: str) -> Optional[str]:
         """Resposta IA com consulta dinâmica no banco para perguntas estratégicas."""
         p = self._ai_parse_query(pergunta)
-        if not any([p["is_banco"], p["is_busca"], p["is_contagem"], p["is_valor"], p["is_critico"],
-                    p["top_n"], p["bottom_n"], p["limiar"], p["codigo"], p["categoria"], p["local"]]):
-            return None
 
         schema = db.get_schema()
         try:
@@ -2123,11 +2137,14 @@ class AdvancedStockReport(ctk.CTkFrame):
                         cat = f["cat"] if f["cat"] else f"'{f['tabela']}'"
                         status = f["status"] if f["status"] else "NULL"
                         local = f["local"] if f["local"] else "NULL"
+                        cor = f["cor"] if f["cor"] else "NULL"
+                        fornecedor = f["fornecedor"] if f["fornecedor"] else "NULL"
                         data = f["data"] if f["data"] else "NULL"
                         union_parts.append(
                             f"SELECT codigo, descricao, {cat} AS categoria, "
                             f"COALESCE({f['qtd']},0)::numeric AS quantidade, "
-                            f"{status} AS status, {local} AS localizacao, {data} AS ultima_atualizacao, "
+                            f"{status} AS status, {local} AS localizacao, {cor} AS cor, {fornecedor} AS fornecedor, "
+                            f"{data} AS ultima_atualizacao, "
                             f"'{f['tabela']}' AS origem "
                             f"FROM {schema}.{f['tabela']}"
                         )
@@ -2145,6 +2162,24 @@ class AdvancedStockReport(ctk.CTkFrame):
                     if p["local"]:
                         filtros.append("LOWER(COALESCE(localizacao,'')) LIKE %s")
                         params.append(f"%{p['local'].lower()}%")
+                    if p["cor"]:
+                        filtros.append("LOWER(COALESCE(cor,'')) LIKE %s")
+                        params.append(f"%{p['cor'].lower()}%")
+                    if p["fornecedor"]:
+                        filtros.append("LOWER(COALESCE(fornecedor,'')) LIKE %s")
+                        params.append(f"%{p['fornecedor'].lower()}%")
+
+                    for termo in p["termos_livres"]:
+                        filtros.append(
+                            "(LOWER(COALESCE(descricao,'')) LIKE %s "
+                            "OR LOWER(COALESCE(categoria,'')) LIKE %s "
+                            "OR LOWER(COALESCE(localizacao,'')) LIKE %s "
+                            "OR LOWER(COALESCE(cor,'')) LIKE %s "
+                            "OR LOWER(COALESCE(fornecedor,'')) LIKE %s "
+                            "OR LOWER(CAST(codigo AS text)) LIKE %s)"
+                        )
+                        like_term = f"%{termo}%"
+                        params.extend([like_term, like_term, like_term, like_term, like_term, like_term])
 
                     if p["is_critico"] and not p["limiar"]:
                         filtros.append("quantidade < 10")
@@ -2156,6 +2191,42 @@ class AdvancedStockReport(ctk.CTkFrame):
                         params.append(p["limiar"])
 
                     where_sql = (" WHERE " + " AND ".join(filtros)) if filtros else ""
+
+                    if p["is_fornecedores"]:
+                        sql = cte + f"""
+                            SELECT COALESCE(fornecedor, '—') AS fornecedor, COUNT(*) AS itens, SUM(quantidade) AS qtd
+                              FROM estoque_unificado
+                              {where_sql}
+                             GROUP BY COALESCE(fornecedor, '—')
+                             ORDER BY itens DESC, fornecedor ASC
+                             LIMIT 50
+                        """
+                        cur.execute(sql, tuple(params))
+                        rows = cur.fetchall()
+                        if not rows:
+                            return "ℹ️ Nenhum fornecedor encontrado no banco para esse filtro."
+                        linhas = ["🏦 **Fornecedores encontrados no banco**:"]
+                        for forn, itens, qtd in rows:
+                            linhas.append(f"- {forn}: {int(itens or 0)} itens, qtd {float(qtd or 0):.2f}")
+                        return "\n".join(linhas)
+
+                    if p["is_cores"]:
+                        sql = cte + f"""
+                            SELECT COALESCE(cor, '—') AS cor, COUNT(*) AS itens, SUM(quantidade) AS qtd
+                              FROM estoque_unificado
+                              {where_sql}
+                             GROUP BY COALESCE(cor, '—')
+                             ORDER BY itens DESC, cor ASC
+                             LIMIT 50
+                        """
+                        cur.execute(sql, tuple(params))
+                        rows = cur.fetchall()
+                        if not rows:
+                            return "ℹ️ Nenhuma cor encontrada no banco para esse filtro."
+                        linhas = ["🎨 **Cores encontradas no banco**:"]
+                        for cor, itens, qtd in rows:
+                            linhas.append(f"- {cor}: {int(itens or 0)} itens, qtd {float(qtd or 0):.2f}")
+                        return "\n".join(linhas)
 
                     if p["is_valor"]:
                         sql = cte + f"""
@@ -2199,7 +2270,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                             f"• Quantidade total: **{float(qtd or 0):,.2f}**"
                         )
 
-                    if p["top_n"] or p["bottom_n"] or p["is_busca"] or p["codigo"] or p["is_critico"] or p["limiar"] is not None:
+                    if p["top_n"] or p["bottom_n"] or p["is_busca"] or p["codigo"] or p["is_critico"] or p["limiar"] is not None or p["termos_livres"]:
                         limit = max(1, min(100, p["top_n"] or p["bottom_n"] or 20))
                         if p["bottom_n"] or p["is_abaixo"] or p["is_critico"]:
                             order = "quantidade ASC, descricao ASC"
@@ -2217,7 +2288,8 @@ class AdvancedStockReport(ctk.CTkFrame):
                                 where_sql = " WHERE " + " AND ".join(filtros)
 
                         sql = cte + f"""
-                            SELECT codigo, descricao, categoria, quantidade, COALESCE(localizacao,'—') AS localizacao, origem
+                            SELECT codigo, descricao, categoria, quantidade, COALESCE(localizacao,'—') AS localizacao,
+                                   COALESCE(cor,'—') AS cor, COALESCE(fornecedor,'—') AS fornecedor, origem
                               FROM estoque_unificado
                               {where_sql}
                              ORDER BY {order}
@@ -2232,9 +2304,23 @@ class AdvancedStockReport(ctk.CTkFrame):
                         for r in rows[:limit]:
                             linhas.append(
                                 f"- `{r[0]}` • {r[1]} • qtd **{float(r[3] or 0):.2f}** • "
-                                f"cat {r[2] or '—'} • local {r[4] or '—'} • tabela {r[5]}"
+                                f"cat {r[2] or '—'} • local {r[4]} • cor {r[5]} • forn {r[6]} • tabela {r[7]}"
                             )
                         return "\n".join(linhas)
+
+                    sql = cte + f"""
+                        SELECT COUNT(*) AS linhas, COUNT(DISTINCT codigo) AS codigos, SUM(quantidade) AS qtd
+                          FROM estoque_unificado
+                          {where_sql}
+                    """
+                    cur.execute(sql, tuple(params))
+                    linhas, codigos, qtd = cur.fetchone()
+                    return (
+                        "🏦 **Verificação no banco concluída**\n"
+                        f"• Linhas: **{int(linhas or 0)}**\n"
+                        f"• Códigos distintos: **{int(codigos or 0)}**\n"
+                        f"• Quantidade total: **{float(qtd or 0):,.2f}**"
+                    )
 
         except Exception as e:
             return f"⚠️ Não consegui consultar o banco agora: {e}"
