@@ -2693,44 +2693,44 @@ class AdvancedStockReport(ctk.CTkFrame):
 
     def _ai_parse_query(self, pergunta: str) -> dict:
         q = (pergunta or "").strip().lower()
-        nums = [int(x) for x in re.findall(r"(?<!\\w)(\\d+)(?!\\w)", q)]
+        nums = [int(x) for x in re.findall(r"(?<!\w)(\d+)(?!\w)", q)]
         stopwords = {
             "o", "a", "os", "as", "de", "do", "da", "dos", "das", "e", "ou", "em", "no", "na", "nos", "nas",
             "para", "por", "com", "sem", "que", "qual", "quais", "quanto", "quantos", "tem", "temos", "ia",
             "banco", "estoque", "item", "itens", "verifique", "mostrar", "mostre", "procure", "buscar", "algo"
         }
-        termos_livres = [t for t in re.findall(r"[a-z0-9áéíóúãõç_\\-]+", q) if len(t) >= 3 and t not in stopwords]
+        termos_livres = [t for t in re.findall(r"[a-z0-9áéíóúãõç_-]+", q) if len(t) >= 3 and t not in stopwords]
 
         codigo = None
-        m_cod = re.search(r"c[oó]d(?:igo)?\\s*[:#]?\\s*([a-z0-9_.\\-/]+)", q)
+        m_cod = re.search(r"c[oó]d(?:igo)?\s*[:#]?\s*([a-z0-9_.\-/]+)", q)
         if m_cod:
             codigo = m_cod.group(1).strip()
 
         limiar = None
-        m_lim = re.search(r"(?:abaixo|menor(?:es)? que|acima|maior(?:es)? que)\\s*(\\d+)", q)
+        m_lim = re.search(r"(?:abaixo|menor(?:es)? que|acima|maior(?:es)? que)\s*(\d+)", q)
         if m_lim:
             limiar = int(m_lim.group(1))
 
         top_n = None
-        m_top = re.search(r"\\b(?:top|maiores?)\\s*(\\d{1,3})\\b", q)
+        m_top = re.search(r"\b(?:top|maiores?)\s*(\d{1,3})\b", q)
         if m_top:
             top_n = int(m_top.group(1))
         elif "top" in q and nums:
             top_n = nums[0]
 
         bottom_n = None
-        m_bot = re.search(r"\\b(?:bottom|menores?)\\s*(\\d{1,3})\\b", q)
+        m_bot = re.search(r"\b(?:bottom|menores?)\s*(\d{1,3})\b", q)
         if m_bot:
             bottom_n = int(m_bot.group(1))
 
-        m_cat = re.search(r"categoria\\s+([\\w\\s\\-_/]+)", q)
+        m_cat = re.search(r"categoria\s+([\w\s_/\-]+)", q)
         categoria = (m_cat.group(1).strip(" ?.,;:") if m_cat else None)
 
-        m_loc = re.search(r"(?:local|localiza(?:ç|c)ão|setor|dep[oó]sito)\\s+([\\w\\s\\-_/]+)", q)
+        m_loc = re.search(r"(?:local|localiza(?:ç|c)ão|setor|dep[oó]sito)\s+([\w\s_/\-]+)", q)
         local = (m_loc.group(1).strip(" ?.,;:") if m_loc else None)
-        m_cor = re.search(r"cor(?:es)?\\s+([\\w\\s\\-_/]+)", q)
+        m_cor = re.search(r"cor(?:es)?\s+([\w\s_/\-]+)", q)
         cor = (m_cor.group(1).strip(" ?.,;:") if m_cor else None)
-        m_forn = re.search(r"(?:fornecedor|fornecedores|prestador|prestadores)\\s+([\\w\\s\\-_/]+)", q)
+        m_forn = re.search(r"(?:fornecedor|fornecedores|prestador|prestadores)\s+([\w\s_/\-]+)", q)
         fornecedor = (m_forn.group(1).strip(" ?.,;:") if m_forn else None)
 
         return {
