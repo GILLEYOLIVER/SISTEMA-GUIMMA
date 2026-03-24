@@ -726,3 +726,6 @@ Exception: Não foi possível conectar. Portas testadas: [5432]
 2026-03-20 12:56:02 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
 2026-03-20 12:56:03 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Clique
 2026-03-20 12:56:04 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-24 10:10:01 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-24 10:10:26 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-24 10:20:07 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
