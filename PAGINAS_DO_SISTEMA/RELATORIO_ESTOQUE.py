@@ -3472,8 +3472,11 @@ class AdvancedStockReport(ctk.CTkFrame):
             try:
                 if self.assistente is None:
                     self.assistente = EstoqueIA(self.resultados)
-                resposta_banco = self._ai_query_database(text)
-                main = resposta_banco or self.assistente.responder(text)
+                resposta_local = self.assistente.responder(text)
+                intent, conf = self.assistente._intent_score(text)
+                usar_banco = self._should_use_db_answer(text, intent, conf)
+                resposta_banco = self._ai_query_database(text) if usar_banco else None
+                main = self._merge_local_and_db_response(resposta_local, resposta_banco, text)
                 variations = [] if resposta_banco else self._short_variations(main)
                 out = main
                 if variations:
@@ -3495,6 +3498,55 @@ class AdvancedStockReport(ctk.CTkFrame):
         ]
         random.shuffle(opts)
         return opts[:2]
+
+    def _should_use_db_answer(self, text: str, intent: Optional[str], conf: float) -> bool:
+        q = (text or "").strip().lower()
+        if not q:
+            return False
+        if intent in {"saudacao", "ajuda", "contexto"} and conf >= 0.15:
+            return False
+        termos_db = (
+            "estoque", "item", "itens", "quantidade", "categoria", "local", "cor", "fornecedor",
+            "prestador", "codigo", "código", "top", "bottom", "critico", "crítico", "valor",
+            "abaixo", "acima", "quanto", "quais", "buscar", "procurar"
+        )
+        return any(t in q for t in termos_db)
+
+    def _strip_markdown_tokens(self, text: str) -> str:
+        if not text:
+            return ""
+        cleaned = text.replace("**", "").replace("`", "")
+        cleaned = cleaned.replace("🏦 ", "").replace("📊 ", "").replace("ℹ️ ", "")
+        return cleaned.strip()
+
+    def _merge_local_and_db_response(self, resposta_local: str, resposta_banco: Optional[str], pergunta: str) -> str:
+        local_txt = self._strip_markdown_tokens(resposta_local)
+        if not resposta_banco:
+            return local_txt
+
+        banco_txt = self._strip_markdown_tokens(resposta_banco)
+        banco_l = banco_txt.lower()
+
+        if "nenhum resultado encontrado no banco" in banco_l or "não consegui consultar o banco" in banco_l:
+            return (
+                f"{local_txt}\n\n"
+                "No banco não encontrei um resultado exato com esse filtro agora. "
+                "Se quiser, eu tento por código, categoria, cor, local ou fornecedor."
+            )
+
+        if "verificação no banco concluída" in banco_l:
+            return (
+                "Entendi 👍\n"
+                f"{banco_txt}\n\n"
+                "Se você me disser o que deseja (ex.: categoria, cor, fornecedor ou código), "
+                "eu te devolvo uma resposta bem mais específica."
+            )
+
+        return (
+            "Perfeito, consultei no banco em tempo real:\n"
+            f"{banco_txt}\n\n"
+            "Se quiser, já te entrego também um resumo em formato de ação (o que comprar, o que está crítico, e prioridade)."
+        )
 
 
 # ---------- Execução Standalone ----------
