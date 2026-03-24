@@ -743,6 +743,8 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._ai_queue = queue.Queue()
         self._last_user_prompt = None
         self._ai_worker_running = False
+        self._ai_schema_cache = []
+        self._ai_schema_cache_ts = 0.0
 
         self._setup_styles()
         self._create_main_layout()
@@ -2006,6 +2008,239 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._create_metrics_panel()
         self.assistente = EstoqueIA(self.resultados)
 
+    # ---------- IA + BANCO (consultas inteligentes) ----------
+    def _get_ai_sources(self, cur, schema: str):
+        """Mapeia tabelas/colunas de estoque para consultas IA sem hardcode."""
+        now = time.time()
+        if self._ai_schema_cache and (now - self._ai_schema_cache_ts) < 300:
+            return self._ai_schema_cache
+
+        cur.execute("""
+            SELECT table_name
+              FROM information_schema.tables
+             WHERE table_schema = %s
+               AND table_name LIKE 'estoque_%%'
+             ORDER BY table_name
+        """, (schema,))
+        tabelas = [r[0] for r in cur.fetchall()]
+
+        fontes = []
+        for tabela in tabelas:
+            cur.execute("""
+                SELECT column_name
+                  FROM information_schema.columns
+                 WHERE table_schema = %s
+                   AND table_name = %s
+            """, (schema, tabela))
+            cols = {c[0].lower() for c in cur.fetchall()}
+            if not {"codigo", "descricao"}.issubset(cols):
+                continue
+
+            qtd_field = next((f for f in ("quantidade", "metros", "qtd", "estoque") if f in cols), None)
+            if not qtd_field:
+                continue
+            fontes.append({
+                "tabela": tabela,
+                "qtd": qtd_field,
+                "cat": "categoria" if "categoria" in cols else None,
+                "status": "status" if "status" in cols else None,
+                "local": next((f for f in ("localizacao", "local", "endereco", "posicao") if f in cols), None),
+                "data": next((f for f in ("data_atualizacao", "ultima_atualizacao", "atualizado_em", "updated_at")
+                              if f in cols), None),
+            })
+
+        self._ai_schema_cache = fontes
+        self._ai_schema_cache_ts = now
+        return fontes
+
+    def _ai_parse_query(self, pergunta: str) -> dict:
+        q = (pergunta or "").strip().lower()
+        nums = [int(x) for x in re.findall(r"(?<!\\w)(\\d+)(?!\\w)", q)]
+
+        codigo = None
+        m_cod = re.search(r"c[oó]d(?:igo)?\\s*[:#]?\\s*([a-z0-9_.\\-/]+)", q)
+        if m_cod:
+            codigo = m_cod.group(1).strip()
+
+        limiar = None
+        m_lim = re.search(r"(?:abaixo|menor(?:es)? que|acima|maior(?:es)? que)\\s*(\\d+)", q)
+        if m_lim:
+            limiar = int(m_lim.group(1))
+
+        top_n = None
+        m_top = re.search(r"\\b(?:top|maiores?)\\s*(\\d{1,3})\\b", q)
+        if m_top:
+            top_n = int(m_top.group(1))
+        elif "top" in q and nums:
+            top_n = nums[0]
+
+        bottom_n = None
+        m_bot = re.search(r"\\b(?:bottom|menores?)\\s*(\\d{1,3})\\b", q)
+        if m_bot:
+            bottom_n = int(m_bot.group(1))
+
+        m_cat = re.search(r"categoria\\s+([\\w\\s\\-_/]+)", q)
+        categoria = (m_cat.group(1).strip(" ?.,;:") if m_cat else None)
+
+        m_loc = re.search(r"(?:local|localiza(?:ç|c)ão|setor|dep[oó]sito)\\s+([\\w\\s\\-_/]+)", q)
+        local = (m_loc.group(1).strip(" ?.,;:") if m_loc else None)
+
+        return {
+            "raw": q,
+            "codigo": codigo,
+            "limiar": limiar,
+            "top_n": top_n,
+            "bottom_n": bottom_n,
+            "categoria": categoria,
+            "local": local,
+            "is_critico": any(k in q for k in ("crítico", "critico", "baixo estoque", "repor urgente")),
+            "is_valor": any(k in q for k in ("valor", "financeiro", "patrimônio", "patrimonio")),
+            "is_contagem": any(k in q for k in ("quantos", "contagem", "total itens", "total de itens")),
+            "is_busca": any(k in q for k in ("buscar", "procurar", "encontrar", "detalhe", "detalhes")),
+            "is_banco": any(k in q for k in ("banco", "tempo real", "agora", "atualizado")),
+            "is_abaixo": any(k in q for k in ("abaixo", "menor")),
+            "is_acima": any(k in q for k in ("acima", "maior")),
+        }
+
+    def _ai_query_database(self, pergunta: str) -> Optional[str]:
+        """Resposta IA com consulta dinâmica no banco para perguntas estratégicas."""
+        p = self._ai_parse_query(pergunta)
+        if not any([p["is_banco"], p["is_busca"], p["is_contagem"], p["is_valor"], p["is_critico"],
+                    p["top_n"], p["bottom_n"], p["limiar"], p["codigo"], p["categoria"], p["local"]]):
+            return None
+
+        schema = db.get_schema()
+        try:
+            with db.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"SET LOCAL search_path = {schema};")
+                    fontes = self._get_ai_sources(cur, schema)
+                    if not fontes:
+                        return "ℹ️ Não encontrei tabelas de estoque válidas para consulta IA."
+
+                    union_parts = []
+                    for f in fontes:
+                        cat = f["cat"] if f["cat"] else f"'{f['tabela']}'"
+                        status = f["status"] if f["status"] else "NULL"
+                        local = f["local"] if f["local"] else "NULL"
+                        data = f["data"] if f["data"] else "NULL"
+                        union_parts.append(
+                            f"SELECT codigo, descricao, {cat} AS categoria, "
+                            f"COALESCE({f['qtd']},0)::numeric AS quantidade, "
+                            f"{status} AS status, {local} AS localizacao, {data} AS ultima_atualizacao, "
+                            f"'{f['tabela']}' AS origem "
+                            f"FROM {schema}.{f['tabela']}"
+                        )
+
+                    cte = " WITH estoque_unificado AS (" + " UNION ALL ".join(union_parts) + ") "
+                    filtros = []
+                    params = []
+
+                    if p["codigo"]:
+                        filtros.append("LOWER(CAST(codigo AS text)) = %s")
+                        params.append(p["codigo"].lower())
+                    if p["categoria"]:
+                        filtros.append("LOWER(COALESCE(categoria,'')) LIKE %s")
+                        params.append(f"%{p['categoria'].lower()}%")
+                    if p["local"]:
+                        filtros.append("LOWER(COALESCE(localizacao,'')) LIKE %s")
+                        params.append(f"%{p['local'].lower()}%")
+
+                    if p["is_critico"] and not p["limiar"]:
+                        filtros.append("quantidade < 10")
+                    if p["limiar"] is not None:
+                        if p["is_acima"]:
+                            filtros.append("quantidade > %s")
+                        else:
+                            filtros.append("quantidade < %s")
+                        params.append(p["limiar"])
+
+                    where_sql = (" WHERE " + " AND ".join(filtros)) if filtros else ""
+
+                    if p["is_valor"]:
+                        sql = cte + f"""
+                            SELECT COUNT(*) AS itens,
+                                   SUM(quantidade) AS qtd_total,
+                                   SUM(
+                                       quantidade * CASE
+                                           WHEN LOWER(COALESCE(categoria,'')) LIKE '%%tecid%%' THEN 15
+                                           WHEN LOWER(COALESCE(categoria,'')) LIKE '%%aviam%%' THEN 2.5
+                                           WHEN LOWER(COALESCE(categoria,'')) LIKE '%%escrit%%' THEN 6
+                                           WHEN LOWER(COALESCE(categoria,'')) LIKE '%%limp%%' THEN 5
+                                           ELSE 7
+                                       END
+                                   ) AS valor_estimado
+                              FROM estoque_unificado
+                              {where_sql}
+                        """
+                        cur.execute(sql, tuple(params))
+                        itens, qtd_total, valor = cur.fetchone()
+                        return (
+                            "🏦 **Consulta em tempo real no banco**\n"
+                            f"• Itens considerados: **{int(itens or 0)}**\n"
+                            f"• Quantidade total: **{float(qtd_total or 0):,.2f}**\n"
+                            f"• Valor estimado: **R$ {float(valor or 0):,.2f}**"
+                        )
+
+                    if p["is_contagem"] and not (p["top_n"] or p["bottom_n"]):
+                        sql = cte + f"""
+                            SELECT COUNT(*) AS linhas,
+                                   COUNT(DISTINCT codigo) AS codigos_distintos,
+                                   SUM(quantidade) AS qtd_total
+                              FROM estoque_unificado
+                              {where_sql}
+                        """
+                        cur.execute(sql, tuple(params))
+                        linhas, distintos, qtd = cur.fetchone()
+                        return (
+                            "📊 **Contagem direta no banco**\n"
+                            f"• Linhas: **{int(linhas or 0)}**\n"
+                            f"• Códigos distintos: **{int(distintos or 0)}**\n"
+                            f"• Quantidade total: **{float(qtd or 0):,.2f}**"
+                        )
+
+                    if p["top_n"] or p["bottom_n"] or p["is_busca"] or p["codigo"] or p["is_critico"] or p["limiar"] is not None:
+                        limit = max(1, min(100, p["top_n"] or p["bottom_n"] or 20))
+                        if p["bottom_n"] or p["is_abaixo"] or p["is_critico"]:
+                            order = "quantidade ASC, descricao ASC"
+                            titulo = f"⬇️ **Menores quantidades (top {limit})**"
+                        else:
+                            order = "quantidade DESC, descricao ASC"
+                            titulo = f"⬆️ **Maiores quantidades (top {limit})**"
+
+                        if p["is_busca"] and not p["codigo"]:
+                            termo = p["raw"].replace("buscar", "").replace("procurar", "").replace("encontrar", "").strip()
+                            if termo:
+                                where_extra = "LOWER(COALESCE(descricao,'')) LIKE %s OR LOWER(CAST(codigo AS text)) LIKE %s"
+                                filtros.append(f"({where_extra})")
+                                params.extend([f"%{termo}%", f"%{termo}%"])
+                                where_sql = " WHERE " + " AND ".join(filtros)
+
+                        sql = cte + f"""
+                            SELECT codigo, descricao, categoria, quantidade, COALESCE(localizacao,'—') AS localizacao, origem
+                              FROM estoque_unificado
+                              {where_sql}
+                             ORDER BY {order}
+                             LIMIT {limit}
+                        """
+                        cur.execute(sql, tuple(params))
+                        rows = cur.fetchall()
+                        if not rows:
+                            return "ℹ️ Nenhum resultado encontrado no banco para esse filtro."
+
+                        linhas = ["🏦 **Consulta em tempo real no banco**", titulo]
+                        for r in rows[:limit]:
+                            linhas.append(
+                                f"- `{r[0]}` • {r[1]} • qtd **{float(r[3] or 0):.2f}** • "
+                                f"cat {r[2] or '—'} • local {r[4] or '—'} • tabela {r[5]}"
+                            )
+                        return "\n".join(linhas)
+
+        except Exception as e:
+            return f"⚠️ Não consegui consultar o banco agora: {e}"
+
+        return None
+
     def _refresh_table(self):
         for i in self.tree.get_children():
             self.tree.delete(i)
@@ -2515,8 +2750,9 @@ class AdvancedStockReport(ctk.CTkFrame):
             try:
                 if self.assistente is None:
                     self.assistente = EstoqueIA(self.resultados)
-                main = self.assistente.responder(text)
-                variations = self._short_variations(main)
+                resposta_banco = self._ai_query_database(text)
+                main = resposta_banco or self.assistente.responder(text)
+                variations = [] if resposta_banco else self._short_variations(main)
                 out = main
                 if variations:
                     out += "\n\n" + " ".join(f"_{v}_" for v in variations)
