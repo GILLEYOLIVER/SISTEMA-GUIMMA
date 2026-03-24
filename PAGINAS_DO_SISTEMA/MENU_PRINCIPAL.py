@@ -504,9 +504,22 @@ class ThemeManager:
                         _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkOptionMenu {_describe_widget(widget)}: {e}")
                     parar_recursao = True
                 elif isinstance(widget, ctk.CTkCheckBox):
+                    cor_checkbox = cor_destaque or cor_primaria
+                    cor_checkmark = self._contrast_text_for_color(cor_checkbox, fallback=cor_texto)
                     widget.configure(
-                        fg_color=cor_primaria,
-                        hover_color=cor_hover,
+                        fg_color=cor_checkbox,
+                        hover_color=cor_hover_realcado,
+                        border_color=cor_borda,
+                        checkmark_color=cor_checkmark,
+                        text_color=cor_texto,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, ctk.CTkRadioButton):
+                    cor_radio = cor_destaque or cor_primaria
+                    widget.configure(
+                        fg_color=cor_radio,
+                        hover_color=cor_hover_realcado,
                         border_color=cor_borda,
                         text_color=cor_texto,
                         font=fonts["body"],
@@ -515,7 +528,7 @@ class ThemeManager:
                 elif isinstance(widget, ctk.CTkSwitch):
                     widget.configure(
                         fg_color=cor_secundaria,
-                        progress_color=cor_primaria,
+                        progress_color=cor_destaque,
                         button_color=cor_texto,
                         button_hover_color=cor_hover,
                         border_color=cor_borda,
