@@ -444,57 +444,18 @@ class ThemeManager:
                     parar_recursao = False
                 elif isinstance(widget, ctk.CTkButton):
                     try:
-                        fg_atual = None
-                        hover_atual = None
-                        border_atual = None
-                        text_atual = None
-
-                        try:
-                            fg_atual = widget.cget("fg_color")
-                        except Exception:
-                            pass
-
-                        try:
-                            hover_atual = widget.cget("hover_color")
-                        except Exception:
-                            pass
-
-                        try:
-                            border_atual = widget.cget("border_color")
-                        except Exception:
-                            pass
-
-                        try:
-                            text_atual = widget.cget("text_color")
-                        except Exception:
-                            pass
-
-                        preservar_cores = getattr(widget, "_opera_preserve_colors", True)
-
-                        if preservar_cores:
-                            widget.configure(
-                                bg_color="transparent",
-                                text_color=text_atual if text_atual else cor_texto,
-                                font=fonts["button"],
-                                corner_radius=getattr(widget, "corner_radius", 8),
-                                fg_color=fg_atual,
-                                hover_color=hover_atual if hover_atual is not None else fg_atual,
-                                border_color=border_atual if border_atual is not None else cor_borda,
-                                hover=True,
-                            )
-                        else:
-                            widget.configure(
-                                border_width=0,
-                                bg_color="transparent",
-                                text_color=cor_texto,
-                                font=fonts["button"],
-                                corner_radius=getattr(widget, "corner_radius", 8),
-                                hover=False,
-                            )
-
-                        cor_texto_hover = text_atual if text_atual else cor_texto
-                        widget.bind("<Enter>", lambda e, w=widget, c=cor_texto_hover: w.configure(text_color=c))
-                        widget.bind("<Leave>", lambda e, w=widget, c=cor_texto_hover: w.configure(text_color=c))
+                        cor_texto_botao = self._contrast_text_for_color(cor_primaria, fallback=cor_texto)
+                        widget.configure(
+                            border_width=0,
+                            bg_color="transparent",
+                            fg_color=cor_primaria,
+                            hover_color=cor_hover,
+                            border_color=cor_borda,
+                            text_color=cor_texto_botao,
+                            font=fonts["button"],
+                            corner_radius=getattr(widget, "corner_radius", 8),
+                            hover=True,
+                        )
                     except Exception as e:
                         _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkButton: {e}")
                     parar_recursao = True
@@ -519,12 +480,12 @@ class ThemeManager:
                         fg_color=cor_secundaria,
                         border_color=cor_borda,
                         button_color=cor_primaria,
-                        button_hover=False,
+                        button_hover_color=cor_hover,
                         text_color=cor_texto,
                         font=fonts["body"],
                         dropdown_fg_color=cor_secundaria,
                         dropdown_text_color=cor_texto,
-                        dropdown_hover=False,
+                        dropdown_hover_color=cor_hover,
                     )
                     parar_recursao = True
                 elif isinstance(widget, ctk.CTkOptionMenu):
@@ -533,22 +494,31 @@ class ThemeManager:
                         widget.configure(
                             fg_color=cor_secundaria,
                             button_color=cor_primaria,
-                            button_hover=False,
+                            button_hover_color=cor_hover,
                             text_color=option_texto,
                             dropdown_fg_color=cor_secundaria,
                             dropdown_text_color=option_texto,
                             dropdown_hover_color=cor_hover,
-                            dropdown_hover=False,
                         )
                     except Exception as e:
                         _dprint(f"[Tema][DEBUG] Falha ao ajustar CTkOptionMenu {_describe_widget(widget)}: {e}")
                     parar_recursao = True
-                elif isinstance(widget, (ctk.CTkCheckBox, ctk.CTkSwitch)):
+                elif isinstance(widget, ctk.CTkCheckBox):
+                    widget.configure(
+                        fg_color=cor_primaria,
+                        hover_color=cor_hover,
+                        border_color=cor_borda,
+                        text_color=cor_texto,
+                        font=fonts["body"],
+                    )
+                    parar_recursao = True
+                elif isinstance(widget, ctk.CTkSwitch):
                     widget.configure(
                         fg_color=cor_secundaria,
+                        progress_color=cor_primaria,
+                        button_color=cor_texto,
+                        button_hover_color=cor_hover,
                         border_color=cor_borda,
-                        button_color=cor_primaria,
-                        button_hover=False,
                         text_color=cor_texto,
                         font=fonts["body"],
                     )
@@ -568,7 +538,7 @@ class ThemeManager:
                         widget.configure(
                             fg_color=cor_secundaria,
                             button_color=cor_primaria,
-                            button_hover=False,
+                            button_hover_color=cor_hover,
                             progress_color=cor_primaria,
                         )
                     except Exception as e:
@@ -591,7 +561,8 @@ class ThemeManager:
                         segmented_button_fg_color=cor_primaria,
                         segmented_button_selected_color=cor_hover_realcado,
                         segmented_button_unselected_color=cor_secundaria,
-                        segmented_button_unselected_hover=False,
+                        segmented_button_unselected_hover_color=cor_hover,
+                        segmented_button_selected_hover_color=cor_hover_realcado,
                         text_color=cor_texto,
                         font=fonts["body"],
                     )
