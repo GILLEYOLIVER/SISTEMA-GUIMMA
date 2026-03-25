@@ -1,0 +1,57 @@
+{
+  "ctx": [
+    [
+      "user",
+      "OI"
+    ],
+    [
+      "assistant",
+      "👋 Olá! Sou seu assistente de estoque. Pergunte sobre:\n- Itens críticos\n- Valor total\n- Categorias/locais\n- Top 10\n- Buscar por código ou descrição 🔴"
+    ],
+    [
+      "user",
+      "QUANTO ITENS TEMOS?"
+    ],
+    [
+      "assistant",
+      "🤖 Não entendi sua pergunta. Tente:\n- *Itens críticos*\n- *Valor por categoria*\n- *Top 10 por quantidade*\n- *Buscar: zíper*\n- *Código: 123* 🔴"
+    ],
+    [
+      "user",
+      "oi"
+    ],
+    [
+      "assistant",
+      "👋 Olá! Sou seu assistente de estoque. Pergunte sobre:\n- Itens críticos\n- Valor total\n- Categorias/locais\n- Top 10\n- Buscar por código ou descrição 🔴"
+    ],
+    [
+      "user",
+      "quais itens temos"
+    ],
+    [
+      "assistant",
+      "🤖 Não entendi sua pergunta. Tente:\n- *Itens críticos*\n- *Valor por categoria*\n- *Top 10 por quantidade*\n- *Buscar: zíper*\n- *Código: 123* 🔴"
+    ],
+    [
+      "user",
+      "quero saber quantos itens tem no estoque"
+    ],
+    [
+      "assistant",
+      "🤖 Não entendi sua pergunta. Tente:\n- *Itens críticos*\n- *Valor por categoria*\n- *Top 10 por quantidade*\n- *Buscar: zíper*\n- *Código: 123* 🔴"
+    ],
+    [
+      "user",
+      "oi"
+    ],
+    [
+      "user",
+      "ola"
+    ],
+    [
+      "user",
+      "quantos tecidos temos"
+    ]
+  ],
+  "filters": {}
+}

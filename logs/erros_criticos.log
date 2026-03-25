@@ -372,3 +372,108 @@ Traceback (most recent call last):
   File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\BANCO_DE_DADOS_PG.py", line 512, in _create_connection
     raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
 Exception: Não foi possível conectar. Portas testadas: [5432]
+2026-03-25 16:35:08 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 16:35:25 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 16:38:21 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 16:47:01 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 17:01:17 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 17:05:57 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 17:21:25 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'

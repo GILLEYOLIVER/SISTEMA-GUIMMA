@@ -137,1215 +137,1179 @@ def _fmt_date(dt):
     return str(dt)
 
 
+# -*- coding: utf-8 -*-
+"""
+ESTOQUE_IA_INTELIGENTE_V3.py
+Classe pronta para substituir a classe EstoqueIA atual do RELATORIO_ESTOQUE.py.
+
+Objetivos:
+- Corrigir erro de compatibilidade com _intent_score
+- Consultar TODAS as tabelas reais do estoque
+- Entender perguntas por código, descrição, cor, fornecedor, tipo e localização
+- Responder de forma natural, mas sempre baseada em SQL real
+- Funcionar sem dependências externas de IA
+"""
+
+
+
+import re
+import unicodedata
+from dataclasses import dataclass
+from difflib import get_close_matches
+from typing import Any, Dict, List, Optional, Tuple
+
+from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
+
+
+import re
+from typing import Any, Dict, List, Optional, Tuple
+
+from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
+
+
 class EstoqueIA:
-    """
-    Assistente de estoque offline com dicionário gigante.
-    """
-
-    # =================== DICIONÁRIO DE INTENÇÕES (palavras-chave e sinônimos) ===================
-    INTENT_KWS = {
-        # Saudação e ajuda
-        "saudacao": [
-            "oi", "olá", "ola", "bom dia", "boa tarde", "boa noite", "fala", "e aí", "opa", "oie", "oiê"
-        ],
-        "ajuda": [
-            "ajuda", "o que você faz", "como usar", "exemplos", "sugestões", "help", "menu", "comandos",
-            "quais perguntas", "o que posso perguntar"
-        ],
-        "contexto": [
-            "histórico", "contexto", "últimas mensagens", "o que falamos", "lembrar", "resumo da conversa"
-        ],
-
-        # Inventário básico
-        "categorias": [
-            "categorias", "quais categorias", "listar categorias", "tipos de item", "famílias", "departamentos",
-            "grupos", "classificações"
-        ],
-        "locais": [
-            "locais", "localizações", "endereços", "prateleiras", "setores", "depósito", "deposito", "armário",
-            "armario", "posições", "ruas", "estantes"
-        ],
-        "quantidade_total": [
-            "total de itens", "quantos itens", "quantidade total", "qtd total", "soma de quantidades",
-            "estoque total", "linhas de estoque"
-        ],
-        "itens_unicos": [
-            "itens diferentes", "quantos códigos", "quantos produtos", "distintos", "produtos únicos"
-        ],
-
-        # Estados do estoque
-        "criticos": [
-            "crítico", "críticos", "baixo", "baixa", "urgente", "prioritário", "repor", "reposição urgente",
-            "abaixo do mínimo", "abaixo de", "menos que", "inferior a", "estoque mínimo", "ponto de pedido"
-        ],
-        "excesso": [
-            "excesso", "alto demais", "acima do máximo", "super estocado", "estouro de estoque", "sobra",
-            "muito estoque", "acima de", "mais que", "superior a"
-        ],
-        "zerados": [
-            "zerado", "zerados", "acabou", "em falta", "faltando", "estoque zero", "sem estoque", "esgotado"
-        ],
-        "negativos": [
-            "negativo", "negativos", "quantidade negativa", "estoque negativo", "abaixo de zero", "menor que zero"
-        ],
-
-        # Compras e reposição
-        "reposicao": [
-            "repor", "reposição", "comprar", "pedido de compra", "sugestões de compra", "sugestoes de compra",
-            "quanto comprar", "necessidade de compra", "falta", "para comprar"
-        ],
-        "ponto_pedido": [
-            "ponto de pedido", "reorder point", "mínimo", "máximo", "parametros", "nível de reposição",
-            "quando comprar"
-        ],
-        "leadtime": [
-            "lead time", "tempo de reposição", "dias de entrega", "prazo de entrega", "demora"
-        ],
-
-        # Financeiro
-        "valor_total": [
-            "valor do estoque", "valor total", "patrimônio", "financeiro", "custo total", "preço total",
-            "quanto vale", "soma dos valores"
-        ],
-        "valor_por_categoria": [
-            "valor por categoria", "categoria valor", "custos por categoria", "valor em cada categoria",
-            "quanto vale a categoria", "valor de cada categoria"
-        ],
-        "valor_por_local": [
-            "valor por local", "valor por localização", "custos por local", "quanto vale no local"
-        ],
-
-        # Grupos específicos (tecidos, aviamentos, etc.)
-        "tecidos": [
-            "tecido", "tecidos", "metragem", "metros", "rolo", "rolos", "malha", "sarja", "jeans", "algodão",
-            "algodao", "viscose", "tricoline"
-        ],
-        "aviamentos": [
-            "aviamento", "aviamentos", "botão", "botões", "zíper", "ziper", "linha", "agulha", "elástico",
-            "elastico", "colchete", "ilho", "etiqueta"
-        ],
-        "limpeza": [
-            "limpeza", "sabão", "detergente", "desinfetante", "vassoura", "pano", "álcool", "alcool",
-            "lixeira", "saco de lixo"
-        ],
-        "escritorio": [
-            "escritório", "escritorio", "papel", "toner", "caneta", "clipe", "post-it", "grampeador",
-            "furador", "envelopes"
-        ],
-
-        # Rankings e análises
-        "top_n": [
-            "top", "maiores", "mais estocados", "mais quantidade", "top itens", "maiores estoques",
-            "ranking", "maiores quantidades"
-        ],
-        "bottom_n": [
-            "menores", "menos quantidade", "quase acabando", "bottom", "menores estoques", "piores",
-            "itens com menos", "itens de menor quantidade"
-        ],
-        "abc": [
-            "abc", "pareto", "classe a", "classe b", "classe c", "curva abc", "classificação abc",
-            "itens mais valiosos", "itens menos valiosos"
-        ],
-
-        # Temporalidade
-        "antigos": [
-            "antigo", "antigos", "parado", "não movimentado", "nao movimentado", "obsoleto", "parados",
-            "sem saída", "sem movimento", "encalhado", "estocado há muito tempo"
-        ],
-        "recem_entrada": [
-            "entrou", "recentes", "chegaram", "novo lote", "novidades", "últimos dias", "última semana",
-            "último mês", "adicionados recentemente", "novos itens"
-        ],
-        "periodo": [
-            "desde", "até", "entre", "no mês", "na semana", "no dia", "no ano", "no período"
-        ],
-
-        # Busca e consulta
-        "buscar_item": [
-            "buscar", "procurar", "encontrar", "detalhes do", "info do", "dados do", "mostre", "liste",
-            "pesquisar", "consulta", "itens com", "onde está", "localizar"
-        ],
-        "abrir_por_codigo": [
-            "código", "codigo", "cod:", "cód:", "identificador", "id"
-        ],
-        "comparar": [
-            "comparar", "vs", "contra", "diferença", "dif", "melhor que", "pior que", "comparação"
-        ],
-
-        # Exportação
-        "exportar": [
-            "exportar", "csv", "excel", "pdf", "salvar relatório", "salvar relatorio", "gerar arquivo",
-            "planilha", "exportar para"
-        ],
-        "agrupar": [
-            "agrupar", "por categoria", "por local", "resumo por", "consolidar", "sumarizar"
-        ],
-
-        # Auditoria
-        "ajustes": [
-            "ajustar", "corrigir", "inconsistência", "inconsistencia", "duplicados", "valores estranhos",
-            "auditar", "verificar dados", "problemas"
-        ],
-
-        # Previsão e análise avançada (offline, com histórico)
-        "previsao_demanda": [
-            "previsão", "demanda", "vai precisar", "quanto comprar", "tendência", "projeção", "futuro"
-        ],
-        "grafico": [
-            "gráfico", "plotar", "mostrar gráfico", "visualizar", "gráfico de barras", "gráfico de pizza"
-        ],
+    TABELAS = {
+        "Tecidos": "estoque_tecidos",
+        "Aviamentos": "estoque_aviamentos",
+        "Insumos": "estoque_insumos",
+        "Escritorio": "estoque_escritorio",
+        "Limpeza": "estoque_limpeza",
+        "Outros": "estoque_outros",
     }
 
-    # Mapeamento de intenções para handlers (métodos da classe)
-    INTENT_HANDLERS = {
-        "saudacao": "_saudacao",
-        "ajuda": "_ajuda",
-        "contexto": "_contexto",
-        "categorias": "_categorias",
-        "locais": "_locais",
-        "quantidade_total": "_quantidade_total",
-        "itens_unicos": "_itens_unicos",
-        "criticos": "_criticos",
-        "excesso": "_excesso",
-        "zerados": "_zerados",
-        "negativos": "_negativos",
-        "reposicao": "_reposicao",
-        "ponto_pedido": "_ponto_pedido",
-        "leadtime": "_leadtime",
-        "valor_total": "_valor_total",
-        "valor_por_categoria": "_valor_por_categoria",
-        "valor_por_local": "_valor_por_local",
-        "tecidos": "_grupagem",
-        "aviamentos": "_grupagem",
-        "limpeza": "_grupagem",
-        "escritorio": "_grupagem",
-        "top_n": "_top_n",
-        "bottom_n": "_bottom_n",
-        "abc": "_abc",
-        "antigos": "_antigos",
-        "recem_entrada": "_recem_entrada",
-        "buscar_item": "_buscar",
-        "abrir_por_codigo": "_buscar",
-        "comparar": "_comparar",
-        "exportar": "_exportar",
-        "agrupar": "_agrupar_auto",
-        "ajustes": "_auditar_dados",
-        "previsao_demanda": "_previsao_demanda",
-        "grafico": "_gerar_grafico",
+    GROUP_SYNONYMS = {
+        "Tecidos": ["tecido", "tecidos", "malha", "sarja", "tricoline", "viscose", "jeans", "algodao", "algodão"],
+        "Aviamentos": ["aviamento", "aviamentos", "ziper", "zíper", "linha", "botao", "botão", "elastico", "elástico", "agulha", "etiqueta"],
+        "Insumos": ["insumo", "insumos"],
+        "Escritorio": ["escritorio", "escritório", "papel", "caneta", "toner", "clip", "clipe", "grampeador"],
+        "Limpeza": ["limpeza", "detergente", "sabao", "sabão", "alcool", "álcool", "pano", "vassoura"],
+        "Outros": ["outro", "outros", "diversos", "geral"],
     }
 
-    # Dicionário de sinônimos de categorias (para associar palavras a grupos)
-    CATEGORY_SYNONYMS = {
-        "tecidos": ["tecido", "tecidos", "algodão", "algodao", "jeans", "sarja", "viscose", "malha", "tricoline", "flanela"],
-        "aviamentos": ["aviamento", "aviamentos", "botão", "botões", "zíper", "ziper", "linha", "elástico", "elastico", "colchete", "ilho", "etiqueta"],
-        "limpeza": ["limpeza", "sabão", "detergente", "desinfetante", "vassoura", "pano", "álcool", "alcool", "lixeira"],
-        "escritorio": ["escritório", "escritorio", "papel", "toner", "caneta", "clipe", "post-it", "grampeador"],
-        "outros": ["diversos", "outros", "geral", "miscelânea"]
+    CONTINUATION_WORDS = {
+        "quais", "quais?", "liste", "liste-os", "liste-os?", "eles", "elas", "esses", "essas",
+        "os", "as", "mostre", "mostra", "nomes", "liste eles", "liste os nomes", "e quais", "e os nomes"
     }
 
     def __init__(self, resultados=None):
-        """
-        Inicializa o assistente.
-        :param resultados: (opcional) lista de tuplas (codigo, descricao, categoria, quantidade, status, localizacao, data)
-        Se não for fornecido, os dados serão buscados diretamente do banco via SQL.
-        """
-        self.resultados = resultados or []  # pode ser usado como cache, mas faremos consultas diretas ao banco
-        self.ctx = []  # histórico de conversa
-        self.last_intent = None
-        self.last_entities = {}
-        self._init_db_info()  # obtém categorias e locais reais do banco para usar nas entidades
+        self.resultados = resultados or []
+        self.ctx: List[Tuple[str, str]] = []
+        self.last_intent: Optional[str] = None
+        self.last_entities: Dict[str, Any] = {}
+        self.last_result_rows: List[Dict[str, Any]] = []
+        self.last_result_summary: Dict[str, Any] = {}
+        self._sources_cache: Optional[List[Dict[str, Any]]] = None
 
-    def _init_db_info(self):
-        """Consulta o banco para obter as categorias e locais existentes (usado para extração dinâmica)."""
-        self.categorias_existentes = set()
-        self.locais_existentes = set()
+    # ---------------------------
+    # Compatibilidade com UI antiga
+    # ---------------------------
+    def _intent_score(self, pergunta: str) -> Tuple[Optional[str], float]:
+        return self._detect_intent(pergunta)
+
+    # ---------------------------
+    # Infra / schema discovery
+    # ---------------------------
+    def _remember(self, who: str, text: str) -> None:
+        self.ctx.append((who, text))
+        if len(self.ctx) > 20:
+            self.ctx = self.ctx[-20:]
+
+    def _safe_float(self, value: Any) -> float:
         try:
-            with db.get_connection() as conn:
-                with conn.cursor() as cur:
-                    # Busca categorias de todas as tabelas de estoque
-                    cur.execute("""
-                        SELECT DISTINCT categoria
-                        FROM estoque_tecidos
-                        WHERE categoria IS NOT NULL AND categoria != ''
-                        UNION
-                        SELECT DISTINCT categoria
-                        FROM estoque_aviamentos
-                        WHERE categoria IS NOT NULL AND categoria != ''
-                        -- adicione outras tabelas conforme necessário
-                    """)
-                    rows = cur.fetchall()
-                    for row in rows:
-                        if row[0]:
-                            self.categorias_existentes.add(row[0].strip())
-                    # Busca locais
-                    cur.execute("""
-                        SELECT DISTINCT localizacao
-                        FROM estoque_tecidos
-                        WHERE localizacao IS NOT NULL AND localizacao != ''
-                        UNION
-                        SELECT DISTINCT localizacao
-                        FROM estoque_aviamentos
-                        WHERE localizacao IS NOT NULL AND localizacao != ''
-                    """)
-                    rows = cur.fetchall()
-                    for row in rows:
-                        if row[0]:
-                            self.locais_existentes.add(row[0].strip())
-        except Exception as e:
-            print(f"[ERRO] Não foi possível obter categorias/locais do banco: {e}")
-            # fallback
-            self.categorias_existentes = {"Tecidos", "Aviamentos", "Limpeza", "Escritório"}
-            self.locais_existentes = {"Depósito", "Prateleira A", "Armário 1"}
+            if value is None or value == "":
+                return 0.0
+            return float(value)
+        except Exception:
+            return 0.0
 
-    # =================== DETECÇÃO DE INTENÇÃO ===================
-    def _detect_intent(self, q: str) -> Tuple[Optional[str], float]:
-        """Detecta intenção baseada no dicionário de palavras-chave e similaridade."""
-        ql = q.lower()
-        scores = {}
-        for intent, kws in self.INTENT_KWS.items():
-            score = 0
-            # Contagem direta
-            for kw in kws:
-                if kw in ql:
-                    score += 1
-            # Similaridade com palavras (usando difflib para capturar variações)
-            words = ql.split()
-            for word in words:
-                # tenta encontrar palavra similar em kws (se for longa o suficiente)
-                if len(word) > 3:
-                    close = get_close_matches(word, kws, n=1, cutoff=0.8)
-                    if close:
-                        score += 0.5
-            scores[intent] = score
-        if not scores:
-            return None, 0.0
-        best = max(scores, key=scores.get)
-        # Confiança baseada no número de palavras na frase
-        conf = scores[best] / (len(ql.split()) + 1)
-        return best, min(conf, 1.0)
+    def _safe_text(self, value: Any) -> str:
+        if value is None:
+            return ""
+        return str(value).strip()
 
-    # =================== EXTRAÇÃO DE ENTIDADES ===================
-    def _extract_entities(self, q: str) -> Dict[str, Any]:
-        """Extrai entidades como números, categorias, locais, etc."""
-        ql = q.lower()
-        entities = {}
-
-        # Números (inteiros e decimais)
-        numbers = re.findall(r'(?<!\w)(\d+\.?\d*)(?!\w)', ql)
-        entities['numbers'] = [float(n) for n in numbers]
-
-        # N (para top/bottom)
-        n = None
-        m = re.search(r'\btop\s*(\d{1,3})\b', ql) or re.search(r'\b(\d{1,3})\s*itens\b', ql)
-        if m:
-            n = int(m.group(1))
-        elif entities['numbers'] and any(k in ql for k in ["top", "maiores", "menores", "bottom"]):
-            n = int(entities['numbers'][0])
-        entities['n'] = n
-
-        # Categoria (baseada nos dados reais do banco + sinônimos)
-        categoria = None
-        # Primeiro, tenta encontrar correspondência exata com categorias existentes
-        for cat in self.categorias_existentes:
-            if cat.lower() in ql:
-                categoria = cat
-                break
-        if not categoria:
-            # Tenta sinônimos
-            for canon, syns in self.CATEGORY_SYNONYMS.items():
-                if any(s in ql for s in syns):
-                    categoria = canon
-                    break
-        entities['categoria'] = categoria
-
-        # Local
-        local = None
-        for loc in self.locais_existentes:
-            if loc.lower() in ql:
-                local = loc
-                break
-        # se não encontrou, tenta por palavras comuns
-        loc_common = ["depósito", "prateleira", "armário", "setor", "rua"]
-        for lc in loc_common:
-            if lc in ql:
-                local = lc.title()
-                break
-        entities['local'] = local
-
-        # Código
-        code = None
-        m = re.search(r'c[oó]d(?:igo)?\s*[:#]?\s*([a-z0-9\-_.]+)', ql)
-        if m:
-            code = m.group(1)
-        entities['codigo'] = code
-
-        # Dias (para antigos, recentes)
-        days = None
-        if "30 dias" in ql or "trinta dias" in ql:
-            days = 30
-        elif "15 dias" in ql or "quinze dias" in ql:
-            days = 15
-        elif "7 dias" in ql or "uma semana" in ql or "7d" in ql:
-            days = 7
-        elif "90 dias" in ql or "noventa dias" in ql:
-            days = 90
-        entities['dias'] = days
-
-        # Limite (para críticos e excesso)
-        limite = None
-        m = re.search(r'abaixo de\s*(\d+\.?\d*)', ql)
-        if m:
-            limite = float(m.group(1))
-        else:
-            m = re.search(r'acima de\s*(\d+\.?\d*)', ql)
-            if m:
-                limite = float(m.group(1))
-        entities['limite'] = limite
-
-        # Palavras-chave de ordenação
-        entities['ordem'] = None
-        if "maiores" in ql or "top" in ql:
-            entities['ordem'] = "DESC"
-        elif "menores" in ql or "bottom" in ql:
-            entities['ordem'] = "ASC"
-
-        # Limite de resultados
-        entities['limite_resultados'] = n or 50  # default
-
-        return entities
-
-    # =================== MÉTODOS DE CONSULTA AO BANCO ===================
-    def _executar_consulta(self, sql: str, params: tuple = ()) -> List[tuple]:
-        """Executa uma consulta SQL e retorna os resultados."""
+    def _list_column_names(self, table: str) -> List[str]:
         try:
-            with db.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(sql, params)
-                    return cur.fetchall()
-        except Exception as e:
-            print(f"[ERRO] Falha na consulta: {e}")
+            cols = db.list_columns(table)
+            names = []
+            for c in cols or []:
+                if isinstance(c, dict):
+                    nm = c.get("column_name")
+                else:
+                    nm = getattr(c, "get", lambda _k, _d=None: None)("column_name")
+                if nm:
+                    names.append(str(nm).lower())
+            return names
+        except Exception:
             return []
 
-    def _obter_categorias_reais(self) -> List[str]:
-        """Retorna lista de categorias existentes no banco."""
-        sql = """
-            SELECT DISTINCT categoria
-            FROM estoque_tecidos
-            WHERE categoria IS NOT NULL AND categoria != ''
-            UNION
-            SELECT DISTINCT categoria
-            FROM estoque_aviamentos
-            WHERE categoria IS NOT NULL AND categoria != ''
-        """
-        rows = self._executar_consulta(sql)
-        return [r[0] for r in rows if r[0]]
+    def _choose_col(self, cols: List[str], candidates: List[str]) -> Optional[str]:
+        for c in candidates:
+            if c.lower() in cols:
+                return c.lower()
+        return None
 
-    def _obter_locais_reais(self) -> List[str]:
-        """Retorna lista de locais existentes no banco."""
-        sql = """
-            SELECT DISTINCT localizacao
-            FROM estoque_tecidos
-            WHERE localizacao IS NOT NULL AND localizacao != ''
-            UNION
-            SELECT DISTINCT localizacao
-            FROM estoque_aviamentos
-            WHERE localizacao IS NOT NULL AND localizacao != ''
-        """
-        rows = self._executar_consulta(sql)
-        return [r[0] for r in rows if r[0]]
+    def _get_sources(self) -> List[Dict[str, Any]]:
+        if self._sources_cache is not None:
+            return self._sources_cache
 
-    def _obter_valor_estimado(self, row) -> float:
-        """Calcula valor estimado de um item baseado na categoria (fator)."""
-        cat = row[2] or ""
-        qtd = float(row[3] or 0)
-        if "tecido" in cat.lower():
-            fator = 15.0
-        elif "aviam" in cat.lower():
-            fator = 2.5
-        elif "escrit" in cat.lower():
-            fator = 6.0
-        elif "limp" in cat.lower():
-            fator = 5.0
+        sources: List[Dict[str, Any]] = []
+        for grupo, tabela in self.TABELAS.items():
+            try:
+                if not db.table_exists(tabela):
+                    continue
+            except Exception:
+                continue
+
+            cols = self._list_column_names(tabela)
+            if not cols:
+                continue
+
+            source = {
+                "grupo": grupo,
+                "tabela": tabela,
+                "cols": cols,
+                "codigo_col": self._choose_col(cols, ["codigo", "cod"]),
+                "descricao_col": self._choose_col(cols, ["descricao", "descrição", "nome", "produto"]),
+                "cor_col": self._choose_col(cols, ["cor"]),
+                "fornecedor_col": self._choose_col(cols, ["fornecedor"]),
+                "composicao_col": self._choose_col(cols, ["composicao", "composição"]),
+                "tipo_col": self._choose_col(cols, ["tipo"]),
+                "categoria_col": self._choose_col(cols, ["categoria"]),
+                "localizacao_col": self._choose_col(cols, ["localizacao", "localização", "local"]),
+                "metros_col": self._choose_col(cols, ["metros", "metro"]),
+                "kilos_col": self._choose_col(cols, ["kilos", "quilo", "kg"]),
+                "quantidade_col": self._choose_col(cols, ["quantidade", "qtd"]),
+                "unidade_col": self._choose_col(cols, ["unidade"]),
+                "data_col": self._choose_col(cols, ["data_entrada", "data", "created_at", "atualizado_em", "updated_at"]),
+                "obs_col": self._choose_col(cols, ["observacoes", "observação", "observacoes", "obs"]),
+            }
+            sources.append(source)
+
+        self._sources_cache = sources
+        return sources
+
+    def _sql_expr(self, col: Optional[str], fallback_sql: str) -> str:
+        if col:
+            return col
+        return fallback_sql
+
+    def _build_union_query(self) -> str:
+        parts = []
+        for s in self._get_sources():
+            codigo = self._sql_expr(s["codigo_col"], "NULL::text")
+            descricao = self._sql_expr(s["descricao_col"], "NULL::text")
+            cor = self._sql_expr(s["cor_col"], "NULL::text")
+            fornecedor = self._sql_expr(s["fornecedor_col"], "NULL::text")
+            composicao = self._sql_expr(s["composicao_col"], "NULL::text")
+            localizacao = self._sql_expr(s["localizacao_col"], "NULL::text")
+            data_col = self._sql_expr(s["data_col"], "NULL::timestamp")
+            obs = self._sql_expr(s["obs_col"], "NULL::text")
+
+            categoria_expr = "NULL::text"
+            if s["categoria_col"]:
+                categoria_expr = s["categoria_col"]
+            elif s["tipo_col"]:
+                categoria_expr = s["tipo_col"]
+            else:
+                categoria_expr = f"'{s['grupo']}'::text"
+
+            if s["grupo"] == "Tecidos":
+                saldo_num = f"COALESCE({s['metros_col']}, 0)" if s["metros_col"] else "0::numeric"
+                saldo_display = (
+                    f"TRIM(BOTH ' ' FROM "
+                    f"CONCAT(CASE WHEN {s['metros_col']} IS NOT NULL THEN COALESCE({s['metros_col']},0)::text || ' m' ELSE '' END, "
+                    f"CASE WHEN {s['kilos_col']} IS NOT NULL THEN CASE WHEN {s['metros_col']} IS NOT NULL THEN ' | ' ELSE '' END || COALESCE({s['kilos_col']},0)::text || ' kg' ELSE '' END))"
+                    if s["metros_col"] or s["kilos_col"] else "''::text"
+                )
+                unidade = "'m/kg'::text"
+                medidas = "'tecido'::text"
+            else:
+                saldo_num = f"COALESCE({s['quantidade_col']}, 0)" if s["quantidade_col"] else "0::numeric"
+                saldo_display = f"COALESCE({s['quantidade_col']}, 0)::text" if s["quantidade_col"] else "'0'::text"
+                unidade = self._sql_expr(s["unidade_col"], "NULL::text")
+                medidas = "'quantidade'::text"
+
+            parts.append(f"""
+                SELECT
+                    '{s['grupo']}'::text AS grupo,
+                    '{s['tabela']}'::text AS tabela,
+                    {codigo}::text AS codigo,
+                    {descricao}::text AS descricao,
+                    {categoria_expr}::text AS categoria_exibicao,
+                    {cor}::text AS cor,
+                    {fornecedor}::text AS fornecedor,
+                    {composicao}::text AS composicao,
+                    {localizacao}::text AS localizacao,
+                    {saldo_num}::numeric AS saldo_num,
+                    {saldo_display}::text AS saldo_exibicao,
+                    {unidade}::text AS unidade,
+                    {medidas}::text AS tipo_medida,
+                    {data_col} AS data_entrada,
+                    {obs}::text AS observacoes
+                FROM {s['tabela']}
+            """)
+        return "\nUNION ALL\n".join(parts) if parts else "SELECT NULL::text AS grupo WHERE FALSE"
+
+    def _fetch_rows(self, where_sql: str = "", params: Optional[List[Any]] = None,
+                    order_sql: str = "ORDER BY saldo_num DESC, descricao ASC", limit: Optional[int] = 50) -> List[Dict[str, Any]]:
+        params = params or []
+        union_sql = self._build_union_query()
+        if "WHERE" not in where_sql.upper() and where_sql.strip():
+            where_sql = f"WHERE {where_sql}"
+        limit_sql = f"LIMIT {int(limit)}" if limit else ""
+        sql = f"""
+            WITH estoque_base AS (
+                {union_sql}
+            )
+            SELECT *
+            FROM estoque_base
+            {where_sql}
+            {order_sql}
+            {limit_sql}
+        """
+        try:
+            rows = db.fetch_all(sql, tuple(params))
+            return rows or []
+        except Exception as e:
+            return [{"__erro__": str(e)}]
+
+    # ---------------------------
+    # NLP leve e contexto
+    # ---------------------------
+    def _normalize(self, text: str) -> str:
+        return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+    def _detect_group(self, q: str) -> Optional[str]:
+        qn = self._normalize(q)
+        for grupo, words in self.GROUP_SYNONYMS.items():
+            for w in words:
+                if w in qn:
+                    return grupo
+        return None
+
+    def _extract_entities(self, q: str) -> Dict[str, Any]:
+        qn = self._normalize(q)
+        ent: Dict[str, Any] = {
+            "grupo": self._detect_group(q),
+            "codigo": None,
+            "cor": None,
+            "fornecedor": None,
+            "local": None,
+            "categoria": None,
+            "limite": None,
+            "top_n": None,
+            "buscar_texto": None,
+            "pedir_lista": False,
+            "pedir_nomes": False,
+            "pedir_criticos": False,
+            "pedir_contagem": False,
+        }
+
+        m_codigo = re.search(r"(?:codigo|código|cod)\s*[:#-]?\s*([a-z0-9._/-]+)", qn)
+        if m_codigo:
+            ent["codigo"] = m_codigo.group(1).strip()
+
+        m_top = re.search(r"(?:top|primeiros|ultimos|últimos|ultimos)\s*(\d{1,3})", qn)
+        if m_top:
+            ent["top_n"] = int(m_top.group(1))
+
+        m_abaixo = re.search(r"(?:abaixo de|menor que|inferior a|criticos abaixo de|críticos abaixo de)\s*(\d+[\.,]?\d*)", qn)
+        if m_abaixo:
+            ent["limite"] = float(m_abaixo.group(1).replace(",", "."))
+
+        for label, key in [
+            (r"cor\s+([\w\s/_-]+)", "cor"),
+            (r"fornecedor\s+([\w\s/_-]+)", "fornecedor"),
+            (r"(?:local|localizacao|localização|deposito|depósito|setor)\s+([\w\s/_-]+)", "local"),
+            (r"categoria\s+([\w\s/_-]+)", "categoria"),
+        ]:
+            m = re.search(label, qn)
+            if m:
+                ent[key] = m.group(1).strip(" ?.,;:")
+
+        ent["pedir_lista"] = any(x in qn for x in ["liste", "listar", "mostre", "mostra", "quais", "quais sao", "quais são", "eles", "elas"])
+        ent["pedir_nomes"] = any(x in qn for x in ["nomes", "liste os nomes", "liste nomes", "mostrar nomes", "mostre os nomes"])
+        ent["pedir_criticos"] = any(x in qn for x in ["critico", "crítico", "criticos", "críticos", "baixo estoque", "repor"])
+        ent["pedir_contagem"] = any(x in qn for x in ["quantos", "quantas", "contagem", "total", "temos", "tem "])
+
+        # busca livre curta
+        limpa = re.sub(r"[?!.:,;]", " ", qn)
+        for remover in ["quantos", "quantas", "temos", "tem", "liste", "listar", "mostre", "mostrar", "quais", "os", "as", "de", "do", "da", "no", "na"]:
+            limpa = re.sub(rf"\b{re.escape(remover)}\b", " ", limpa)
+        limpa = re.sub(r"\s+", " ", limpa).strip()
+        if len(limpa) >= 3:
+            ent["buscar_texto"] = limpa
+
+        return ent
+
+    def _detect_intent(self, q: str) -> Tuple[Optional[str], float]:
+        qn = self._normalize(q)
+        if not qn:
+            return None, 0.0
+
+        if qn in {"oi", "ola", "olá", "bom dia", "boa tarde", "boa noite"}:
+            return "saudacao", 1.0
+        if any(x in qn for x in ["ajuda", "o que voce faz", "o que você faz", "como usar"]):
+            return "ajuda", 0.95
+        if any(x in qn for x in ["codigo", "código", "cod "]):
+            return "buscar_codigo", 0.92
+        if any(x in qn for x in ["critico", "crítico", "criticos", "críticos", "baixo estoque", "repor urgente"]):
+            return "criticos", 0.90
+        if any(x in qn for x in ["quantos", "quantas", "contagem", "total"]) and self._detect_group(qn):
+            return "contagem_grupo", 0.90
+        if any(x in qn for x in ["liste", "listar", "nomes", "quais", "mostre"]):
+            return "listar", 0.70
+        if self._detect_group(qn):
+            return "grupo", 0.60
+        return "busca_livre", 0.45
+
+    def _merge_with_context(self, current: Dict[str, Any], q: str) -> Dict[str, Any]:
+        qn = self._normalize(q)
+        merged = dict(self.last_entities or {})
+        merged.update({k: v for k, v in current.items() if v not in (None, False, "")})
+
+        continuation = (
+            qn in self.CONTINUATION_WORDS
+            or qn.startswith("quais")
+            or qn.startswith("liste")
+            or qn.startswith("mostre")
+            or qn.startswith("e ")
+        )
+        if continuation and self.last_result_summary:
+            if not merged.get("grupo"):
+                merged["grupo"] = self.last_result_summary.get("grupo")
+            if not merged.get("categoria"):
+                merged["categoria"] = self.last_result_summary.get("categoria")
+            if not merged.get("local"):
+                merged["local"] = self.last_result_summary.get("local")
+
+        return merged
+
+    # ---------------------------
+    # Renderização
+    # ---------------------------
+    def _format_number_pt(self, value: float, casas: int = 2) -> str:
+        s = f"{value:,.{casas}f}"
+        return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _human_intro(self) -> str:
+        return (
+            "Olá! Posso consultar o estoque real por tecidos, aviamentos, insumos, escritório, limpeza e outros.\n"
+            "Você pode pedir contagem, críticos, nomes, código, cor, fornecedor ou localização."
+        )
+
+    def _rows_to_list(self, rows: List[Dict[str, Any]], max_items: int = 20) -> str:
+        if not rows:
+            return "Nenhum item encontrado."
+        out = []
+        for r in rows[:max_items]:
+            desc = self._safe_text(r.get("descricao")) or "Sem descrição"
+            cod = self._safe_text(r.get("codigo")) or "—"
+            grupo = self._safe_text(r.get("grupo")) or "—"
+            local = self._safe_text(r.get("localizacao")) or "—"
+            cor = self._safe_text(r.get("cor"))
+            saldo = self._safe_text(r.get("saldo_exibicao")) or self._format_number_pt(self._safe_float(r.get("saldo_num")))
+            extra = []
+            if cor:
+                extra.append(f"Cor: {cor}")
+            if local:
+                extra.append(f"Local: {local}")
+            out.append(f"- {desc} | Cód: {cod} | Grupo: {grupo} | Saldo: {saldo}" + (" | " + " | ".join(extra) if extra else ""))
+        return "\n".join(out)
+
+    def _store_result_context(self, rows: List[Dict[str, Any]], entities: Dict[str, Any], intent: Optional[str]) -> None:
+        self.last_result_rows = rows[:]
+        self.last_result_summary = {
+            "grupo": entities.get("grupo"),
+            "categoria": entities.get("categoria"),
+            "local": entities.get("local"),
+            "intent": intent,
+            "count": len(rows),
+        }
+
+    # ---------------------------
+    # Respostas
+    # ---------------------------
+    def _responder_saudacao(self) -> str:
+        return self._human_intro()
+
+    def _responder_ajuda(self) -> str:
+        return (
+            self._human_intro() + "\n\n"
+            "Exemplos:\n"
+            "- quantos tecidos temos\n"
+            "- liste os nomes dos tecidos\n"
+            "- mostre os críticos de limpeza\n"
+            "- buscar código 123\n"
+            "- itens do fornecedor santa luzia\n"
+            "- o que temos no depósito A"
+        )
+
+    def _build_filters(self, entities: Dict[str, Any]) -> Tuple[str, List[Any]]:
+        where = []
+        params: List[Any] = []
+
+        if entities.get("grupo"):
+            where.append("grupo = %s")
+            params.append(entities["grupo"])
+        if entities.get("codigo"):
+            where.append("LOWER(COALESCE(codigo, '')) = %s")
+            params.append(str(entities["codigo"]).lower())
+        if entities.get("cor"):
+            where.append("LOWER(COALESCE(cor, '')) LIKE %s")
+            params.append(f"%{entities['cor'].lower()}%")
+        if entities.get("fornecedor"):
+            where.append("LOWER(COALESCE(fornecedor, '')) LIKE %s")
+            params.append(f"%{entities['fornecedor'].lower()}%")
+        if entities.get("local"):
+            where.append("LOWER(COALESCE(localizacao, '')) LIKE %s")
+            params.append(f"%{entities['local'].lower()}%")
+        if entities.get("categoria"):
+            where.append("LOWER(COALESCE(categoria_exibicao, '')) LIKE %s")
+            params.append(f"%{entities['categoria'].lower()}%")
+
+        return " AND ".join(where), params
+
+    def _responder_contagem(self, entities: Dict[str, Any]) -> str:
+        where, params = self._build_filters(entities)
+        rows = self._fetch_rows(where_sql=where, params=params, order_sql="ORDER BY descricao ASC", limit=None)
+        if rows and rows[0].get("__erro__"):
+            return f"Erro ao consultar o banco: {rows[0]['__erro__']}"
+
+        total_linhas = len(rows)
+        total_codigos = len({self._safe_text(r.get('codigo')).lower() for r in rows if self._safe_text(r.get('codigo'))})
+        saldo_total = sum(self._safe_float(r.get("saldo_num")) for r in rows)
+        grupo = entities.get("grupo") or "itens"
+
+        self._store_result_context(rows, entities, "contagem")
+        return (
+            f"Perfeito, consultei o banco em tempo real.\n"
+            f"Encontrei {total_linhas} registro(s) em {grupo}.\n"
+            f"Códigos distintos: {total_codigos}.\n"
+            f"Saldo numérico total: {self._format_number_pt(saldo_total)}.\n\n"
+            f"Se quiser, eu posso listar os nomes, mostrar só os críticos ou separar por fornecedor/localização."
+        )
+
+    def _responder_criticos(self, entities: Dict[str, Any]) -> str:
+        limite = entities.get("limite")
+        if limite is None:
+            limite = 10.0 if entities.get("grupo") != "Tecidos" else 20.0
+        where, params = self._build_filters(entities)
+        where = (where + " AND " if where else "") + "saldo_num < %s"
+        params.append(limite)
+        rows = self._fetch_rows(where_sql=where, params=params, order_sql="ORDER BY saldo_num ASC, descricao ASC", limit=50)
+        if rows and rows[0].get("__erro__"):
+            return f"Erro ao consultar o banco: {rows[0]['__erro__']}"
+        self._store_result_context(rows, entities, "criticos")
+        if not rows:
+            return f"Ótimo: não encontrei itens críticos abaixo de {self._format_number_pt(limite)} com esse filtro."
+        return (
+            f"Encontrei {len(rows)} item(ns) crítico(s) abaixo de {self._format_number_pt(limite)}.\n"
+            f"{self._rows_to_list(rows, max_items=20)}\n\n"
+            f"Posso agora listar só os nomes, exportar a relação ou separar por grupo."
+        )
+
+    def _responder_listar(self, entities: Dict[str, Any]) -> str:
+        where, params = self._build_filters(entities)
+        # continuação: se o usuário só pediu "quais" ou "liste eles", usa último resultado
+        q_rows = None
+        if self.last_result_rows and not any([entities.get("grupo"), entities.get("codigo"), entities.get("cor"), entities.get("fornecedor"), entities.get("local"), entities.get("categoria")]):
+            q_rows = self.last_result_rows
         else:
-            fator = 7.0
-        return qtd * fator
+            q_rows = self._fetch_rows(where_sql=where, params=params, order_sql="ORDER BY descricao ASC", limit=50)
+            if q_rows and q_rows[0].get("__erro__"):
+                return f"Erro ao consultar o banco: {q_rows[0]['__erro__']}"
+        self._store_result_context(q_rows, entities, "listar")
+        if not q_rows:
+            return "Não encontrei itens para listar com esse filtro."
+        return f"Aqui está a lista encontrada:\n{self._rows_to_list(q_rows, max_items=30)}"
 
-    # =================== HANDLERS PRINCIPAIS ===================
-    def _saudacao(self) -> str:
-        return ("👋 Olá! Sou seu assistente de estoque. Pergunte sobre:\n"
-                "- Itens críticos\n- Valor total do estoque\n- Categorias/locais\n"
-                "- Top 10 por quantidade\n- Itens parados\n- Buscar por código ou descrição")
-
-    def _ajuda(self) -> str:
-        return self._saudacao() + "\n\n💡 Exemplos: 'mostre itens críticos', 'valor por categoria', 'top 20', 'buscar zíper'"
-
-    def _contexto(self) -> str:
-        if not self.ctx:
-            return "Nenhum histórico ainda."
-        out = ["📜 **Histórico recente:**"]
-        for who, text in self.ctx[-8:]:
-            out.append(f"- {who}: {text[:80]}...")
-        return "\n".join(out)
-
-    def _categorias(self) -> str:
-        """Lista as categorias disponíveis no banco."""
-        cats = self._obter_categorias_reais()
-        if not cats:
-            return "ℹ️ Nenhuma categoria encontrada no banco."
-        out = ["📂 **Categorias cadastradas:**"]
-        for cat in cats:
-            out.append(f"- {cat}")
-        return "\n".join(out)
-
-    def _locais(self) -> str:
-        locs = self._obter_locais_reais()
-        if not locs:
-            return "ℹ️ Nenhum local cadastrado."
-        out = ["🗄️ **Locais cadastrados:**"]
-        for loc in locs:
-            out.append(f"- {loc}")
-        return "\n".join(out)
-
-    def _quantidade_total(self) -> str:
-        """Soma todas as quantidades de todas as tabelas."""
-        sql = """
-            SELECT SUM(quantidade) FROM estoque_tecidos
-            UNION ALL
-            SELECT SUM(quantidade) FROM estoque_aviamentos
-            -- adicione outras tabelas
-        """
-        rows = self._executar_consulta(sql)
-        total = sum(r[0] for r in rows if r[0] is not None)
-        return f"📦 Quantidade total de itens em estoque: **{total:,.2f}** unidades."
-
-    def _itens_unicos(self) -> str:
-        """Número de códigos distintos."""
-        sql = """
-            SELECT COUNT(DISTINCT codigo) FROM (
-                SELECT codigo FROM estoque_tecidos
-                UNION ALL
-                SELECT codigo FROM estoque_aviamentos
-            ) AS t
-        """
-        rows = self._executar_consulta(sql)
-        total = rows[0][0] if rows else 0
-        return f"🔢 Número de produtos distintos: **{total}**."
-
-    def _criticos(self) -> str:
-        """Itens com quantidade abaixo do limite (padrão 10 ou definido pelo usuário)."""
-        limite = self.last_entities.get('limite', 10)
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        where.append("quantidade < %s")
-        params.append(limite)
-
-        where_clause = " AND ".join(where) if where else "1=1"
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            ORDER BY quantidade ASC
-            LIMIT 50
-        """
-        rows = self._executar_consulta(sql, tuple(params))
+    def _responder_busca_codigo(self, entities: Dict[str, Any]) -> str:
+        if not entities.get("codigo"):
+            return "Me diga o código do item para eu buscar no banco."
+        where, params = self._build_filters(entities)
+        rows = self._fetch_rows(where_sql=where, params=params, order_sql="ORDER BY descricao ASC", limit=10)
+        if rows and rows[0].get("__erro__"):
+            return f"Erro ao consultar o banco: {rows[0]['__erro__']}"
+        self._store_result_context(rows, entities, "buscar_codigo")
         if not rows:
-            return f"✅ Nenhum item crítico (abaixo de {limite}) encontrado."
-        out = [f"🔴 **Itens críticos (< {limite}):**"]
-        for r in rows:
-            out.append(f"- {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Cat: {r[2]} | Local: {r[4]}")
-        return "\n".join(out)
+            return f"Não encontrei item com código {entities['codigo']}."
+        r = rows[0]
+        return (
+            f"Encontrei este item no banco:\n"
+            f"Descrição: {self._safe_text(r.get('descricao')) or 'Sem descrição'}\n"
+            f"Código: {self._safe_text(r.get('codigo')) or '—'}\n"
+            f"Grupo: {self._safe_text(r.get('grupo')) or '—'}\n"
+            f"Categoria/Tipo: {self._safe_text(r.get('categoria_exibicao')) or '—'}\n"
+            f"Cor: {self._safe_text(r.get('cor')) or '—'}\n"
+            f"Fornecedor: {self._safe_text(r.get('fornecedor')) or '—'}\n"
+            f"Localização: {self._safe_text(r.get('localizacao')) or '—'}\n"
+            f"Saldo: {self._safe_text(r.get('saldo_exibicao')) or self._format_number_pt(self._safe_float(r.get('saldo_num')))}"
+        )
 
-    def _excesso(self) -> str:
-        """Itens com quantidade acima de um limite dinâmico (baseado na mediana da categoria)."""
-        # Essa função requer dados agrupados. Vamos fazer uma consulta simples: acima de 100 por enquanto.
-        limite = self.last_entities.get('limite', 100)
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        where.append("quantidade > %s")
-        params.append(limite)
+    def _responder_grupo(self, entities: Dict[str, Any]) -> str:
+        return self._responder_contagem(entities)
 
-        where_clause = " AND ".join(where) if where else "1=1"
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            ORDER BY quantidade DESC
-            LIMIT 50
-        """
-        rows = self._executar_consulta(sql, tuple(params))
+    def _responder_busca_livre(self, entities: Dict[str, Any], q: str) -> str:
+        texto = entities.get("buscar_texto") or self._normalize(q)
+        words = [w for w in re.split(r"\s+", texto) if len(w) >= 2]
+        conditions = []
+        params: List[Any] = []
+        for w in words[:6]:
+            like = f"%{w.lower()}%"
+            conditions.append("(" + " OR ".join([
+                "LOWER(COALESCE(descricao, '')) LIKE %s",
+                "LOWER(COALESCE(codigo, '')) LIKE %s",
+                "LOWER(COALESCE(cor, '')) LIKE %s",
+                "LOWER(COALESCE(fornecedor, '')) LIKE %s",
+                "LOWER(COALESCE(localizacao, '')) LIKE %s",
+                "LOWER(COALESCE(categoria_exibicao, '')) LIKE %s",
+                "LOWER(COALESCE(grupo, '')) LIKE %s",
+            ]) + ")")
+            params.extend([like] * 7)
+        where = " AND ".join(conditions)
+        rows = self._fetch_rows(where_sql=where, params=params, order_sql="ORDER BY saldo_num DESC, descricao ASC", limit=30)
+        if rows and rows[0].get("__erro__"):
+            return f"Erro ao consultar o banco: {rows[0]['__erro__']}"
+        self._store_result_context(rows, entities, "busca_livre")
         if not rows:
-            return f"✅ Nenhum item com excesso (acima de {limite}) encontrado."
-        out = [f"🟣 **Itens com possível excesso (> {limite}):**"]
-        for r in rows:
-            out.append(f"- {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Cat: {r[2]} | Local: {r[4]}")
-        return "\n".join(out)
+            return "Não encontrei resultados com esse texto no estoque real."
+        return (
+            f"Achei {len(rows)} resultado(s) relacionados a '{texto}'.\n"
+            f"{self._rows_to_list(rows, max_items=20)}\n\n"
+            f"Se quiser, eu refino por grupo, cor, fornecedor, código ou localização."
+        )
 
-    def _zerados(self) -> str:
-        """Itens com quantidade <= 0."""
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        where.append("quantidade <= 0")
-        where_clause = " AND ".join(where) if where else "quantidade <= 0"
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            LIMIT 50
-        """
-        rows = self._executar_consulta(sql, tuple(params))
-        if not rows:
-            return "✅ Nenhum item zerado encontrado."
-        out = ["⚫ **Itens zerados:**"]
-        for r in rows:
-            out.append(f"- {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Cat: {r[2]} | Local: {r[4]}")
-        return "\n".join(out)
+    # ---------------------------
+    # Entrada pública
+    # ---------------------------
+    def responder(self, pergunta: str) -> str:
+        q = (pergunta or "").strip()
+        if not q:
+            return "Aguardando sua pergunta."
 
-    def _negativos(self) -> str:
-        """Itens com quantidade negativa."""
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        where.append("quantidade < 0")
-        where_clause = " AND ".join(where) if where else "quantidade < 0"
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            LIMIT 50
-        """
-        rows = self._executar_consulta(sql, tuple(params))
-        if not rows:
-            return "✅ Nenhum item com quantidade negativa."
-        out = ["🟥 **Itens com quantidade negativa:**"]
-        for r in rows:
-            out.append(f"- {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Cat: {r[2]} | Local: {r[4]}")
-        return "\n".join(out)
+        self._remember("user", q)
+        intent, conf = self._detect_intent(q)
+        current_entities = self._extract_entities(q)
+        entities = self._merge_with_context(current_entities, q)
 
-    def _reposicao(self) -> str:
-        """Sugestões de compra para itens abaixo de uma meta (padrão 20)."""
-        meta = self.last_entities.get('limite', 20)
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        where.append("quantidade < %s")
-        params.append(meta)
+        self.last_intent = intent
+        self.last_entities = entities
 
-        where_clause = " AND ".join(where) if where else "quantidade < %s"
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            ORDER BY quantidade ASC
-            LIMIT 50
-        """
-        rows = self._executar_consulta(sql, tuple(params))
-        if not rows:
-            return f"✅ Todos os itens estão acima da meta de {meta}."
-        out = [f"📋 **Sugestões de compra (meta {meta}):**"]
-        for r in rows:
-            falta = max(0, meta - r[3])
-            out.append(f"- {r[1]} (Cód {r[0]}) | Qtd atual: {r[3]:.2f} | Comprar: +{falta:.0f}")
-        return "\n".join(out)
-
-    def _ponto_pedido(self) -> str:
-        """Explicação sobre ponto de pedido."""
-        return ("📐 **Ponto de Pedido (PP)**\n"
-                "PP = Demanda Diária × Lead Time + Estoque de Segurança.\n"
-                "Para calcular com precisão, preciso da demanda média e lead time de cada item.\n"
-                "Exemplo: 'tecido X demanda 10m/dia, lead 7 dias, segurança 20m'.")
-
-    def _leadtime(self) -> str:
-        return "⏱️ *Lead time* é o tempo entre o pedido e a chegada. Informe os dias para cada categoria."
-
-    def _valor_total(self) -> str:
-        """Valor estimado do estoque."""
-        sql_tecidos = "SELECT codigo, descricao, categoria, quantidade FROM estoque_tecidos"
-        sql_aviamentos = "SELECT codigo, descricao, categoria, quantidade FROM estoque_aviamentos"
-        rows_tec = self._executar_consulta(sql_tecidos)
-        rows_avi = self._executar_consulta(sql_aviamentos)
-        total = 0.0
-        for r in rows_tec + rows_avi:
-            total += self._obter_valor_estimado(r)
-        return f"💰 **Valor estimado do estoque**: **R$ {total:,.2f}**."
-
-    def _valor_por_categoria(self) -> str:
-        """Valor estimado agrupado por categoria."""
-        sql_tecidos = "SELECT categoria, SUM(quantidade) FROM estoque_tecidos GROUP BY categoria"
-        sql_aviamentos = "SELECT categoria, SUM(quantidade) FROM estoque_aviamentos GROUP BY categoria"
-        rows = self._executar_consulta(sql_tecidos) + self._executar_consulta(sql_aviamentos)
-        # Agrupar por categoria
-        cat_total = defaultdict(float)
-        for cat, qtd in rows:
-            if cat and qtd:
-                # estimativa de valor: usar fator da categoria
-                if "tecido" in cat.lower():
-                    fator = 15.0
-                elif "aviam" in cat.lower():
-                    fator = 2.5
-                elif "escrit" in cat.lower():
-                    fator = 6.0
-                elif "limp" in cat.lower():
-                    fator = 5.0
+        try:
+            if intent == "saudacao":
+                resp = self._responder_saudacao()
+            elif intent == "ajuda":
+                resp = self._responder_ajuda()
+            elif intent == "buscar_codigo":
+                resp = self._responder_busca_codigo(entities)
+            elif intent == "criticos":
+                resp = self._responder_criticos(entities)
+            elif intent == "contagem_grupo":
+                resp = self._responder_contagem(entities)
+            elif intent == "listar":
+                resp = self._responder_listar(entities)
+            elif intent == "grupo":
+                resp = self._responder_grupo(entities)
+            else:
+                # escolha contextual automática
+                if entities.get("pedir_criticos"):
+                    resp = self._responder_criticos(entities)
+                elif entities.get("pedir_lista") or entities.get("pedir_nomes"):
+                    resp = self._responder_listar(entities)
+                elif entities.get("pedir_contagem") and entities.get("grupo"):
+                    resp = self._responder_contagem(entities)
                 else:
-                    fator = 7.0
-                cat_total[cat] += qtd * fator
-        if not cat_total:
-            return "ℹ️ Nenhum dado encontrado."
-        out = ["💰 **Valor por categoria:**"]
-        for cat, val in sorted(cat_total.items(), key=lambda x: x[1], reverse=True):
-            out.append(f"- {cat}: R$ {val:,.2f}")
-        return "\n".join(out)
+                    resp = self._responder_busca_livre(entities, q)
+        except Exception as e:
+            resp = f"Erro ao gerar resposta: {e}"
 
-    def _valor_por_local(self) -> str:
-        """Valor estimado por localização."""
-        sql = """
-            SELECT localizacao, SUM(quantidade) FROM estoque_tecidos GROUP BY localizacao
-            UNION ALL
-            SELECT localizacao, SUM(quantidade) FROM estoque_aviamentos GROUP BY localizacao
-        """
-        rows = self._executar_consulta(sql)
-        local_total = defaultdict(float)
-        for loc, qtd in rows:
-            if loc and qtd:
-                # Usa fator médio (7.0) pois não sabemos a categoria por local aqui
-                local_total[loc] += qtd * 7.0
-        if not local_total:
-            return "ℹ️ Nenhum dado encontrado."
-        out = ["🏷️ **Valor por local:**"]
-        for loc, val in sorted(local_total.items(), key=lambda x: x[1], reverse=True):
-            out.append(f"- {loc}: R$ {val:,.2f}")
-        return "\n".join(out)
+        self._remember("assistant", resp)
+        return resp
 
-    def _grupagem(self) -> str:
-        """Mostra informações sobre um grupo específico (tecidos, aviamentos, etc.)."""
-        grupo = self.last_intent  # 'tecidos', 'aviamentos', etc.
-        # Mapeia grupo para a categoria correspondente (pode ser um nome exato ou parte)
-        cat_filter = grupo.capitalize()
+
+
+# -*- coding: utf-8 -*-
+"""
+ESTOQUE_IA_INTELIGENTE_V3.py
+Classe pronta para substituir a classe EstoqueIA atual do RELATORIO_ESTOQUE.py.
+
+Objetivos:
+- Corrigir erro de compatibilidade com _intent_score
+- Consultar TODAS as tabelas reais do estoque
+- Entender perguntas por código, descrição, cor, fornecedor, tipo e localização
+- Responder de forma natural, mas sempre baseada em SQL real
+- Funcionar sem dependências externas de IA
+"""
+
+import re
+import unicodedata
+from dataclasses import dataclass
+from difflib import get_close_matches
+from typing import Any, Dict, List, Optional, Tuple
+
+from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
+
+
+@dataclass
+class FonteEstoque:
+    tipo: str
+    tabela: str
+    unidade_base: str
+    possui_metros_kilos: bool = False
+
+
+class EstoqueIA:
+    """
+    Assistente de estoque orientado por SQL real.
+    Compatível com chamadas novas (responder) e antigas (_intent_score).
+    """
+
+    FONTES: List[FonteEstoque] = [
+        FonteEstoque("Tecidos", "estoque_tecidos", "tecidos", True),
+        FonteEstoque("Aviamentos", "estoque_aviamentos", "unidades"),
+        FonteEstoque("Insumos", "estoque_insumos", "unidades"),
+        FonteEstoque("Escritorio", "estoque_escritorio", "unidades"),
+        FonteEstoque("Limpeza", "estoque_limpeza", "unidades"),
+        FonteEstoque("Outros", "estoque_outros", "unidades"),
+    ]
+
+    SAUDACOES = {
+        "oi", "ola", "olá", "opa", "eai", "e aí", "bom dia", "boa tarde", "boa noite"
+    }
+
+    PALAVRAS_CRITICOS = {"critico", "críticos", "criticos", "baixo", "baixos", "acabando", "falta", "faltando", "repor"}
+    PALAVRAS_TOTAIS = {"total", "quantos", "quantidade", "somar", "soma"}
+    PALAVRAS_BUSCA = {"buscar", "procurar", "encontrar", "mostrar", "mostre", "ver", "detalhes", "dados"}
+    PALAVRAS_CODIGO = {"codigo", "código", "cod"}
+    PALAVRAS_LOCAL = {"local", "localizacao", "localização", "onde", "deposito", "depósito", "prateleira"}
+    PALAVRAS_VALOR = {"valor", "custo", "preco", "preço", "vale", "financeiro"}
+    PALAVRAS_LISTAR = {"listar", "liste", "quais", "temos", "tem", "existem"}
+
+    SINONIMOS_TIPO = {
+        "tecidos": "Tecidos",
+        "tecido": "Tecidos",
+        "aviamentos": "Aviamentos",
+        "aviamento": "Aviamentos",
+        "insumos": "Insumos",
+        "insumo": "Insumos",
+        "escritorio": "Escritorio",
+        "escritório": "Escritorio",
+        "limpeza": "Limpeza",
+        "outros": "Outros",
+        "outro": "Outros",
+    }
+
+    def __init__(self, resultados=None):
+        self.resultados = resultados or []
+        self.ctx: List[Tuple[str, str]] = []
+        self.last_intent: Optional[str] = None
+        self.last_entities: Dict[str, Any] = {}
+        self.schema = getattr(db, "get_schema", lambda: "opera")()
+        self._fontes_validas = self._descobrir_fontes_validas()
+        self._tipos_disponiveis = [f.tipo for f in self._fontes_validas]
+        self._locais_cache: List[str] = []
+        self._fornecedores_cache: List[str] = []
+
+    # ---------------- Compatibilidade ----------------
+    def _intent_score(self, pergunta: str) -> Tuple[Optional[str], float]:
+        """Compatibilidade com código antigo da UI."""
+        return self._detect_intent(pergunta)
+
+    # ---------------- Utilidades ----------------
+    def _remember(self, who: str, text: str) -> None:
+        self.ctx.append((who, text))
+        if len(self.ctx) > 20:
+            self.ctx = self.ctx[-20:]
+
+    def _norm(self, text: Any) -> str:
+        text = "" if text is None else str(text)
+        text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+        return re.sub(r"\s+", " ", text.strip().lower())
+
+    def _descobrir_fontes_validas(self) -> List[FonteEstoque]:
+        validas = []
+        for fonte in self.FONTES:
+            try:
+                if db.table_exists(fonte.tabela, self.schema):
+                    validas.append(fonte)
+            except TypeError:
+                if db.table_exists(fonte.tabela):
+                    validas.append(fonte)
+            except Exception:
+                continue
+        return validas or self.FONTES[:2]
+
+    def _todas_as_fontes_sql(self) -> str:
+        partes = []
+        for fonte in self._fontes_validas:
+            if fonte.possui_metros_kilos:
+                partes.append(f"""
+                    SELECT
+                        '{fonte.tipo}' AS tipo,
+                        '{fonte.tabela}' AS tabela_origem,
+                        id,
+                        COALESCE(codigo::text, '') AS codigo,
+                        COALESCE(descricao, '') AS descricao,
+                        COALESCE(cor, '') AS cor,
+                        COALESCE(fornecedor, '') AS fornecedor,
+                        COALESCE(composicao, '') AS composicao,
+                        COALESCE(localizacao, '') AS localizacao,
+                        COALESCE(observacoes, '') AS observacoes,
+                        COALESCE(data_entrada::text, '') AS data_entrada,
+                        NULLIF(TRIM(COALESCE(categoria, '')), '') AS categoria,
+                        COALESCE(metros, 0)::numeric AS quantidade_base,
+                        'metros' AS unidade_base,
+                        COALESCE(metros, 0)::numeric AS metros,
+                        COALESCE(kilos, 0)::numeric AS kilos,
+                        NULL::text AS unidade,
+                        NULL::numeric AS quantidade
+                    FROM {self.schema}.{fonte.tabela}
+                """)
+            else:
+                partes.append(f"""
+                    SELECT
+                        '{fonte.tipo}' AS tipo,
+                        '{fonte.tabela}' AS tabela_origem,
+                        id,
+                        COALESCE(codigo::text, '') AS codigo,
+                        COALESCE(descricao, '') AS descricao,
+                        COALESCE(cor, '') AS cor,
+                        COALESCE(fornecedor, '') AS fornecedor,
+                        '' AS composicao,
+                        COALESCE(localizacao, '') AS localizacao,
+                        COALESCE(observacoes, '') AS observacoes,
+                        COALESCE(data_entrada::text, '') AS data_entrada,
+                        NULLIF(TRIM(COALESCE(categoria, COALESCE(tipo, ''))), '') AS categoria,
+                        COALESCE(quantidade, 0)::numeric AS quantidade_base,
+                        COALESCE(NULLIF(TRIM(unidade), ''), 'unidades') AS unidade_base,
+                        NULL::numeric AS metros,
+                        NULL::numeric AS kilos,
+                        COALESCE(NULLIF(TRIM(unidade), ''), 'unidades') AS unidade,
+                        COALESCE(quantidade, 0)::numeric AS quantidade
+                    FROM {self.schema}.{fonte.tabela}
+                """)
+        return "\nUNION ALL\n".join(partes)
+
+    def _run(self, sql: str, params: tuple = ()) -> List[dict]:
+        try:
+            return db.fetch_all(sql, params)
+        except Exception:
+            try:
+                with db.get_conn_cursor() as (_conn, cur):
+                    cur.execute(sql, params)
+                    rows = cur.fetchall() or []
+                    out = []
+                    for row in rows:
+                        out.append(dict(row) if not isinstance(row, dict) else row)
+                    return out
+            except Exception as e:
+                return [{"_erro": str(e)}]
+
+    def _one(self, sql: str, params: tuple = ()) -> Optional[dict]:
+        try:
+            return db.fetch_one(sql, params)
+        except Exception:
+            rows = self._run(sql, params)
+            if rows and "_erro" not in rows[0]:
+                return rows[0]
+            return None
+
+    def _extrair_limite(self, pergunta: str, default: float) -> float:
+        q = self._norm(pergunta)
+        m = re.search(r"(?:abaixo de|menor que|inferior a|acima de|maior que|superior a)\s*(\d+[\.,]?\d*)", q)
+        if m:
+            return float(m.group(1).replace(",", "."))
+        nums = re.findall(r"\d+[\.,]?\d*", q)
+        return float(nums[0].replace(",", ".")) if nums else default
+
+    def _extrair_codigo(self, pergunta: str) -> Optional[str]:
+        q = pergunta.strip()
+        m = re.search(r"(?:cod(?:igo)?|c[oó]digo)\s*[:#-]?\s*([A-Za-z0-9._/-]+)", q, re.I)
+        if m:
+            return m.group(1).strip()
+        tokens = re.findall(r"[A-Za-z]{0,4}\d{2,}[A-Za-z0-9._/-]*|\d{3,}", q)
+        return tokens[0].strip() if tokens else None
+
+    def _extrair_tipo(self, pergunta: str) -> Optional[str]:
+        q = self._norm(pergunta)
+        for k, v in self.SINONIMOS_TIPO.items():
+            if k in q:
+                return v
+        if self.last_entities.get("tipo") in self._tipos_disponiveis and re.search(r"\be\s+os\b|\be\s+as\b|\bdesses\b|\bdessas\b", q):
+            return self.last_entities.get("tipo")
+        return None
+
+    def _extrair_local(self, pergunta: str) -> Optional[str]:
+        locais = self._listar_locais_reais()
+        q = self._norm(pergunta)
+        for loc in locais:
+            if self._norm(loc) in q:
+                return loc
+        return None
+
+    def _extrair_termo_busca(self, pergunta: str) -> str:
+        q = pergunta.strip()
+        q = re.sub(r"\b(quantos|quais|temos|tem|mostrar|mostre|listar|liste|buscar|procurar|encontrar|do|da|de|dos|das|no|na|nos|nas|em|por|favor)\b", " ", q, flags=re.I)
+        return re.sub(r"\s+", " ", q).strip(" ?!.")
+
+    def _listar_locais_reais(self) -> List[str]:
+        if self._locais_cache:
+            return self._locais_cache
+        sql = f"SELECT DISTINCT NULLIF(TRIM(localizacao), '') AS localizacao FROM ({self._todas_as_fontes_sql()}) t WHERE NULLIF(TRIM(localizacao), '') IS NOT NULL ORDER BY 1"
+        rows = self._run(sql)
+        self._locais_cache = [r["localizacao"] for r in rows if r.get("localizacao")]
+        return self._locais_cache
+
+    def _listar_fornecedores_reais(self) -> List[str]:
+        if self._fornecedores_cache:
+            return self._fornecedores_cache
+        sql = f"SELECT DISTINCT NULLIF(TRIM(fornecedor), '') AS fornecedor FROM ({self._todas_as_fontes_sql()}) t WHERE NULLIF(TRIM(fornecedor), '') IS NOT NULL ORDER BY 1"
+        rows = self._run(sql)
+        self._fornecedores_cache = [r["fornecedor"] for r in rows if r.get("fornecedor")]
+        return self._fornecedores_cache
+
+    # ---------------- Intenção ----------------
+    def _detect_intent(self, pergunta: str) -> Tuple[Optional[str], float]:
+        q = self._norm(pergunta)
+        if not q:
+            return None, 0.0
+
+        if q in self.SAUDACOES or any(s in q for s in self.SAUDACOES):
+            return "saudacao", 0.95
+        if "ajuda" in q or "o que voce faz" in q or "o que você faz" in q:
+            return "ajuda", 0.95
+        if any(p in q for p in self.PALAVRAS_CRITICOS):
+            return "criticos", 0.85
+        if "valor" in q and "categoria" in q:
+            return "valor_por_categoria", 0.90
+        if any(p in q for p in self.PALAVRAS_VALOR):
+            return "valor_total", 0.82
+        if ("quantos" in q or "qtd" in q or "quantidade" in q) and self._extrair_tipo(pergunta):
+            return "quantidade_tipo", 0.91
+        if any(p in q for p in self.PALAVRAS_LOCAL) and ("onde" in q or self._extrair_codigo(pergunta) or len(q.split()) <= 6):
+            return "localizar", 0.88
+        if self._extrair_codigo(pergunta):
+            return "buscar_codigo", 0.93
+        if any(p in q for p in self.PALAVRAS_LISTAR) and self._extrair_tipo(pergunta):
+            return "listar_tipo", 0.86
+        if any(p in q for p in self.PALAVRAS_TOTAIS):
+            return "quantidade_total", 0.72
+        if any(p in q for p in self.PALAVRAS_BUSCA):
+            return "buscar_livre", 0.74
+        return "buscar_livre", 0.40
+
+    # ---------------- Resposta ----------------
+    def responder(self, pergunta: str) -> str:
+        q = (pergunta or "").strip()
+        if not q:
+            return "Digite sua pergunta primeiro."
+
+        self._remember("user", q)
+        intent, score = self._detect_intent(q)
+        entities = {
+            "tipo": self._extrair_tipo(q),
+            "codigo": self._extrair_codigo(q),
+            "local": self._extrair_local(q),
+            "limite": self._extrair_limite(q, 10),
+            "termo": self._extrair_termo_busca(q),
+        }
+        self.last_intent = intent
+        self.last_entities = entities
+
+        try:
+            if intent == "saudacao":
+                resp = self._resp_saudacao()
+            elif intent == "ajuda":
+                resp = self._resp_ajuda()
+            elif intent == "criticos":
+                resp = self._resp_criticos(entities)
+            elif intent == "quantidade_total":
+                resp = self._resp_quantidade_total()
+            elif intent == "quantidade_tipo":
+                resp = self._resp_quantidade_por_tipo(entities["tipo"])
+            elif intent == "listar_tipo":
+                resp = self._resp_listar_tipo(entities["tipo"])
+            elif intent == "buscar_codigo":
+                resp = self._resp_busca_codigo(entities["codigo"])
+            elif intent == "localizar":
+                resp = self._resp_localizar(entities)
+            elif intent == "valor_total":
+                resp = self._resp_valor_total(entities)
+            elif intent == "valor_por_categoria":
+                resp = self._resp_valor_por_categoria()
+            else:
+                resp = self._resp_busca_livre(entities["termo"], entities)
+        except Exception as e:
+            resp = f"Erro ao gerar resposta: {e}"
+
+        self._remember("assistant", resp)
+        return resp
+
+    # ---------------- Handlers ----------------
+    def _resp_saudacao(self) -> str:
+        tipos = ", ".join(self._tipos_disponiveis)
+        return (
+            "Olá. Estou pronto para consultar o estoque real do banco.\n\n"
+            f"Hoje eu consigo conversar sobre: {tipos}.\n"
+            "Exemplos:\n"
+            "- quantos tecidos temos\n"
+            "- itens críticos abaixo de 10\n"
+            "- código 12345\n"
+            "- onde está o item código 12345\n"
+            "- mostre aviamentos\n"
+            "- valor total do estoque"
+        )
+
+    def _resp_ajuda(self) -> str:
+        return self._resp_saudacao()
+
+    def _resp_quantidade_total(self) -> str:
+        sql = f"SELECT COUNT(*) AS itens, COALESCE(SUM(quantidade_base),0) AS quantidade_total FROM ({self._todas_as_fontes_sql()}) t"
+        row = self._one(sql) or {}
+        itens = int(row.get("itens") or 0)
+        qtd = float(row.get("quantidade_total") or 0)
+        return f"No estoque inteiro existem {itens} registros, com total acumulado de {qtd:,.2f}.".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _resp_quantidade_por_tipo(self, tipo: Optional[str]) -> str:
+        if not tipo:
+            return "Não consegui identificar o tipo do item na sua pergunta."
+        sql = f"SELECT COUNT(*) AS itens, COALESCE(SUM(quantidade_base),0) AS quantidade_total FROM ({self._todas_as_fontes_sql()}) t WHERE tipo = %s"
+        row = self._one(sql, (tipo,)) or {}
+        itens = int(row.get("itens") or 0)
+        qtd = float(row.get("quantidade_total") or 0)
+        return f"Hoje {tipo} tem {itens} registros e soma {qtd:,.2f} na unidade base do cadastro.".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _resp_listar_tipo(self, tipo: Optional[str]) -> str:
+        if not tipo:
+            return "Diga qual tipo você quer listar: Tecidos, Aviamentos, Insumos, Escritório, Limpeza ou Outros."
         sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos
-            WHERE categoria ILIKE '%{cat_filter}%'
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos
-            WHERE categoria ILIKE '%{cat_filter}%'
+            SELECT codigo, descricao, cor, fornecedor, localizacao, quantidade_base, unidade_base
+            FROM ({self._todas_as_fontes_sql()}) t
+            WHERE tipo = %s
+            ORDER BY descricao NULLS LAST, codigo NULLS LAST
+            LIMIT 20
+        """
+        rows = self._run(sql, (tipo,))
+        if not rows or rows[0].get("_erro"):
+            return f"Não encontrei dados de {tipo} agora."
+        linhas = [f"{tipo} encontrados:"]
+        for r in rows:
+            linhas.append(
+                f"- {r['descricao']} | cód {r['codigo']} | {float(r['quantidade_base'] or 0):,.2f} {r['unidade_base']} | local {r['localizacao'] or 'não informado'}"
+                .replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        return "\n".join(linhas)
+
+    def _resp_criticos(self, entities: Dict[str, Any]) -> str:
+        limite = float(entities.get("limite") or 10)
+        tipo = entities.get("tipo")
+        local = entities.get("local")
+        filtros = ["quantidade_base < %s"]
+        params: List[Any] = [limite]
+        if tipo:
+            filtros.append("tipo = %s")
+            params.append(tipo)
+        if local:
+            filtros.append("localizacao = %s")
+            params.append(local)
+        sql = f"""
+            SELECT tipo, codigo, descricao, cor, fornecedor, localizacao, quantidade_base, unidade_base
+            FROM ({self._todas_as_fontes_sql()}) t
+            WHERE {' AND '.join(filtros)}
+            ORDER BY quantidade_base ASC, descricao ASC
             LIMIT 30
         """
-        rows = self._executar_consulta(sql)
-        if not rows:
-            return f"ℹ️ Nenhum item encontrado para o grupo *{grupo}*."
-        total_qtd = sum(r[3] for r in rows)
-        out = [f"📦 **{grupo.capitalize()}**", f"• Itens listados: {len(rows)}", f"• Quantidade total: {total_qtd:.2f}"]
-        out.append("• Primeiros itens:")
-        for r in rows[:10]:
-            out.append(f"  - {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Local: {r[4]}")
-        return "\n".join(out)
-
-    def _top_n(self) -> str:
-        """Top N itens por quantidade."""
-        n = self.last_entities.get('n', 10)
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        where_clause = " AND ".join(where) if where else "1=1"
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            ORDER BY quantidade DESC
-            LIMIT %s
-        """
-        rows = self._executar_consulta(sql, tuple(params + [n]))
-        if not rows:
-            return f"ℹ️ Nenhum item encontrado."
-        out = [f"🏆 **Top {n} itens por quantidade:**"]
+        rows = self._run(sql, tuple(params))
+        if not rows or rows[0].get("_erro"):
+            return "Não consegui listar os itens críticos agora."
+        if len(rows) == 0:
+            return f"Não encontrei itens abaixo de {limite:,.2f}.".replace(",", "X").replace(".", ",").replace("X", ".")
+        cab = f"Itens críticos abaixo de {limite:,.2f}:".replace(",", "X").replace(".", ",").replace("X", ".")
+        linhas = [cab]
         for r in rows:
-            out.append(f"- {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Cat: {r[2]} | Local: {r[4]}")
-        return "\n".join(out)
+            linhas.append(
+                f"- [{r['tipo']}] {r['descricao']} | cód {r['codigo']} | saldo {float(r['quantidade_base'] or 0):,.2f} {r['unidade_base']} | local {r['localizacao'] or 'não informado'}"
+                .replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        return "\n".join(linhas)
 
-    def _bottom_n(self) -> str:
-        """Bottom N itens por quantidade."""
-        n = self.last_entities.get('n', 10)
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        where_clause = " AND ".join(where) if where else "1=1"
+    def _resp_busca_codigo(self, codigo: Optional[str]) -> str:
+        if not codigo:
+            return "Informe o código do item para eu pesquisar."
         sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            ORDER BY quantidade ASC
-            LIMIT %s
-        """
-        rows = self._executar_consulta(sql, tuple(params + [n]))
-        if not rows:
-            return f"ℹ️ Nenhum item encontrado."
-        out = [f"⬇️ **Bottom {n} itens por quantidade:**"]
-        for r in rows:
-            out.append(f"- {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Cat: {r[2]} | Local: {r[4]}")
-        return "\n".join(out)
-
-    def _abc(self) -> str:
-        """Classificação ABC baseada no valor dos itens."""
-        # Para simplificar, vamos considerar todos os itens e calcular valor.
-        sql_tec = "SELECT codigo, descricao, categoria, quantidade FROM estoque_tecidos"
-        sql_avi = "SELECT codigo, descricao, categoria, quantidade FROM estoque_aviamentos"
-        rows = self._executar_consulta(sql_tec) + self._executar_consulta(sql_avi)
-        if not rows:
-            return "ℹ️ Sem dados para análise ABC."
-        items = [(r, self._obter_valor_estimado(r)) for r in rows]
-        total = sum(v for _, v in items)
-        items.sort(key=lambda x: x[1], reverse=True)
-        cum = 0.0
-        a = b = c = 0
-        for _, v in items:
-            cum += v
-            share = cum / total
-            if share <= 0.8:
-                a += 1
-            elif share <= 0.95:
-                b += 1
-            else:
-                c += 1
-        return (f"📊 **Curva ABC (por valor)**:\n"
-                f"- Classe A: {a} itens (~80% do valor)\n"
-                f"- Classe B: {b} itens (~15%)\n"
-                f"- Classe C: {c} itens (~5%)\n"
-                f"💡 Foque controles rigorosos na Classe A.")
-
-    def _antigos(self) -> str:
-        """Itens parados há mais de N dias (se houver campo data_atualizacao)."""
-        dias = self.last_entities.get('dias', 30)
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        # Supondo que exista coluna data_atualizacao (se não, retorna mensagem)
-        where.append("data_atualizacao <= CURRENT_DATE - INTERVAL '%s days'")
-        params.append(dias)
-        where_clause = " AND ".join(where) if where else "data_atualizacao <= CURRENT_DATE - INTERVAL '%s days'"
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao, data_atualizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao, data_atualizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            ORDER BY data_atualizacao ASC
-            LIMIT 50
-        """
-        try:
-            rows = self._executar_consulta(sql, tuple(params))
-        except Exception as e:
-            return f"⚠️ Não foi possível consultar itens antigos: {e}\nVerifique se a coluna 'data_atualizacao' existe."
-        if not rows:
-            return f"📅 Nenhum item parado há {dias} dias."
-        out = [f"📅 **Itens parados há {dias} dias:**"]
-        for r in rows:
-            data = _fmt_date(r[5])
-            out.append(f"- {r[1]} (Cód {r[0]}) | Últ. atualização: {data} | Local: {r[4]}")
-        return "\n".join(out)
-
-    def _recem_entrada(self) -> str:
-        """Itens que entraram nos últimos N dias."""
-        dias = self.last_entities.get('dias', 7)
-        cat = self.last_entities.get('categoria')
-        loc = self.last_entities.get('local')
-        where = []
-        params = []
-        if cat:
-            where.append("categoria = %s")
-            params.append(cat)
-        if loc:
-            where.append("localizacao = %s")
-            params.append(loc)
-        where.append("data_atualizacao >= CURRENT_DATE - INTERVAL '%s days'")
-        params.append(dias)
-        where_clause = " AND ".join(where) if where else "data_atualizacao >= CURRENT_DATE - INTERVAL '%s days'"
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao, data_atualizacao
-            FROM estoque_tecidos
-            WHERE {where_clause}
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao, data_atualizacao
-            FROM estoque_aviamentos
-            WHERE {where_clause}
-            ORDER BY data_atualizacao DESC
-            LIMIT 50
-        """
-        try:
-            rows = self._executar_consulta(sql, tuple(params))
-        except Exception as e:
-            return f"⚠️ Não foi possível consultar itens recentes: {e}"
-        if not rows:
-            return f"🆕 Nenhum item entrou nos últimos {dias} dias."
-        out = [f"🆕 **Itens que entraram nos últimos {dias} dias:**"]
-        for r in rows:
-            data = _fmt_date(r[5])
-            out.append(f"- {r[1]} (Cód {r[0]}) | Entrada: {data} | Qtd: {r[3]:.2f}")
-        return "\n".join(out)
-
-    def _buscar(self) -> str:
-        """Busca por código ou descrição."""
-        q = self.ctx[-1][1] if self.ctx else ""
-        code = self.last_entities.get('codigo')
-        if code:
-            # busca por código exato
-            sql = f"""
-                SELECT codigo, descricao, categoria, quantidade, localizacao, data_atualizacao
-                FROM estoque_tecidos WHERE codigo = %s
-                UNION ALL
-                SELECT codigo, descricao, categoria, quantidade, localizacao, data_atualizacao
-                FROM estoque_aviamentos WHERE codigo = %s
-            """
-            rows = self._executar_consulta(sql, (code, code))
-            if rows:
-                return self._format_item(rows[0])
-            else:
-                return f"🔍 Nenhum item com código '{code}' encontrado."
-        else:
-            # busca textual na descrição
-            termo = q.lower().replace("buscar", "").replace("procurar", "").strip()
-            if not termo:
-                return "Digite algo para buscar."
-            sql = f"""
-                SELECT codigo, descricao, categoria, quantidade, localizacao
-                FROM estoque_tecidos WHERE LOWER(descricao) LIKE %s
-                UNION ALL
-                SELECT codigo, descricao, categoria, quantidade, localizacao
-                FROM estoque_aviamentos WHERE LOWER(descricao) LIKE %s
-                LIMIT 20
-            """
-            rows = self._executar_consulta(sql, (f"%{termo}%", f"%{termo}%"))
-            if not rows:
-                return f"🔍 Nenhum item encontrado com '{termo}'."
-            out = [f"🔎 **Resultados para '{termo}':**"]
-            for r in rows:
-                out.append(f"- {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Cat: {r[2]} | Local: {r[4]}")
-            return "\n".join(out)
-
-    def _format_item(self, row) -> str:
-        """Formata um item para exibição detalhada."""
-        qty = row[3]
-        status = "🔴 CRÍTICO" if qty < 10 else ("🟡 ALERTA" if qty < 15 else "🟢 OK")
-        return (f"📋 **Item**\n"
-                f"• Código: `{row[0]}`\n"
-                f"• Descrição: {row[1]}\n"
-                f"• Categoria: {row[2]}\n"
-                f"• Quantidade: **{qty:.2f}**\n"
-                f"• Status: {status}\n"
-                f"• Localização: {row[4] or '—'}\n"
-                f"• Últ. atualização: {_fmt_date(row[5]) if len(row) > 5 else '—'}")
-
-    def _comparar(self) -> str:
-        """Compara duas categorias ou dois locais."""
-        q = self.ctx[-1][1].lower()
-        # Identificar duas categorias ou dois locais
-        cats = [c for c in self.categorias_existentes if c.lower() in q]
-        locs = [l for l in self.locais_existentes if l.lower() in q]
-        if len(cats) >= 2:
-            cat1, cat2 = cats[0], cats[1]
-            sql = f"""
-                SELECT SUM(quantidade) FROM estoque_tecidos WHERE categoria = %s
-                UNION ALL
-                SELECT SUM(quantidade) FROM estoque_aviamentos WHERE categoria = %s
-            """
-            qtd1 = sum(r[0] or 0 for r in self._executar_consulta(sql, (cat1, cat1)))
-            qtd2 = sum(r[0] or 0 for r in self._executar_consulta(sql, (cat2, cat2)))
-            val1 = qtd1 * 7.0  # fator médio
-            val2 = qtd2 * 7.0
-            diff = val1 - val2
-            perc = (diff / val2 * 100) if val2 != 0 else 0
-            return (f"🔁 **Comparação: {cat1} vs {cat2}**\n"
-                    f"- {cat1}: R$ {val1:,.2f}\n"
-                    f"- {cat2}: R$ {val2:,.2f}\n"
-                    f"- Diferença: R$ {diff:,.2f} ({perc:+.1f}%)")
-        elif len(locs) >= 2:
-            loc1, loc2 = locs[0], locs[1]
-            sql = f"""
-                SELECT SUM(quantidade) FROM estoque_tecidos WHERE localizacao = %s
-                UNION ALL
-                SELECT SUM(quantidade) FROM estoque_aviamentos WHERE localizacao = %s
-            """
-            qtd1 = sum(r[0] or 0 for r in self._executar_consulta(sql, (loc1, loc1)))
-            qtd2 = sum(r[0] or 0 for r in self._executar_consulta(sql, (loc2, loc2)))
-            val1 = qtd1 * 7.0
-            val2 = qtd2 * 7.0
-            diff = val1 - val2
-            perc = (diff / val2 * 100) if val2 != 0 else 0
-            return (f"🔁 **Comparação: {loc1} vs {loc2}**\n"
-                    f"- {loc1}: R$ {val1:,.2f}\n"
-                    f"- {loc2}: R$ {val2:,.2f}\n"
-                    f"- Diferença: R$ {diff:,.2f} ({perc:+.1f}%)")
-        else:
-            return "🔁 Para comparar, informe duas categorias ou dois locais. Ex.: 'compare tecidos com aviamentos'."
-
-    def _exportar(self) -> str:
-        """Instruções para exportar."""
-        return "💾 Para exportar, utilize os botões na aba *Relatório* ou me peça para filtrar e depois clique em CSV/PDF."
-
-    def _agrupar_auto(self) -> str:
-        """Agrupa por categoria ou local conforme a pergunta."""
-        if "categoria" in self.ctx[-1][1].lower():
-            return self._valor_por_categoria()
-        elif "local" in self.ctx[-1][1].lower():
-            return self._valor_por_local()
-        else:
-            return "🔀 Posso agrupar por *categoria* ou *local*. Qual prefere?"
-
-    def _auditar_dados(self) -> str:
-        """Auditoria simples de integridade."""
-        # Verificar duplicados de código
-        sql = """
-            SELECT codigo, COUNT(*) FROM (
-                SELECT codigo FROM estoque_tecidos
-                UNION ALL
-                SELECT codigo FROM estoque_aviamentos
-            ) AS t GROUP BY codigo HAVING COUNT(*) > 1
-        """
-        dup = self._executar_consulta(sql)
-        # Verificar quantidades negativas
-        sql_neg = """
-            SELECT COUNT(*) FROM estoque_tecidos WHERE quantidade < 0
-            UNION ALL
-            SELECT COUNT(*) FROM estoque_aviamentos WHERE quantidade < 0
-        """
-        neg = sum(r[0] for r in self._executar_consulta(sql_neg))
-        out = ["🧪 **Auditoria rápida**:"]
-        out.append(f"- Códigos duplicados: {len(dup)}")
-        out.append(f"- Itens com quantidade negativa: {neg}")
-        if not dup and neg == 0:
-            out.append("✅ Tudo consistente!")
-        return "\n".join(out)
-
-    def _previsao_demanda(self) -> str:
-        """Previsão de demanda com base no histórico (se disponível)."""
-        try:
-            sql = """
-                SELECT codigo, data_mov, tipo, quantidade
-                FROM movimentacoes_estoque
-                WHERE data_mov >= CURRENT_DATE - INTERVAL '90 days'
-                ORDER BY codigo, data_mov
-            """
-            rows = self._executar_consulta(sql)
-        except Exception as e:
-            return f"⚠️ Não foi possível acessar histórico: {e}. A previsão requer tabela 'movimentacoes_estoque'."
-        if not rows:
-            return "📈 Nenhum dado de movimentação nos últimos 90 dias."
-        demandas = defaultdict(list)
-        for cod, data, tipo, qtd in rows:
-            if tipo.lower() in ('saída', 'venda', 'consumo'):
-                demandas[cod].append(qtd)
-        previsoes = []
-        for cod, movs in demandas.items():
-            if len(movs) >= 7:
-                media = sum(movs[-7:]) / 7
-            else:
-                media = sum(movs) / len(movs) if movs else 0
-            # verifica estoque atual
-            sql_est = f"""
-                SELECT descricao, quantidade FROM estoque_tecidos WHERE codigo = %s
-                UNION ALL
-                SELECT descricao, quantidade FROM estoque_aviamentos WHERE codigo = %s
-            """
-            item = self._executar_consulta(sql_est, (cod, cod))
-            if item:
-                desc = item[0][0]
-                qtd_atual = item[0][1]
-                if qtd_atual < media * 7:
-                    previsoes.append((desc, media, qtd_atual))
-        if not previsoes:
-            return "✅ Nenhum item com demanda crítica nos próximos 7 dias."
-        previsoes.sort(key=lambda x: x[1], reverse=True)
-        out = ["📊 **Previsão de demanda (próximos 7 dias):**"]
-        for desc, dem, qtd in previsoes[:10]:
-            out.append(f"- {desc}: demanda {dem:.2f}/dia | estoque atual {qtd:.2f}")
-        out.append("\n💡 Ajuste pedidos para evitar ruptura.")
-        return "\n".join(out)
-
-    def _gerar_grafico(self) -> str:
-        """Gera gráfico (se matplotlib disponível) e retorna caminho (não exibido automaticamente)."""
-        if not MATPLOTLIB_AVAILABLE:
-            return "📊 Matplotlib não está instalado. Para gráficos, execute: pip install matplotlib"
-        # Exemplo simples: gráfico de barras das 10 categorias com mais itens
-        sql = """
-            SELECT categoria, SUM(quantidade) FROM estoque_tecidos GROUP BY categoria
-            UNION ALL
-            SELECT categoria, SUM(quantidade) FROM estoque_aviamentos GROUP BY categoria
-        """
-        rows = self._executar_consulta(sql)
-        if not rows:
-            return "ℹ️ Nenhum dado para gerar gráfico."
-        # Agrupar por categoria
-        cat_qtd = defaultdict(float)
-        for cat, qtd in rows:
-            if cat:
-                cat_qtd[cat] += qtd
-        # ordenar e pegar top 10
-        top = sorted(cat_qtd.items(), key=lambda x: x[1], reverse=True)[:10]
-        categorias = [t[0] for t in top]
-        quantidades = [t[1] for t in top]
-        fig, ax = plt.subplots(figsize=(8, 5))
-        ax.bar(categorias, quantidades, color='skyblue')
-        ax.set_title('Quantidade por Categoria (Top 10)')
-        ax.set_xlabel('Categoria')
-        ax.set_ylabel('Quantidade')
-        plt.xticks(rotation=45, ha='right')
-        plt.tight_layout()
-        # Salvar temporariamente
-        filename = "grafico_estoque.png"
-        plt.savefig(filename)
-        plt.close()
-        return f"📈 Gráfico gerado e salvo como '{filename}'. (Abra-o manualmente.)"
-
-    def _fallback(self) -> str:
-        """Resposta padrão quando não entende."""
-        return ("🤖 Não entendi sua pergunta. Tente:\n"
-                "- *Itens críticos*\n- *Valor por categoria*\n- *Top 10 por quantidade*\n"
-                "- *Buscar: zíper*\n- *Código: 123*")
-
-    # =================== MÉTODOS PÚBLICOS ===================
-    def responder(self, pergunta: str) -> str:
-        """Ponto de entrada para o assistente."""
-        q = pergunta.strip()
-        if not q:
-            return "Digite uma pergunta."
-        self._remember("user", q)
-
-        intent, conf = self._detect_intent(q)
-        self.last_intent = intent
-        self.last_entities = self._extract_entities(q)
-
-        # Se confiança muito baixa, tenta busca livre como fallback
-        if not intent or conf < 0.3:
-            resposta = self._buscar_livre(q)
-        else:
-            handler_name = self.INTENT_HANDLERS.get(intent, "_fallback")
-            handler = getattr(self, handler_name, self._fallback)
-            try:
-                resposta = handler()
-            except Exception as e:
-                resposta = f"⚠️ Erro: {e}"
-
-        self._remember("assistant", resposta)
-        return resposta
-
-    def _buscar_livre(self, q: str) -> str:
-        """Tenta interpretar como busca livre quando não detecta intenção."""
-        # Remove palavras comuns
-        palavras_ignorar = ["por", "para", "de", "da", "do", "em", "com", "sobre", "me", "mostre", "liste"]
-        termo = " ".join([w for w in q.split() if w.lower() not in palavras_ignorar]).strip()
-        if len(termo) < 3:
-            return self._fallback()
-        sql = f"""
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_tecidos WHERE LOWER(descricao) LIKE %s
-            UNION ALL
-            SELECT codigo, descricao, categoria, quantidade, localizacao
-            FROM estoque_aviamentos WHERE LOWER(descricao) LIKE %s
+            SELECT *
+            FROM ({self._todas_as_fontes_sql()}) t
+            WHERE codigo ILIKE %s
+            ORDER BY tipo, descricao
             LIMIT 10
         """
-        rows = self._executar_consulta(sql, (f"%{termo}%", f"%{termo}%"))
-        if rows:
-            out = [f"🔎 **Resultados para '{termo}':**"]
-            for r in rows:
-                out.append(f"- {r[1]} (Cód {r[0]}) | Qtd: {r[3]:.2f} | Cat: {r[2]} | Local: {r[4]}")
-            return "\n".join(out)
-        else:
-            return self._fallback()
+        rows = self._run(sql, (codigo,))
+        if not rows:
+            rows = self._run(sql, (f"%{codigo}%",))
+        if not rows or rows[0].get("_erro"):
+            return f"Não achei item com código {codigo}."
+        return self._formatar_detalhes_item(rows)
 
-    def _remember(self, who: str, text: str):
-        self.ctx.append((who, text))
-        if len(self.ctx) > 30:
-            self.ctx.pop(0)
+    def _resp_localizar(self, entities: Dict[str, Any]) -> str:
+        codigo = entities.get("codigo")
+        if codigo:
+            return self._resp_busca_codigo(codigo)
+        termo = entities.get("termo")
+        local = entities.get("local")
+        if local and (not termo or self._norm(termo) == self._norm(local)):
+            sql = f"""
+                SELECT tipo, codigo, descricao, quantidade_base, unidade_base
+                FROM ({self._todas_as_fontes_sql()}) t
+                WHERE localizacao = %s
+                ORDER BY descricao
+                LIMIT 20
+            """
+            rows = self._run(sql, (local,))
+            if not rows or rows[0].get("_erro"):
+                return f"Não encontrei itens no local {local}."
+            linhas = [f"Itens no local {local}:"]
+            for r in rows:
+                linhas.append(
+                    f"- [{r['tipo']}] {r['descricao']} | cód {r['codigo']} | {float(r['quantidade_base'] or 0):,.2f} {r['unidade_base']}"
+                    .replace(",", "X").replace(".", ",").replace("X", ".")
+                )
+            return "\n".join(linhas)
+        return self._resp_busca_livre(termo, entities)
+
+    def _resp_busca_livre(self, termo: str, entities: Dict[str, Any]) -> str:
+        termo = (termo or "").strip()
+        if len(termo) < 2:
+            return "Faça uma pergunta um pouco mais específica para eu pesquisar no estoque real."
+
+        tipo = entities.get("tipo")
+        filtros = ["(descricao ILIKE %s OR codigo ILIKE %s OR cor ILIKE %s OR fornecedor ILIKE %s OR localizacao ILIKE %s)"]
+        like = f"%{termo}%"
+        params: List[Any] = [like, like, like, like, like]
+        if tipo:
+            filtros.append("tipo = %s")
+            params.append(tipo)
+
+        sql = f"""
+            SELECT tipo, codigo, descricao, cor, fornecedor, localizacao, quantidade_base, unidade_base
+            FROM ({self._todas_as_fontes_sql()}) t
+            WHERE {' AND '.join(filtros)}
+            ORDER BY descricao, codigo
+            LIMIT 20
+        """
+        rows = self._run(sql, tuple(params))
+
+        if not rows:
+            candidatos = get_close_matches(self._norm(termo), [self._norm(x) for x in self._listar_fornecedores_reais()], n=1, cutoff=0.85)
+            if candidatos:
+                real = next((x for x in self._listar_fornecedores_reais() if self._norm(x) == candidatos[0]), termo)
+                return self._resp_busca_livre(real, entities)
+            return f"Não achei resultados para '{termo}'."
+
+        if rows[0].get("_erro"):
+            return f"Erro ao pesquisar '{termo}': {rows[0]['_erro']}"
+
+        linhas = [f"Encontrei {len(rows)} resultado(s) para '{termo}':"]
+        for r in rows:
+            linhas.append(
+                f"- [{r['tipo']}] {r['descricao']} | cód {r['codigo']} | cor {r['cor'] or '-'} | fornecedor {r['fornecedor'] or '-'} | saldo {float(r['quantidade_base'] or 0):,.2f} {r['unidade_base']} | local {r['localizacao'] or 'não informado'}"
+                .replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        return "\n".join(linhas)
+
+    def _resp_valor_total(self, entities: Dict[str, Any]) -> str:
+        tipo = entities.get("tipo")
+        filtros = []
+        params: List[Any] = []
+        if tipo:
+            filtros.append("tipo = %s")
+            params.append(tipo)
+        where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+        sql = f"""
+            SELECT tipo, COUNT(*) AS itens, COALESCE(SUM(quantidade_base),0) AS total_quantidade
+            FROM ({self._todas_as_fontes_sql()}) t
+            {where}
+            GROUP BY tipo
+            ORDER BY tipo
+        """
+        rows = self._run(sql, tuple(params))
+        if not rows or rows[0].get("_erro"):
+            return "Não consegui calcular esse resumo agora."
+        linhas = ["Resumo financeiro estimado por volume cadastrado:"]
+        total_geral = 0.0
+        for r in rows:
+            qtd = float(r.get("total_quantidade") or 0)
+            fator = self._fator_estimado_tipo(r.get("tipo"))
+            valor = qtd * fator
+            total_geral += valor
+            linhas.append(
+                f"- {r['tipo']}: {int(r['itens'] or 0)} itens | quantidade {qtd:,.2f} | valor estimado {valor:,.2f}"
+                .replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        linhas.append(f"Total estimado: {total_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        linhas.append("Observação: isso é uma estimativa por fator médio, porque o cadastro enviado não mostra um preço unitário padrão para todos os tipos.")
+        return "\n".join(linhas)
+
+    def _resp_valor_por_categoria(self) -> str:
+        sql = f"""
+            SELECT COALESCE(NULLIF(TRIM(categoria), ''), tipo) AS categoria_final,
+                   COALESCE(SUM(quantidade_base),0) AS total_quantidade,
+                   COUNT(*) AS itens,
+                   MIN(tipo) AS tipo_ref
+            FROM ({self._todas_as_fontes_sql()}) t
+            GROUP BY categoria_final
+            ORDER BY categoria_final
+        """
+        rows = self._run(sql)
+        if not rows or rows[0].get("_erro"):
+            return "Não consegui montar o valor por categoria agora."
+        linhas = ["Valor estimado por categoria:"]
+        for r in rows:
+            qtd = float(r.get("total_quantidade") or 0)
+            valor = qtd * self._fator_estimado_tipo(r.get("tipo_ref"))
+            linhas.append(
+                f"- {r['categoria_final']}: quantidade {qtd:,.2f} | itens {int(r['itens'] or 0)} | valor estimado {valor:,.2f}"
+                .replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        return "\n".join(linhas)
+
+    # ---------------- Formatação ----------------
+    def _formatar_detalhes_item(self, rows: List[dict]) -> str:
+        linhas = ["Encontrei estes itens:"]
+        for r in rows:
+            bloco = [
+                f"- [{r.get('tipo')}] {r.get('descricao') or 'Sem descrição'}",
+                f"  código: {r.get('codigo') or '-'}",
+                f"  cor: {r.get('cor') or '-'}",
+                f"  fornecedor: {r.get('fornecedor') or '-'}",
+                f"  local: {r.get('localizacao') or 'não informado'}",
+                f"  data entrada: {r.get('data_entrada') or '-'}",
+            ]
+            if r.get("metros") is not None or r.get("kilos") is not None:
+                bloco.append(
+                    f"  saldo: {float(r.get('metros') or 0):,.2f} metros | {float(r.get('kilos') or 0):,.3f} kilos"
+                    .replace(",", "X").replace(".", ",").replace("X", ".")
+                )
+            else:
+                bloco.append(
+                    f"  saldo: {float(r.get('quantidade') or r.get('quantidade_base') or 0):,.2f} {r.get('unidade') or r.get('unidade_base') or 'unidades'}"
+                    .replace(",", "X").replace(".", ",").replace("X", ".")
+                )
+            linhas.extend(bloco)
+        return "\n".join(linhas)
+
+    def _fator_estimado_tipo(self, tipo: Optional[str]) -> float:
+        mapa = {
+            "Tecidos": 15.0,
+            "Aviamentos": 2.5,
+            "Insumos": 7.0,
+            "Escritorio": 6.0,
+            "Limpeza": 5.0,
+            "Outros": 7.0,
+        }
+        return mapa.get(tipo or "", 7.0)
+
+
 
 
 # ------------------------------------------------------------------

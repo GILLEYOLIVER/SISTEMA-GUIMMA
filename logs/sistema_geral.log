@@ -729,3 +729,133 @@ Exception: Não foi possível conectar. Portas testadas: [5432]
 2026-03-24 10:10:01 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
 2026-03-24 10:10:26 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
 2026-03-24 10:20:07 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-03-25 16:05:30 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-25 16:17:39 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-25 16:17:39 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-25 16:17:41 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-25 16:17:49 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Atalho
+2026-03-25 16:17:53 | INFO     | OPERA_SYSTEM | [SISTEMA] Execução SQL finalizada
+2026-03-25 16:17:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-25 16:18:31 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-03-25 16:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-25 16:20:22 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-03-25 16:20:24 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-03-25 16:29:47 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-25 16:29:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-25 16:30:02 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-25 16:35:08 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 16:35:25 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 16:38:21 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 16:43:55 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-03-25 16:43:55 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-25 16:43:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-25 16:44:08 | INFO     | OPERA_SYSTEM | [SISTEMA] Console SQL aberto
+2026-03-25 16:44:12 | INFO     | OPERA_SYSTEM | [SISTEMA] Execução SQL finalizada
+2026-03-25 16:44:17 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-25 16:46:56 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-03-25 16:47:01 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 17:01:17 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 17:05:57 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 17:21:25 | ERROR    | OPERA_SYSTEM | [SISTEMA] [PAGINA] Falha ao inicializar Entrada de Estoque: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 198, in __init__
+    self.setup_ui()
+  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\ENTRADA_ESTOQUE.py", line 756, in setup_ui
+    self._aplicar_estilo_tags_treeview()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tags_treeview'
+2026-03-25 17:23:21 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-25 17:46:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-25 17:46:41 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-03-25 17:47:04 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.

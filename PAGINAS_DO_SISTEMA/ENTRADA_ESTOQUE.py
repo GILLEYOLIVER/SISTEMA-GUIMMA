@@ -5,6 +5,7 @@ import json
 import os
 from tkinter import ttk, messagebox
 from datetime import datetime, date
+from decimal import Decimal, InvalidOperation
 from contextlib import contextmanager
 
 # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
@@ -129,6 +130,23 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         self._column_keys = []
         self.entries = {}
         self._last_tipo_interno = "Tecidos"
+        self._metric_column_by_type = {
+            "Tecidos": ("metros", "kilos"),
+            "Aviamentos": ("quantidade",),
+            "Insumos": ("quantidade",),
+            "Escritorio": ("quantidade",),
+            "Limpeza": ("quantidade",),
+            "Outros": ("quantidade",),
+        }
+        self._stock_thresholds = {
+            "Tecidos": {"critico": Decimal("20"), "baixo": Decimal("40")},
+            "Aviamentos": {"critico": Decimal("30"), "baixo": Decimal("50")},
+            "Insumos": {"critico": Decimal("30"), "baixo": Decimal("50")},
+            "Escritorio": {"critico": Decimal("15"), "baixo": Decimal("35")},
+            "Limpeza": {"critico": Decimal("20"), "baixo": Decimal("40")},
+            "Outros": {"critico": Decimal("25"), "baixo": Decimal("50")},
+        }
+        self.tecido_referencia_var = ctk.StringVar(value="metros")
 
         self.configure(fg_color=getattr(sistema, "cor_fundo", "#ffffff"))
         self.pack(fill="both", expand=True)
@@ -139,12 +157,42 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         try:
             self.tipos = ["Tecidos", "Aviamentos", "Insumos", "Escritorio", "Limpeza", "Outros"]
             self.campos_por_tipo = {
-                "Tecidos": ["codigo", "descricao", "fornecedor", "composicao", "cor", "metros", "kilos", "data_entrada", "observacoes"],
-                "Aviamentos": ["codigo", "descricao", "fornecedor", "cor", "quantidade", "unidade", "data_entrada", "observacoes"],
-                "Insumos": ["codigo", "descricao", "fornecedor", "cor", "quantidade", "unidade", "data_entrada", "observacoes"],
-                "Escritorio": ["codigo", "descricao", "fornecedor", "cor", "quantidade", "unidade", "data_entrada", "observacoes"],
-                "Limpeza": ["codigo", "descricao", "fornecedor", "cor", "quantidade", "unidade", "data_entrada", "observacoes"],
-                "Outros": ["codigo", "descricao", "fornecedor", "cor", "quantidade", "unidade", "data_entrada", "observacoes"],
+                "Tecidos": [
+                    "codigo", "descricao", "fornecedor", "composicao", "cor",
+                    "metros", "kilos",
+                    "estoque_ideal", "estoque_minimo", "estoque_critico",
+                    "data_entrada", "observacoes"
+                ],
+                "Aviamentos": [
+                    "codigo", "descricao", "fornecedor", "cor",
+                    "quantidade", "unidade",
+                    "estoque_ideal", "estoque_minimo", "estoque_critico",
+                    "data_entrada", "observacoes"
+                ],
+                "Insumos": [
+                    "codigo", "descricao", "fornecedor", "cor",
+                    "quantidade", "unidade",
+                    "estoque_ideal", "estoque_minimo", "estoque_critico",
+                    "data_entrada", "observacoes"
+                ],
+                "Escritorio": [
+                    "codigo", "descricao", "fornecedor", "cor",
+                    "quantidade", "unidade",
+                    "estoque_ideal", "estoque_minimo", "estoque_critico",
+                    "data_entrada", "observacoes"
+                ],
+                "Limpeza": [
+                    "codigo", "descricao", "fornecedor", "cor",
+                    "quantidade", "unidade",
+                    "estoque_ideal", "estoque_minimo", "estoque_critico",
+                    "data_entrada", "observacoes"
+                ],
+                "Outros": [
+                    "codigo", "descricao", "fornecedor", "cor",
+                    "quantidade", "unidade",
+                    "estoque_ideal", "estoque_minimo", "estoque_critico",
+                    "data_entrada", "observacoes"
+                ],
             }
 
             self.setup_ui()
@@ -160,6 +208,28 @@ class EntradaEstoqueApp(ctk.CTkFrame):
     # =========================================================
     def _get_idioma_atual(self):
         return getattr(self.sistema, "idioma_atual", "pt_BR")
+
+    # ADICIONE ESTE MÉTODO DENTRO DA CLASSE EntradaEstoqueApp
+
+    def _aplicar_estilo_tags_treeview(self):
+        try:
+            if not hasattr(self, "tree") or self.tree is None:
+                return
+
+            tema_atual = ctk.get_appearance_mode()
+
+            if tema_atual == "Dark":
+                self.tree.tag_configure("critico", background="#4c1d1d", foreground="#fecaca")
+                self.tree.tag_configure("baixo", background="#45320f", foreground="#fde68a")
+                self.tree.tag_configure("normal", background="#0f2e1d", foreground="#bbf7d0")
+                self.tree.tag_configure("sem_referencia", background="#1f2937", foreground="#d1d5db")
+            else:
+                self.tree.tag_configure("critico", background="#ffe5e5", foreground="#a40000")
+                self.tree.tag_configure("baixo", background="#fff7d6", foreground="#8a5a00")
+                self.tree.tag_configure("normal", background="#e9f9ee", foreground="#0f6b2e")
+                self.tree.tag_configure("sem_referencia", background="#f3f4f6", foreground="#4b5563")
+        except Exception:
+            pass
 
     def _get_text(self, chave, **kwargs):
         idioma = self._get_idioma_atual()
@@ -228,6 +298,21 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                 "type_escritorio": "Escritório",
                 "type_limpeza": "Limpeza",
                 "type_outros": "Outros",
+                "col_percentual_estoque": "% Estoque",
+                "col_status_estoque": "Status Estoque",
+                "col_referencia_estoque": "Referência",
+                "col_estoque_ideal": "Estoque Ideal",
+                "col_estoque_minimo": "Estoque Mínimo",
+                "col_estoque_critico": "Estoque Crítico",
+                "reference_base": "Base da Referência",
+                "reference_base_hint": "Para tecidos, a referência será comparada por esta base.",
+                "reference_base_metros": "Metros",
+                "reference_base_kilos": "Kilos",
+                "status_critical": "Crítico",
+                "status_low": "Baixo",
+                "status_normal": "Normal",
+                "status_no_reference": "Sem referência",
+                "stock_rule_summary": "Referência real aplicada | Críticos: {criticos} | Baixos: {baixos} | Normais: {normais}",
             },
             "en_US": {
                 "title": "Stock Entry",
@@ -293,6 +378,21 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                 "type_escritorio": "Office",
                 "type_limpeza": "Cleaning",
                 "type_outros": "Others",
+                "col_percentual_estoque": "% Stock",
+                "col_status_estoque": "Stock Status",
+                "col_referencia_estoque": "Reference",
+                "col_estoque_ideal": "Ideal Stock",
+                "col_estoque_minimo": "Minimum Stock",
+                "col_estoque_critico": "Critical Stock",
+                "reference_base": "Reference Base",
+                "reference_base_hint": "For fabrics, the reference will be compared using this base.",
+                "reference_base_metros": "Meters",
+                "reference_base_kilos": "Kilos",
+                "status_critical": "Critical",
+                "status_low": "Low",
+                "status_normal": "Normal",
+                "status_no_reference": "No reference",
+                "stock_rule_summary": "Real reference applied | Critical: {criticos} | Low: {baixos} | Normal: {normais}",
             },
             "es_ES": {
                 "title": "Entrada de Stock",
@@ -358,6 +458,21 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                 "type_escritorio": "Oficina",
                 "type_limpeza": "Limpieza",
                 "type_outros": "Otros",
+                "col_percentual_estoque": "% Stock",
+                "col_status_estoque": "Estado Stock",
+                "col_referencia_estoque": "Referencia",
+                "col_estoque_ideal": "Stock Ideal",
+                "col_estoque_minimo": "Stock Mínimo",
+                "col_estoque_critico": "Stock Crítico",
+                "reference_base": "Base de Referencia",
+                "reference_base_hint": "Para tejidos, la referencia se comparará usando esta base.",
+                "reference_base_metros": "Metros",
+                "reference_base_kilos": "Kilos",
+                "status_critical": "Crítico",
+                "status_low": "Bajo",
+                "status_normal": "Normal",
+                "status_no_reference": "Sin referencia",
+                "stock_rule_summary": "Referencia real aplicada | Críticos: {criticos} | Bajos: {baixos} | Normales: {normais}",
             },
         }
         base = textos.get(idioma, textos["pt_BR"])
@@ -463,8 +578,92 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             "quantidade": "col_quantidade",
             "unidade": "col_unidade",
             "localizacao": "col_localizacao",
+            "estoque_ideal": "col_estoque_ideal",
+            "estoque_minimo": "col_estoque_minimo",
+            "estoque_critico": "col_estoque_critico",
+            "percentual_estoque": "col_percentual_estoque",
+            "status_estoque": "col_status_estoque",
+            "referencia_estoque": "col_referencia_estoque",
         }
         return self._get_text(mapa.get(coluna, coluna))
+
+    def _to_decimal(self, valor):
+        try:
+            if isinstance(valor, Decimal):
+                return valor
+            if isinstance(valor, (int, float)):
+                return Decimal(str(valor))
+            s = str(valor or "").strip()
+            if not s:
+                return Decimal("0")
+            if "," in s and "." in s:
+                s = s.replace(".", "").replace(",", ".")
+            elif "," in s:
+                s = s.replace(",", ".")
+            return Decimal(s)
+        except (InvalidOperation, ValueError, TypeError):
+            return Decimal("0")
+
+    def _normalizar_base_referencia_tecido(self, valor):
+        v = str(valor or "").strip().lower()
+        if v in ("kg", "quilo", "quilos", "kilo", "kilos"):
+            return "kilos"
+        return "metros"
+
+    def _obter_base_referencia_tecido(self, item=None):
+        if isinstance(item, dict):
+            unidade = item.get("unidade")
+            if unidade not in (None, ""):
+                return self._normalizar_base_referencia_tecido(unidade)
+        return self._normalizar_base_referencia_tecido(self.tecido_referencia_var.get())
+
+    def _obter_metrica_item(self, item, tipo):
+        if tipo == "Tecidos":
+            base = self._obter_base_referencia_tecido(item)
+            if base == "kilos":
+                return self._to_decimal(item.get("kilos", 0)), "kilos"
+            return self._to_decimal(item.get("metros", 0)), "metros"
+        for campo in self._metric_column_by_type.get(tipo, ("quantidade",)):
+            return self._to_decimal(item.get(campo, 0)), campo
+        return Decimal("0"), "quantidade"
+
+    def _classificar_estoque_real(self, valor_atual, estoque_minimo, estoque_critico):
+        if estoque_critico > 0 and valor_atual <= estoque_critico:
+            return self._get_text("status_critical"), "critico"
+        if estoque_minimo > 0 and valor_atual <= estoque_minimo:
+            return self._get_text("status_low"), "baixo"
+        return self._get_text("status_normal"), "normal"
+
+    def _enriquecer_dados_com_referencia_real(self, dados, tipo):
+        contagem = {"critico": 0, "baixo": 0, "normal": 0}
+        for item in dados:
+            valor_atual, campo_base = self._obter_metrica_item(item, tipo)
+            estoque_ideal = self._to_decimal(item.get("estoque_ideal", 0))
+            estoque_minimo = self._to_decimal(item.get("estoque_minimo", 0))
+            estoque_critico = self._to_decimal(item.get("estoque_critico", 0))
+
+            item["__valor_estoque__"] = valor_atual
+            item["__campo_estoque__"] = campo_base
+            item["referencia_estoque"] = estoque_ideal
+
+            if estoque_ideal <= 0:
+                item["percentual_estoque"] = Decimal("0")
+                item["status_estoque"] = self._get_text("status_no_reference")
+                item["__status_tag__"] = "sem_referencia"
+                continue
+
+            percentual = Decimal("0")
+            if estoque_ideal > 0:
+                percentual = (valor_atual / estoque_ideal) * Decimal("100")
+            percentual = min(percentual, Decimal("999.99"))
+
+            status_texto, status_tag = self._classificar_estoque_real(valor_atual, estoque_minimo, estoque_critico)
+            item["percentual_estoque"] = percentual
+            item["status_estoque"] = status_texto
+            item["__status_tag__"] = status_tag
+            contagem[status_tag] += 1
+
+        return dados, contagem
 
     def refresh_texts(self):
         atual = self._last_tipo_interno
@@ -530,9 +729,6 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             button_color=self.cor_primaria,
             button_hover_color=self.cor_hover,
             text_color=self.cor_texto,
-            dropdown_fg_color=self.cor_secundaria,
-            dropdown_text_color=self.cor_texto,
-            dropdown_hover_color=self.cor_hover,
         )
         self._ui_refs["type_menu"].pack(side="right", padx=10, fill="x", expand=True)
 
@@ -546,10 +742,6 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             button_frame,
             text=self._get_text("register_entry"),
             command=self.salvar_entrada,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
-            font=("Arial", 12, "bold"),
         )
         self._ui_refs["register_button"].pack(side="left", padx=5)
 
@@ -557,23 +749,24 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             button_frame,
             text=self._get_text("clear_fields"),
             command=self.limpar_campos,
-            fg_color=self.cor_secundaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
-            font=("Arial", 12),
         )
         self._ui_refs["clear_button"].pack(side="left", padx=5)
 
-        self.status_label = ctk.CTkLabel(self, text="", text_color=self.cor_texto)
+        self.status_label = ctk.CTkLabel(self, text="")
         self.status_label.pack(pady=5)
 
-        self.tree_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        self.tree_frame = ctk.CTkFrame(self)
         self.tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.configurar_treeview_theme()
 
-        self.tree = ttk.Treeview(self.tree_frame, show="headings", style="Custom.Treeview")
+        self.tree = ttk.Treeview(self.tree_frame, show="headings")
         self.tree.pack(fill="both", expand=True)
+
+        # CHAMADA SEGURA
+        if hasattr(self, "_aplicar_estilo_tags_treeview"):
+            self._aplicar_estilo_tags_treeview()
+
         self.tree.bind("<Double-1>", self.carregar_item_selecionado)
 
     def configurar_treeview_theme(self):
@@ -719,6 +912,7 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             self.entries["data_entrada"].insert(0, date.today().strftime(self._get_date_pattern()))
 
         if tipo == "Tecidos":
+            self._criar_seletor_base_referencia_tecido()
             self.adicionar_pesquisa_codigo()
 
         self.status_label.configure(
@@ -726,8 +920,58 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             text_color=self.cor_texto,
         )
 
+    def _criar_seletor_base_referencia_tecido(self):
+        frame = ctk.CTkFrame(self.campos_frame, fg_color=self.cor_fundo)
+        frame.pack(fill="x", padx=5, pady=3)
+
+        ctk.CTkLabel(
+            frame,
+            text=self._get_text("reference_base") + ":",
+            width=150,
+            anchor="e",
+            text_color=self.cor_texto,
+        ).pack(side="left", padx=5)
+
+        valores = [
+            self._get_text("reference_base_metros"),
+            self._get_text("reference_base_kilos"),
+        ]
+        valor_atual = self._normalizar_base_referencia_tecido(self.tecido_referencia_var.get())
+        exibicao = self._get_text("reference_base_metros") if valor_atual == "metros" else self._get_text("reference_base_kilos")
+        self.tecido_referencia_exibicao_var = ctk.StringVar(value=exibicao)
+
+        def ao_mudar(valor):
+            self.tecido_referencia_var.set(
+                "kilos" if valor == self._get_text("reference_base_kilos") else "metros"
+            )
+            self.carregar_dados_existente()
+
+        seletor = ctk.CTkOptionMenu(
+            frame,
+            variable=self.tecido_referencia_exibicao_var,
+            values=valores,
+            command=ao_mudar,
+            width=220,
+            fg_color=self.cor_secundaria,
+            button_color=self.cor_primaria,
+            button_hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            dropdown_fg_color=self.cor_secundaria,
+            dropdown_text_color=self.cor_texto,
+            dropdown_hover_color=self.cor_hover,
+        )
+        seletor.pack(side="left", padx=5)
+
+        ctk.CTkLabel(
+            frame,
+            text=self._get_text("reference_base_hint"),
+            text_color=self.cor_texto,
+            anchor="w",
+        ).pack(side="left", padx=10)
+
     def configurar_tabela(self, tipo: str):
-        colunas_desejadas = ["id"] + self.campos_por_tipo.get(tipo, [])
+
+        colunas_desejadas = ["id"] + self.campos_por_tipo.get(tipo, []) + ["referencia_estoque", "percentual_estoque", "status_estoque"]
         self._column_keys = list(colunas_desejadas)
         self.tree["columns"] = tuple(colunas_desejadas)
 
@@ -736,7 +980,12 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             self.tree.column(col, width=0)
 
         for col in colunas_desejadas:
-            largura = 50 if col == "id" else 120
+            if col == "id":
+                largura = 50
+            elif col in ("percentual_estoque", "status_estoque", "referencia_estoque"):
+                largura = 130
+            else:
+                largura = 120
             self.tree.heading(col, text=self._texto_coluna(col))
             self.tree.column(col, width=largura, stretch=True, anchor="w")
 
@@ -805,6 +1054,14 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                     widget.delete(0, "end")
                     widget.insert(0, valor)
 
+        if tipo == "Tecidos":
+            base = self._obter_base_referencia_tecido(item)
+            self.tecido_referencia_var.set(base)
+            if hasattr(self, "tecido_referencia_exibicao_var"):
+                self.tecido_referencia_exibicao_var.set(
+                    self._get_text("reference_base_kilos") if base == "kilos" else self._get_text("reference_base_metros")
+                )
+
         self.status_label.configure(text=self._get_text("code_loaded", codigo=item["codigo"]), text_color="green")
 
     def carregar_dados_existente(self):
@@ -839,6 +1096,9 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             "unidade": "unidade",
             "tipo": "tipo",
             "localizacao": "localizacao",
+            "estoqueideal": "estoque_ideal",
+            "estoqueminimo": "estoque_minimo",
+            "estoquecritico": "estoque_critico",
             "createdat": "created_at",
             "updatedat": "updated_at",
         }
@@ -956,17 +1216,28 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         try:
             sql = f"SELECT {', '.join(select_cols)} FROM {tabela_qual}{order_sql}"
             dados = db.fetch_all(sql) or []
+            dados, contagem = self._enriquecer_dados_com_referencia_real(dados, tipo_raw)
+            self._aplicar_estilo_tags_treeview()
             for item in dados:
                 linha = []
                 for col_label in cols_tree:
+                    if col_label in ("percentual_estoque", "status_estoque", "referencia_estoque"):
+                        val = item.get(col_label)
+                        linha.append(self.formatar_valor(val, col_label))
+                        continue
                     col_db = tree_to_db.get(col_label)
                     val = item.get(col_db) if (col_db and isinstance(item, dict)) else None
                     linha.append(self.formatar_valor(val, col_db or col_label))
                 iid = item.get("id") if isinstance(item, dict) and "id" in item else ""
-                self.tree.insert("", "end", iid=iid, values=linha)
+                self.tree.insert("", "end", iid=iid, values=linha, tags=(item.get("__status_tag__", "sem_referencia"),))
 
             self.status_label.configure(
-                text=self._get_text("items_loaded", quantidade=len(dados)),
+                text=self._get_text(
+                    "stock_rule_summary",
+                    criticos=contagem.get("critico", 0),
+                    baixos=contagem.get("baixo", 0),
+                    normais=contagem.get("normal", 0),
+                ),
                 text_color="green",
             )
         except Exception as e:
@@ -1012,6 +1283,14 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                     widget.delete(0, "end")
                     widget.insert(0, valor)
 
+            if tipo == "Tecidos":
+                base = self._obter_base_referencia_tecido(item_completo)
+                self.tecido_referencia_var.set(base)
+                if hasattr(self, "tecido_referencia_exibicao_var"):
+                    self.tecido_referencia_exibicao_var.set(
+                        self._get_text("reference_base_kilos") if base == "kilos" else self._get_text("reference_base_metros")
+                    )
+
             self.status_label.configure(
                 text=self._get_text("item_loaded", item_id=item_id, tabela=tabela_qual),
                 text_color="blue",
@@ -1029,6 +1308,10 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                 widget.delete(0, "end")
         if "data_entrada" in self.entries:
             self.entries["data_entrada"].insert(0, date.today().strftime(self._get_date_pattern()))
+        if self._last_tipo_interno == "Tecidos":
+            self.tecido_referencia_var.set("metros")
+            if hasattr(self, "tecido_referencia_exibicao_var"):
+                self.tecido_referencia_exibicao_var.set(self._get_text("reference_base_metros"))
         try:
             self.tree.selection_remove(self.tree.selection())
         except Exception:
@@ -1143,7 +1426,7 @@ class EntradaEstoqueApp(ctk.CTkFrame):
                     return
                 continue
 
-            if campo in ["metros", "kilos", "quantidade"]:
+            if campo in ["metros", "kilos", "quantidade", "estoque_ideal", "estoque_minimo", "estoque_critico"]:
                 dados[campo] = _to_decimal(valor)
                 continue
 
@@ -1153,8 +1436,24 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         if "data_entrada" in colunas_db and "data_entrada" not in dados:
             dados["data_entrada"] = date.today()
 
+        if tipo_raw == "Tecidos" and "unidade" in colunas_db:
+            dados["unidade"] = self._normalizar_base_referencia_tecido(self.tecido_referencia_var.get())
+
         if "unidade" in colunas_db and not _validar_unidade_salvamento(unidade_valor, tipo_raw):
             messagebox.showerror(self._get_text("invalid_unit"), self._get_text("invalid_unit_detail"))
+            return
+
+        estoque_ideal = _to_decimal(dados.get("estoque_ideal", 0))
+        estoque_minimo = _to_decimal(dados.get("estoque_minimo", 0))
+        estoque_critico = _to_decimal(dados.get("estoque_critico", 0))
+        if any(v < 0 for v in (estoque_ideal, estoque_minimo, estoque_critico)):
+            messagebox.showerror(self._get_text("error"), "Os níveis de estoque não podem ser negativos.")
+            return
+        if estoque_ideal > 0 and estoque_minimo > estoque_ideal:
+            messagebox.showerror(self._get_text("error"), "O estoque mínimo não pode ser maior que o estoque ideal.")
+            return
+        if estoque_minimo > 0 and estoque_critico > estoque_minimo:
+            messagebox.showerror(self._get_text("error"), "O estoque crítico não pode ser maior que o estoque mínimo.")
             return
 
         agora = datetime.now()
@@ -1343,6 +1642,21 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         try:
             if campo == "codigo":
                 return str(valor)
+
+            if campo == "status_estoque":
+                return str(valor)
+
+            if campo in ("percentual_estoque",):
+                dec = self._to_decimal(valor)
+                if self._get_idioma_atual() == "en_US":
+                    return f"{float(dec):.1f}%"
+                return f"{float(dec):.1f}%".replace(".", ",")
+
+            if campo in ("referencia_estoque", "estoque_ideal", "estoque_minimo", "estoque_critico"):
+                dec = self._to_decimal(valor)
+                if campo == "referencia_estoque" and dec <= 0:
+                    return "-"
+                return self.formatar_valor(dec, "quantidade")
 
             if campo in ("metros", "kilos", "quantidade"):
                 from decimal import Decimal, InvalidOperation

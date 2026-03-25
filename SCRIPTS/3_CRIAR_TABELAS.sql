@@ -840,6 +840,10 @@ CREATE TABLE IF NOT EXISTS opera.pagamento_corte_acabamento (
 ----------------------------------------
 -- 12. TABELAS DE ESTOQUE
 ----------------------------------------
+-- 12. TABELAS DE ESTOQUE
+-- BLOCO CORRIGIDO PARA PRODUÇÃO
+----------------------------------------
+
 -- [TABELA 36] estoque_tecidos - Estoque de tecidos
 CREATE TABLE IF NOT EXISTS opera.estoque_tecidos (
     id SERIAL PRIMARY KEY,
@@ -848,18 +852,65 @@ CREATE TABLE IF NOT EXISTS opera.estoque_tecidos (
     cor VARCHAR(50) NOT NULL,
     composicao VARCHAR(100),
     fornecedor VARCHAR(100),
+
     metros NUMERIC(12,3) DEFAULT 0,
     kilos NUMERIC(12,3) DEFAULT 0,
+
     valor_metro NUMERIC(12,2) DEFAULT 0,
     valor_kilo NUMERIC(12,2) DEFAULT 0,
     unidade VARCHAR(50) DEFAULT 'metros',
+
+    estoque_ideal NUMERIC(12,3) DEFAULT 0,
+    estoque_minimo NUMERIC(12,3) DEFAULT 0,
+    estoque_critico NUMERIC(12,3) DEFAULT 0,
+    base_referencia VARCHAR(20) DEFAULT 'metros',
+
     observacoes TEXT,
     localizacao VARCHAR(100),
     data_entrada DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE (codigo, cor)
+
+    CONSTRAINT uq_estoque_tecidos UNIQUE (codigo, cor),
+
+    CONSTRAINT ck_estoque_tecidos_niveis CHECK (
+        estoque_ideal >= 0
+        AND estoque_minimo >= 0
+        AND estoque_critico >= 0
+        AND estoque_ideal >= estoque_minimo
+        AND estoque_minimo >= estoque_critico
+    ),
+
+    CONSTRAINT ck_estoque_tecidos_saldos CHECK (
+        metros >= 0
+        AND kilos >= 0
+        AND valor_metro >= 0
+        AND valor_kilo >= 0
+    ),
+
+    CONSTRAINT ck_estoque_tecidos_base_ref CHECK (
+        base_referencia IN ('metros', 'kilos')
+    )
 );
+
+CREATE INDEX IF NOT EXISTS idx_estoque_tecidos_codigo
+    ON opera.estoque_tecidos(codigo);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_tecidos_cor
+    ON opera.estoque_tecidos(cor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_tecidos_fornecedor
+    ON opera.estoque_tecidos(fornecedor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_tecidos_localizacao
+    ON opera.estoque_tecidos(localizacao);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_tecidos_base_referencia
+    ON opera.estoque_tecidos(base_referencia);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_tecidos_niveis
+    ON opera.estoque_tecidos(estoque_critico, estoque_minimo, estoque_ideal);
+
 
 -- [TABELA 37] estoque_aviamentos - Estoque de aviamentos
 CREATE TABLE IF NOT EXISTS opera.estoque_aviamentos (
@@ -868,16 +919,52 @@ CREATE TABLE IF NOT EXISTS opera.estoque_aviamentos (
     descricao TEXT,
     cor VARCHAR(50) NOT NULL,
     fornecedor VARCHAR(100),
+
     quantidade NUMERIC(12,3) DEFAULT 0,
     unidade VARCHAR(50) DEFAULT 'unidades',
     valor_unidade NUMERIC(12,2) DEFAULT 0,
+
+    estoque_ideal NUMERIC(12,3) DEFAULT 0,
+    estoque_minimo NUMERIC(12,3) DEFAULT 0,
+    estoque_critico NUMERIC(12,3) DEFAULT 0,
+
     observacoes TEXT,
     localizacao VARCHAR(100),
     data_entrada DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE (codigo, cor)
+
+    CONSTRAINT uq_estoque_aviamentos UNIQUE (codigo, cor),
+
+    CONSTRAINT ck_estoque_aviamentos_niveis CHECK (
+        estoque_ideal >= 0
+        AND estoque_minimo >= 0
+        AND estoque_critico >= 0
+        AND estoque_ideal >= estoque_minimo
+        AND estoque_minimo >= estoque_critico
+    ),
+
+    CONSTRAINT ck_estoque_aviamentos_saldos CHECK (
+        quantidade >= 0
+        AND valor_unidade >= 0
+    )
 );
+
+CREATE INDEX IF NOT EXISTS idx_estoque_aviamentos_codigo
+    ON opera.estoque_aviamentos(codigo);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_aviamentos_cor
+    ON opera.estoque_aviamentos(cor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_aviamentos_fornecedor
+    ON opera.estoque_aviamentos(fornecedor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_aviamentos_localizacao
+    ON opera.estoque_aviamentos(localizacao);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_aviamentos_niveis
+    ON opera.estoque_aviamentos(estoque_critico, estoque_minimo, estoque_ideal);
+
 
 -- [TABELA 38] estoque_insumos - Estoque de insumos
 CREATE TABLE IF NOT EXISTS opera.estoque_insumos (
@@ -886,9 +973,15 @@ CREATE TABLE IF NOT EXISTS opera.estoque_insumos (
     descricao TEXT,
     fornecedor VARCHAR(100),
     cor VARCHAR(50) NOT NULL,
+
     quantidade NUMERIC(12,3) DEFAULT 0,
     unidade VARCHAR(50) DEFAULT 'unidades',
     valor_unidade NUMERIC(12,2) DEFAULT 0,
+
+    estoque_ideal NUMERIC(12,3) DEFAULT 0,
+    estoque_minimo NUMERIC(12,3) DEFAULT 0,
+    estoque_critico NUMERIC(12,3) DEFAULT 0,
+
     tipo VARCHAR(100),
     categoria VARCHAR(100),
     observacoes TEXT,
@@ -896,19 +989,58 @@ CREATE TABLE IF NOT EXISTS opera.estoque_insumos (
     data_entrada DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE (codigo, cor)
+
+    CONSTRAINT uq_estoque_insumos UNIQUE (codigo, cor),
+
+    CONSTRAINT ck_estoque_insumos_niveis CHECK (
+        estoque_ideal >= 0
+        AND estoque_minimo >= 0
+        AND estoque_critico >= 0
+        AND estoque_ideal >= estoque_minimo
+        AND estoque_minimo >= estoque_critico
+    ),
+
+    CONSTRAINT ck_estoque_insumos_saldos CHECK (
+        quantidade >= 0
+        AND valor_unidade >= 0
+    )
 );
 
--- [TABELA 39] estoque_escritorio - Estoque de escritório
+CREATE INDEX IF NOT EXISTS idx_estoque_insumos_codigo
+    ON opera.estoque_insumos(codigo);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_insumos_cor
+    ON opera.estoque_insumos(cor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_insumos_fornecedor
+    ON opera.estoque_insumos(fornecedor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_insumos_categoria
+    ON opera.estoque_insumos(categoria);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_insumos_localizacao
+    ON opera.estoque_insumos(localizacao);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_insumos_niveis
+    ON opera.estoque_insumos(estoque_critico, estoque_minimo, estoque_ideal);
+
+
+-- [TABELA 39] estoque_escritorio - Estoque de materiais de escritório
 CREATE TABLE IF NOT EXISTS opera.estoque_escritorio (
     id SERIAL PRIMARY KEY,
     codigo VARCHAR(100) NOT NULL,
     descricao TEXT,
     fornecedor VARCHAR(100),
     cor VARCHAR(50) NOT NULL,
+
     quantidade NUMERIC(12,3) DEFAULT 0,
     unidade VARCHAR(50) DEFAULT 'unidades',
     valor_unidade NUMERIC(12,2) DEFAULT 0,
+
+    estoque_ideal NUMERIC(12,3) DEFAULT 0,
+    estoque_minimo NUMERIC(12,3) DEFAULT 0,
+    estoque_critico NUMERIC(12,3) DEFAULT 0,
+
     tipo VARCHAR(100),
     categoria VARCHAR(100),
     observacoes TEXT,
@@ -916,19 +1048,58 @@ CREATE TABLE IF NOT EXISTS opera.estoque_escritorio (
     data_entrada DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE (codigo, cor)
+
+    CONSTRAINT uq_estoque_escritorio UNIQUE (codigo, cor),
+
+    CONSTRAINT ck_estoque_escritorio_niveis CHECK (
+        estoque_ideal >= 0
+        AND estoque_minimo >= 0
+        AND estoque_critico >= 0
+        AND estoque_ideal >= estoque_minimo
+        AND estoque_minimo >= estoque_critico
+    ),
+
+    CONSTRAINT ck_estoque_escritorio_saldos CHECK (
+        quantidade >= 0
+        AND valor_unidade >= 0
+    )
 );
 
--- [TABELA 40] estoque_limpeza - Estoque de limpeza
+CREATE INDEX IF NOT EXISTS idx_estoque_escritorio_codigo
+    ON opera.estoque_escritorio(codigo);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_escritorio_cor
+    ON opera.estoque_escritorio(cor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_escritorio_fornecedor
+    ON opera.estoque_escritorio(fornecedor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_escritorio_categoria
+    ON opera.estoque_escritorio(categoria);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_escritorio_localizacao
+    ON opera.estoque_escritorio(localizacao);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_escritorio_niveis
+    ON opera.estoque_escritorio(estoque_critico, estoque_minimo, estoque_ideal);
+
+
+-- [TABELA 40] estoque_limpeza - Estoque de materiais de limpeza
 CREATE TABLE IF NOT EXISTS opera.estoque_limpeza (
     id SERIAL PRIMARY KEY,
     codigo VARCHAR(100) NOT NULL,
     descricao TEXT,
     fornecedor VARCHAR(100),
     cor VARCHAR(50) NOT NULL,
+
     quantidade NUMERIC(12,3) DEFAULT 0,
     unidade VARCHAR(50) DEFAULT 'unidades',
     valor_unidade NUMERIC(12,2) DEFAULT 0,
+
+    estoque_ideal NUMERIC(12,3) DEFAULT 0,
+    estoque_minimo NUMERIC(12,3) DEFAULT 0,
+    estoque_critico NUMERIC(12,3) DEFAULT 0,
+
     tipo VARCHAR(100),
     categoria VARCHAR(100),
     observacoes TEXT,
@@ -936,8 +1107,41 @@ CREATE TABLE IF NOT EXISTS opera.estoque_limpeza (
     data_entrada DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE (codigo, cor)
+
+    CONSTRAINT uq_estoque_limpeza UNIQUE (codigo, cor),
+
+    CONSTRAINT ck_estoque_limpeza_niveis CHECK (
+        estoque_ideal >= 0
+        AND estoque_minimo >= 0
+        AND estoque_critico >= 0
+        AND estoque_ideal >= estoque_minimo
+        AND estoque_minimo >= estoque_critico
+    ),
+
+    CONSTRAINT ck_estoque_limpeza_saldos CHECK (
+        quantidade >= 0
+        AND valor_unidade >= 0
+    )
 );
+
+CREATE INDEX IF NOT EXISTS idx_estoque_limpeza_codigo
+    ON opera.estoque_limpeza(codigo);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_limpeza_cor
+    ON opera.estoque_limpeza(cor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_limpeza_fornecedor
+    ON opera.estoque_limpeza(fornecedor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_limpeza_categoria
+    ON opera.estoque_limpeza(categoria);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_limpeza_localizacao
+    ON opera.estoque_limpeza(localizacao);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_limpeza_niveis
+    ON opera.estoque_limpeza(estoque_critico, estoque_minimo, estoque_ideal);
+
 
 -- [TABELA 41] estoque_outros - Estoque de outros materiais
 CREATE TABLE IF NOT EXISTS opera.estoque_outros (
@@ -946,9 +1150,15 @@ CREATE TABLE IF NOT EXISTS opera.estoque_outros (
     descricao TEXT,
     fornecedor VARCHAR(100),
     cor VARCHAR(50) NOT NULL,
+
     quantidade NUMERIC(12,3) DEFAULT 0,
     unidade VARCHAR(50) DEFAULT 'unidades',
     valor_unidade NUMERIC(12,2) DEFAULT 0,
+
+    estoque_ideal NUMERIC(12,3) DEFAULT 0,
+    estoque_minimo NUMERIC(12,3) DEFAULT 0,
+    estoque_critico NUMERIC(12,3) DEFAULT 0,
+
     tipo VARCHAR(100),
     categoria VARCHAR(100),
     observacoes TEXT,
@@ -956,8 +1166,41 @@ CREATE TABLE IF NOT EXISTS opera.estoque_outros (
     data_entrada DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE (codigo, cor)
+
+    CONSTRAINT uq_estoque_outros UNIQUE (codigo, cor),
+
+    CONSTRAINT ck_estoque_outros_niveis CHECK (
+        estoque_ideal >= 0
+        AND estoque_minimo >= 0
+        AND estoque_critico >= 0
+        AND estoque_ideal >= estoque_minimo
+        AND estoque_minimo >= estoque_critico
+    ),
+
+    CONSTRAINT ck_estoque_outros_saldos CHECK (
+        quantidade >= 0
+        AND valor_unidade >= 0
+    )
 );
+
+CREATE INDEX IF NOT EXISTS idx_estoque_outros_codigo
+    ON opera.estoque_outros(codigo);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_outros_cor
+    ON opera.estoque_outros(cor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_outros_fornecedor
+    ON opera.estoque_outros(fornecedor);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_outros_categoria
+    ON opera.estoque_outros(categoria);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_outros_localizacao
+    ON opera.estoque_outros(localizacao);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_outros_niveis
+    ON opera.estoque_outros(estoque_critico, estoque_minimo, estoque_ideal);
+
 
 -- [TABELA 42] estoque_saida_log - Log de saída do estoque
 CREATE TABLE IF NOT EXISTS opera.estoque_saida_log (
@@ -968,13 +1211,23 @@ CREATE TABLE IF NOT EXISTS opera.estoque_saida_log (
     codigo VARCHAR(100),
     descricao TEXT,
     cor VARCHAR(50),
-    quantidade NUMERIC(10,3) NOT NULL,
+    quantidade NUMERIC(12,3) NOT NULL,
     unidade VARCHAR(20),
     motivo VARCHAR(100),
     observacoes TEXT,
-    usuario VARCHAR(100)
+    usuario VARCHAR(100),
+
+    CONSTRAINT ck_estoque_saida_log_quantidade CHECK (quantidade >= 0)
 );
 
+CREATE INDEX IF NOT EXISTS idx_estoque_saida_log_data_hora
+    ON opera.estoque_saida_log(data_hora);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_saida_log_tipo_estoque
+    ON opera.estoque_saida_log(tipo_estoque);
+
+CREATE INDEX IF NOT EXISTS idx_estoque_saida_log_item_id
+    ON opera.estoque_saida_log(item_id);
 ----------------------------------------
 -- 13. TABELAS DE SERVIÇOS E HISTÓRICO
 ----------------------------------------
