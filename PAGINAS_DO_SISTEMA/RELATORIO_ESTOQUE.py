@@ -1584,6 +1584,148 @@ class AdvancedStockReport(ctk.CTkFrame):
         """
         self.configurar_treeview_theme()
 
+    def _page_lang(self):
+        idioma = getattr(getattr(self, "sistema", None), "idioma_atual", None)
+        if not idioma:
+            idioma = getattr(getattr(self, "controller", None), "idioma_atual", None)
+        if not idioma:
+            idioma = "pt_BR"
+        return idioma
+
+    def _txt(self, key: str) -> str:
+        labels = {
+            "pt_BR": {
+                "report_tab": "📋 Relatório",
+                "analysis_tab": "📊 Análise",
+                "assistant_tab": "🤖 Assistente",
+                "search": "🔎 Buscar por código ou descrição...",
+                "apply_filters": "Aplicar Filtros",
+                "export_csv": "📄 Exportar CSV",
+                "generate_pdf": "🖨️ Gerar PDF",
+                "export_excel": "📊 Exportar Excel",
+                "print": "🖨️ Imprimir",
+                "header": ["ID", "Descrição", "Categoria", "Quantidade", "Status", "Localização", "Última Atualização"],
+                "total_items": "🧾 Total Itens",
+                "critical_items": "⚠️ Itens Críticos",
+                "categories": "📂 Categorias",
+                "updated": "🕒 Atualizado",
+                "estimated_value": "💰 Valor Estimado",
+                "by_category": "Quantidade por Categoria",
+                "critical_by_category": "Itens Críticos por Categoria",
+                "assistant_title": "🤖 Assistente de Estoque Inteligente",
+                "assistant_ph": "Converse aqui... (Enter para enviar)",
+                "send": "Enviar",
+                "quick_1": "Itens críticos",
+                "quick_2": "Valor do estoque",
+                "quick_3": "Tecidos (metragem)",
+                "quick_4": "Sugestões de compra",
+                "quick_5": "Itens não movimentados há 30 dias",
+                "regen": "🔁 Regenerar",
+                "export_chat": "💾 Exportar conversa",
+                "suggestions": "💡 Sugestões/Perguntas",
+            },
+            "en_US": {
+                "report_tab": "📋 Report",
+                "analysis_tab": "📊 Analysis",
+                "assistant_tab": "🤖 Assistant",
+                "search": "🔎 Search by code or description...",
+                "apply_filters": "Apply Filters",
+                "export_csv": "📄 Export CSV",
+                "generate_pdf": "🖨️ Generate PDF",
+                "export_excel": "📊 Export Excel",
+                "print": "🖨️ Print",
+                "header": ["ID", "Description", "Category", "Quantity", "Status", "Location", "Last Update"],
+                "total_items": "🧾 Total Items",
+                "critical_items": "⚠️ Critical Items",
+                "categories": "📂 Categories",
+                "updated": "🕒 Updated",
+                "estimated_value": "💰 Estimated Value",
+                "by_category": "Quantity by Category",
+                "critical_by_category": "Critical Items by Category",
+                "assistant_title": "🤖 Smart Stock Assistant",
+                "assistant_ph": "Chat here... (Press Enter to send)",
+                "send": "Send",
+                "quick_1": "Critical items",
+                "quick_2": "Stock value",
+                "quick_3": "Fabrics (meterage)",
+                "quick_4": "Purchase suggestions",
+                "quick_5": "Items not moved for 30 days",
+                "regen": "🔁 Regenerate",
+                "export_chat": "💾 Export chat",
+                "suggestions": "💡 Suggestions/Questions",
+            },
+            "es_ES": {
+                "report_tab": "📋 Reporte",
+                "analysis_tab": "📊 Análisis",
+                "assistant_tab": "🤖 Asistente",
+                "search": "🔎 Buscar por código o descripción...",
+                "apply_filters": "Aplicar Filtros",
+                "export_csv": "📄 Exportar CSV",
+                "generate_pdf": "🖨️ Generar PDF",
+                "export_excel": "📊 Exportar Excel",
+                "print": "🖨️ Imprimir",
+                "header": ["ID", "Descripción", "Categoría", "Cantidad", "Estado", "Ubicación", "Última Actualización"],
+                "total_items": "🧾 Total Ítems",
+                "critical_items": "⚠️ Ítems Críticos",
+                "categories": "📂 Categorías",
+                "updated": "🕒 Actualizado",
+                "estimated_value": "💰 Valor Estimado",
+                "by_category": "Cantidad por Categoría",
+                "critical_by_category": "Ítems Críticos por Categoría",
+                "assistant_title": "🤖 Asistente Inteligente de Stock",
+                "assistant_ph": "Escriba aquí... (Enter para enviar)",
+                "send": "Enviar",
+                "quick_1": "Ítems críticos",
+                "quick_2": "Valor del stock",
+                "quick_3": "Tejidos (metraje)",
+                "quick_4": "Sugerencias de compra",
+                "quick_5": "Ítems sin movimiento hace 30 días",
+                "regen": "🔁 Regenerar",
+                "export_chat": "💾 Exportar conversación",
+                "suggestions": "💡 Sugerencias/Preguntas",
+            }
+        }
+        idioma = self._page_lang()
+        return labels.get(idioma, labels["pt_BR"]).get(key, labels["pt_BR"].get(key, key))
+
+    def _refresh_texts_runtime(self):
+        try:
+            if hasattr(self, 'search_entry'):
+                self.search_entry.configure(placeholder_text=self._txt('search'))
+            if hasattr(self, 'btn_apply_filters'):
+                self.btn_apply_filters.configure(text=self._txt('apply_filters'))
+            if hasattr(self, 'btn_export_csv'):
+                self.btn_export_csv.configure(text=self._txt('export_csv'))
+            if hasattr(self, 'btn_export_pdf'):
+                self.btn_export_pdf.configure(text=self._txt('generate_pdf'))
+            if hasattr(self, 'btn_export_excel'):
+                self.btn_export_excel.configure(text=self._txt('export_excel'))
+            if hasattr(self, 'btn_print'):
+                self.btn_print.configure(text=self._txt('print'))
+            if hasattr(self, 'tree'):
+                headers = self._txt('header')
+                cols = list(self.tree["columns"])
+                for col, head in zip(cols, headers):
+                    self.tree.heading(col, text=head)
+            if hasattr(self, 'ai_input'):
+                self.ai_input.configure(placeholder_text=self._txt('assistant_ph'))
+            if hasattr(self, 'btn_send'):
+                self.btn_send.configure(text=self._txt('send'))
+            if hasattr(self, 'lbl_assistant_title'):
+                self.lbl_assistant_title.configure(text=self._txt('assistant_title'))
+            if hasattr(self, 'btn_regen'):
+                self.btn_regen.configure(text=self._txt('regen'))
+            if hasattr(self, 'btn_export_chat'):
+                self.btn_export_chat.configure(text=self._txt('export_chat'))
+            if hasattr(self, 'btn_suggestions'):
+                self.btn_suggestions.configure(text=self._txt('suggestions'))
+            if hasattr(self, 'quick_buttons'):
+                keys = ['quick_1','quick_2','quick_3','quick_4','quick_5']
+                for btn, key in zip(self.quick_buttons, keys):
+                    btn.configure(text=self._txt(key))
+        except Exception:
+            pass
+
     def _create_main_layout(self):
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -1618,6 +1760,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._setup_report_tab()
         self._setup_analytics_tab()
         self._setup_ai_tab()
+        self._refresh_texts_runtime()
 
         # Footer - MESMO PADRÃO DO CADASTRO_DE_CORTE
         footer = ctk.CTkFrame(self, height=40, fg_color=self.cor_primaria)
@@ -1647,7 +1790,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         filtros.grid_columnconfigure(0, weight=1)
 
         self.search_entry = ctk.CTkEntry(
-            filtros, placeholder_text="🔎 Buscar por código ou descrição...",
+            filtros, placeholder_text=self._txt("search"),
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
             text_color=self.cor_texto_entry, placeholder_text_color=self.cor_placeholder
         )
@@ -1655,7 +1798,10 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         self.category_var = tk.StringVar(value="Todas")
         self.combo_category = ctk.CTkComboBox(
-            filtros, variable=self.category_var, values=["Todas", "Tecidos", "Aviamentos", "Outros"],
+            filtros,
+            variable=self.category_var,
+            values=["Todas", "Tecidos", "Aviamentos", "Insumos", "Escritorio", "Limpeza", "Outros"],
+            state="readonly",
             fg_color=self.cor_secundaria, border_color=self.cor_borda,
             button_color=self.cor_primaria, button_hover_color=self.cor_hover,
             text_color=self.cor_texto, dropdown_fg_color=self.cor_secundaria,
@@ -1663,11 +1809,12 @@ class AdvancedStockReport(ctk.CTkFrame):
         )
         self.combo_category.grid(row=0, column=1, padx=(0, 8))
 
-        ctk.CTkButton(
-            filtros, text="Aplicar Filtros", command=self.apply_filters,
+        self.btn_apply_filters = ctk.CTkButton(
+            filtros, text=self._txt("apply_filters"), command=self.apply_filters,
             fg_color=self.cor_primaria, hover_color=self.cor_hover,
             text_color=self.cor_texto
-        ).grid(row=0, column=2)
+        )
+        self.btn_apply_filters.grid(row=0, column=2)
 
         # Tabela - MESMO PADRÃO DO CADASTRO_DE_CORTE
         self._create_stock_table(parent=wrapper)
@@ -1676,17 +1823,20 @@ class AdvancedStockReport(ctk.CTkFrame):
         export_frame = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
         export_frame.grid(row=2, column=0, sticky="ew", pady=(8, 0))
 
-        ctk.CTkButton(export_frame, text="📄 Exportar CSV", fg_color=self.cor_sucesso,
+        self.btn_export_csv = ctk.CTkButton(export_frame, text=self._txt("export_csv"), fg_color=self.cor_sucesso,
                       hover_color=self.cor_hover, text_color=self.cor_texto,
-                      command=self.export_csv).pack(side="left", padx=5)
+                      command=self.export_csv)
+        self.btn_export_csv.pack(side="left", padx=5)
 
-        ctk.CTkButton(export_frame, text="🖨️ Gerar PDF", fg_color=self.cor_alerta,
+        self.btn_export_pdf = ctk.CTkButton(export_frame, text=self._txt("generate_pdf"), fg_color=self.cor_alerta,
                       hover_color=self.cor_hover, text_color=self.cor_texto,
-                      command=self.export_pdf).pack(side="left", padx=5)
+                      command=self.export_pdf)
+        self.btn_export_pdf.pack(side="left", padx=5)
 
-        ctk.CTkButton(export_frame, text="📊 Exportar Excel", fg_color=self.cor_destaque,
+        self.btn_export_excel = ctk.CTkButton(export_frame, text=self._txt("export_excel"), fg_color=self.cor_destaque,
                       hover_color=self.cor_hover, text_color=self.cor_texto,
-                      command=self.export_excel).pack(side="left", padx=5)
+                      command=self.export_excel)
+        self.btn_export_excel.pack(side="left", padx=5)
 
     def _create_stock_table(self, parent=None):
         if parent is None:
@@ -1710,22 +1860,24 @@ class AdvancedStockReport(ctk.CTkFrame):
         # Configurar estilo da Treeview - MESMO PADRÃO DO CADASTRO_DE_CORTE
         self.configurar_treeview_theme()
 
-        cols = ["ID", "Descrição", "Categoria", "Quantidade", "Status", "Localização", "Última Atualização"]
+        cols = ["col_id", "col_descricao", "col_categoria", "col_quantidade", "col_status", "col_localizacao", "col_ultima_atualizacao"]
         self.tree = ttk.Treeview(
             table_wrap, columns=cols, show="headings",
             style="Custom.Treeview", yscrollcommand=vsb.set, xscrollcommand=hsb.set
         )
 
-        for name, width, anchor in [
-            ("ID", 80, "center"),
-            ("Descrição", 300, "w"),
-            ("Categoria", 120, "w"),
-            ("Quantidade", 90, "center"),
-            ("Status", 90, "center"),
-            ("Localização", 150, "w"),
-            ("Última Atualização", 140, "center"),
-        ]:
-            self.tree.heading(name, text=name)
+        headers = self._txt("header")
+        specs = [
+            ("col_id", 80, "center"),
+            ("col_descricao", 300, "w"),
+            ("col_categoria", 120, "w"),
+            ("col_quantidade", 90, "center"),
+            ("col_status", 90, "center"),
+            ("col_localizacao", 150, "w"),
+            ("col_ultima_atualizacao", 140, "center"),
+        ]
+        for (name, width, anchor), header in zip(specs, headers):
+            self.tree.heading(name, text=header)
             self.tree.column(name, width=width, anchor=anchor)
 
         self.tree.grid(row=0, column=0, sticky="nsew")
@@ -1760,10 +1912,10 @@ class AdvancedStockReport(ctk.CTkFrame):
         for i in range(4):
             self.cards_frame.grid_columnconfigure(i, weight=1)
 
-        self._metric_card(self.cards_frame, "🧾 Total Itens", "—").grid(row=0, column=0, sticky="ew")
-        self._metric_card(self.cards_frame, "⚠️ Itens Críticos", "—").grid(row=0, column=1, sticky="ew")
-        self._metric_card(self.cards_frame, "📂 Categorias", "—").grid(row=0, column=2, sticky="ew")
-        self._metric_card(self.cards_frame, "🕒 Atualizado", "—").grid(row=0, column=3, sticky="ew")
+        self._metric_card(self.cards_frame, self._txt("total_items"), "—").grid(row=0, column=0, sticky="ew")
+        self._metric_card(self.cards_frame, self._txt("critical_items"), "—").grid(row=0, column=1, sticky="ew")
+        self._metric_card(self.cards_frame, self._txt("categories"), "—").grid(row=0, column=2, sticky="ew")
+        self._metric_card(self.cards_frame, self._txt("updated"), "—").grid(row=0, column=3, sticky="ew")
 
         self.charts_frame = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
         self.charts_frame.grid(row=1, column=0, sticky="nsew")
@@ -1806,12 +1958,12 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         ax1 = fig.add_subplot(1, 2, 1)
         ax1.bar(list(categories.keys()), list(categories.values()))
-        ax1.set_title('Itens por Categoria')
+        ax1.set_title(self._txt('by_category'))
         ax1.tick_params(axis='x', rotation=45)
 
         ax2 = fig.add_subplot(1, 2, 2)
         ax2.bar(list(critical_items.keys()), list(critical_items.values()))
-        ax2.set_title('Itens Críticos')
+        ax2.set_title(self._txt('critical_by_category'))
         ax2.tick_params(axis='x', rotation=45)
 
         fig.tight_layout()
@@ -1852,10 +2004,10 @@ class AdvancedStockReport(ctk.CTkFrame):
             )
             return box
 
-        _metric("🧾 Total Itens", self.stats_data.get("total_items", 0)).grid(row=0, column=0, sticky="ew", padx=6)
-        _metric("⚠️ Itens Críticos", self.stats_data.get("low_stock", 0)).grid(row=0, column=1, sticky="ew", padx=6)
-        _metric("📂 Categorias", self.stats_data.get("categories", 0)).grid(row=0, column=2, sticky="ew", padx=6)
-        _metric("💰 Valor Estimado", f"{self.stats_data.get('total_value', 0):,.2f}").grid(
+        _metric(self._txt("total_items"), self.stats_data.get("total_items", 0)).grid(row=0, column=0, sticky="ew", padx=6)
+        _metric(self._txt("critical_items"), self.stats_data.get("low_stock", 0)).grid(row=0, column=1, sticky="ew", padx=6)
+        _metric(self._txt("categories"), self.stats_data.get("categories", 0)).grid(row=0, column=2, sticky="ew", padx=6)
+        _metric(self._txt("estimated_value"), f"{self.stats_data.get('total_value', 0):,.2f}").grid(
             row=0, column=3, sticky="ew", padx=6
         )
 
@@ -1872,8 +2024,9 @@ class AdvancedStockReport(ctk.CTkFrame):
         header = ctk.CTkFrame(wrapper, height=48, fg_color=self.cor_primaria)
         header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
         header.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(header, text="🤖 Assistente de Estoque Inteligente",
-                     font=self.font_titulo_medio, text_color=_hex_contrast(self.cor_primaria)).grid(
+        self.lbl_assistant_title = ctk.CTkLabel(header, text=self._txt("assistant_title"),
+                     font=self.font_titulo_medio, text_color=_hex_contrast(self.cor_primaria))
+        self.lbl_assistant_title.grid(
             row=0, column=0, sticky="w", padx=12, pady=10
         )
 
@@ -1900,7 +2053,7 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         self.ai_input = ctk.CTkEntry(
             input_frame,
-            placeholder_text="Converse aqui... (Enter para enviar)",
+            placeholder_text=self._txt("assistant_ph"),
             fg_color=self.cor_secundaria,
             text_color=self.cor_texto_entry,
             placeholder_text_color=self.cor_placeholder
@@ -1909,7 +2062,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         self.ai_input.bind("<Return>", self.process_ai_query)
 
         self.btn_send = ctk.CTkButton(
-            input_frame, text="Enviar", command=self.process_ai_query,
+            input_frame, text=self._txt("send"), command=self.process_ai_query,
             fg_color=self.cor_destaque, hover_color=self.cor_hover,
             text_color=self.cor_texto, width=90
         )
@@ -1917,30 +2070,31 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         self.quick_actions = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
         self.quick_actions.grid(row=2, column=0, sticky="ew", pady=(6, 0))
-        for i, text in enumerate([
-            "Itens críticos",
-            "Valor do estoque",
-            "Tecidos (metragem)",
-            "Sugestões de compra",
-            "Itens não movimentados há 30 dias",
-        ]):
+        self.quick_buttons = []
+        quick_keys = ["quick_1", "quick_2", "quick_3", "quick_4", "quick_5"]
+        for i, key in enumerate(quick_keys):
+            text = self._txt(key)
             btn = ctk.CTkButton(self.quick_actions, text=text, width=1,
                                 fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                                 text_color=self.cor_texto,
                                 command=lambda t=text: self._send_quick(t))
             btn.grid(row=0, column=i, padx=4)
+            self.quick_buttons.append(btn)
 
         self.extra_actions = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
         self.extra_actions.grid(row=3, column=0, sticky="ew", pady=(4, 0))
-        ctk.CTkButton(self.extra_actions, text="🔁 Regenerar", command=self._regenerate_last,
+        self.btn_regen = ctk.CTkButton(self.extra_actions, text=self._txt("regen"), command=self._regenerate_last,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
-        ctk.CTkButton(self.extra_actions, text="💾 Exportar conversa", command=self._export_chat,
+                      text_color=self.cor_texto)
+        self.btn_regen.pack(side="left", padx=4)
+        self.btn_export_chat = ctk.CTkButton(self.extra_actions, text=self._txt("export_chat"), command=self._export_chat,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
-        ctk.CTkButton(self.extra_actions, text="💡 Sugestões/Perguntas", command=self._open_suggestions_window,
+                      text_color=self.cor_texto)
+        self.btn_export_chat.pack(side="left", padx=4)
+        self.btn_suggestions = ctk.CTkButton(self.extra_actions, text=self._txt("suggestions"), command=self._open_suggestions_window,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).pack(side="left", padx=4)
+                      text_color=self.cor_texto)
+        self.btn_suggestions.pack(side="left", padx=4)
 
         self._post_bot(
             "👋 Olá! Pergunte sobre *críticos*, *valor*, *tecidos*, *localização* ou digite o *código* do item.",
@@ -3514,68 +3668,673 @@ class AdvancedStockReport(ctk.CTkFrame):
 
 
 # ---------- Execução Standalone ----------
+
+
+# --- Traduções completas aplicadas antes do __main__ ---
+AdvancedStockReport_TRANSLATIONS = {
+    "pt_BR": {
+        "window_title": "Relatórios - Sistema Opera",
+        "title": "Relatórios",
+        "subtitle": "Controle de Estoque",
+        "refresh": "Atualizar Dados",
+        "report_tab": "📋 Relatório",
+        "analysis_tab": "📊 Análise",
+        "assistant_tab": "🤖 Assistente",
+        "search": "🔎 Buscar por código ou descrição...",
+        "apply_filters": "Aplicar Filtros",
+        "clear_filters": "Limpar Filtros",
+        "category_all": "Todas",
+        "category_fabrics": "Tecidos",
+        "category_trims": "Aviamentos",
+        "category_inputs": "Insumos",
+        "category_office": "Escritorio",
+        "category_cleaning": "Limpeza",
+        "category_other": "Outros",
+        "export_csv": "📄 Exportar CSV",
+        "generate_pdf": "🖨️ Gerar PDF",
+        "export_excel": "📊 Exportar Excel",
+        "print": "🖨️ Imprimir",
+        "header": ["ID", "Descrição", "Categoria", "Quantidade", "Status", "Localização", "Última Atualização"],
+        "total_items": "🧾 Total Itens",
+        "critical_items": "⚠️ Itens Críticos",
+        "categories": "📂 Categorias",
+        "updated": "🕒 Atualizado",
+        "estimated_value": "💰 Valor Estimado",
+        "by_category": "Quantidade por Categoria",
+        "critical_by_category": "Itens Críticos por Categoria",
+        "assistant_title": "🤖 Assistente de Estoque Inteligente",
+        "assistant_ph": "Converse aqui... (Enter para enviar)",
+        "assistant_greeting": "👋 Olá! Pergunte sobre críticos, valor, tecidos, localização ou digite o código do item.",
+        "typing_indicator": "digitando...",
+        "send": "Enviar",
+        "quick_1": "Itens críticos",
+        "quick_2": "Valor do estoque",
+        "quick_3": "Tecidos (metragem)",
+        "quick_4": "Sugestões de compra",
+        "quick_5": "Itens não movimentados há 30 dias",
+        "regen": "🔁 Regenerar",
+        "export_chat": "💾 Exportar conversa",
+        "suggestions": "💡 Sugestões/Perguntas",
+        "connected": "🟢 Conectado | {data}",
+        "add_item_title": "Adicionar Item do Estoque",
+        "add_item_search_label": "Buscar Item (código/descrição/categoria):",
+        "add_item_search_button": "Buscar",
+        "add_item_confirm": "Confirmar",
+        "add_item_cancel": "Cancelar",
+        "suggestions_title": "Sugestões de Perguntas",
+        "suggestions_info": "Duplo clique na pergunta para enviar. Use o filtro para reduzir a lista.",
+        "suggestions_filter_label": "Filtro:",
+        "suggestions_filter_placeholder": "Filtrar perguntas...",
+        "suggestions_categories": "Categorias",
+        "suggestions_questions": "Perguntas",
+        "suggestions_prev": "◀ Anterior",
+        "suggestions_next": "Próxima ▶",
+        "suggestions_page_info": "Página {page} de {total} | {count} perguntas",
+        "title_info": "Informação",
+        "title_warning": "Aviso",
+        "title_error": "Erro",
+        "title_confirm": "Confirmar",
+        "msg_no_message_regen": "Ainda não há mensagem para regenerar.",
+    },
+    "en_US": {
+        "window_title": "Reports - Opera System",
+        "title": "Reports",
+        "subtitle": "Stock Control",
+        "refresh": "Refresh Data",
+        "report_tab": "📋 Report",
+        "analysis_tab": "📊 Analysis",
+        "assistant_tab": "🤖 Assistant",
+        "search": "🔎 Search by code or description...",
+        "apply_filters": "Apply Filters",
+        "clear_filters": "Clear Filters",
+        "category_all": "All",
+        "category_fabrics": "Fabrics",
+        "category_trims": "Trims",
+        "category_inputs": "Inputs",
+        "category_office": "Office",
+        "category_cleaning": "Cleaning",
+        "category_other": "Others",
+        "export_csv": "📄 Export CSV",
+        "generate_pdf": "🖨️ Generate PDF",
+        "export_excel": "📊 Export Excel",
+        "print": "🖨️ Print",
+        "header": ["ID", "Description", "Category", "Quantity", "Status", "Location", "Last Update"],
+        "total_items": "🧾 Total Items",
+        "critical_items": "⚠️ Critical Items",
+        "categories": "📂 Categories",
+        "updated": "🕒 Updated",
+        "estimated_value": "💰 Estimated Value",
+        "by_category": "Quantity by Category",
+        "critical_by_category": "Critical Items by Category",
+        "assistant_title": "🤖 Smart Stock Assistant",
+        "assistant_ph": "Chat here... (Press Enter to send)",
+        "assistant_greeting": "👋 Hello! Ask about critical items, stock value, fabrics, locations, or type an item code.",
+        "typing_indicator": "typing...",
+        "send": "Send",
+        "quick_1": "Critical items",
+        "quick_2": "Stock value",
+        "quick_3": "Fabrics (meterage)",
+        "quick_4": "Purchase suggestions",
+        "quick_5": "Items not moved for 30 days",
+        "regen": "🔁 Regenerate",
+        "export_chat": "💾 Export chat",
+        "suggestions": "💡 Suggestions/Questions",
+        "connected": "🟢 Connected | {data}",
+        "add_item_title": "Add Stock Item",
+        "add_item_search_label": "Search Item (code/description/category):",
+        "add_item_search_button": "Search",
+        "add_item_confirm": "Confirm",
+        "add_item_cancel": "Cancel",
+        "suggestions_title": "Question Suggestions",
+        "suggestions_info": "Double-click a question to send it. Use the filter to reduce the list.",
+        "suggestions_filter_label": "Filter:",
+        "suggestions_filter_placeholder": "Filter questions...",
+        "suggestions_categories": "Categories",
+        "suggestions_questions": "Questions",
+        "suggestions_prev": "◀ Previous",
+        "suggestions_next": "Next ▶",
+        "suggestions_page_info": "Page {page} of {total} | {count} questions",
+        "title_info": "Information",
+        "title_warning": "Warning",
+        "title_error": "Error",
+        "title_confirm": "Confirm",
+        "msg_no_message_regen": "There is no message to regenerate yet.",
+    },
+    "es_ES": {
+        "window_title": "Reportes - Sistema Opera",
+        "title": "Reportes",
+        "subtitle": "Control de Stock",
+        "refresh": "Actualizar Datos",
+        "report_tab": "📋 Reporte",
+        "analysis_tab": "📊 Análisis",
+        "assistant_tab": "🤖 Asistente",
+        "search": "🔎 Buscar por código o descripción...",
+        "apply_filters": "Aplicar Filtros",
+        "clear_filters": "Limpiar Filtros",
+        "category_all": "Todas",
+        "category_fabrics": "Tejidos",
+        "category_trims": "Avíos",
+        "category_inputs": "Insumos",
+        "category_office": "Oficina",
+        "category_cleaning": "Limpieza",
+        "category_other": "Otros",
+        "export_csv": "📄 Exportar CSV",
+        "generate_pdf": "🖨️ Generar PDF",
+        "export_excel": "📊 Exportar Excel",
+        "print": "🖨️ Imprimir",
+        "header": ["ID", "Descripción", "Categoría", "Cantidad", "Estado", "Ubicación", "Última Actualización"],
+        "total_items": "🧾 Total Ítems",
+        "critical_items": "⚠️ Ítems Críticos",
+        "categories": "📂 Categorías",
+        "updated": "🕒 Actualizado",
+        "estimated_value": "💰 Valor Estimado",
+        "by_category": "Cantidad por Categoría",
+        "critical_by_category": "Ítems Críticos por Categoría",
+        "assistant_title": "🤖 Asistente Inteligente de Stock",
+        "assistant_ph": "Escriba aquí... (Enter para enviar)",
+        "assistant_greeting": "👋 ¡Hola! Pregunte sobre críticos, valor, tejidos, ubicación o escriba el código del ítem.",
+        "typing_indicator": "escribiendo...",
+        "send": "Enviar",
+        "quick_1": "Ítems críticos",
+        "quick_2": "Valor del stock",
+        "quick_3": "Tejidos (metraje)",
+        "quick_4": "Sugerencias de compra",
+        "quick_5": "Ítems sin movimiento hace 30 días",
+        "regen": "🔁 Regenerar",
+        "export_chat": "💾 Exportar conversación",
+        "suggestions": "💡 Sugerencias/Preguntas",
+        "connected": "🟢 Conectado | {data}",
+        "add_item_title": "Agregar Ítem de Stock",
+        "add_item_search_label": "Buscar ítem (código/descripción/categoría):",
+        "add_item_search_button": "Buscar",
+        "add_item_confirm": "Confirmar",
+        "add_item_cancel": "Cancelar",
+        "suggestions_title": "Sugerencias de Preguntas",
+        "suggestions_info": "Doble clic en la pregunta para enviarla. Use el filtro para reducir la lista.",
+        "suggestions_filter_label": "Filtro:",
+        "suggestions_filter_placeholder": "Filtrar preguntas...",
+        "suggestions_categories": "Categorías",
+        "suggestions_questions": "Preguntas",
+        "suggestions_prev": "◀ Anterior",
+        "suggestions_next": "Siguiente ▶",
+        "suggestions_page_info": "Página {page} de {total} | {count} preguntas",
+        "title_info": "Información",
+        "title_warning": "Aviso",
+        "title_error": "Error",
+        "title_confirm": "Confirmar",
+        "msg_no_message_regen": "Todavía no hay mensaje para regenerar.",
+    },
+}
+
+def _opera_page_lang(self):
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", None)
+    if not idioma:
+        idioma = getattr(getattr(self, "controller", None), "idioma_atual", None)
+    if idioma not in AdvancedStockReport_TRANSLATIONS:
+        idioma = "pt_BR"
+    return idioma
+
+def _opera_txt(self, key, **kwargs):
+    idioma = _opera_page_lang(self)
+    bloco = AdvancedStockReport_TRANSLATIONS.get(idioma, AdvancedStockReport_TRANSLATIONS["pt_BR"])
+    texto = bloco.get(key, AdvancedStockReport_TRANSLATIONS["pt_BR"].get(key, key))
+    if isinstance(texto, str) and kwargs:
+        try:
+            return texto.format(**kwargs)
+        except Exception:
+            return texto
+    return texto
+
+def _opera_msgbox(self, kind, title_key, message_key, **kwargs):
+    title = self._txt(title_key)
+    message = self._txt(message_key, **kwargs)
+    fn = getattr(messagebox, kind, messagebox.showinfo)
+    return fn(title, message)
+
+def _opera_category_values(self):
+    return [
+        self._txt("category_all"),
+        self._txt("category_fabrics"),
+        self._txt("category_trims"),
+        self._txt("category_inputs"),
+        self._txt("category_office"),
+        self._txt("category_cleaning"),
+        self._txt("category_other"),
+    ]
+
+def _opera_refresh_texts_runtime(self):
+    try:
+        if hasattr(self, "winfo_toplevel"):
+            try:
+                self.winfo_toplevel().title(self._txt("window_title"))
+            except Exception:
+                pass
+        if hasattr(self, "lbl_header_title"):
+            self.lbl_header_title.configure(text=self._txt("subtitle"))
+        if hasattr(self, "btn_refresh"):
+            self.btn_refresh.configure(text=self._txt("refresh"))
+        if hasattr(self, "lbl_footer"):
+            self.lbl_footer.configure(text=self._txt("connected", data=datetime.now().strftime('%d/%m/%Y %H:%M')))
+        if hasattr(self, "tabs") and hasattr(self, "_tab_keys"):
+            vals = [self._txt(k) for k in self._tab_keys]
+            try:
+                current = self.tabs.get()
+                self.tabs._segmented_button.configure(values=vals)
+                for old, new in zip(getattr(self, "_tab_labels", vals), vals):
+                    if old in self.tabs._name_list and old != new:
+                        idx = self.tabs._name_list.index(old)
+                        self.tabs._name_list[idx] = new
+                        self.tabs._tab_dict[new] = self.tabs._tab_dict.pop(old)
+                self._tab_labels = vals
+                if current in getattr(self, "_tab_labels", []):
+                    self.tabs.set(current)
+            except Exception:
+                pass
+        if hasattr(self, "search_entry"):
+            self.search_entry.configure(placeholder_text=self._txt("search"))
+        if hasattr(self, "combo_category"):
+            current = self.category_var.get() if hasattr(self, "category_var") else None
+            vals = self._category_values()
+            self.combo_category.configure(values=vals)
+            if current not in vals:
+                current = vals[0]
+            self.combo_category.set(current)
+        if hasattr(self, "btn_apply_filters"):
+            self.btn_apply_filters.configure(text=self._txt("apply_filters"))
+        if hasattr(self, "btn_export_csv"):
+            self.btn_export_csv.configure(text=self._txt("export_csv"))
+        if hasattr(self, "btn_export_pdf"):
+            self.btn_export_pdf.configure(text=self._txt("generate_pdf"))
+        if hasattr(self, "btn_export_excel"):
+            self.btn_export_excel.configure(text=self._txt("export_excel"))
+        if hasattr(self, "btn_print"):
+            self.btn_print.configure(text=self._txt("print"))
+        if hasattr(self, "tree"):
+            headers = self._txt("header")
+            for col, head in zip(self.tree["columns"], headers):
+                self.tree.heading(col, text=head)
+        if hasattr(self, "lbl_assistant_title"):
+            self.lbl_assistant_title.configure(text=self._txt("assistant_title"))
+        if hasattr(self, "ai_input"):
+            self.ai_input.configure(placeholder_text=self._txt("assistant_ph"))
+        if hasattr(self, "btn_send"):
+            self.btn_send.configure(text=self._txt("send"))
+        if hasattr(self, "btn_regen"):
+            self.btn_regen.configure(text=self._txt("regen"))
+        if hasattr(self, "btn_export_chat"):
+            self.btn_export_chat.configure(text=self._txt("export_chat"))
+        if hasattr(self, "btn_suggestions"):
+            self.btn_suggestions.configure(text=self._txt("suggestions"))
+        if hasattr(self, "quick_buttons"):
+            keys = ["quick_1", "quick_2", "quick_3", "quick_4", "quick_5"]
+            for btn, key in zip(self.quick_buttons, keys):
+                btn.configure(text=self._txt(key))
+        if hasattr(self, "cards_frame") and hasattr(self, "stats_data"):
+            try:
+                for widget in self.cards_frame.winfo_children():
+                    widget.destroy()
+                self._metric_card(self.cards_frame, self._txt("total_items"), self.stats_data.get("total_items", "—")).grid(row=0, column=0, sticky="ew")
+                self._metric_card(self.cards_frame, self._txt("critical_items"), self.stats_data.get("low_stock", "—")).grid(row=0, column=1, sticky="ew")
+                self._metric_card(self.cards_frame, self._txt("categories"), self.stats_data.get("categories", "—")).grid(row=0, column=2, sticky="ew")
+                self._metric_card(self.cards_frame, self._txt("updated"), datetime.now().strftime("%d/%m/%Y %H:%M")).grid(row=0, column=3, sticky="ew")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+def _opera_create_main_layout(self):
+    self.grid_rowconfigure(1, weight=1)
+    self.grid_columnconfigure(0, weight=1)
+
+    header = ctk.CTkFrame(self, height=80, corner_radius=0, fg_color=self.cor_primaria)
+    header.grid(row=0, column=0, sticky="nsew", padx=10, pady=5)
+
+    self.lbl_header_title = ctk.CTkLabel(
+        header, text=self._txt("subtitle"), font=self.font_titulo,
+        text_color=_hex_contrast(self.cor_primaria)
+    )
+    self.lbl_header_title.pack(side="left", padx=20)
+
+    self.btn_refresh = ctk.CTkButton(
+        header, text=self._txt("refresh"), command=self.reload_data, width=140,
+        fg_color=self.cor_secundaria, hover_color=self.cor_hover, text_color=self.cor_texto
+    )
+    self.btn_refresh.pack(side="right", padx=20)
+
+    self.tabs = ctk.CTkTabview(
+        self,
+        fg_color=self.cor_fundo,
+        segmented_button_fg_color=self.cor_primaria,
+        segmented_button_selected_color=self.cor_hover,
+        segmented_button_unselected_color=self.cor_secundaria,
+        segmented_button_unselected_hover_color=self.cor_hover,
+        text_color=self.cor_texto
+    )
+    self.tabs.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+
+    self._tab_keys = ["report_tab", "analysis_tab", "assistant_tab"]
+    self._tab_labels = [self._txt(k) for k in self._tab_keys]
+    self.tab_report = self.tabs.add(self._tab_labels[0])
+    self.tab_analytics = self.tabs.add(self._tab_labels[1])
+    self.tab_ai = self.tabs.add(self._tab_labels[2])
+
+    self._setup_report_tab()
+    self._setup_analytics_tab()
+    self._setup_ai_tab()
+
+    footer = ctk.CTkFrame(self, height=40, fg_color=self.cor_primaria)
+    footer.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
+    self.lbl_footer = ctk.CTkLabel(
+        footer,
+        text=self._txt("connected", data=datetime.now().strftime('%d/%m/%Y %H:%M')),
+        font=self.font_pequeno,
+        text_color=_hex_contrast(self.cor_primaria)
+    )
+    self.lbl_footer.pack(side="left", padx=20)
+    self._refresh_texts_runtime()
+
+def _opera_setup_report_tab(self):
+    self.tab_report.grid_rowconfigure(0, weight=1)
+    self.tab_report.grid_columnconfigure(0, weight=1)
+
+    wrapper = ctk.CTkFrame(self.tab_report, fg_color=self.cor_fundo)
+    wrapper.grid(row=0, column=0, sticky="nsew", padx=10, pady=(10, 0))
+    wrapper.grid_rowconfigure(0, weight=0)
+    wrapper.grid_rowconfigure(1, weight=1)
+    wrapper.grid_rowconfigure(2, weight=0)
+    wrapper.grid_columnconfigure(0, weight=1)
+
+    filtros = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
+    filtros.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+    filtros.grid_columnconfigure(0, weight=1)
+
+    self.search_entry = ctk.CTkEntry(
+        filtros,
+        placeholder_text=self._txt("search"),
+        fg_color=self.cor_secundaria,
+        border_color=self.cor_borda,
+        text_color=self.cor_texto_entry,
+        placeholder_text_color=self.cor_placeholder
+    )
+    self.search_entry.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+
+    self.category_var = tk.StringVar(value=self._category_values()[0])
+    self.combo_category = ctk.CTkComboBox(
+        filtros,
+        variable=self.category_var,
+        values=self._category_values(),
+        state="readonly",
+        fg_color=self.cor_secundaria, border_color=self.cor_borda,
+        button_color=self.cor_primaria, button_hover_color=self.cor_hover,
+        text_color=self.cor_texto, dropdown_fg_color=self.cor_secundaria,
+        dropdown_text_color=self.cor_texto, dropdown_hover_color=self.cor_hover
+    )
+    self.combo_category.grid(row=0, column=1, padx=(0, 8))
+
+    self.btn_apply_filters = ctk.CTkButton(
+        filtros, text=self._txt("apply_filters"), command=self.apply_filters,
+        fg_color=self.cor_primaria, hover_color=self.cor_hover, text_color=self.cor_texto
+    )
+    self.btn_apply_filters.grid(row=0, column=2)
+
+    self._create_stock_table(parent=wrapper)
+
+    export_frame = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
+    export_frame.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+
+    self.btn_export_csv = ctk.CTkButton(export_frame, text=self._txt("export_csv"),
+        fg_color=self.cor_sucesso, hover_color=self.cor_hover, text_color=self.cor_texto,
+        command=self.export_csv)
+    self.btn_export_csv.pack(side="left", padx=5)
+
+    self.btn_export_pdf = ctk.CTkButton(export_frame, text=self._txt("generate_pdf"),
+        fg_color=self.cor_alerta, hover_color=self.cor_hover, text_color=self.cor_texto,
+        command=self.export_pdf)
+    self.btn_export_pdf.pack(side="left", padx=5)
+
+    self.btn_export_excel = ctk.CTkButton(export_frame, text=self._txt("export_excel"),
+        fg_color=self.cor_destaque, hover_color=self.cor_hover, text_color=self.cor_texto,
+        command=self.export_excel)
+    self.btn_export_excel.pack(side="left", padx=5)
+
+    self.btn_print = ctk.CTkButton(export_frame, text=self._txt("print"),
+        fg_color=self.cor_secundaria, hover_color=self.cor_hover, text_color=self.cor_texto,
+        command=self._opera_print_report if hasattr(self, "_opera_print_report") else self.export_pdf)
+    self.btn_print.pack(side="left", padx=5)
+
+def _opera_setup_ai_tab(self):
+    self.tab_ai.grid_rowconfigure(0, weight=1)
+    self.tab_ai.grid_columnconfigure(0, weight=1)
+
+    wrapper = ctk.CTkFrame(self.tab_ai, fg_color=self.cor_fundo)
+    wrapper.grid(row=0, column=0, sticky="nsew", padx=10, pady=(10, 0))
+    wrapper.grid_rowconfigure(1, weight=1)
+    wrapper.grid_columnconfigure(0, weight=1)
+
+    header = ctk.CTkFrame(wrapper, height=48, fg_color=self.cor_primaria)
+    header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+    header.grid_columnconfigure(0, weight=1)
+    self.lbl_assistant_title = ctk.CTkLabel(header, text=self._txt("assistant_title"),
+                     font=self.font_titulo_medio, text_color=_hex_contrast(self.cor_primaria))
+    self.lbl_assistant_title.grid(row=0, column=0, sticky="w", padx=12, pady=10)
+
+    body = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
+    body.grid(row=1, column=0, sticky="nsew")
+    body.grid_rowconfigure(0, weight=1)
+    body.grid_rowconfigure(1, weight=0)
+    body.grid_columnconfigure(0, weight=1)
+
+    self.chat_canvas = tk.Canvas(body, bg=self.cor_fundo, highlightthickness=0, bd=0)
+    self.chat_scroll = ttk.Scrollbar(body, orient="vertical", command=self.chat_canvas.yview)
+    self.chat_frame = ctk.CTkFrame(self.chat_canvas, fg_color=self.cor_fundo)
+    self.chat_frame.bind("<Configure>", lambda e: self.chat_canvas.configure(scrollregion=self.chat_canvas.bbox("all")))
+    self.chat_canvas.create_window((0, 0), window=self.chat_frame, anchor="nw")
+    self.chat_canvas.configure(yscrollcommand=self.chat_scroll.set)
+    self.chat_canvas.grid(row=0, column=0, sticky="nsew")
+    self.chat_scroll.grid(row=0, column=1, sticky="ns")
+
+    input_frame = ctk.CTkFrame(body, height=52, fg_color=self.cor_secundaria, corner_radius=12)
+    input_frame.grid(row=1, column=0, sticky="ew", padx=8, pady=(6, 8))
+    input_frame.grid_columnconfigure(0, weight=1)
+
+    self.ai_input = ctk.CTkEntry(
+        input_frame, placeholder_text=self._txt("assistant_ph"),
+        fg_color=self.cor_secundaria, text_color=self.cor_texto_entry,
+        placeholder_text_color=self.cor_placeholder
+    )
+    self.ai_input.grid(row=0, column=0, sticky="ew", padx=(10, 8), pady=8)
+    self.ai_input.bind("<Return>", self.process_ai_query)
+
+    self.btn_send = ctk.CTkButton(
+        input_frame, text=self._txt("send"), command=self.process_ai_query,
+        fg_color=self.cor_destaque, hover_color=self.cor_hover, text_color=self.cor_texto, width=90
+    )
+    self.btn_send.grid(row=0, column=1, padx=(0, 10))
+
+    self.quick_actions = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
+    self.quick_actions.grid(row=2, column=0, sticky="ew", pady=(6, 0))
+    self.quick_buttons = []
+    quick_keys = ["quick_1", "quick_2", "quick_3", "quick_4", "quick_5"]
+    for i, key in enumerate(quick_keys):
+        text = self._txt(key)
+        btn = ctk.CTkButton(self.quick_actions, text=text, width=1,
+                            fg_color=self.cor_secundaria, hover_color=self.cor_hover,
+                            text_color=self.cor_texto, command=lambda t=text: self._send_quick(t))
+        btn.grid(row=0, column=i, padx=4)
+        self.quick_buttons.append(btn)
+
+    self.extra_actions = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
+    self.extra_actions.grid(row=3, column=0, sticky="ew", pady=(4, 0))
+    self.btn_regen = ctk.CTkButton(self.extra_actions, text=self._txt("regen"), command=self._regenerate_last,
+                      fg_color=self.cor_secundaria, hover_color=self.cor_hover, text_color=self.cor_texto)
+    self.btn_regen.pack(side="left", padx=4)
+    self.btn_export_chat = ctk.CTkButton(self.extra_actions, text=self._txt("export_chat"), command=self._export_chat,
+                      fg_color=self.cor_secundaria, hover_color=self.cor_hover, text_color=self.cor_texto)
+    self.btn_export_chat.pack(side="left", padx=4)
+    self.btn_suggestions = ctk.CTkButton(self.extra_actions, text=self._txt("suggestions"), command=self._open_suggestions_window,
+                      fg_color=self.cor_secundaria, hover_color=self.cor_hover, text_color=self.cor_texto)
+    self.btn_suggestions.pack(side="left", padx=4)
+
+    self._post_bot(self._txt("assistant_greeting"), slow=False)
+
+def _opera_show_typing(self):
+    wrap = ctk.CTkFrame(self.chat_frame, fg_color=self.cor_fundo)
+    wrap.pack(fill="x", padx=8, pady=2)
+    bubble = ctk.CTkFrame(wrap, fg_color=self.cor_secundaria, corner_radius=14)
+    bubble.pack(anchor="w", padx=6, pady=2)
+    label = ctk.CTkLabel(bubble, text=self._txt("typing_indicator"), text_color=self.cor_texto)
+    label.pack(padx=10, pady=8)
+    self.chat_canvas.update_idletasks()
+    self.chat_canvas.yview_moveto(1.0)
+    return wrap
+
+def _opera_regenerate_last(self):
+    if not getattr(self, "_last_user_prompt", None):
+        self._msgbox("showinfo", "title_info", "msg_no_message_regen")
+        return
+    self._enqueue_ai(self._last_user_prompt, is_regen=True)
+
+def _opera_adicionar_tecido(self):
+    dialog = ctk.CTkToplevel(self)
+    dialog.title(self._txt("add_item_title"))
+    dialog.transient(self.winfo_toplevel())
+    dialog.grab_set()
+    dialog.focus_force()
+    dialog.update_idletasks()
+    sw = dialog.winfo_screenwidth()
+    sh = dialog.winfo_screenheight()
+    largura = 800
+    altura = 600
+    x = (sw - largura) // 2
+    y = (sh - altura) // 2
+    dialog.geometry(f"{largura}x{altura}+{x}+{y}")
+
+    self.obter_cores_por_tema()
+
+    main_frame = ctk.CTkScrollableFrame(dialog, fg_color=self.cor_fundo)
+    main_frame.pack(fill="both", expand=True, padx=10, pady=(10, 18))
+
+    search_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
+    search_frame.pack(fill="x", pady=5)
+
+    ctk.CTkLabel(search_frame, text=self._txt("add_item_search_label"),
+                 width=220, anchor="w", text_color=self.cor_texto).pack(side="left", padx=5)
+
+    search_entry = ctk.CTkEntry(search_frame, fg_color=self.cor_secundaria,
+                                border_color=self.cor_borda, text_color=self.cor_texto_entry,
+                                placeholder_text_color=self.cor_placeholder)
+    search_entry.pack(side="left", fill="x", expand=True, padx=5)
+
+    tree_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
+    tree_frame.pack(fill="both", expand=True, pady=5)
+
+    columns = ["Código", "Descrição", "Categoria", "Quantidade", "Localização", "Status"]
+    tecido_tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=8, style="Custom.Treeview")
+    for col in columns:
+        tecido_tree.heading(col, text=col)
+        tecido_tree.column(col, width=130 if col in ("Descrição", "Localização") else 100, anchor='w' if col in ("Descrição","Categoria","Localização") else 'center')
+    scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tecido_tree.yview)
+    scrollbar.pack(side="right", fill="y")
+    tecido_tree.configure(yscrollcommand=scrollbar.set)
+    tecido_tree.pack(fill="both", expand=True)
+
+    btn_buscar = ctk.CTkButton(search_frame, text=self._txt("add_item_search_button"),
+                               command=lambda: self._buscar_tecidos_para_adicao(search_entry, tecido_tree))
+    btn_buscar.pack(side="left", padx=5)
+
+    btn_row = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
+    btn_row.pack(fill="x", pady=(8, 0))
+    ctk.CTkButton(btn_row, text=self._txt("add_item_confirm"),
+                  command=lambda: self._confirmar_adicao_tecido(dialog, tecido_tree)).pack(side="right", padx=5)
+    ctk.CTkButton(btn_row, text=self._txt("add_item_cancel"),
+                  command=dialog.destroy, fg_color=self.cor_secundaria, text_color=self.cor_texto).pack(side="right", padx=5)
+
+def _opera_open_suggestions_window(self):
+    win = ctk.CTkToplevel(self)
+    win.title(self._txt("suggestions_title"))
+    win.geometry("860x560")
+    win.grab_set()
+
+    self.obter_cores_por_tema()
+
+    top = ctk.CTkFrame(win, fg_color=self.cor_fundo)
+    top.pack(fill="x", padx=10, pady=(10, 6))
+    ctk.CTkLabel(top, text=self._txt("suggestions_info"), text_color=self.cor_texto).pack(anchor="w")
+
+    filt_row = ctk.CTkFrame(win, fg_color=self.cor_fundo)
+    filt_row.pack(fill="x", padx=10, pady=(0, 6))
+    ctk.CTkLabel(filt_row, text=self._txt("suggestions_filter_label"), text_color=self.cor_texto, width=60).pack(side="left")
+
+    self._sug_filter_var = tk.StringVar()
+    self._sug_filter = ctk.CTkEntry(
+        filt_row, textvariable=self._sug_filter_var,
+        placeholder_text=self._txt("suggestions_filter_placeholder"),
+        fg_color=self.cor_secundaria, border_color=self.cor_borda,
+        text_color=self.cor_texto_entry, placeholder_text_color=self.cor_placeholder
+    )
+    self._sug_filter.pack(side="left", fill="x", expand=True)
+    self._sug_filter_var.trace_add("write", lambda *a: self._reload_questions())
+
+    body = ctk.CTkFrame(win, fg_color=self.cor_fundo)
+    body.pack(fill="both", expand=True, padx=10, pady=10)
+    body.grid_columnconfigure(0, weight=1)
+    body.grid_columnconfigure(1, weight=3)
+    body.grid_rowconfigure(0, weight=1)
+    body.grid_rowconfigure(1, weight=0)
+
+    left = ctk.CTkFrame(body, fg_color=self.cor_fundo)
+    left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+    ctk.CTkLabel(left, text=self._txt("suggestions_categories"), text_color=self.cor_texto).pack(anchor="w")
+    self._sug_cat_list = tk.Listbox(left, activestyle="dotbox", bg=self.cor_secundaria, fg=self.cor_texto,
+                                    selectbackground=self.cor_selecao)
+    self._sug_cat_list.pack(fill="both", expand=True)
+    self._sug_cat_list.bind("<<ListboxSelect>>", lambda e: self._on_select_category())
+
+    right = ctk.CTkFrame(body, fg_color=self.cor_fundo)
+    right.grid(row=0, column=1, sticky="nsew")
+    ctk.CTkLabel(right, text=self._txt("suggestions_questions"), text_color=self.cor_texto).pack(anchor="w")
+    self._sug_q_list = tk.Listbox(right, activestyle="dotbox", bg=self.cor_secundaria, fg=self.cor_texto,
+                                  selectbackground=self.cor_selecao)
+    self._sug_q_list.pack(fill="both", expand=True)
+    self._sug_q_list.bind("<Double-Button-1>", lambda e: self._insert_selected_question())
+
+    nav = ctk.CTkFrame(body, fg_color=self.cor_fundo)
+    nav.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8,0))
+    self._sug_prev_btn = ctk.CTkButton(nav, text=self._txt("suggestions_prev"), width=110, command=self._sug_prev_page)
+    self._sug_prev_btn.pack(side="left", padx=4)
+    self._sug_next_btn = ctk.CTkButton(nav, text=self._txt("suggestions_next"), width=110, command=self._sug_next_page)
+    self._sug_next_btn.pack(side="right", padx=4)
+    self._sug_page_label = ctk.CTkLabel(nav, text="")
+    self._sug_page_label.pack(side="left", expand=True)
+
+    try:
+        self._load_suggestion_bases()
+        self._reload_categories()
+        self._reload_questions()
+    except Exception:
+        pass
+
+# aplicar monkey patches
+AdvancedStockReport._page_lang = _opera_page_lang
+AdvancedStockReport._txt = _opera_txt
+AdvancedStockReport._msgbox = _opera_msgbox
+AdvancedStockReport._category_values = _opera_category_values
+AdvancedStockReport._refresh_texts_runtime = _opera_refresh_texts_runtime
+AdvancedStockReport._create_main_layout = _opera_create_main_layout
+AdvancedStockReport._setup_report_tab = _opera_setup_report_tab
+AdvancedStockReport._setup_ai_tab = _opera_setup_ai_tab
+AdvancedStockReport._show_typing = _opera_show_typing
+AdvancedStockReport._regenerate_last = _opera_regenerate_last
+AdvancedStockReport.adicionar_tecido = _opera_adicionar_tecido
+AdvancedStockReport._open_suggestions_window = _opera_open_suggestions_window
+
 if __name__ == "__main__":
     ctk.set_appearance_mode("Dark")
     root = ctk.CTk()
-    root.title("Controle de Estoque")
+    root.title("Relatórios - Sistema Opera")
     root.geometry("1100x760")
 
     app = AdvancedStockReport(root)
     app.pack(fill="both", expand=True)
 
     root.mainloop()
-
-#03/02/2025
-
-# --- Suporte trilíngue individual desta página ---
-AdvancedStockReport_TRANSLATIONS = {
-    "pt_BR": {
-        "title": "Relatórios de Estoque",
-        "Atualizar": "Atualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpar",
-        "Exportar": "Exportar",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-    },
-    "en_US": {
-        "title": "Stock Reports",
-        "Atualizar": "Refresh",
-        "Filtrar": "Filter",
-        "Limpar": "Clear",
-        "Exportar": "Export",
-        "Imprimir": "Print",
-        "Buscar": "Search",
-    },
-    "es_ES": {
-        "title": "Reportes de Inventario",
-        "Atualizar": "Actualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpiar",
-        "Exportar": "Exportar",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-    },
-}
-
-
-def _apply_advancedstockreport_translations(self):
-    """Aplica tradução individual desta página."""
-    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
-    if idioma not in AdvancedStockReport_TRANSLATIONS:
-        idioma = "pt_BR"
-    if hasattr(self, "titulo"):
-        try:
-            self.titulo.configure(text=AdvancedStockReport_TRANSLATIONS[idioma]["title"])
-        except Exception:
-            pass
-
-
-try:
-    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    AdvancedStockReport.TRANSLATIONS = AdvancedStockReport_TRANSLATIONS
-    if not hasattr(AdvancedStockReport, "apply_page_translations"):
-        AdvancedStockReport.apply_page_translations = _apply_advancedstockreport_translations
-    attach_i18n_support(AdvancedStockReport, AdvancedStockReport_TRANSLATIONS)
-except Exception:
-    pass

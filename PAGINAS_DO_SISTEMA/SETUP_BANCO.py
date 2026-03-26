@@ -292,6 +292,33 @@ def detect_ports(host: str) -> List[int]:
     return [p for p in ports if _probe_port(host, p, timeout=0.25)]
 
 
+def detect_local_postgres() -> List[str]:
+    """
+    Procura PostgreSQL local em localhost/127.0.0.1 nas portas comuns.
+    Retorna itens no mesmo formato do combo: "LOCALHOST:5432".
+    """
+    found: List[str] = []
+    checked = set()
+
+    for host_label, host in (("LOCALHOST", "localhost"), ("127.0.0.1", "127.0.0.1")):
+        for port in detect_ports(host):
+            key = (host_label, port)
+            if key in checked:
+                continue
+            checked.add(key)
+            found.append(f"{host_label}:{port}")
+
+    # Evita duplicidade visual se localhost e 127.0.0.1 responderem na mesma porta
+    compact: List[str] = []
+    seen_ports = set()
+    for item in found:
+        _h, _p = item.split(":", 1)
+        if _p not in seen_ports:
+            seen_ports.add(_p)
+            compact.append(f"LOCALHOST:{_p}")
+    return compact
+
+
 def _humanize_pg_error(raw: str, cfg: DBConfig) -> str:
     s = (raw or "").strip()
     low = s.lower()
@@ -523,6 +550,9 @@ class SetupBancoWindow:
         )
         self.opt_found.pack(fill="x", padx=16, pady=(0, 10))
 
+        self.btn_detect_local = ctk.CTkButton(left, text="Detectar PostgreSQL local", command=self._on_detect_local)
+        self.btn_detect_local.pack(fill="x", padx=16, pady=(0, 8))
+
         self.btn_scan = ctk.CTkButton(left, text="Detectar servidores na rede", command=self._on_scan_network)
         self.btn_scan.pack(fill="x", padx=16, pady=(0, 8))
 
@@ -559,6 +589,7 @@ class SetupBancoWindow:
         rb.grid(row=0, column=1, sticky="e")
         ctk.CTkRadioButton(rb, text="Local", value="local", variable=self.var_mode).pack(side="left", padx=(0, 10))
         ctk.CTkRadioButton(rb, text="Rede", value="rede", variable=self.var_mode).pack(side="left")
+        self.var_mode.trace_add("write", lambda *args: self._on_mode_changed())
 
         def field(label: str, row: int, col: int, default: str = "", width: int = 320, show: str | None = None):
             ctk.CTkLabel(right, text=label, text_color=C_TEXT_SUB, font=ctk.CTkFont(size=11)).grid(
@@ -631,6 +662,8 @@ class SetupBancoWindow:
                 "info"
             )
 
+        self._on_mode_changed(initial=True)
+
     # ---------- window helpers ----------
     def _center_window(self, w: int, h: int):
         try:
@@ -659,6 +692,46 @@ class SetupBancoWindow:
     def _toggle_pass(self):
         self.ent_pass.configure(show="" if self.var_show.get() else "•")
 
+    def _normalize_selected_host(self, host_value: str) -> str:
+        host = (host_value or "").strip()
+        if host.upper() == "LOCALHOST":
+            return "localhost"
+        return host
+
+    def _on_mode_changed(self, initial: bool = False):
+        mode = (self.var_mode.get() or "local").strip().lower()
+
+        if mode == "local":
+            current_host = self.ent_host.get().strip().lower()
+            if initial or not current_host or current_host == get_local_ip().lower():
+                self.ent_host.delete(0, "end")
+                self.ent_host.insert(0, "localhost")
+
+            self.btn_detect_local.configure(state="normal")
+            self.btn_scan.configure(state="normal")
+            self._set_center(
+                "Modo LOCAL selecionado.\n"
+                "Use localhost nesta máquina ou clique em “Detectar PostgreSQL local”.",
+                "info"
+            )
+            self.lbl_status.configure(text="Modo local ativo", text_color=self._ui_colors["sub"])
+        else:
+            current_host = self.ent_host.get().strip().lower()
+            if current_host in ("", "localhost", "127.0.0.1"):
+                detected_ip = get_local_ip().strip()
+                if detected_ip:
+                    self.ent_host.delete(0, "end")
+                    self.ent_host.insert(0, detected_ip)
+
+            self.btn_detect_local.configure(state="normal")
+            self.btn_scan.configure(state="normal")
+            self._set_center(
+                "Modo REDE selecionado.\n"
+                "Detecte servidores na rede ou informe o IP do servidor PostgreSQL.",
+                "info"
+            )
+            self.lbl_status.configure(text="Modo rede ativo", text_color=self._ui_colors["sub"])
+
     def _on_close(self):
         self.exit_code = 0 if self._saved_ok else 1
         try:
@@ -681,11 +754,17 @@ class SetupBancoWindow:
             port = port.strip()
 
             if ip:
+                normalized_host = self._normalize_selected_host(ip)
                 self.ent_host.delete(0, "end")
-                self.ent_host.insert(0, ip)
+                self.ent_host.insert(0, normalized_host)
             if port:
                 self.ent_port.delete(0, "end")
                 self.ent_port.insert(0, port)
+
+            if ip.upper() == "LOCALHOST" or ip == "127.0.0.1":
+                self.var_mode.set("local")
+            else:
+                self.var_mode.set("rede")
 
             self._set_center(
                 f"✅ Servidor selecionado: {ip}:{port}\nAgora clique em “Testar conexão”.",
@@ -695,6 +774,36 @@ class SetupBancoWindow:
             pass
 
     # ---------- scan control ----------
+    def _on_detect_local(self):
+        self.lbl_status.configure(text="Detectando PostgreSQL local...", text_color=self._ui_colors["sub"])
+        self._set_center("Procurando PostgreSQL local em localhost / 127.0.0.1...", "info")
+        self.root.update_idletasks()
+
+        found = detect_local_postgres()
+        if found:
+            values = list(found)
+            current_values = list(self.opt_found.cget("values"))
+            for item in current_values:
+                if item not in ("(nenhum ainda)", "(nenhum encontrado)") and item not in values:
+                    values.append(item)
+
+            self.opt_found.configure(values=values)
+            self.var_found.set(found[0])
+            self._on_select_found_server(found[0])
+            self.lbl_status.configure(text=f"PostgreSQL local encontrado: {found[0]}", text_color=self._ui_colors["ok"])
+            self._set_center(
+                f"✅ PostgreSQL local encontrado: {found[0]}\nAgora clique em “Testar conexão”.",
+                "ok"
+            )
+        else:
+            self.lbl_status.configure(text="Nenhum PostgreSQL local detectado", text_color=self._ui_colors["warn"])
+            self._set_center(
+                "⚠️ Não encontrei PostgreSQL local nas portas 5432–5435.\n"
+                "• Verifique se o serviço está ligado nesta máquina\n"
+                "• Ou informe Host/IP e Porta manualmente",
+                "warn"
+            )
+
     def _on_cancel_scan(self):
         if self._scan_running:
             self._scan_stop.set()
@@ -837,7 +946,7 @@ class SetupBancoWindow:
 
     # ---------- validate / actions ----------
     def _validate_fields_before_test(self) -> Tuple[bool, str]:
-        host = self.ent_host.get().strip()
+        host = self._normalize_selected_host(self.ent_host.get().strip())
         port = self.ent_port.get().strip()
         user = self.ent_user.get().strip()
         schema = self.ent_schema.get().strip()
@@ -865,9 +974,9 @@ class SetupBancoWindow:
         return True, ""
 
     def _on_detect_port(self):
-        host = self.ent_host.get().strip()
+        host = self._normalize_selected_host(self.ent_host.get().strip())
         if not host:
-            self._set_center("⚠️ Informe o Host/IP primeiro (ex: 192.168.0.110).", "warn")
+            self._set_center("⚠️ Informe o Host/IP primeiro (ex: localhost ou 192.168.0.110).", "warn")
             return
 
         self.lbl_status.configure(text="Detectando portas comuns...", text_color=self._ui_colors["sub"])
@@ -891,7 +1000,7 @@ class SetupBancoWindow:
             )
 
     def _current_cfg(self) -> DBConfig:
-        host = self.ent_host.get().strip()
+        host = self._normalize_selected_host(self.ent_host.get().strip())
         port_txt = self.ent_port.get().strip()
         user = self.ent_user.get().strip()
         password = self.ent_pass.get()

@@ -708,7 +708,7 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         self.obter_cores_por_tema()
 
         top_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        top_frame.pack(fill="x", padx=10, pady=10)
+        top_frame.pack(fill="x", padx=10, pady=(10, 6))
 
         self._ui_refs["title_label"] = ctk.CTkLabel(
             top_frame,
@@ -716,7 +716,7 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             font=("Arial", 18, "bold"),
             text_color=self.cor_texto,
         )
-        self._ui_refs["title_label"].pack(side="left", padx=10)
+        self._ui_refs["title_label"].pack(side="left", padx=(10, 12))
 
         self.tipo_var = ctk.StringVar(value=self._get_tipo_texto("Tecidos"))
         self._ui_refs["type_menu"] = ctk.CTkOptionMenu(
@@ -724,46 +724,86 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             variable=self.tipo_var,
             values=[self._get_tipo_texto(t) for t in self.tipos],
             command=self.atualizar_interface,
-            width=200,
+            width=220,
             fg_color=self.cor_secundaria,
             button_color=self.cor_primaria,
             button_hover_color=self.cor_hover,
             text_color=self.cor_texto,
         )
-        self._ui_refs["type_menu"].pack(side="right", padx=10, fill="x", expand=True)
+        self._ui_refs["type_menu"].pack(side="left", padx=(0, 10))
 
         self.campos_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        self.campos_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.campos_frame.pack(fill="x", padx=10, pady=(4, 8))
 
         button_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        button_frame.pack(fill="x", padx=10, pady=5)
+        button_frame.pack(fill="x", padx=10, pady=(0, 6))
 
         self._ui_refs["register_button"] = ctk.CTkButton(
             button_frame,
             text=self._get_text("register_entry"),
             command=self.salvar_entrada,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color="white",
+            height=34,
+            width=150,
         )
-        self._ui_refs["register_button"].pack(side="left", padx=5)
+        self._ui_refs["register_button"].pack(side="left", padx=(0, 6))
 
         self._ui_refs["clear_button"] = ctk.CTkButton(
             button_frame,
             text=self._get_text("clear_fields"),
             command=self.limpar_campos,
+            fg_color=self.cor_secundaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            height=34,
+            width=140,
         )
-        self._ui_refs["clear_button"].pack(side="left", padx=5)
+        self._ui_refs["clear_button"].pack(side="left", padx=(0, 6))
 
-        self.status_label = ctk.CTkLabel(self, text="")
-        self.status_label.pack(pady=5)
+        self.status_label = ctk.CTkLabel(
+            self,
+            text="",
+            text_color=self.cor_texto,
+            anchor="w",
+            justify="left",
+            font=("Arial", 12),
+        )
+        self.status_label.pack(fill="x", padx=12, pady=(0, 6))
 
-        self.tree_frame = ctk.CTkFrame(self)
-        self.tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.tree_container = ctk.CTkFrame(
+            self,
+            fg_color=self.cor_fundo,
+            corner_radius=8,
+            border_width=1,
+            border_color=self.cor_borda,
+        )
+        self.tree_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        self.tree_frame = ctk.CTkFrame(self.tree_container, fg_color=self.cor_fundo)
+        self.tree_frame.pack(fill="both", expand=True, padx=6, pady=6)
 
         self.configurar_treeview_theme()
 
-        self.tree = ttk.Treeview(self.tree_frame, show="headings")
+        self.tree_scroll_y = ctk.CTkScrollbar(self.tree_frame, orientation="vertical")
+        self.tree_scroll_y.pack(side="right", fill="y")
+
+        self.tree_scroll_x = ctk.CTkScrollbar(self.tree_frame, orientation="horizontal")
+        self.tree_scroll_x.pack(side="bottom", fill="x")
+
+        self.tree = ttk.Treeview(
+            self.tree_frame,
+            show="headings",
+            style="Custom.Treeview",
+            yscrollcommand=self.tree_scroll_y.set,
+            xscrollcommand=self.tree_scroll_x.set,
+        )
         self.tree.pack(fill="both", expand=True)
 
-        # CHAMADA SEGURA
+        self.tree_scroll_y.configure(command=self.tree.yview)
+        self.tree_scroll_x.configure(command=self.tree.xview)
+
         if hasattr(self, "_aplicar_estilo_tags_treeview"):
             self._aplicar_estilo_tags_treeview()
 
@@ -792,21 +832,28 @@ class EntradaEstoqueApp(ctk.CTkFrame):
             fieldbackground=cor_campo,
             borderwidth=0,
             highlightthickness=0,
-            rowheight=25,
+            rowheight=23,
+            font=("Arial", 9),
         )
+
         self.style.configure(
             "Custom.Treeview.Heading",
             background=self.cor_primaria,
             foreground=cor_texto,
             relief="flat",
             borderwidth=1,
-            font=("Arial", 10, "bold"),
+            font=("Arial", 8, "bold"),
+            padding=(2, 2),
         )
+
         self.style.map(
             "Custom.Treeview",
             background=[("selected", cor_selecao)],
             foreground=[("selected", "white")],
         )
+
+        if hasattr(self, "tree") and self.tree is not None:
+            self.tree.configure(style="Custom.Treeview")
 
     # =========================================================
     # FLUXO DA PÁGINA
@@ -970,24 +1017,87 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         ).pack(side="left", padx=10)
 
     def configurar_tabela(self, tipo: str):
-
-        colunas_desejadas = ["id"] + self.campos_por_tipo.get(tipo, []) + ["referencia_estoque", "percentual_estoque", "status_estoque"]
+        colunas_desejadas = ["id"] + self.campos_por_tipo.get(tipo, []) + [
+            "referencia_estoque",
+            "percentual_estoque",
+            "status_estoque"
+        ]
         self._column_keys = list(colunas_desejadas)
         self.tree["columns"] = tuple(colunas_desejadas)
 
         for col in self.tree["columns"]:
             self.tree.heading(col, text="")
-            self.tree.column(col, width=0)
+            self.tree.column(col, width=0, stretch=False)
+
+        larguras = {
+            "id": 45,
+            "codigo": 85,
+            "cor": 75,
+            "metros": 70,
+            "kilos": 70,
+            "quantidade": 80,
+            "unidade": 70,
+            "data_entrada": 95,
+            "fornecedor": 120,
+            "composicao": 120,
+            "estoque_ideal": 88,
+            "estoque_minimo": 88,
+            "estoque_critico": 88,
+            "referencia_estoque": 82,
+            "percentual_estoque": 78,
+            "status_estoque": 95,
+            "descricao": 190,
+            "observacoes": 180,
+            "localizacao": 100,
+            "tipo": 90,
+        }
+
+        alinhamento = {
+            "id": "center",
+            "codigo": "center",
+            "cor": "center",
+            "metros": "e",
+            "kilos": "e",
+            "quantidade": "e",
+            "unidade": "center",
+            "data_entrada": "center",
+            "estoque_ideal": "e",
+            "estoque_minimo": "e",
+            "estoque_critico": "e",
+            "referencia_estoque": "e",
+            "percentual_estoque": "e",
+            "status_estoque": "center",
+        }
 
         for col in colunas_desejadas:
-            if col == "id":
-                largura = 50
-            elif col in ("percentual_estoque", "status_estoque", "referencia_estoque"):
-                largura = 130
-            else:
-                largura = 120
-            self.tree.heading(col, text=self._texto_coluna(col))
-            self.tree.column(col, width=largura, stretch=True, anchor="w")
+            titulo = self._texto_coluna(col)
+
+            # títulos mais curtos para caber melhor
+            if col == "data_entrada":
+                titulo = "Data"
+            elif col == "observacoes":
+                titulo = "Obs."
+            elif col == "referencia_estoque":
+                titulo = "Refer."
+            elif col == "percentual_estoque":
+                titulo = "% Est."
+            elif col == "status_estoque":
+                titulo = "Status"
+            elif col == "estoque_ideal":
+                titulo = "Est. Ideal"
+            elif col == "estoque_minimo":
+                titulo = "Est. Mín."
+            elif col == "estoque_critico":
+                titulo = "Est. Crít."
+
+            self.tree.heading(col, text=titulo)
+            self.tree.column(
+                col,
+                width=larguras.get(col, 100),
+                minwidth=larguras.get(col, 100),
+                stretch=col in ("descricao", "observacoes", "fornecedor", "composicao"),
+                anchor=alinhamento.get(col, "w"),
+            )
 
     def adicionar_pesquisa_codigo(self):
         frame = ctk.CTkFrame(self.campos_frame, fg_color=self.cor_fundo)

@@ -23,11 +23,12 @@ else:
     winreg = None
 
 
-APP_TITLE = "OPERA • Configurador PostgreSQL (Servidor)"
+APP_TITLE = "OPERA • Configurador PostgreSQL"
 DEFAULT_PORT = "5432"
 TAG_HBA = "# --- OPERA: acesso rede (adicionado automaticamente) ---"
-
 DB_NAME_DEFAULT = "BANCO_OPERA"
+MODO_LOCAL = "local"
+MODO_REDE = "rede"
 
 
 # ------------------ ADMIN ------------------
@@ -46,17 +47,18 @@ def is_admin() -> bool:
 def relaunch_as_admin_silent():
     """
     Reabre o app elevado.
-    - Windows: UAC
-    - macOS/Linux: não força relaunch automático para evitar problemas com app GUI
+    Usado apenas em ações administrativas específicas para evitar abrir a janela inteira
+    como administrador e atrapalhar captura de tela.
     """
     if not IS_WINDOWS:
-        return
+        return False
 
     try:
         params = " ".join([f'"{a}"' for a in sys.argv])
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
+        rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
+        return rc > 32
     except Exception:
-        pass
+        return False
 
 
 # ------------------ subprocess / utils ------------------
@@ -83,11 +85,6 @@ def run_cmd(cmd_list, timeout: int = 60, env=None) -> tuple[int, str, str]:
     return p.returncode, (p.stdout or ""), (p.stderr or "")
 
 
-def run_shell(command: str, timeout: int = 60, env=None) -> tuple[int, str, str]:
-    p = subprocess.run(command, capture_output=True, text=True, timeout=timeout, env=env, shell=True)
-    return p.returncode, (p.stdout or ""), (p.stderr or "")
-
-
 def now_stamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -105,14 +102,6 @@ def which_or_empty(cmd_name: str) -> str:
 # ------------------ scripts -> Desktop (blindado) ------------------
 
 def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
-    """
-    Copia a pasta scripts para ~/Desktop/scripts.
-    Funciona em:
-      - DEV (rodando .py)
-      - PyInstaller --onedir (scripts ao lado do exe)
-      - PyInstaller --onefile (scripts extraídos em sys._MEIPASS)
-    Retorna o caminho final ~/Desktop/scripts.
-    """
     desktop = os.path.join(os.path.expanduser("~"), "Desktop")
     dst = os.path.join(desktop, "scripts")
 
@@ -158,7 +147,7 @@ def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
     return dst
 
 
-# ------------------ SQL parsing (auto DB name) ------------------
+# ------------------ SQL parsing ------------------
 
 def extrair_nome_banco_do_sql(sql_path: str) -> str:
     if not sql_path or not os.path.exists(sql_path):
@@ -173,7 +162,7 @@ def extrair_nome_banco_do_sql(sql_path: str) -> str:
     m = re.search(
         r"\bCREATE\s+DATABASE\s+((?:\"[^\"]+\")|(?:[A-Za-z_][A-Za-z0-9_]*))",
         content,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
     if not m:
         return ""
@@ -242,7 +231,7 @@ def _windows_detect_postgres_service_and_datadir() -> tuple[str, str]:
         out = run_powershell(
             r"Get-Service | Where-Object { $_.Name -match 'postgres' -and $_.Name -match '18' } | "
             r"Select-Object -First 1 -ExpandProperty Name",
-            timeout=15
+            timeout=15,
         ).strip()
         if out:
             img = _get_service_imagepath(out)
@@ -273,7 +262,6 @@ def _mac_detect_postgres_service_and_datadir() -> tuple[str, str]:
     for brew_name in ("postgresql@18", "postgresql"):
         rc, out, _ = run_cmd(["brew", "services", "list"], timeout=20)
         if rc == 0 and brew_name in out:
-            # tenta achar o data dir padrão do brew
             if brew_name == "postgresql@18":
                 for p in ("/opt/homebrew/var/postgresql@18", "/usr/local/var/postgresql@18"):
                     conf = os.path.join(p, "postgresql.conf")
@@ -310,8 +298,7 @@ def detectar_postgres_service_and_datadir() -> tuple[str, str]:
 def infer_install_root_from_datadir(datadir: str) -> str:
     if not datadir:
         return ""
-    p = os.path.normpath(datadir)
-    return os.path.dirname(p)
+    return os.path.dirname(os.path.normpath(datadir))
 
 
 def find_psql_exe(datadir: str) -> str:
@@ -385,7 +372,6 @@ def detectar_rede_cidr(ip_alvo: str) -> str:
         except Exception:
             pass
 
-    # fallback simples e seguro para macOS/Linux
     try:
         net = ipaddress.IPv4Network(f"{ip_alvo}/24", strict=False)
         return f"{net.network_address}/24"
@@ -457,7 +443,7 @@ def ensure_firewall_rule(port: str, logger) -> None:
         out = run_powershell(
             f"Get-NetFirewallRule -DisplayName '{rule_name}' -ErrorAction SilentlyContinue | "
             "Select-Object -First 1 -ExpandProperty DisplayName",
-            timeout=15
+            timeout=15,
         )
         if out.strip():
             logger(f"Firewall: regra já existe ({rule_name})")
@@ -471,7 +457,7 @@ def ensure_firewall_rule(port: str, logger) -> None:
         "-Direction Inbound -Action Allow -Protocol TCP "
         f"-LocalPort {port} "
         "-Profile Private | Out-Null",
-        timeout=20
+        timeout=20,
     )
     logger(f"Firewall: regra criada (TCP {port}, Private)")
 
@@ -485,7 +471,6 @@ def restart_service(service_name: str, datadir: str, logger) -> None:
         return
 
     if IS_MAC:
-        # tenta Homebrew primeiro
         for svc in ("postgresql@18", "postgresql"):
             rc, out, err = run_cmd(["brew", "services", "restart", svc], timeout=60)
             if rc == 0:
@@ -494,7 +479,6 @@ def restart_service(service_name: str, datadir: str, logger) -> None:
                     logger(out.strip())
                 return
 
-        # fallback com pg_ctl
         pg_ctl = ""
         for c in [
             "/Library/PostgreSQL/18/bin/pg_ctl",
@@ -517,11 +501,7 @@ def restart_service(service_name: str, datadir: str, logger) -> None:
         logger("Não consegui reiniciar automaticamente no macOS. Reinicie o PostgreSQL manualmente.")
         return
 
-    # Linux fallback
-    for cmd in (
-        ["systemctl", "restart", "postgresql"],
-        ["service", "postgresql", "restart"],
-    ):
+    for cmd in (["systemctl", "restart", "postgresql"], ["service", "postgresql", "restart"]):
         rc, out, err = run_cmd(cmd, timeout=60)
         if rc == 0:
             logger(f"Serviço reiniciado: {' '.join(cmd)}")
@@ -530,7 +510,7 @@ def restart_service(service_name: str, datadir: str, logger) -> None:
     logger("Não consegui reiniciar automaticamente no Linux. Reinicie o PostgreSQL manualmente.")
 
 
-# ------------------ SQL execution via psql ------------------
+# ------------------ SQL execution ------------------
 
 def run_psql_file(psql_exe: str, host: str, port: str, user: str, password: str,
                   dbname: str, sql_file: str, logger) -> None:
@@ -551,7 +531,7 @@ def run_psql_file(psql_exe: str, host: str, port: str, user: str, password: str,
         "-p", str(port),
         "-U", user,
         "-d", dbname,
-        "-f", sql_file
+        "-f", sql_file,
     ]
 
     logger(f"Executando: {os.path.basename(sql_file)} (db={dbname}) ...")
@@ -577,8 +557,6 @@ def centralizar_janela(win: ctk.CTk, width: int, height: int):
     win.geometry(f"{width}x{height}+{x}+{y}")
 
 
-# ------------------ App ------------------
-
 class ConfigurarPostgresApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -587,15 +565,17 @@ class ConfigurarPostgresApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.title(APP_TITLE)
-
-        self.win_width = 1400
-        self.win_height = 1000
+        self.win_width = 1450
+        self.win_height = 1020
         centralizar_janela(self, self.win_width, self.win_height)
         self.resizable(True, True)
 
         self.log_q = queue.Queue()
 
-        self.ip_var = ctk.StringVar(value=detectar_ip())
+        self.modo_var = ctk.StringVar(value=MODO_LOCAL)
+        self.detected_ip = detectar_ip()
+        self.detected_cidr = ""
+        self.ip_var = ctk.StringVar(value=self.detected_ip)
         self.port_var = ctk.StringVar(value=DEFAULT_PORT)
         self.net_var = ctk.StringVar(value="(não detectado)")
         self.svc_var = ctk.StringVar(value="(não detectado)")
@@ -615,31 +595,8 @@ class ConfigurarPostgresApp(ctk.CTk):
         self._pump_logs()
 
         self.detect_all(silent=True)
-
-        try:
-            desktop_scripts = garantir_scripts_na_area_de_trabalho(logger=self.log)
-
-            mapping = {
-                "1_CRIAR_BANCO.sql": self.sql_banco_var,
-                "2_CRIAR_SCHEMA.sql": self.sql_schema_var,
-                "3_CRIAR_TABELAS.sql": self.sql_tabelas_var,
-                "APAGAR_TUDO.sql": self.sql_apagar_var,
-            }
-
-            found_any = False
-            for fname, var in mapping.items():
-                p = os.path.join(desktop_scripts, fname)
-                if os.path.exists(p):
-                    var.set(p)
-                    found_any = True
-
-            if found_any:
-                self._apply_auto_db_from_1()
-                self.log("Scripts detectados no Desktop e preenchidos automaticamente ✅")
-            else:
-                self.log("Não encontrei scripts padrão no Desktop/scripts (use 'Buscar pasta dos scripts').")
-        except Exception as e:
-            self.log(f"Falha ao preparar scripts no Desktop: {e}")
+        self._load_default_scripts()
+        self._update_mode_ui()
 
     # ---------- UI ----------
     def _build_ui(self):
@@ -656,22 +613,22 @@ class ConfigurarPostgresApp(ctk.CTk):
 
         ctk.CTkLabel(
             title_row,
-            text="Configuração do PostgreSQL (Servidor)",
-            font=ctk.CTkFont(size=22, weight="bold")
+            text="Configuração do PostgreSQL",
+            font=ctk.CTkFont(size=22, weight="bold"),
         ).grid(row=0, column=0, sticky="w")
 
         ctk.CTkLabel(
             title_row,
-            text="Rede + Banco/Tabelas",
-            font=ctk.CTkFont(size=13)
+            text="Modo Local ou Rede",
+            font=ctk.CTkFont(size=13),
         ).grid(row=0, column=1, sticky="e")
 
-        hint = ctk.CTkLabel(
+        self.hint_lbl = ctk.CTkLabel(
             header,
-            text="Fluxo: 1) Detectar  •  2) Configurar Rede  •  3) Scripts  •  4) Executar (1→2→3)",
-            font=ctk.CTkFont(size=12)
+            text="Fluxo Local: 1) Detectar  •  2) Scripts  •  3) Executar (1→2→3)",
+            font=ctk.CTkFont(size=12),
         )
-        hint.pack(anchor="w", padx=14, pady=(0, 12))
+        self.hint_lbl.pack(anchor="w", padx=14, pady=(0, 12))
 
         content = ctk.CTkFrame(wrapper, corner_radius=14)
         content.pack(fill="both", expand=True, padx=14, pady=(0, 12))
@@ -691,17 +648,49 @@ class ConfigurarPostgresApp(ctk.CTk):
         ctk.CTkLabel(log_frame, text="Log (tempo real)", font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", padx=14, pady=(12, 6)
         )
-
         self.logbox = ctk.CTkTextbox(log_frame, corner_radius=10, height=220)
         self.logbox.pack(fill="both", expand=False, padx=14, pady=(0, 10))
         self.logbox.configure(state="disabled")
-
         self.status_lbl = ctk.CTkLabel(log_frame, text="Status: pronto", font=ctk.CTkFont(size=12))
         self.status_lbl.pack(anchor="w", padx=14, pady=(0, 12))
 
-        # LEFT
-        ctk.CTkLabel(left, text="Detecção / Rede", font=ctk.CTkFont(size=16, weight="bold")).pack(
+        ctk.CTkLabel(left, text="Modo de uso", font=ctk.CTkFont(size=16, weight="bold")).pack(
             anchor="w", padx=14, pady=(14, 10)
+        )
+
+        mode_frame = ctk.CTkFrame(left, corner_radius=12)
+        mode_frame.pack(fill="x", padx=14, pady=(0, 14))
+        mode_frame.grid_columnconfigure(0, weight=1)
+        mode_frame.grid_columnconfigure(1, weight=1)
+
+        self.rb_local = ctk.CTkRadioButton(
+            mode_frame,
+            text="Banco Local (esta máquina)",
+            value=MODO_LOCAL,
+            variable=self.modo_var,
+            command=self.on_change_mode,
+        )
+        self.rb_local.grid(row=0, column=0, sticky="w", padx=12, pady=12)
+
+        self.rb_rede = ctk.CTkRadioButton(
+            mode_frame,
+            text="Servidor / Rede",
+            value=MODO_REDE,
+            variable=self.modo_var,
+            command=self.on_change_mode,
+        )
+        self.rb_rede.grid(row=0, column=1, sticky="w", padx=12, pady=12)
+
+        self.mode_info_lbl = ctk.CTkLabel(
+            mode_frame,
+            text="No modo local, o app cria o banco e as tabelas em localhost. No modo rede, também libera acesso externo.",
+            justify="left",
+            wraplength=560,
+        )
+        self.mode_info_lbl.grid(row=1, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 12))
+
+        ctk.CTkLabel(left, text="Detecção / Ambiente", font=ctk.CTkFont(size=16, weight="bold")).pack(
+            anchor="w", padx=14, pady=(0, 10)
         )
 
         det = ctk.CTkFrame(left, corner_radius=12)
@@ -709,12 +698,12 @@ class ConfigurarPostgresApp(ctk.CTk):
         det.grid_columnconfigure(0, weight=1)
         det.grid_columnconfigure(1, weight=1)
 
-        self._row_entry(det, 0, 0, "IP do servidor:", self.ip_var)
-        self._row_entry(det, 0, 1, "Porta:", self.port_var)
-        self._row_entry(det, 2, 0, "Rede (CIDR):", self.net_var)
-        self._row_entry(det, 2, 1, "Serviço:", self.svc_var)
-        self._row_entry(det, 4, 0, "DataDir (-D):", self.datadir_var)
-        self._row_entry(det, 4, 1, "psql:", self.psql_var)
+        self.ip_label, self.ip_entry = self._row_entry(det, 0, 0, "IP detectado:", self.ip_var)
+        self.port_label, self.port_entry = self._row_entry(det, 0, 1, "Porta:", self.port_var)
+        self.net_label, self.net_entry = self._row_entry(det, 2, 0, "Rede (CIDR):", self.net_var)
+        self.svc_label, self.svc_entry = self._row_entry(det, 2, 1, "Serviço:", self.svc_var)
+        self.datadir_label, self.datadir_entry = self._row_entry(det, 4, 0, "DataDir (-D):", self.datadir_var)
+        self.psql_label, self.psql_entry = self._row_entry(det, 4, 1, "psql:", self.psql_var)
 
         btns = ctk.CTkFrame(left, fg_color="transparent")
         btns.pack(fill="x", padx=14, pady=(0, 14))
@@ -724,7 +713,12 @@ class ConfigurarPostgresApp(ctk.CTk):
         self.btn_detect = ctk.CTkButton(btns, text="Detectar tudo", height=44, command=self.on_detect)
         self.btn_detect.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
-        self.btn_config = ctk.CTkButton(btns, text="Configurar Rede (REAL)", height=44, command=self.on_configure_real)
+        self.btn_config = ctk.CTkButton(
+            btns,
+            text="Configurar Rede (admin)",
+            height=44,
+            command=self.on_configure_real,
+        )
         self.btn_config.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
         quick = ctk.CTkFrame(left, fg_color="transparent")
@@ -733,9 +727,12 @@ class ConfigurarPostgresApp(ctk.CTk):
         quick.grid_columnconfigure(1, weight=1)
 
         self.btn_copy = ctk.CTkButton(
-            quick, text="Copiar host/porta/db", height=44,
-            fg_color="transparent", border_width=2,
-            command=self.on_copy
+            quick,
+            text="Copiar conexão",
+            height=44,
+            fg_color="transparent",
+            border_width=2,
+            command=self.on_copy,
         )
         self.btn_copy.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
@@ -744,11 +741,10 @@ class ConfigurarPostgresApp(ctk.CTk):
             text="APAGAR TUDO (PERIGOSO)",
             height=44,
             fg_color="#8B0000",
-            command=self.on_run_drop_all
+            command=self.on_run_drop_all,
         )
         self.btn_drop.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
-        # RIGHT
         ctk.CTkLabel(right, text="Scripts SQL (deixar pronto para o OPERA)", font=ctk.CTkFont(size=16, weight="bold")).pack(
             anchor="w", padx=14, pady=(14, 10)
         )
@@ -759,8 +755,9 @@ class ConfigurarPostgresApp(ctk.CTk):
         scripts.grid_columnconfigure(1, weight=0)
 
         ctk.CTkLabel(
-            scripts, text="DB alvo (auto pelo 1_CRIAR_BANCO.sql):",
-            font=ctk.CTkFont(size=12, weight="bold")
+            scripts,
+            text="DB alvo (auto pelo 1_CRIAR_BANCO.sql):",
+            font=ctk.CTkFont(size=12, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(12, 2))
 
         ctk.CTkEntry(scripts, textvariable=self.dbname_var, height=34).grid(
@@ -801,26 +798,33 @@ class ConfigurarPostgresApp(ctk.CTk):
 
         self.btn_run_all = ctk.CTkButton(
             actions,
-            text="EXECUTAR CRIAÇÃO (1→2→3)",
+            text="EXECUTAR CRIAÇÃO LOCAL (1→2→3)",
             height=44,
             fg_color="#1f8b4c",
             hover_color="#176b3a",
             text_color="white",
-            command=self.on_run_create_all
+            command=self.on_run_create_all,
         )
         self.btn_run_all.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
     def _row_entry(self, parent, row, col, label, var):
-        ctk.CTkLabel(parent, text=label, font=ctk.CTkFont(size=12, weight="bold")).grid(
-            row=row, column=col, sticky="w",
+        lbl = ctk.CTkLabel(parent, text=label, font=ctk.CTkFont(size=12, weight="bold"))
+        lbl.grid(
+            row=row,
+            column=col,
+            sticky="w",
             padx=(12, 6) if col == 0 else (6, 12),
-            pady=(8 if row == 0 else 4, 2)
+            pady=(8 if row == 0 else 4, 2),
         )
-        ctk.CTkEntry(parent, textvariable=var, height=34).grid(
-            row=row + 1, column=col, sticky="ew",
+        ent = ctk.CTkEntry(parent, textvariable=var, height=34)
+        ent.grid(
+            row=row + 1,
+            column=col,
+            sticky="ew",
             padx=(12, 6) if col == 0 else (6, 12),
-            pady=(0, 6)
+            pady=(0, 6),
         )
+        return lbl, ent
 
     def _file_picker_row(self, parent, row, label, var, cmd_pick):
         ctk.CTkLabel(parent, text=label, font=ctk.CTkFont(size=12, weight="bold")).grid(
@@ -833,7 +837,7 @@ class ConfigurarPostgresApp(ctk.CTk):
             row=row + 1, column=1, sticky="e", padx=12, pady=(0, 6)
         )
 
-    # ---------- Logging ----------
+    # ---------- logging ----------
     def log(self, msg: str):
         self.log_q.put(msg)
 
@@ -856,17 +860,55 @@ class ConfigurarPostgresApp(ctk.CTk):
         state = "disabled" if busy else "normal"
         for b in (self.btn_detect, self.btn_config, self.btn_folder, self.btn_run_all, self.btn_copy, self.btn_drop):
             b.configure(state=state)
+        self.rb_local.configure(state=state)
+        self.rb_rede.configure(state=state)
 
-    # ---------- Detect ----------
+    # ---------- mode ----------
+    def get_modo(self) -> str:
+        modo = (self.modo_var.get() or MODO_LOCAL).strip().lower()
+        return MODO_REDE if modo == MODO_REDE else MODO_LOCAL
+
+    def on_change_mode(self):
+        self._update_mode_ui()
+
+    def _update_mode_ui(self):
+        modo = self.get_modo()
+        if modo == MODO_LOCAL:
+            self.hint_lbl.configure(text="Fluxo Local: 1) Detectar  •  2) Scripts  •  3) Executar (1→2→3)")
+            self.mode_info_lbl.configure(text="Modo Local: usa localhost nesta própria máquina para criar o banco, schema e tabelas. Não exige liberar rede.")
+            self.btn_config.configure(state="disabled", text="Rede não necessária no modo local")
+            self.btn_run_all.configure(text="EXECUTAR CRIAÇÃO LOCAL (1→2→3)")
+            self.ip_label.configure(text="Host local:")
+            self.ip_var.set("localhost")
+            self.net_var.set("Não se aplica no modo local")
+            self.net_entry.configure(state="disabled")
+        else:
+            self.hint_lbl.configure(text="Fluxo Rede: 1) Detectar  •  2) Configurar Rede  •  3) Scripts  •  4) Executar (1→2→3)")
+            self.mode_info_lbl.configure(text="Modo Rede: além de criar o banco, também ajusta listen_addresses, pg_hba.conf e firewall para aceitar conexões de outras máquinas.")
+            self.btn_config.configure(state="normal", text="Configurar Rede (admin)")
+            self.btn_run_all.configure(text="EXECUTAR CRIAÇÃO NO SERVIDOR (1→2→3)")
+            self.ip_label.configure(text="IP detectado:")
+            self.ip_var.set(self.detected_ip or detectar_ip())
+            self.net_var.set(self.detected_cidr or "(não detectado)")
+            self.net_entry.configure(state="normal")
+
+    # ---------- detect ----------
     def detect_all(self, silent: bool = False):
-        ip = self.ip_var.get().strip() or detectar_ip()
-        self.ip_var.set(ip)
+        ip = detectar_ip()
+        self.detected_ip = ip
 
         try:
             cidr = detectar_rede_cidr(ip)
         except Exception:
             cidr = ""
-        self.net_var.set(cidr if cidr else "(não detectado)")
+        self.detected_cidr = cidr if cidr else "(não detectado)"
+
+        if self.get_modo() == MODO_LOCAL:
+            self.ip_var.set("localhost")
+            self.net_var.set("Não se aplica no modo local")
+        else:
+            self.ip_var.set(ip)
+            self.net_var.set(self.detected_cidr)
 
         svc, datadir = ("", "")
         try:
@@ -887,14 +929,21 @@ class ConfigurarPostgresApp(ctk.CTk):
                 f"Rede: {self.net_var.get()}\n"
                 f"Serviço: {self.svc_var.get()}\n"
                 f"DataDir: {self.datadir_var.get()}\n"
-                f"psql: {self.psql_var.get()}"
+                f"psql: {self.psql_var.get()}",
             )
 
     def on_detect(self):
         self.detect_all(silent=False)
 
-    # ---------- Configure REAL ----------
+    # ---------- network ----------
     def on_configure_real(self):
+        if self.get_modo() != MODO_REDE:
+            messagebox.showinfo(
+                "Modo Local",
+                "Você está no modo local.\n\nPara criar o banco nesta máquina, use apenas 'EXECUTAR CRIAÇÃO LOCAL (1→2→3)'.",
+            )
+            return
+
         self.detect_all(silent=True)
 
         svc = self.svc_var.get().strip()
@@ -926,7 +975,7 @@ class ConfigurarPostgresApp(ctk.CTk):
             f"Serviço: {svc}\n"
             f"Rede: {cidr}\n"
             f"Porta: {port}\n\n"
-            "Continuar?"
+            "Continuar?",
         ):
             return
 
@@ -961,14 +1010,15 @@ class ConfigurarPostgresApp(ctk.CTk):
                 messagebox.showerror("Erro", str(e))
             finally:
                 self.set_busy(False)
+                self._update_mode_ui()
 
         threading.Thread(target=worker, daemon=True).start()
 
-    # ---------- Script pickers ----------
+    # ---------- script helpers ----------
     def _pick_sql_file(self) -> str:
         path = filedialog.askopenfilename(
             title="Selecione um arquivo .sql",
-            filetypes=[("SQL", "*.sql"), ("Todos", "*.*")]
+            filetypes=[("SQL", "*.sql"), ("Todos", "*.*")],
         )
         return path or ""
 
@@ -983,6 +1033,31 @@ class ConfigurarPostgresApp(ctk.CTk):
             enc = extrair_encoding_do_sql(p_banco)
             if enc:
                 self.log(f"Encoding detectado no SQL: {enc}")
+
+    def _load_default_scripts(self):
+        try:
+            desktop_scripts = garantir_scripts_na_area_de_trabalho(logger=self.log)
+            mapping = {
+                "1_CRIAR_BANCO.sql": self.sql_banco_var,
+                "2_CRIAR_SCHEMA.sql": self.sql_schema_var,
+                "3_CRIAR_TABELAS.sql": self.sql_tabelas_var,
+                "APAGAR_TUDO.sql": self.sql_apagar_var,
+            }
+
+            found_any = False
+            for fname, var in mapping.items():
+                p = os.path.join(desktop_scripts, fname)
+                if os.path.exists(p):
+                    var.set(p)
+                    found_any = True
+
+            if found_any:
+                self._apply_auto_db_from_1()
+                self.log("Scripts detectados no Desktop e preenchidos automaticamente ✅")
+            else:
+                self.log("Não encontrei scripts padrão no Desktop/scripts (use 'Buscar pasta dos scripts').")
+        except Exception as e:
+            self.log(f"Falha ao preparar scripts no Desktop: {e}")
 
     def pick_sql_banco(self):
         p = self._pick_sql_file()
@@ -1030,16 +1105,27 @@ class ConfigurarPostgresApp(ctk.CTk):
         else:
             messagebox.showwarning("Scripts", "Não encontrei os nomes padrão nessa pasta.\nUse os botões 'Buscar'.")
 
-    # ---------- Execute scripts ----------
+    def _get_execution_host(self) -> str:
+        return "localhost"
+
+    def _get_connection_text(self) -> str:
+        port = self.port_var.get().strip() or DEFAULT_PORT
+        dbname = self.dbname_var.get().strip() or DB_NAME_DEFAULT
+        modo = self.get_modo()
+        host = "localhost" if modo == MODO_LOCAL else (self.ip_var.get().strip() or "localhost")
+        return f"host={host} port={port} dbname={dbname}"
+
+    # ---------- execute scripts ----------
     def on_run_create_all(self):
         self.detect_all(silent=True)
 
         psql = self.psql_var.get().strip()
-        host = "localhost"
+        host = self._get_execution_host()
         port = self.port_var.get().strip() or DEFAULT_PORT
         user = self.user_var.get().strip() or "postgres"
         pwd = self.pass_var.get()
         dbname = self.dbname_var.get().strip() or DB_NAME_DEFAULT
+        modo = self.get_modo()
 
         f1 = self.sql_banco_var.get().strip()
         f2 = self.sql_schema_var.get().strip()
@@ -1055,14 +1141,18 @@ class ConfigurarPostgresApp(ctk.CTk):
             messagebox.showerror("Scripts", "Selecione o 3_CRIAR_TABELAS.sql")
             return
 
+        texto_modo = "LOCAL (esta máquina)" if modo == MODO_LOCAL else "REDE / SERVIDOR"
+        host_final = "localhost" if modo == MODO_LOCAL else (self.ip_var.get().strip() or "localhost")
+
         if not messagebox.askyesno(
             "Confirmar",
             "Vou executar os scripts em sequência (1→2→3).\n\n"
+            f"Modo: {texto_modo}\n"
             f"DB: {dbname}\n"
             f"Usuário: {user}\n"
-            f"Host: {host}\n"
+            f"Host de execução: {host}\n"
             f"Porta: {port}\n\n"
-            "Continuar?"
+            "Continuar?",
         ):
             return
 
@@ -1072,8 +1162,9 @@ class ConfigurarPostgresApp(ctk.CTk):
             try:
                 self.log("")
                 self.log("=== EXECUÇÃO SCRIPTS (1→2→3) ===")
+                self.log(f"Modo: {texto_modo}")
                 self.log(f"psql: {psql}")
-                self.log(f"user: {user} host: {host} port: {port}")
+                self.log(f"user: {user} host_execucao: {host} port: {port}")
                 self.log(f"DB alvo: {dbname}")
                 self.log("")
 
@@ -1088,23 +1179,32 @@ class ConfigurarPostgresApp(ctk.CTk):
 
                 self.set_status("banco pronto ✅")
 
-                ip_servidor = self.ip_var.get().strip()
-                msg = (
-                    "BANCO PRONTO PARA O OPERA ✅\n\n"
-                    f"IP do servidor: {ip_servidor}\n"
-                    f"Porta: {port}\n"
-                    f"Banco: {dbname}\n"
-                    f"Usuário: {user}\n\n"
-                    f"host={ip_servidor} port={port} dbname={dbname}"
-                )
+                if modo == MODO_LOCAL:
+                    msg = (
+                        "BANCO LOCAL PRONTO PARA O OPERA ✅\n\n"
+                        f"Host: localhost\n"
+                        f"Porta: {port}\n"
+                        f"Banco: {dbname}\n"
+                        f"Usuário: {user}\n\n"
+                        f"host=localhost port={port} dbname={dbname}"
+                    )
+                else:
+                    msg = (
+                        "BANCO / SERVIDOR PRONTO PARA O OPERA ✅\n\n"
+                        f"IP do servidor: {host_final}\n"
+                        f"Porta: {port}\n"
+                        f"Banco: {dbname}\n"
+                        f"Usuário: {user}\n\n"
+                        f"host={host_final} port={port} dbname={dbname}"
+                    )
                 messagebox.showinfo("OPERA • Pronto", msg)
-
             except Exception as e:
                 self.set_status("erro ❌")
                 self.log(f"ERRO: {e}")
                 messagebox.showerror("Erro ao executar scripts", str(e))
             finally:
                 self.set_busy(False)
+                self._update_mode_ui()
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1143,25 +1243,17 @@ class ConfigurarPostgresApp(ctk.CTk):
                 messagebox.showerror("Erro", str(e))
             finally:
                 self.set_busy(False)
+                self._update_mode_ui()
 
         threading.Thread(target=worker, daemon=True).start()
 
     def on_copy(self):
-        ip = self.ip_var.get().strip()
-        port = self.port_var.get().strip() or DEFAULT_PORT
-        dbname = self.dbname_var.get().strip() or DB_NAME_DEFAULT
-        text = f"host={ip} port={port} dbname={dbname}"
+        text = self._get_connection_text()
         self.clipboard_clear()
         self.clipboard_append(text)
         messagebox.showinfo("Copiado", f"Copiado:\n\n{text}")
 
 
-# ------------------ ENTRYPOINT ------------------
-
 if __name__ == "__main__":
-    if IS_WINDOWS and not is_admin():
-        relaunch_as_admin_silent()
-        sys.exit(0)
-
     app = ConfigurarPostgresApp()
     app.mainloop()
