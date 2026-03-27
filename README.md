@@ -4,6 +4,37 @@ Aplicação desktop para gestão de produção (modelos, corte, estoque, pagamen
 
 ---
 
+## Últimas mudanças identificadas (Git)
+
+Levantamento feito a partir dos commits mais recentes da branch `work`:
+
+### 2026-03-26 — `894c74f` — Sincronização local/GitHub
+- Evolução importante no relatório de estoque com grande refatoração de `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`.
+- Inclusão do novo módulo `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE_IA.py` para recursos de análise assistida por IA no contexto de estoque.
+- Ajustes em `PAGINAS_DO_SISTEMA/ENTRADA_ESTOQUE.py` (fluxos de entrada e consistência de dados).
+- Revisões de setup/conexão em `PAGINAS_DO_SISTEMA/SETUP_BANCO.py` e `configurar_postgres.py`.
+- Sincronização de arquivos de configuração (`config.json` em diferentes pontos do projeto).
+
+### 2026-03-25 — `95a043f` — Sincronização local/GitHub
+- Iterações extensas de protótipos de relatório em:
+  - `PAGINAS_DO_SISTEMA/NOVO RELATORIO.py`
+  - `PAGINAS_DO_SISTEMA/NOVO RELATORIO QUASE BOM.py`
+- Atualização significativa de `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`.
+- Ajustes em `PAGINAS_DO_SISTEMA/ENTRADA_ESTOQUE.py`.
+- Inclusão de memória de contexto IA em `PAGINAS_DO_SISTEMA/ia_memory.json`.
+- Mudanças de estrutura SQL em `SCRIPTS/3_CRIAR_TABELAS.sql`.
+
+### 2026-03-24 — `be2840e` — Melhoria de experiência no assistente
+- Humanização das respostas do assistente na interface principal.
+- Redução de fallback “seco” de banco nas respostas.
+- Arquivos centrais alterados:
+  - `PAGINAS_DO_SISTEMA/MENU_PRINCIPAL.py`
+  - `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`
+
+> Nota: os commits de merge de PR entre 2026-03-24 e 2026-03-25 foram excluídos do resumo por serem integrações de branch.
+
+---
+
 ## Estrutura real do repositório (atualizada)
 
 ```text
@@ -129,4 +160,3 @@ python packaging/build.py --platform macos
 - Para mudanças de banco, mantenha sincronizados:
   1. `SCRIPTS/3_CRIAR_TABELAS.sql`
   2. scripts de instalação em `data/INSTAL_BANCO_APP/scripts/`
-
