@@ -104,6 +104,7 @@ SISTEMA-GUIMMA/
 ### Relatórios e utilitários de UI
 - `DASHBOARD.py`
 - `RELATORIO_ESTOQUE.py`
+- `RELATORIO_ESTOQUE_IA.py`  ← cérebro/engine de IA separado da tela
 - `RELATORIO_ACABAMENTO.py`
 - `RELATORIO_ENVIO_DETALHADO.py`
 - `RELATORIO_MODELOS_PRODUZIDOS.py`
@@ -115,6 +116,17 @@ SISTEMA-GUIMMA/
 - `TEMAS.py`
 - `I18N_PAGE_ADAPTER.py`
 - `route_map.json`
+
+---
+
+## Arquitetura atual do Relatório de Estoque com IA
+
+Sim — agora o “cérebro” de IA do relatório de estoque está desacoplado da página principal:
+
+- `RELATORIO_ESTOQUE.py`: responsável por UI, filtros, eventos da tela e integração com os componentes visuais.
+- `RELATORIO_ESTOQUE_IA.py`: responsável por lógica de IA, interpretação de perguntas/comandos e geração de respostas/contexto do relatório.
+
+Esse desacoplamento melhora manutenção, testes e evolução do assistente sem poluir o arquivo da tela.
 
 ---
 
