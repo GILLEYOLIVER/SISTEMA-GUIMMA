@@ -3719,7 +3719,16 @@ class AdvancedStockReport(ctk.CTkFrame):
         q = (text or "").strip().lower()
         if not q:
             return False
+        gatilhos_explicitos_banco = ("no banco", "direto no banco", "consulta sql", "query", "banco de dados")
+        if any(g in q for g in gatilhos_explicitos_banco):
+            return True
         if intent in {"saudacao", "ajuda", "contexto"} and conf >= 0.15:
+            return False
+        intents_locais_fortes = {
+            "listar_grupo", "contar_grupo", "resumo_grupo", "resumo_geral", "listar_todos_itens",
+            "itens_por_setor_detalhado", "itens_criticos", "contar_itens_distintos", "contar_codigos"
+        }
+        if intent in intents_locais_fortes and conf >= 0.70:
             return False
         termos_db = (
             "estoque", "item", "itens", "quantidade", "categoria", "local", "cor", "fornecedor",
@@ -3743,6 +3752,8 @@ class AdvancedStockReport(ctk.CTkFrame):
         banco_txt = self._strip_markdown_tokens(resposta_banco)
         banco_l = banco_txt.lower()
         estado = "ok"
+        if ("linhas: 0" in banco_l or "linhas:0" in banco_l) and local_txt and "não encontrei" not in local_txt.lower():
+            return local_txt
 
         if "nenhum resultado encontrado no banco" in banco_l or "não consegui consultar o banco" in banco_l:
             estado = "no_match"

@@ -966,9 +966,10 @@ class EstoqueIA:
         return txt[:19]
 
     def _unit_for_rows(self, rows: List[Dict[str, Any]]) -> str:
+        unidades_validas = {"un", "unid", "unidade", "unidades", "m", "metro", "metros", "kg", "kilo", "kilos", "l", "litro", "litros"}
         for r in rows:
             u = self._safe_text(r.get("unidade"))
-            if u:
+            if u and self._normalize(u) in unidades_validas:
                 return u
         return "un"
 
