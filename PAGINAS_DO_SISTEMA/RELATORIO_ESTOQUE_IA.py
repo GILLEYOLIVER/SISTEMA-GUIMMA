@@ -157,7 +157,7 @@ class EstoqueIA:
         "itens_recentes", "contar_codigos", "contar_itens_distintos",
         "distribuicao_cores", "distribuicao_fornecedores", "distribuicao_locais", "consultar_cobertura",
         "consultar_consumo", "sugestao_compra", "analise_risco", "projecao_consumo",
-        "analise_abc", "resumo_memoria", "resposta_contextual"
+        "analise_abc", "resumo_memoria", "workflow_estoque", "resposta_contextual"
     ]
 
     def __init__(self, resultados=None):
@@ -175,6 +175,7 @@ class EstoqueIA:
             "fallbacks": 0,
             "por_intent": Counter(),
         }
+        self._carregar_memoria_persistente()
 
     # =========================================================
     # COMPATIBILIDADE / INTERFACE PÚBLICA
@@ -542,6 +543,9 @@ class EstoqueIA:
         if self._has_any(normal, self.PALAVRAS_ACAO["memoria"]):
             return "resumo_memoria", 0.92
 
+        if any(k in normal for k in ("diagnostico completo", "diagnóstico completo", "auditoria de estoque", "plano de reposicao", "plano de reposição")):
+            return "workflow_estoque", 0.96
+
         if ("setor" in normal or "localizacao" in normal or "localização" in normal) and (
             "cada setor" in normal or "por setor" in normal or "quantos itens" in normal or "seus nomes" in normal
         ):
@@ -696,6 +700,66 @@ class EstoqueIA:
         self.memoria_consultas.append(snapshot)
         if len(self.memoria_consultas) > self.max_memoria_consultas:
             self.memoria_consultas = self.memoria_consultas[-self.max_memoria_consultas:]
+        self._persistir_memoria_persistente(snapshot)
+
+    def _garantir_tabela_memoria(self) -> None:
+        schema = db.get_schema()
+        db.execute(f"""
+            CREATE TABLE IF NOT EXISTS {schema}.ia_memoria_estoque (
+                id BIGSERIAL PRIMARY KEY,
+                criado_em TIMESTAMP DEFAULT NOW(),
+                intent TEXT,
+                grupo TEXT,
+                item_nome TEXT,
+                codigo TEXT,
+                cor TEXT,
+                fornecedor TEXT,
+                resposta_preview TEXT
+            )
+        """)
+
+    def _persistir_memoria_persistente(self, snapshot: Dict[str, Any]) -> None:
+        try:
+            self._garantir_tabela_memoria()
+            schema = db.get_schema()
+            db.execute(
+                f"""INSERT INTO {schema}.ia_memoria_estoque
+                (intent, grupo, item_nome, codigo, cor, fornecedor, resposta_preview)
+                VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                [
+                    snapshot.get("intent"), snapshot.get("grupo"), snapshot.get("item_nome"),
+                    snapshot.get("codigo"), snapshot.get("cor"), snapshot.get("fornecedor"),
+                    snapshot.get("resposta_preview"),
+                ],
+            )
+        except Exception:
+            pass
+
+    def _carregar_memoria_persistente(self) -> None:
+        try:
+            self._garantir_tabela_memoria()
+            schema = db.get_schema()
+            rows = db.fetch_all(
+                f"""SELECT criado_em, intent, grupo, item_nome, codigo, cor, fornecedor, resposta_preview
+                    FROM {schema}.ia_memoria_estoque
+                    ORDER BY id DESC
+                    LIMIT 30"""
+            ) or []
+            for r in reversed(rows):
+                self.memoria_consultas.append({
+                    "ts": self._safe_text(r.get("criado_em")),
+                    "intent": self._safe_text(r.get("intent")),
+                    "grupo": self._safe_text(r.get("grupo")),
+                    "item_nome": self._safe_text(r.get("item_nome")),
+                    "codigo": self._safe_text(r.get("codigo")),
+                    "cor": self._safe_text(r.get("cor")),
+                    "fornecedor": self._safe_text(r.get("fornecedor")),
+                    "resposta_preview": self._safe_text(r.get("resposta_preview")),
+                })
+            if len(self.memoria_consultas) > self.max_memoria_consultas:
+                self.memoria_consultas = self.memoria_consultas[-self.max_memoria_consultas:]
+        except Exception:
+            pass
 
     def _atualizar_objetivo_ativo(self, intent: Optional[str], entidades: Dict[str, Any]) -> None:
         if entidades.get("escopo_global"):
@@ -1058,6 +1122,7 @@ class EstoqueIA:
             "projecao_consumo": self._resp_projecao_consumo,
             "analise_abc": self._resp_analise_abc,
             "resumo_memoria": self._resp_resumo_memoria,
+            "workflow_estoque": self._resp_workflow_estoque,
             "resposta_contextual": self._resp_contextual,
         }
         handler = mapa.get(intent)
@@ -1700,6 +1765,24 @@ class EstoqueIA:
                 linhas.append(f"- cor: {self.contexto.cor}")
         linhas.append("Se quiser, posso continuar usando esse contexto sem você repetir tudo.")
         return "\n".join(linhas)
+
+    def _resp_workflow_estoque(self, entidades: Dict[str, Any]) -> str:
+        """
+        Workflow de alto nível para auditoria completa de estoque.
+        """
+        partes = [
+            self._resp_resumo_geral(entidades),
+            "",
+            self._resp_analise_risco(entidades),
+            "",
+            self._resp_sugestao_compra(entidades),
+            "",
+            self._resp_itens_por_setor_detalhado(entidades),
+        ]
+        self.contexto.objetivo_ativo = "workflow_diagnostico_completo"
+        self.contexto.objetivo_status = "concluido"
+        self.contexto.proxima_acao_sugerida = "inventario_completo"
+        return "\n".join(partes)
 
     def _resp_contextual(self, entidades: Dict[str, Any]) -> str:
         ultimo = self.contexto.ultimo_intent

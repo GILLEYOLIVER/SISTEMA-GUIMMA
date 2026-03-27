@@ -1348,7 +1348,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._ai_schema_cache_ts = 0.0
         self._ai_pending_action: Optional[str] = None
         self._ai_perfil_resposta = "operacional"
-        self._ai_metricas = {"mensagens": 0, "acoes_diretas": 0, "fallback_db": 0}
+        self._ai_metricas = {"mensagens": 0, "acoes_diretas": 0, "fallback_db": 0, "db_queries": 0, "zero_results": 0}
 
         self._setup_styles()
         self._create_main_layout()
@@ -2823,6 +2823,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             fontes.append({
                 "tabela": tabela,
                 "grupo": tabela.replace("estoque_", ""),
+                "cols": sorted(cols),
                 "qtd": qtd_field,
                 "cat": "categoria" if "categoria" in cols else None,
                 "status": "status" if "status" in cols else None,
@@ -2836,6 +2837,30 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._ai_schema_cache = fontes
         self._ai_schema_cache_ts = now
         return fontes
+
+    def _ai_schema_map_text(self) -> str:
+        schema = db.get_schema()
+        try:
+            with db.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"SET LOCAL search_path = {schema};")
+                    fontes = self._get_ai_sources(cur, schema)
+        except Exception as e:
+            return f"Não consegui ler o mapa do banco agora: {e}"
+
+        if not fontes:
+            return f"Não encontrei fontes de estoque no schema '{schema}'."
+
+        linhas = [f"Mapa do banco (schema: {schema})"]
+        for f in fontes:
+            linhas.append(f"- Tabela: {f['tabela']} | grupo: {f['grupo']} | qtd: {f['qtd']}")
+            linhas.append(
+                f"  colunas-chave => categoria:{f['cat'] or '-'} | local:{f['local'] or '-'} | "
+                f"cor:{f['cor'] or '-'} | fornecedor:{f['fornecedor'] or '-'} | data:{f['data'] or '-'}"
+            )
+            if f.get("cols"):
+                linhas.append(f"  total colunas detectadas: {len(f['cols'])}")
+        return "\n".join(linhas)
 
     def _ai_parse_query(self, pergunta: str) -> dict:
         q = (pergunta or "").strip().lower()
@@ -3015,7 +3040,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                         cur.execute(sql, tuple(params))
                         rows = cur.fetchall()
                         if not rows:
-                            return "ℹ️ Nenhum fornecedor encontrado no banco para esse filtro."
+                            return self._ai_investigar_zero_resultado(cur, cte, where_sql, params, p, "fornecedor")
                         linhas = ["🏦 **Fornecedores encontrados no banco**:"]
                         for forn, itens, qtd in rows:
                             linhas.append(f"- {forn}: {int(itens or 0)} itens, qtd {float(qtd or 0):.2f}")
@@ -3033,7 +3058,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                         cur.execute(sql, tuple(params))
                         rows = cur.fetchall()
                         if not rows:
-                            return "ℹ️ Nenhuma cor encontrada no banco para esse filtro."
+                            return self._ai_investigar_zero_resultado(cur, cte, where_sql, params, p, "cor")
                         linhas = ["🎨 **Cores encontradas no banco**:"]
                         for cor, itens, qtd in rows:
                             linhas.append(f"- {cor}: {int(itens or 0)} itens, qtd {float(qtd or 0):.2f}")
@@ -3109,7 +3134,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                         cur.execute(sql, tuple(params))
                         rows = cur.fetchall()
                         if not rows:
-                            return "ℹ️ Nenhum resultado encontrado no banco para esse filtro."
+                            return self._ai_investigar_zero_resultado(cur, cte, where_sql, params, p, "busca")
 
                         linhas = ["🏦 **Consulta em tempo real no banco**", titulo]
                         for r in rows[:limit]:
@@ -3660,6 +3685,8 @@ class AdvancedStockReport(ctk.CTkFrame):
                 intent, conf = self.assistente._intent_score(text)
                 self._ajustar_perfil_resposta(text)
                 usar_banco = self._should_use_db_answer(text, intent, conf)
+                if usar_banco:
+                    self._ai_metricas["db_queries"] += 1
                 resposta_banco = self._ai_query_database(text) if usar_banco else None
                 main = self._merge_local_and_db_response(resposta_local, resposta_banco, text)
                 variations = [] if resposta_banco else self._short_variations(main)
@@ -3727,8 +3754,12 @@ class AdvancedStockReport(ctk.CTkFrame):
                 f"- mensagens processadas: {self._ai_metricas['mensagens']}\n"
                 f"- ações diretas executadas: {self._ai_metricas['acoes_diretas']}\n"
                 f"- fallbacks de banco: {self._ai_metricas['fallback_db']}\n"
+                f"- consultas diretas no banco: {self._ai_metricas['db_queries']}\n"
+                f"- zero-results detectados: {self._ai_metricas['zero_results']}\n"
                 f"- perfil atual de resposta: {self._ai_perfil_resposta}"
             )
+        if "mapa do banco" in q or "auditoria do schema" in q or "estrutura do banco" in q:
+            return self._ai_schema_map_text()
 
         return None
 
@@ -3788,6 +3819,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         if "nenhum resultado encontrado no banco" in banco_l or "não consegui consultar o banco" in banco_l:
             estado = "no_match"
             self._ai_metricas["fallback_db"] += 1
+            self._ai_metricas["zero_results"] += 1
             return (
                 f"{local_txt}\n\n"
                 "No banco não encontrei um resultado exato com esse filtro agora. "
@@ -3810,6 +3842,35 @@ class AdvancedStockReport(ctk.CTkFrame):
         if self._ai_perfil_resposta == "detalhado" and estado == "ok":
             resposta += "\n\nPróximo passo sugerido: peça 'análise de risco' ou 'curva abc' para aprofundar."
         return resposta
+
+    def _ai_investigar_zero_resultado(self, cur, cte: str, where_sql: str, params: list, parsed: dict, foco: str) -> str:
+        self._ai_metricas["zero_results"] += 1
+        try:
+            sql_total = cte + " SELECT COUNT(*) FROM estoque_unificado"
+            cur.execute(sql_total)
+            total = int(cur.fetchone()[0] or 0)
+
+            sql_grupos = cte + " SELECT origem_grupo, COUNT(*) FROM estoque_unificado GROUP BY origem_grupo ORDER BY 2 DESC"
+            cur.execute(sql_grupos)
+            grupos = cur.fetchall() or []
+
+            sql_filtrado = cte + f" SELECT COUNT(*) FROM estoque_unificado {where_sql}"
+            cur.execute(sql_filtrado, tuple(params))
+            filtrado = int(cur.fetchone()[0] or 0)
+
+            linhas = [f"Nenhum resultado para foco '{foco}' com os filtros atuais."]
+            linhas.append(f"Diagnóstico: total de linhas no estoque_unificado = {total}")
+            linhas.append(f"Diagnóstico: linhas após filtro = {filtrado}")
+            if parsed.get("grupo_alvo"):
+                linhas.append(f"Grupo alvo detectado na pergunta: {parsed['grupo_alvo']}")
+            if grupos:
+                linhas.append("Distribuição por grupo detectado:")
+                for g, c in grupos[:10]:
+                    linhas.append(f"- {g}: {int(c)}")
+            linhas.append("Dica: peça 'mapa do banco' para ver estrutura completa detectada.")
+            return "\n".join(linhas)
+        except Exception:
+            return f"Nenhum resultado encontrado para '{foco}' e não consegui gerar diagnóstico detalhado agora."
 
 
 # ---------- Execução Standalone ----------
