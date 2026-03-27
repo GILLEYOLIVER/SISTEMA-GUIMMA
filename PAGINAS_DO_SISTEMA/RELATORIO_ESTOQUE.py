@@ -1346,6 +1346,9 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._ai_worker_running = False
         self._ai_schema_cache = []
         self._ai_schema_cache_ts = 0.0
+        self._ai_pending_action: Optional[str] = None
+        self._ai_perfil_resposta = "operacional"
+        self._ai_metricas = {"mensagens": 0, "acoes_diretas": 0, "fallback_db": 0}
 
         self._setup_styles()
         self._create_main_layout()
@@ -3612,6 +3615,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             except queue.Empty:
                 continue
             try:
+                self._ai_metricas["mensagens"] += 1
                 if self.assistente is None:
                     self.assistente = EstoqueIAAvancada(self.resultados)
 
@@ -3619,10 +3623,12 @@ class AdvancedStockReport(ctk.CTkFrame):
                 if acao_direta:
                     self._post_bot(acao_direta)
                     self.assistente._remember("assistant", acao_direta)
+                    self._ai_metricas["acoes_diretas"] += 1
                     continue
 
                 resposta_local = self.assistente.responder(text)
                 intent, conf = self.assistente._intent_score(text)
+                self._ajustar_perfil_resposta(text)
                 usar_banco = self._should_use_db_answer(text, intent, conf)
                 resposta_banco = self._ai_query_database(text) if usar_banco else None
                 main = self._merge_local_and_db_response(resposta_local, resposta_banco, text)
@@ -3642,6 +3648,27 @@ class AdvancedStockReport(ctk.CTkFrame):
         if not q:
             return None
 
+        if q in {"sim", "ok", "confirmo", "pode", "pode sim", "isso"}:
+            if self._ai_pending_action == "pdf":
+                self.after(0, self.export_pdf)
+                self._ai_pending_action = None
+                return "Confirmação recebida. Abri a exportação de PDF."
+            if self._ai_pending_action == "csv":
+                self.after(0, self.export_csv)
+                self._ai_pending_action = None
+                return "Confirmação recebida. Abri a exportação de CSV."
+            if self._ai_pending_action == "excel":
+                self.after(0, self.export_excel)
+                self._ai_pending_action = None
+                return "Confirmação recebida. Abri a exportação de Excel."
+            if self._ai_pending_action == "criticos":
+                self._ai_pending_action = None
+                return self.assistente.responder("quais itens estão críticos")
+
+        if q in {"nao", "não", "cancelar", "pare"}:
+            self._ai_pending_action = None
+            return "Tudo bem, ação cancelada. Me diga o próximo objetivo."
+
         if any(k in q for k in ("gerar pdf", "gere pdf", "exportar pdf", "salvar pdf", "relatorio em pdf", "relatório em pdf")):
             self.after(0, self.export_pdf)
             return "Perfeito. Abri a exportação de PDF para você."
@@ -3657,11 +3684,36 @@ class AdvancedStockReport(ctk.CTkFrame):
         if any(k in q for k in ("apenas os criticos", "apenas os críticos", "somente criticos", "somente críticos")):
             return self.assistente.responder("quais itens estão críticos")
 
+        if any(k in q for k in ("gerar relatorio completo", "gerar relatório completo", "inventario completo", "inventário completo")):
+            self._ai_pending_action = "pdf"
+            return (
+                "Posso gerar o relatório completo agora.\n"
+                "Se quiser continuar, responda: SIM."
+            )
+
+        if "diagnostico ia" in q or "diagnóstico ia" in q:
+            return (
+                "Diagnóstico rápido da IA:\n"
+                f"- mensagens processadas: {self._ai_metricas['mensagens']}\n"
+                f"- ações diretas executadas: {self._ai_metricas['acoes_diretas']}\n"
+                f"- fallbacks de banco: {self._ai_metricas['fallback_db']}\n"
+                f"- perfil atual de resposta: {self._ai_perfil_resposta}"
+            )
+
         return None
 
     def _short_variations(self, base_text):
         # Evita ruído e loops de confirmação no chat.
         return []
+
+    def _ajustar_perfil_resposta(self, text: str) -> None:
+        q = (text or "").lower()
+        if any(k in q for k in ("detalhado", "detalhe", "completo", "analitico", "analítico", "explique")):
+            self._ai_perfil_resposta = "detalhado"
+        elif any(k in q for k in ("rápido", "rapido", "resumo", "curto")):
+            self._ai_perfil_resposta = "objetivo"
+        else:
+            self._ai_perfil_resposta = "operacional"
 
     def _should_use_db_answer(self, text: str, intent: Optional[str], conf: float) -> bool:
         q = (text or "").strip().lower()
@@ -3690,8 +3742,11 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         banco_txt = self._strip_markdown_tokens(resposta_banco)
         banco_l = banco_txt.lower()
+        estado = "ok"
 
         if "nenhum resultado encontrado no banco" in banco_l or "não consegui consultar o banco" in banco_l:
+            estado = "no_match"
+            self._ai_metricas["fallback_db"] += 1
             return (
                 f"{local_txt}\n\n"
                 "No banco não encontrei um resultado exato com esse filtro agora. "
@@ -3699,6 +3754,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             )
 
         if "verificação no banco concluída" in banco_l:
+            estado = "disambiguation"
             return (
                 "Entendi 👍\n"
                 f"{banco_txt}\n\n"
@@ -3706,10 +3762,13 @@ class AdvancedStockReport(ctk.CTkFrame):
                 "eu te devolvo uma resposta bem mais específica."
             )
 
-        return (
+        resposta = (
             "Perfeito, consultei no banco em tempo real:\n"
             f"{banco_txt}"
         )
+        if self._ai_perfil_resposta == "detalhado" and estado == "ok":
+            resposta += "\n\nPróximo passo sugerido: peça 'análise de risco' ou 'curva abc' para aprofundar."
+        return resposta
 
 
 # ---------- Execução Standalone ----------

@@ -46,6 +46,9 @@ class ConversaContexto:
     ultimas_linhas: List[Dict[str, Any]] = field(default_factory=list)
     ultima_pergunta: Optional[str] = None
     ultimos_itens_mapeados: List[str] = field(default_factory=list)
+    objetivo_ativo: Optional[str] = None
+    objetivo_status: str = "idle"
+    proxima_acao_sugerida: Optional[str] = None
 
 
 class EstoqueIA:
@@ -167,6 +170,11 @@ class EstoqueIA:
         self._dialogos_cache: Optional[List[Dict[str, str]]] = None
         self.memoria_consultas: List[Dict[str, Any]] = []
         self.max_memoria_consultas = 120
+        self.metricas = {
+            "total_consultas": 0,
+            "fallbacks": 0,
+            "por_intent": Counter(),
+        }
 
     # =========================================================
     # COMPATIBILIDADE / INTERFACE PÚBLICA
@@ -202,6 +210,7 @@ class EstoqueIA:
         pergunta = self._safe_text(pergunta)
         self._remember("usuario", pergunta)
         self.contexto.ultima_pergunta = pergunta
+        self.metricas["total_consultas"] += 1
 
         if not pergunta:
             resposta = "Escreva sua pergunta sobre o estoque. Exemplo: quais tecidos temos ou quais aviamentos estão críticos."
@@ -217,14 +226,26 @@ class EstoqueIA:
             return resposta
 
         entidades = self._extract_entities(pergunta)
+        if entidades.get("confirmacao") or entidades.get("negacao"):
+            resposta = self._responder_confirmacao(entidades)
+            self._registrar_memoria_consulta("confirmacao", entidades, resposta)
+            self._remember("ia", resposta)
+            return resposta
+
         intent, score = self._detect_intent(pergunta, entidades)
         self.last_intent = intent
         self.last_entities = entidades
+        self.metricas["por_intent"][intent or "indefinido"] += 1
         self._update_context(entidades, intent)
+        self._atualizar_objetivo_ativo(intent, entidades)
 
         resposta = self._dispatch(intent, pergunta, normal, entidades)
         if not resposta:
             resposta = self._fallback_conversacional(pergunta, entidades, intent, score)
+            self.metricas["fallbacks"] += 1
+
+        resposta = self._enriquecer_resposta_estruturada(intent, entidades, resposta)
+        self._sugerir_proxima_acao(intent, entidades, resposta)
 
         self._registrar_memoria_consulta(intent, entidades, resposta)
         self._remember("ia", resposta)
@@ -357,6 +378,9 @@ class EstoqueIA:
             "saudacao": self._is_greeting(normal),
             "comparacao": self._has_any(normal, self.PALAVRAS_ACAO["comparar"]),
             "escopo_global": self._is_global_scope_request(normal),
+            "confirmacao": normal in {"sim", "ok", "confirmo", "pode", "pode sim", "isso", "segue", "continue"},
+            "negacao": normal in {"nao", "não", "agora nao", "agora não", "cancelar", "pare"},
+            "perfil_detalhado": any(t in normal for t in ("detalhado", "detalhe", "completo", "analitico", "analítico")),
         }
         return entities
 
@@ -672,6 +696,72 @@ class EstoqueIA:
         self.memoria_consultas.append(snapshot)
         if len(self.memoria_consultas) > self.max_memoria_consultas:
             self.memoria_consultas = self.memoria_consultas[-self.max_memoria_consultas:]
+
+    def _atualizar_objetivo_ativo(self, intent: Optional[str], entidades: Dict[str, Any]) -> None:
+        if entidades.get("escopo_global"):
+            self.contexto.objetivo_ativo = "inventario_global"
+            self.contexto.objetivo_status = "coletando"
+            return
+        mapa = {
+            "itens_por_setor_detalhado": "analise_setores",
+            "analise_risco": "mitigar_risco",
+            "sugestao_compra": "planejar_reposicao",
+            "analise_abc": "classificacao_curva_abc",
+            "projecao_consumo": "projecao_consumo",
+            "listar_todos_itens": "inventario_global",
+        }
+        if intent in mapa:
+            self.contexto.objetivo_ativo = mapa[intent]
+            self.contexto.objetivo_status = "em_execucao"
+
+    def _responder_confirmacao(self, entidades: Dict[str, Any]) -> str:
+        if entidades.get("negacao"):
+            self.contexto.proxima_acao_sugerida = None
+            self.contexto.objetivo_status = "aguardando_novo_pedido"
+            return "Perfeito, cancelei a ação pendente. Me diga o próximo objetivo (ex.: setores, críticos, ABC ou projeção)."
+        acao = self.contexto.proxima_acao_sugerida
+        if not acao:
+            return "Recebi o 'sim'. Se quiser, diga a ação: gerar pdf, listar críticos, inventário completo ou itens por setor."
+        mapa = {
+            "listar_criticos": "itens_criticos",
+            "inventario_completo": "listar_todos_itens",
+            "por_setor": "itens_por_setor_detalhado",
+            "analise_risco": "analise_risco",
+        }
+        intent = mapa.get(acao)
+        if not intent:
+            return "Confirmação recebida, mas não encontrei ação pendente válida. Diga novamente a operação desejada."
+        self.contexto.proxima_acao_sugerida = None
+        self.contexto.objetivo_status = "confirmado"
+        return self._dispatch(intent, "", "", {"escopo_global": True, "grupo": self.contexto.grupo})
+
+    def _sugerir_proxima_acao(self, intent: Optional[str], entidades: Dict[str, Any], resposta: str) -> None:
+        if intent in {"resumo_geral", "resumo_grupo"}:
+            self.contexto.proxima_acao_sugerida = "listar_criticos"
+        elif intent in {"itens_criticos", "analise_risco"}:
+            self.contexto.proxima_acao_sugerida = "inventario_completo"
+        elif intent in {"listar_todos_itens", "itens_por_setor_detalhado"}:
+            self.contexto.proxima_acao_sugerida = "analise_risco"
+        elif intent == "sugestao_compra":
+            self.contexto.proxima_acao_sugerida = "por_setor"
+
+    def _enriquecer_resposta_estruturada(self, intent: Optional[str], entidades: Dict[str, Any], resposta: str) -> str:
+        if not resposta:
+            return resposta
+        if intent not in {
+            "analise_risco", "sugestao_compra", "projecao_consumo",
+            "analise_abc", "itens_por_setor_detalhado", "listar_todos_itens", "resumo_geral", "resumo_grupo"
+        }:
+            return resposta
+        objetivo = self.contexto.objetivo_ativo or "consulta_estoque"
+        perfil = "detalhado" if entidades.get("perfil_detalhado") else "operacional"
+        proxima = self.contexto.proxima_acao_sugerida or "listar_criticos"
+        return (
+            f"OBJETIVO: {objetivo} ({perfil})\n"
+            f"STATUS: {self.contexto.objetivo_status}\n\n"
+            f"{resposta}\n\n"
+            f"PRÓXIMO PASSO SUGERIDO: {proxima} (responda 'sim' para executar)"
+        )
 
     # =========================================================
     # ACESSO AO BANCO / DESCOBERTA DE COLUNAS
