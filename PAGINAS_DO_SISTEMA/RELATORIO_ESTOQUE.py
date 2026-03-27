@@ -2822,6 +2822,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                 continue
             fontes.append({
                 "tabela": tabela,
+                "grupo": tabela.replace("estoque_", ""),
                 "qtd": qtd_field,
                 "cat": "categoria" if "categoria" in cols else None,
                 "status": "status" if "status" in cols else None,
@@ -2843,8 +2844,23 @@ class AdvancedStockReport(ctk.CTkFrame):
             "o", "a", "os", "as", "de", "do", "da", "dos", "das", "e", "ou", "em", "no", "na", "nos", "nas",
             "para", "por", "com", "sem", "que", "qual", "quais", "quanto", "quantos", "tem", "temos", "ia",
             "banco", "estoque", "item", "itens", "verifique", "mostrar", "mostre", "procure", "buscar", "algo"
+            , "cores", "cor", "fornecedor", "fornecedores", "categoria", "categorias", "local", "locais"
         }
         termos_livres = [t for t in re.findall(r"[a-z0-9áéíóúãõç_-]+", q) if len(t) >= 3 and t not in stopwords]
+
+        grupo_alvo = None
+        mapa_grupo = {
+            "tecido": "tecidos", "tecidos": "tecidos",
+            "aviamento": "aviamentos", "aviamentos": "aviamentos",
+            "insumo": "insumos", "insumos": "insumos",
+            "escritorio": "escritorio", "escritório": "escritorio",
+            "limpeza": "limpeza",
+            "outro": "outros", "outros": "outros",
+        }
+        for termo, grupo in mapa_grupo.items():
+            if termo in q:
+                grupo_alvo = grupo
+                break
 
         codigo = None
         m_cod = re.search(r"c[oó]d(?:igo)?\s*[:#]?\s*([a-z0-9_.\-/]+)", q)
@@ -2888,6 +2904,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             "local": local,
             "cor": cor,
             "fornecedor": fornecedor,
+            "grupo_alvo": grupo_alvo,
             "termos_livres": termos_livres[:6],
             "is_critico": any(k in q for k in ("crítico", "critico", "baixo estoque", "repor urgente")),
             "is_valor": any(k in q for k in ("valor", "financeiro", "patrimônio", "patrimonio")),
@@ -2926,6 +2943,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                             f"COALESCE({f['qtd']},0)::numeric AS quantidade, "
                             f"{status} AS status, {local} AS localizacao, {cor} AS cor, {fornecedor} AS fornecedor, "
                             f"{data} AS ultima_atualizacao, "
+                            f"'{f['grupo']}' AS origem_grupo, "
                             f"'{f['tabela']}' AS origem "
                             f"FROM {schema}.{f['tabela']}"
                         )
@@ -2949,18 +2967,30 @@ class AdvancedStockReport(ctk.CTkFrame):
                     if p["fornecedor"]:
                         filtros.append("LOWER(COALESCE(fornecedor,'')) LIKE %s")
                         params.append(f"%{p['fornecedor'].lower()}%")
+                    if p.get("grupo_alvo"):
+                        filtros.append("LOWER(COALESCE(origem_grupo,'')) = %s")
+                        params.append(p["grupo_alvo"].lower())
 
-                    for termo in p["termos_livres"]:
+                    termos_busca = list(p["termos_livres"] or [])
+                    if p.get("grupo_alvo"):
+                        termos_busca = [t for t in termos_busca if t != p["grupo_alvo"]]
+                    if p["is_cores"] and not p["cor"]:
+                        termos_busca = [t for t in termos_busca if t not in {"cores", "cor"}]
+                    if p["is_fornecedores"] and not p["fornecedor"]:
+                        termos_busca = [t for t in termos_busca if t not in {"fornecedor", "fornecedores"}]
+
+                    for termo in termos_busca:
                         filtros.append(
                             "(LOWER(COALESCE(descricao,'')) LIKE %s "
                             "OR LOWER(COALESCE(categoria,'')) LIKE %s "
+                            "OR LOWER(COALESCE(origem_grupo,'')) LIKE %s "
                             "OR LOWER(COALESCE(localizacao,'')) LIKE %s "
                             "OR LOWER(COALESCE(cor,'')) LIKE %s "
                             "OR LOWER(COALESCE(fornecedor,'')) LIKE %s "
                             "OR LOWER(CAST(codigo AS text)) LIKE %s)"
                         )
                         like_term = f"%{termo}%"
-                        params.extend([like_term, like_term, like_term, like_term, like_term, like_term])
+                        params.extend([like_term, like_term, like_term, like_term, like_term, like_term, like_term])
 
                     if p["is_critico"] and not p["limiar"]:
                         filtros.append("quantidade < 10")
