@@ -131,6 +131,12 @@ class EstoqueIA:
         "diversidade": {"tipos", "variedades", "variedade", "cores diferentes", "codigos distintos", "códigos distintos"},
         "cobertura": {"quanto dura", "dias de estoque", "cobertura", "autonomia", "suficiencia", "suficiência"},
         "consumo": {"consumo", "gasto", "uso", "utilizacao", "utilização", "saida", "saída"},
+        "risco": {"risco", "criticidade", "classificacao de risco", "classificação de risco", "saude do estoque", "saúde do estoque"},
+        "sugestao_compra": {"sugestao de compra", "sugestão de compra", "comprar", "repor", "reposicao", "reposição"},
+        "distribuicao": {"distribuicao", "distribuição", "participacao", "participação", "share", "mix"},
+        "projecao": {"projecao", "projeção", "previsao", "previsão", "forecast", "simulacao", "simulação"},
+        "abc": {"curva abc", "analise abc", "análise abc", "pareto", "classe a", "classe b", "classe c"},
+        "memoria": {"resumo da conversa", "memoria", "memória", "o que ja falamos", "o que já falamos", "retomar contexto"},
     }
 
     CONTINUACOES = {
@@ -144,9 +150,11 @@ class EstoqueIA:
         "contar_cores", "listar_fornecedores", "listar_locais", "saldo_item", "codigo_item", "itens_criticos",
         "itens_zerados", "itens_abaixo", "itens_acima", "itens_entre", "top_saldo", "top_variedade",
         "itens_por_cor", "itens_por_fornecedor", "itens_por_local", "itens_por_composicao", "comparar_grupos",
-        "resumo_grupo", "resumo_geral", "itens_recentes", "contar_codigos", "contar_itens_distintos",
+        "resumo_grupo", "resumo_geral", "listar_todos_itens", "itens_por_setor_detalhado",
+        "itens_recentes", "contar_codigos", "contar_itens_distintos",
         "distribuicao_cores", "distribuicao_fornecedores", "distribuicao_locais", "consultar_cobertura",
-        "consultar_consumo", "sugestao_compra", "analise_risco", "resposta_contextual"
+        "consultar_consumo", "sugestao_compra", "analise_risco", "projecao_consumo",
+        "analise_abc", "resumo_memoria", "resposta_contextual"
     ]
 
     def __init__(self, resultados=None):
@@ -157,6 +165,8 @@ class EstoqueIA:
         self.last_entities: Dict[str, Any] = {}
         self._sources_cache: Optional[List[Dict[str, Any]]] = None
         self._dialogos_cache: Optional[List[Dict[str, str]]] = None
+        self.memoria_consultas: List[Dict[str, Any]] = []
+        self.max_memoria_consultas = 120
 
     # =========================================================
     # COMPATIBILIDADE / INTERFACE PÚBLICA
@@ -216,6 +226,7 @@ class EstoqueIA:
         if not resposta:
             resposta = self._fallback_conversacional(pergunta, entidades, intent, score)
 
+        self._registrar_memoria_consulta(intent, entidades, resposta)
         self._remember("ia", resposta)
         return resposta
 
@@ -345,8 +356,16 @@ class EstoqueIA:
             "continuidade": self._is_continuation(normal),
             "saudacao": self._is_greeting(normal),
             "comparacao": self._has_any(normal, self.PALAVRAS_ACAO["comparar"]),
+            "escopo_global": self._is_global_scope_request(normal),
         }
         return entities
+
+    def _is_global_scope_request(self, normal: str) -> bool:
+        gatilhos = (
+            "todos os itens", "tudo do estoque", "estoque completo", "inventario completo", "inventário completo",
+            "lista completa", "quero tudo", "quero todos", "mostrar tudo"
+        )
+        return any(g in normal for g in gatilhos)
 
     def _extract_group(self, normal: str) -> Optional[str]:
         for grupo, termos in self.GRUPOS_SINONIMOS.items():
@@ -487,6 +506,26 @@ class EstoqueIA:
         if self._has_any(normal, self.PALAVRAS_ACAO["consumo"]):
             return "consultar_consumo", 0.93
 
+        if self._has_any(normal, self.PALAVRAS_ACAO["projecao"]):
+            return "projecao_consumo", 0.93
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["abc"]):
+            return "analise_abc", 0.93
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["risco"]):
+            return "analise_risco", 0.92
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["memoria"]):
+            return "resumo_memoria", 0.92
+
+        if ("setor" in normal or "localizacao" in normal or "localização" in normal) and (
+            "cada setor" in normal or "por setor" in normal or "quantos itens" in normal or "seus nomes" in normal
+        ):
+            return "itens_por_setor_detalhado", 0.95
+
+        if entidades.get("escopo_global") and (self._has_any(normal, self.PALAVRAS_ACAO["listar"]) or "itens" in normal):
+            return "listar_todos_itens", 0.95
+
         if self._has_any(normal, self.PALAVRAS_ACAO["recente"]):
             return "itens_recentes", 0.95
 
@@ -515,6 +554,12 @@ class EstoqueIA:
                 return "listar_fornecedores", 0.97
             return "distribuicao_fornecedores", 0.90
 
+        if self._has_any(normal, self.PALAVRAS_ACAO["distribuicao"]) and self._has_any(normal, self.PALAVRAS_ACAO["cores"]):
+            return "distribuicao_cores", 0.92
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["distribuicao"]) and self._has_any(normal, self.PALAVRAS_ACAO["onde"]):
+            return "distribuicao_locais", 0.92
+
         if self._has_any(normal, self.PALAVRAS_ACAO["onde"]):
             return "listar_locais", 0.97
 
@@ -534,6 +579,9 @@ class EstoqueIA:
             if self._has_any(normal, self.PALAVRAS_ACAO["cores"]) or "variedade" in normal:
                 return "top_variedade", 0.94
             return "top_saldo", 0.95
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["sugestao_compra"]):
+            return "sugestao_compra", 0.93
 
         if entidades.get("cor") and (grupo or item or entidades.get("continuidade")):
             return "itens_por_cor", 0.95
@@ -596,7 +644,34 @@ class EstoqueIA:
             self.contexto.ultimo_limite = entidades["faixa"]["max"]
         if entidades.get("faixa", {}).get("min") is not None and entidades["faixa"].get("tipo") == "acima":
             self.contexto.ultimo_limite = entidades["faixa"]["min"]
+        if entidades.get("escopo_global"):
+            self.contexto.item_nome = None
+            self.contexto.item_codigo = None
+            self.contexto.cor = None
+            self.contexto.fornecedor = None
+            self.contexto.localizacao = None
+            self.contexto.composicao = None
         self.contexto.ultimo_intent = intent
+
+    def _registrar_memoria_consulta(self, intent: Optional[str], entidades: Dict[str, Any], resposta: str) -> None:
+        """
+        Mantém memória operacional da conversa para melhorar continuidade.
+        """
+        if not intent:
+            return
+        snapshot = {
+            "ts": datetime.now().isoformat(timespec="seconds"),
+            "intent": intent,
+            "grupo": entidades.get("grupo") or self.contexto.grupo,
+            "item_nome": entidades.get("item_nome") or self.contexto.item_nome,
+            "codigo": entidades.get("codigo") or self.contexto.item_codigo,
+            "cor": entidades.get("cor") or self.contexto.cor,
+            "fornecedor": entidades.get("fornecedor") or self.contexto.fornecedor,
+            "resposta_preview": self._safe_text(resposta).split("\n")[0][:160],
+        }
+        self.memoria_consultas.append(snapshot)
+        if len(self.memoria_consultas) > self.max_memoria_consultas:
+            self.memoria_consultas = self.memoria_consultas[-self.max_memoria_consultas:]
 
     # =========================================================
     # ACESSO AO BANCO / DESCOBERTA DE COLUNAS
@@ -877,12 +952,21 @@ class EstoqueIA:
             "comparar_grupos": self._resp_comparar_grupos,
             "resumo_grupo": self._resp_resumo_grupo,
             "resumo_geral": self._resp_resumo_geral,
+            "listar_todos_itens": self._resp_listar_todos_itens,
+            "itens_por_setor_detalhado": self._resp_itens_por_setor_detalhado,
             "itens_recentes": self._resp_recentes,
             "contar_codigos": self._resp_contar_codigos,
             "contar_itens_distintos": self._resp_contar_distintos,
             "distribuicao_fornecedores": self._resp_distribuicao_fornecedores,
+            "distribuicao_cores": self._resp_distribuicao_cores,
+            "distribuicao_locais": self._resp_distribuicao_locais,
             "consultar_cobertura": self._resp_cobertura,
             "consultar_consumo": self._resp_consumo,
+            "analise_risco": self._resp_analise_risco,
+            "sugestao_compra": self._resp_sugestao_compra,
+            "projecao_consumo": self._resp_projecao_consumo,
+            "analise_abc": self._resp_analise_abc,
+            "resumo_memoria": self._resp_resumo_memoria,
             "resposta_contextual": self._resp_contextual,
         }
         handler = mapa.get(intent)
@@ -1235,6 +1319,52 @@ class EstoqueIA:
         linhas.append("Pergunte, por exemplo: quais tecidos temos ou quais aviamentos estão críticos.")
         return "\n".join(linhas)
 
+    def _resp_listar_todos_itens(self, entidades: Dict[str, Any]) -> str:
+        rows = self._dataset({})
+        if not rows:
+            return "Não encontrei itens no estoque para listar."
+        agg: Dict[str, Dict[str, Any]] = {}
+        for r in rows:
+            nome = self._safe_text(r.get("descricao")) or "Sem nome"
+            grp = self._safe_text(r.get("grupo_principal")) or "Sem grupo"
+            key = f"{grp}::{nome}"
+            if key not in agg:
+                agg[key] = {"grupo": grp, "nome": nome, "saldo": 0.0, "unidade": self._safe_text(r.get("unidade")) or "un"}
+            agg[key]["saldo"] += self._safe_float(r.get("saldo_num"))
+        ordenado = sorted(agg.values(), key=lambda x: (x["grupo"], x["nome"]))
+        self._save_last_rows(rows, "listar_todos_itens", {"escopo_global": True})
+        linhas = [f"Inventário geral: {len(ordenado)} item(ns) distintos."]
+        for item in ordenado[:80]:
+            linhas.append(f"- [{item['grupo']}] {item['nome']} | saldo {self._fmt_qtd(item['saldo'])} {item['unidade']}")
+        if len(ordenado) > 80:
+            linhas.append(f"... e mais {len(ordenado) - 80} item(ns).")
+        return "\n".join(linhas)
+
+    def _resp_itens_por_setor_detalhado(self, entidades: Dict[str, Any]) -> str:
+        filtro = {"grupo": entidades.get("grupo")} if entidades.get("grupo") else {}
+        rows = self._dataset(filtro if filtro else {})
+        if not rows:
+            return "Não encontrei dados para listar por setor."
+        mapa: Dict[str, Dict[str, Any]] = {}
+        for r in rows:
+            setor = self._safe_text(r.get("localizacao")) or "Sem localização"
+            nome = self._safe_text(r.get("descricao")) or "Sem nome"
+            if setor not in mapa:
+                mapa[setor] = {"nomes": set(), "saldo": 0.0}
+            mapa[setor]["nomes"].add(nome)
+            mapa[setor]["saldo"] += self._safe_float(r.get("saldo_num"))
+        ordenado = sorted(mapa.items(), key=lambda x: (-len(x[1]["nomes"]), x[0]))
+        linhas = ["Itens por setor/localização:"]
+        for setor, info in ordenado:
+            nomes = sorted(info["nomes"])
+            linhas.append(f"- {setor}: {len(nomes)} item(ns) | saldo total {self._fmt_qtd(info['saldo'])}")
+            for nome in nomes[:15]:
+                linhas.append(f"  • {nome}")
+            if len(nomes) > 15:
+                linhas.append(f"  • ... +{len(nomes) - 15} item(ns)")
+        self._save_last_rows(rows, "itens_por_setor_detalhado", entidades)
+        return "\n".join(linhas)
+
     def _resp_recentes(self, entidades: Dict[str, Any]) -> str:
         rows = [r for r in self._dataset(entidades) if r.get("data_ref") not in (None, "")]
         if not rows:
@@ -1274,6 +1404,40 @@ class EstoqueIA:
             linhas.append(f"- {nome}: {qtd} registro(s)")
         return "\n".join(linhas)
 
+    def _resp_distribuicao_cores(self, entidades: Dict[str, Any]) -> str:
+        rows = self._dataset(entidades)
+        mapa: Dict[str, int] = {}
+        for r in rows:
+            cor = self._safe_text(r.get("cor"))
+            if cor:
+                mapa[cor] = mapa.get(cor, 0) + 1
+        if not mapa:
+            return "Não encontrei cores suficientes para montar a distribuição."
+        total = max(1, sum(mapa.values()))
+        ordenado = sorted(mapa.items(), key=lambda x: (-x[1], x[0]))
+        linhas = ["Distribuição por cor (participação no filtro):"]
+        for cor, qtd in ordenado[:25]:
+            pct = (qtd / total) * 100
+            linhas.append(f"- {cor}: {qtd} registro(s) ({self._fmt_qtd(pct)}%)")
+        return "\n".join(linhas)
+
+    def _resp_distribuicao_locais(self, entidades: Dict[str, Any]) -> str:
+        rows = self._dataset(entidades)
+        mapa: Dict[str, int] = {}
+        for r in rows:
+            local = self._safe_text(r.get("localizacao"))
+            if local:
+                mapa[local] = mapa.get(local, 0) + 1
+        if not mapa:
+            return "Não encontrei localizações suficientes para montar a distribuição."
+        total = max(1, sum(mapa.values()))
+        ordenado = sorted(mapa.items(), key=lambda x: (-x[1], x[0]))
+        linhas = ["Distribuição por localização (participação no filtro):"]
+        for local, qtd in ordenado[:25]:
+            pct = (qtd / total) * 100
+            linhas.append(f"- {local}: {qtd} registro(s) ({self._fmt_qtd(pct)}%)")
+        return "\n".join(linhas)
+
     def _resp_cobertura(self, entidades: Dict[str, Any]) -> str:
         rows = self._rank_item_rows(self._dataset(entidades), entidades.get("item_nome"), entidades.get("codigo"))
         if not rows:
@@ -1295,6 +1459,156 @@ class EstoqueIA:
         if consumo <= 0:
             return "Esse item não tem consumo médio cadastrado."
         return f"Consumo médio de {self._safe_text(r.get('descricao'))}: {self._fmt_qtd(consumo)} {self._safe_text(r.get('unidade')) or 'un'} por período."
+
+    def _resp_analise_risco(self, entidades: Dict[str, Any]) -> str:
+        rows = self._dataset(entidades)
+        if not rows:
+            return "Não encontrei dados para análise de risco."
+        classes = Counter()
+        for r in rows:
+            classes[self._classificar_risco(r)] += 1
+        total = max(1, sum(classes.values()))
+        ordenado = sorted(classes.items(), key=lambda x: (-x[1], x[0]))
+        linhas = ["Matriz de risco do estoque (filtro atual):"]
+        for classe, qtd in ordenado:
+            pct = (qtd / total) * 100
+            linhas.append(f"- {classe}: {qtd} item(ns) ({self._fmt_qtd(pct)}%)")
+        criticos = [r for r in rows if self._classificar_risco(r) in {"sem saldo", "crítico", "cobertura curta"}]
+        if criticos:
+            criticos = sorted(criticos, key=lambda r: (self._safe_float(r.get("saldo_num")), self._safe_text(r.get("descricao"))))
+            linhas.append("")
+            linhas.append("Prioridade de atenção:")
+            for r in criticos[:10]:
+                linhas.append(
+                    f"- {self._safe_text(r.get('descricao')) or 'Sem nome'} | saldo {self._fmt_qtd(self._safe_float(r.get('saldo_num')))} "
+                    f"{self._safe_text(r.get('unidade')) or 'un'} | risco {self._classificar_risco(r)}"
+                )
+        return "\n".join(linhas)
+
+    def _resp_sugestao_compra(self, entidades: Dict[str, Any]) -> str:
+        rows = self._dataset(entidades)
+        if not rows:
+            return "Não encontrei dados para sugerir reposição."
+        candidatos = []
+        for r in rows:
+            saldo = self._safe_float(r.get("saldo_num"))
+            minimo = self._safe_float(r.get("estoque_minimo"))
+            ideal = self._safe_float(r.get("estoque_ideal"))
+            consumo = self._safe_float(r.get("consumo_medio"))
+            if ideal > 0:
+                alvo = ideal
+            elif minimo > 0:
+                alvo = minimo * 1.35
+            elif consumo > 0:
+                alvo = consumo * 2.0
+            else:
+                alvo = 0.0
+            if alvo > saldo:
+                faltante = max(0.0, alvo - saldo)
+                prioridade = (2.0 if saldo <= 0 else 1.2 if minimo > 0 and saldo <= minimo else 1.0) * (1.0 + consumo)
+                candidatos.append((prioridade, faltante, r))
+        if not candidatos:
+            return "No filtro atual, não identifiquei itens com necessidade clara de reposição."
+        candidatos.sort(key=lambda x: (-x[0], -x[1]))
+        linhas = ["Sugestão inteligente de reposição (estimativa):"]
+        for _, faltante, r in candidatos[:15]:
+            desc = self._safe_text(r.get("descricao")) or "Sem nome"
+            un = self._safe_text(r.get("unidade")) or "un"
+            saldo = self._safe_float(r.get("saldo_num"))
+            minimo = self._safe_float(r.get("estoque_minimo"))
+            ideal = self._safe_float(r.get("estoque_ideal"))
+            linhas.append(
+                f"- {desc}: sugerido repor ~{self._fmt_qtd(faltante)} {un} "
+                f"(saldo {self._fmt_qtd(saldo)}, mínimo {self._fmt_qtd(minimo)}, ideal {self._fmt_qtd(ideal)})"
+            )
+        linhas.append("Obs.: cálculo usa estoque mínimo/ideal e consumo médio quando disponível.")
+        return "\n".join(linhas)
+
+    def _resp_projecao_consumo(self, entidades: Dict[str, Any]) -> str:
+        horizonte = entidades.get("numero")
+        dias = int(horizonte) if isinstance(horizonte, (int, float)) and horizonte > 0 else 30
+        dias = max(1, min(dias, 365))
+        rows = self._rank_item_rows(self._dataset(entidades), entidades.get("item_nome"), entidades.get("codigo"))
+        if not rows:
+            return "Não encontrei item para fazer projeção."
+        r = rows[0]
+        consumo = self._safe_float(r.get("consumo_medio"))
+        saldo = self._safe_float(r.get("saldo_num"))
+        if consumo <= 0:
+            return "Esse item não tem consumo médio suficiente para projetar."
+        saldo_estimado = saldo - (consumo * dias)
+        linhas = [
+            f"Projeção de consumo para {self._safe_text(r.get('descricao')) or 'item'} em {dias} período(s):",
+            f"- saldo atual: {self._fmt_qtd(saldo)} {self._safe_text(r.get('unidade')) or 'un'}",
+            f"- consumo médio: {self._fmt_qtd(consumo)} por período",
+            f"- saldo projetado: {self._fmt_qtd(saldo_estimado)} {self._safe_text(r.get('unidade')) or 'un'}",
+        ]
+        if saldo_estimado <= 0:
+            linhas.append("- alerta: ruptura provável dentro do horizonte consultado.")
+        elif saldo_estimado < self._safe_float(r.get("estoque_minimo")) and self._safe_float(r.get("estoque_minimo")) > 0:
+            linhas.append("- alerta: saldo projetado abaixo do estoque mínimo.")
+        else:
+            linhas.append("- status: saldo projetado ainda em faixa operacional.")
+        return "\n".join(linhas)
+
+    def _resp_analise_abc(self, entidades: Dict[str, Any]) -> str:
+        rows = self._dataset(entidades)
+        if not rows:
+            return "Não encontrei dados para análise ABC."
+        por_item: Dict[str, float] = {}
+        for r in rows:
+            nome = self._safe_text(r.get("descricao")) or self._safe_text(r.get("codigo"))
+            if nome:
+                por_item[nome] = por_item.get(nome, 0.0) + max(0.0, self._safe_float(r.get("saldo_num")))
+        if not por_item:
+            return "Não há saldo positivo suficiente para classificar em curva ABC."
+        total = sum(por_item.values())
+        if total <= 0:
+            return "Não há base de saldo para calcular curva ABC."
+        ordenado = sorted(por_item.items(), key=lambda x: x[1], reverse=True)
+        acumulado = 0.0
+        classes = {"A": [], "B": [], "C": []}
+        for nome, valor in ordenado:
+            acumulado += valor
+            perc = acumulado / total
+            if perc <= 0.80:
+                classe = "A"
+            elif perc <= 0.95:
+                classe = "B"
+            else:
+                classe = "C"
+            classes[classe].append((nome, valor))
+        linhas = ["Curva ABC por participação no saldo do filtro:"]
+        for classe in ("A", "B", "C"):
+            itens = classes[classe]
+            subtotal = sum(v for _, v in itens)
+            pct = (subtotal / total) * 100 if total > 0 else 0
+            linhas.append(f"- Classe {classe}: {len(itens)} item(ns), {self._fmt_qtd(pct)}% do saldo acumulado")
+            for nome, valor in itens[:5]:
+                linhas.append(f"  • {nome}: {self._fmt_qtd(valor)}")
+        return "\n".join(linhas)
+
+    def _resp_resumo_memoria(self, entidades: Dict[str, Any]) -> str:
+        if not self.memoria_consultas:
+            return "Ainda não tenho memória de consultas nesta sessão. Faça uma pergunta de estoque para começar."
+        ultimas = self.memoria_consultas[-8:]
+        linhas = ["Resumo inteligente da conversa (últimas consultas):"]
+        for m in reversed(ultimas):
+            foco = m.get("item_nome") or m.get("grupo") or "estoque geral"
+            linhas.append(f"- [{m.get('ts')}] {m.get('intent')} | foco: {foco}")
+        if self.contexto.item_nome or self.contexto.grupo:
+            linhas.append("")
+            linhas.append("Contexto ativo agora:")
+            if self.contexto.grupo:
+                linhas.append(f"- grupo: {self.contexto.grupo}")
+            if self.contexto.item_nome:
+                linhas.append(f"- item: {self.contexto.item_nome}")
+            if self.contexto.item_codigo:
+                linhas.append(f"- código: {self.contexto.item_codigo}")
+            if self.contexto.cor:
+                linhas.append(f"- cor: {self.contexto.cor}")
+        linhas.append("Se quiser, posso continuar usando esse contexto sem você repetir tudo.")
+        return "\n".join(linhas)
 
     def _resp_contextual(self, entidades: Dict[str, Any]) -> str:
         ultimo = self.contexto.ultimo_intent
