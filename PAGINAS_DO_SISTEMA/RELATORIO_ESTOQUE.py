@@ -3591,6 +3591,13 @@ class AdvancedStockReport(ctk.CTkFrame):
             try:
                 if self.assistente is None:
                     self.assistente = EstoqueIAAvancada(self.resultados)
+
+                acao_direta = self._try_handle_direct_ai_action(text)
+                if acao_direta:
+                    self._post_bot(acao_direta)
+                    self.assistente._remember("assistant", acao_direta)
+                    continue
+
                 resposta_local = self.assistente.responder(text)
                 intent, conf = self.assistente._intent_score(text)
                 usar_banco = self._should_use_db_answer(text, intent, conf)
@@ -3607,16 +3614,31 @@ class AdvancedStockReport(ctk.CTkFrame):
             finally:
                 self._ai_queue.task_done()
 
+    def _try_handle_direct_ai_action(self, text: str) -> Optional[str]:
+        q = (text or "").strip().lower()
+        if not q:
+            return None
+
+        if any(k in q for k in ("gerar pdf", "gere pdf", "exportar pdf", "salvar pdf", "relatorio em pdf", "relatório em pdf")):
+            self.after(0, self.export_pdf)
+            return "Perfeito. Abri a exportação de PDF para você."
+
+        if any(k in q for k in ("exportar csv", "gerar csv", "salvar csv")):
+            self.after(0, self.export_csv)
+            return "Perfeito. Abri a exportação de CSV para você."
+
+        if any(k in q for k in ("exportar excel", "gerar excel", "salvar excel", "planilha")):
+            self.after(0, self.export_excel)
+            return "Perfeito. Abri a exportação de Excel para você."
+
+        if any(k in q for k in ("apenas os criticos", "apenas os críticos", "somente criticos", "somente críticos")):
+            return self.assistente.responder("quais itens estão críticos")
+
+        return None
+
     def _short_variations(self, base_text):
-        opts = [
-            "Quer que eu *exporte* essa lista?",
-            "Deseja ver *apenas os críticos*?",
-            "Posso *abrir um item* pelo código se preferir.",
-            "Gerar *PDF* com esses dados?",
-            "Quer que eu *salve* um relatório agora?"
-        ]
-        random.shuffle(opts)
-        return opts[:2]
+        # Evita ruído e loops de confirmação no chat.
+        return []
 
     def _should_use_db_answer(self, text: str, intent: Optional[str], conf: float) -> bool:
         q = (text or "").strip().lower()
@@ -3663,8 +3685,7 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         return (
             "Perfeito, consultei no banco em tempo real:\n"
-            f"{banco_txt}\n\n"
-            "Se quiser, já te entrego também um resumo em formato de ação (o que comprar, o que está crítico, e prioridade)."
+            f"{banco_txt}"
         )
 
 
