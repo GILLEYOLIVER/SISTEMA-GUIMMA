@@ -150,7 +150,8 @@ class EstoqueIA:
         "contar_cores", "listar_fornecedores", "listar_locais", "saldo_item", "codigo_item", "itens_criticos",
         "itens_zerados", "itens_abaixo", "itens_acima", "itens_entre", "top_saldo", "top_variedade",
         "itens_por_cor", "itens_por_fornecedor", "itens_por_local", "itens_por_composicao", "comparar_grupos",
-        "resumo_grupo", "resumo_geral", "itens_recentes", "contar_codigos", "contar_itens_distintos",
+        "resumo_grupo", "resumo_geral", "listar_todos_itens", "itens_por_setor_detalhado",
+        "itens_recentes", "contar_codigos", "contar_itens_distintos",
         "distribuicao_cores", "distribuicao_fornecedores", "distribuicao_locais", "consultar_cobertura",
         "consultar_consumo", "sugestao_compra", "analise_risco", "projecao_consumo",
         "analise_abc", "resumo_memoria", "resposta_contextual"
@@ -355,8 +356,16 @@ class EstoqueIA:
             "continuidade": self._is_continuation(normal),
             "saudacao": self._is_greeting(normal),
             "comparacao": self._has_any(normal, self.PALAVRAS_ACAO["comparar"]),
+            "escopo_global": self._is_global_scope_request(normal),
         }
         return entities
+
+    def _is_global_scope_request(self, normal: str) -> bool:
+        gatilhos = (
+            "todos os itens", "tudo do estoque", "estoque completo", "inventario completo", "inventário completo",
+            "lista completa", "quero tudo", "quero todos", "mostrar tudo"
+        )
+        return any(g in normal for g in gatilhos)
 
     def _extract_group(self, normal: str) -> Optional[str]:
         for grupo, termos in self.GRUPOS_SINONIMOS.items():
@@ -509,6 +518,14 @@ class EstoqueIA:
         if self._has_any(normal, self.PALAVRAS_ACAO["memoria"]):
             return "resumo_memoria", 0.92
 
+        if ("setor" in normal or "localizacao" in normal or "localização" in normal) and (
+            "cada setor" in normal or "por setor" in normal or "quantos itens" in normal or "seus nomes" in normal
+        ):
+            return "itens_por_setor_detalhado", 0.95
+
+        if entidades.get("escopo_global") and (self._has_any(normal, self.PALAVRAS_ACAO["listar"]) or "itens" in normal):
+            return "listar_todos_itens", 0.95
+
         if self._has_any(normal, self.PALAVRAS_ACAO["recente"]):
             return "itens_recentes", 0.95
 
@@ -627,6 +644,13 @@ class EstoqueIA:
             self.contexto.ultimo_limite = entidades["faixa"]["max"]
         if entidades.get("faixa", {}).get("min") is not None and entidades["faixa"].get("tipo") == "acima":
             self.contexto.ultimo_limite = entidades["faixa"]["min"]
+        if entidades.get("escopo_global"):
+            self.contexto.item_nome = None
+            self.contexto.item_codigo = None
+            self.contexto.cor = None
+            self.contexto.fornecedor = None
+            self.contexto.localizacao = None
+            self.contexto.composicao = None
         self.contexto.ultimo_intent = intent
 
     def _registrar_memoria_consulta(self, intent: Optional[str], entidades: Dict[str, Any], resposta: str) -> None:
@@ -928,6 +952,8 @@ class EstoqueIA:
             "comparar_grupos": self._resp_comparar_grupos,
             "resumo_grupo": self._resp_resumo_grupo,
             "resumo_geral": self._resp_resumo_geral,
+            "listar_todos_itens": self._resp_listar_todos_itens,
+            "itens_por_setor_detalhado": self._resp_itens_por_setor_detalhado,
             "itens_recentes": self._resp_recentes,
             "contar_codigos": self._resp_contar_codigos,
             "contar_itens_distintos": self._resp_contar_distintos,
@@ -1291,6 +1317,52 @@ class EstoqueIA:
             crit = len([r for r in rows if self._is_critical(r)])
             linhas.append(f"- {grupo}: {itens} item(ns) distintos | saldo {self._fmt_qtd(saldo)} | críticos {crit}")
         linhas.append("Pergunte, por exemplo: quais tecidos temos ou quais aviamentos estão críticos.")
+        return "\n".join(linhas)
+
+    def _resp_listar_todos_itens(self, entidades: Dict[str, Any]) -> str:
+        rows = self._dataset({})
+        if not rows:
+            return "Não encontrei itens no estoque para listar."
+        agg: Dict[str, Dict[str, Any]] = {}
+        for r in rows:
+            nome = self._safe_text(r.get("descricao")) or "Sem nome"
+            grp = self._safe_text(r.get("grupo_principal")) or "Sem grupo"
+            key = f"{grp}::{nome}"
+            if key not in agg:
+                agg[key] = {"grupo": grp, "nome": nome, "saldo": 0.0, "unidade": self._safe_text(r.get("unidade")) or "un"}
+            agg[key]["saldo"] += self._safe_float(r.get("saldo_num"))
+        ordenado = sorted(agg.values(), key=lambda x: (x["grupo"], x["nome"]))
+        self._save_last_rows(rows, "listar_todos_itens", {"escopo_global": True})
+        linhas = [f"Inventário geral: {len(ordenado)} item(ns) distintos."]
+        for item in ordenado[:80]:
+            linhas.append(f"- [{item['grupo']}] {item['nome']} | saldo {self._fmt_qtd(item['saldo'])} {item['unidade']}")
+        if len(ordenado) > 80:
+            linhas.append(f"... e mais {len(ordenado) - 80} item(ns).")
+        return "\n".join(linhas)
+
+    def _resp_itens_por_setor_detalhado(self, entidades: Dict[str, Any]) -> str:
+        filtro = {"grupo": entidades.get("grupo")} if entidades.get("grupo") else {}
+        rows = self._dataset(filtro if filtro else {})
+        if not rows:
+            return "Não encontrei dados para listar por setor."
+        mapa: Dict[str, Dict[str, Any]] = {}
+        for r in rows:
+            setor = self._safe_text(r.get("localizacao")) or "Sem localização"
+            nome = self._safe_text(r.get("descricao")) or "Sem nome"
+            if setor not in mapa:
+                mapa[setor] = {"nomes": set(), "saldo": 0.0}
+            mapa[setor]["nomes"].add(nome)
+            mapa[setor]["saldo"] += self._safe_float(r.get("saldo_num"))
+        ordenado = sorted(mapa.items(), key=lambda x: (-len(x[1]["nomes"]), x[0]))
+        linhas = ["Itens por setor/localização:"]
+        for setor, info in ordenado:
+            nomes = sorted(info["nomes"])
+            linhas.append(f"- {setor}: {len(nomes)} item(ns) | saldo total {self._fmt_qtd(info['saldo'])}")
+            for nome in nomes[:15]:
+                linhas.append(f"  • {nome}")
+            if len(nomes) > 15:
+                linhas.append(f"  • ... +{len(nomes) - 15} item(ns)")
+        self._save_last_rows(rows, "itens_por_setor_detalhado", entidades)
         return "\n".join(linhas)
 
     def _resp_recentes(self, entidades: Dict[str, Any]) -> str:

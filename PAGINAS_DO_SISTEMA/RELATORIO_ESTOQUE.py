@@ -1351,6 +1351,29 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._create_main_layout()
         self.reload_data()
         self._setup_window_protocol()
+        self._ajustar_janela_inicial()
+
+    def _ajustar_janela_inicial(self):
+        """
+        Abre a janela do relatório maior e centralizada.
+        Só ajusta quando estiver em uma janela de topo.
+        """
+        try:
+            top = self.winfo_toplevel()
+            if top is None:
+                return
+            top.update_idletasks()
+            sw = top.winfo_screenwidth()
+            sh = top.winfo_screenheight()
+            largura = min(1500, max(1180, int(sw * 0.88)))
+            altura = min(920, max(760, int(sh * 0.86)))
+            x = max(0, (sw - largura) // 2)
+            y = max(0, (sh - altura) // 2)
+            top.minsize(1120, 700)
+            top.geometry(f"{largura}x{altura}+{x}+{y}")
+            top.lift()
+        except Exception:
+            pass
 
     def obter_cores_por_tema(self):
         """
