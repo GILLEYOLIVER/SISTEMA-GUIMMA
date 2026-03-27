@@ -61,6 +61,7 @@ except Exception:
 
 # === ACESSO AO POSTGRES ===
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
+from PAGINAS_DO_SISTEMA.RELATORIO_ESTOQUE_IA import EstoqueIA as EstoqueIAAvancada
 
 
 # ------------------------------------------------------------------
@@ -1345,11 +1346,39 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._ai_worker_running = False
         self._ai_schema_cache = []
         self._ai_schema_cache_ts = 0.0
+        self._ai_pending_action: Optional[str] = None
+        self._ai_perfil_resposta = "operacional"
+        self._ai_metricas = {"mensagens": 0, "acoes_diretas": 0, "fallback_db": 0, "db_queries": 0, "zero_results": 0}
+        self._ai_last_decision: Dict[str, Any] = {}
+        self._ai_error_log: List[str] = []
 
         self._setup_styles()
         self._create_main_layout()
         self.reload_data()
         self._setup_window_protocol()
+        self._ajustar_janela_inicial()
+
+    def _ajustar_janela_inicial(self):
+        """
+        Abre a janela do relatório maior e centralizada.
+        Só ajusta quando estiver em uma janela de topo.
+        """
+        try:
+            top = self.winfo_toplevel()
+            if top is None:
+                return
+            top.update_idletasks()
+            sw = top.winfo_screenwidth()
+            sh = top.winfo_screenheight()
+            largura = min(1500, max(1180, int(sw * 0.88)))
+            altura = min(920, max(760, int(sh * 0.86)))
+            x = max(0, (sw - largura) // 2)
+            y = max(0, (sh - altura) // 2)
+            top.minsize(1120, 700)
+            top.geometry(f"{largura}x{altura}+{x}+{y}")
+            top.lift()
+        except Exception:
+            pass
 
     def obter_cores_por_tema(self):
         """
@@ -2760,7 +2789,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._recalc_stats()
         self._create_analytics_charts()
         self._create_metrics_panel()
-        self.assistente = EstoqueIA(self.resultados)
+        self.assistente = EstoqueIAAvancada(self.resultados)
 
     # ---------- IA + BANCO (consultas inteligentes) ----------
     def _get_ai_sources(self, cur, schema: str):
@@ -2795,6 +2824,8 @@ class AdvancedStockReport(ctk.CTkFrame):
                 continue
             fontes.append({
                 "tabela": tabela,
+                "grupo": tabela.replace("estoque_", ""),
+                "cols": sorted(cols),
                 "qtd": qtd_field,
                 "cat": "categoria" if "categoria" in cols else None,
                 "status": "status" if "status" in cols else None,
@@ -2809,6 +2840,30 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._ai_schema_cache_ts = now
         return fontes
 
+    def _ai_schema_map_text(self) -> str:
+        schema = db.get_schema()
+        try:
+            with db.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"SET LOCAL search_path = {schema};")
+                    fontes = self._get_ai_sources(cur, schema)
+        except Exception as e:
+            return f"Não consegui ler o mapa do banco agora: {e}"
+
+        if not fontes:
+            return f"Não encontrei fontes de estoque no schema '{schema}'."
+
+        linhas = [f"Mapa do banco (schema: {schema})"]
+        for f in fontes:
+            linhas.append(f"- Tabela: {f['tabela']} | grupo: {f['grupo']} | qtd: {f['qtd']}")
+            linhas.append(
+                f"  colunas-chave => categoria:{f['cat'] or '-'} | local:{f['local'] or '-'} | "
+                f"cor:{f['cor'] or '-'} | fornecedor:{f['fornecedor'] or '-'} | data:{f['data'] or '-'}"
+            )
+            if f.get("cols"):
+                linhas.append(f"  total colunas detectadas: {len(f['cols'])}")
+        return "\n".join(linhas)
+
     def _ai_parse_query(self, pergunta: str) -> dict:
         q = (pergunta or "").strip().lower()
         nums = [int(x) for x in re.findall(r"(?<!\w)(\d+)(?!\w)", q)]
@@ -2816,8 +2871,23 @@ class AdvancedStockReport(ctk.CTkFrame):
             "o", "a", "os", "as", "de", "do", "da", "dos", "das", "e", "ou", "em", "no", "na", "nos", "nas",
             "para", "por", "com", "sem", "que", "qual", "quais", "quanto", "quantos", "tem", "temos", "ia",
             "banco", "estoque", "item", "itens", "verifique", "mostrar", "mostre", "procure", "buscar", "algo"
+            , "cores", "cor", "fornecedor", "fornecedores", "categoria", "categorias", "local", "locais"
         }
         termos_livres = [t for t in re.findall(r"[a-z0-9áéíóúãõç_-]+", q) if len(t) >= 3 and t not in stopwords]
+
+        grupo_alvo = None
+        mapa_grupo = {
+            "tecido": "tecidos", "tecidos": "tecidos",
+            "aviamento": "aviamentos", "aviamentos": "aviamentos",
+            "insumo": "insumos", "insumos": "insumos",
+            "escritorio": "escritorio", "escritório": "escritorio",
+            "limpeza": "limpeza",
+            "outro": "outros", "outros": "outros",
+        }
+        for termo, grupo in mapa_grupo.items():
+            if termo in q:
+                grupo_alvo = grupo
+                break
 
         codigo = None
         m_cod = re.search(r"c[oó]d(?:igo)?\s*[:#]?\s*([a-z0-9_.\-/]+)", q)
@@ -2861,6 +2931,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             "local": local,
             "cor": cor,
             "fornecedor": fornecedor,
+            "grupo_alvo": grupo_alvo,
             "termos_livres": termos_livres[:6],
             "is_critico": any(k in q for k in ("crítico", "critico", "baixo estoque", "repor urgente")),
             "is_valor": any(k in q for k in ("valor", "financeiro", "patrimônio", "patrimonio")),
@@ -2899,6 +2970,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                             f"COALESCE({f['qtd']},0)::numeric AS quantidade, "
                             f"{status} AS status, {local} AS localizacao, {cor} AS cor, {fornecedor} AS fornecedor, "
                             f"{data} AS ultima_atualizacao, "
+                            f"'{f['grupo']}' AS origem_grupo, "
                             f"'{f['tabela']}' AS origem "
                             f"FROM {schema}.{f['tabela']}"
                         )
@@ -2922,18 +2994,30 @@ class AdvancedStockReport(ctk.CTkFrame):
                     if p["fornecedor"]:
                         filtros.append("LOWER(COALESCE(fornecedor,'')) LIKE %s")
                         params.append(f"%{p['fornecedor'].lower()}%")
+                    if p.get("grupo_alvo"):
+                        filtros.append("LOWER(COALESCE(origem_grupo,'')) = %s")
+                        params.append(p["grupo_alvo"].lower())
 
-                    for termo in p["termos_livres"]:
+                    termos_busca = list(p["termos_livres"] or [])
+                    if p.get("grupo_alvo"):
+                        termos_busca = [t for t in termos_busca if t != p["grupo_alvo"]]
+                    if p["is_cores"] and not p["cor"]:
+                        termos_busca = [t for t in termos_busca if t not in {"cores", "cor"}]
+                    if p["is_fornecedores"] and not p["fornecedor"]:
+                        termos_busca = [t for t in termos_busca if t not in {"fornecedor", "fornecedores"}]
+
+                    for termo in termos_busca:
                         filtros.append(
                             "(LOWER(COALESCE(descricao,'')) LIKE %s "
                             "OR LOWER(COALESCE(categoria,'')) LIKE %s "
+                            "OR LOWER(COALESCE(origem_grupo,'')) LIKE %s "
                             "OR LOWER(COALESCE(localizacao,'')) LIKE %s "
                             "OR LOWER(COALESCE(cor,'')) LIKE %s "
                             "OR LOWER(COALESCE(fornecedor,'')) LIKE %s "
                             "OR LOWER(CAST(codigo AS text)) LIKE %s)"
                         )
                         like_term = f"%{termo}%"
-                        params.extend([like_term, like_term, like_term, like_term, like_term, like_term])
+                        params.extend([like_term, like_term, like_term, like_term, like_term, like_term, like_term])
 
                     if p["is_critico"] and not p["limiar"]:
                         filtros.append("quantidade < 10")
@@ -2958,7 +3042,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                         cur.execute(sql, tuple(params))
                         rows = cur.fetchall()
                         if not rows:
-                            return "ℹ️ Nenhum fornecedor encontrado no banco para esse filtro."
+                            return self._ai_investigar_zero_resultado(cur, cte, where_sql, params, p, "fornecedor")
                         linhas = ["🏦 **Fornecedores encontrados no banco**:"]
                         for forn, itens, qtd in rows:
                             linhas.append(f"- {forn}: {int(itens or 0)} itens, qtd {float(qtd or 0):.2f}")
@@ -2976,7 +3060,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                         cur.execute(sql, tuple(params))
                         rows = cur.fetchall()
                         if not rows:
-                            return "ℹ️ Nenhuma cor encontrada no banco para esse filtro."
+                            return self._ai_investigar_zero_resultado(cur, cte, where_sql, params, p, "cor")
                         linhas = ["🎨 **Cores encontradas no banco**:"]
                         for cor, itens, qtd in rows:
                             linhas.append(f"- {cor}: {int(itens or 0)} itens, qtd {float(qtd or 0):.2f}")
@@ -3052,7 +3136,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                         cur.execute(sql, tuple(params))
                         rows = cur.fetchall()
                         if not rows:
-                            return "ℹ️ Nenhum resultado encontrado no banco para esse filtro."
+                            return self._ai_investigar_zero_resultado(cur, cte, where_sql, params, p, "busca")
 
                         linhas = ["🏦 **Consulta em tempo real no banco**", titulo]
                         for r in rows[:limit]:
@@ -3219,7 +3303,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         """Janela leve: carrega só a categoria escolhida. Evita travamentos."""
         try:
             if not hasattr(self, "assistente") or self.assistente is None:
-                self.assistente = EstoqueIA(self.resultados)
+                self.assistente = EstoqueIAAvancada(self.resultados)
         except Exception:
             pass
 
@@ -3588,13 +3672,33 @@ class AdvancedStockReport(ctk.CTkFrame):
             except queue.Empty:
                 continue
             try:
+                self._ai_metricas["mensagens"] += 1
                 if self.assistente is None:
-                    self.assistente = EstoqueIA(self.resultados)
+                    self.assistente = EstoqueIAAvancada(self.resultados)
+
+                acao_direta = self._try_handle_direct_ai_action(text)
+                if acao_direta:
+                    self._post_bot(acao_direta)
+                    self.assistente._remember("assistant", acao_direta)
+                    self._ai_metricas["acoes_diretas"] += 1
+                    continue
+
                 resposta_local = self.assistente.responder(text)
                 intent, conf = self.assistente._intent_score(text)
+                self._ajustar_perfil_resposta(text)
                 usar_banco = self._should_use_db_answer(text, intent, conf)
+                if usar_banco:
+                    self._ai_metricas["db_queries"] += 1
                 resposta_banco = self._ai_query_database(text) if usar_banco else None
                 main = self._merge_local_and_db_response(resposta_local, resposta_banco, text)
+                self._ai_last_decision = {
+                    "pergunta": text,
+                    "intent": intent,
+                    "confianca": conf,
+                    "usou_banco": usar_banco,
+                    "perfil": self._ai_perfil_resposta,
+                    "tem_resposta_banco": bool(resposta_banco),
+                }
                 variations = [] if resposta_banco else self._short_variations(main)
                 out = main
                 if variations:
@@ -3603,25 +3707,134 @@ class AdvancedStockReport(ctk.CTkFrame):
                 self.assistente._remember("assistant", main)
             except Exception as e:
                 self._post_bot(f"⚠️ Erro ao gerar resposta: {e}", slow=False)
+                self._ai_error_log.append(f"{datetime.now().isoformat(timespec='seconds')} | {e}")
+                self._ai_error_log = self._ai_error_log[-20:]
             finally:
                 self._ai_queue.task_done()
 
+    def _try_handle_direct_ai_action(self, text: str) -> Optional[str]:
+        q = (text or "").strip().lower()
+        if not q:
+            return None
+
+        if q in {"sim", "ok", "confirmo", "pode", "pode sim", "isso"}:
+            if self._ai_pending_action == "pdf":
+                self.after(0, self.export_pdf)
+                self._ai_pending_action = None
+                return "Confirmação recebida. Abri a exportação de PDF."
+            if self._ai_pending_action == "csv":
+                self.after(0, self.export_csv)
+                self._ai_pending_action = None
+                return "Confirmação recebida. Abri a exportação de CSV."
+            if self._ai_pending_action == "excel":
+                self.after(0, self.export_excel)
+                self._ai_pending_action = None
+                return "Confirmação recebida. Abri a exportação de Excel."
+            if self._ai_pending_action == "criticos":
+                self._ai_pending_action = None
+                return self.assistente.responder("quais itens estão críticos")
+
+        if q in {"nao", "não", "cancelar", "pare"}:
+            self._ai_pending_action = None
+            return "Tudo bem, ação cancelada. Me diga o próximo objetivo."
+
+        if any(k in q for k in ("gerar pdf", "gere pdf", "exportar pdf", "salvar pdf", "relatorio em pdf", "relatório em pdf")):
+            self.after(0, self.export_pdf)
+            return "Perfeito. Abri a exportação de PDF para você."
+
+        if any(k in q for k in ("exportar csv", "gerar csv", "salvar csv")):
+            self.after(0, self.export_csv)
+            return "Perfeito. Abri a exportação de CSV para você."
+
+        if any(k in q for k in ("exportar excel", "gerar excel", "salvar excel", "planilha")):
+            self.after(0, self.export_excel)
+            return "Perfeito. Abri a exportação de Excel para você."
+
+        if any(k in q for k in ("apenas os criticos", "apenas os críticos", "somente criticos", "somente críticos")):
+            return self.assistente.responder("quais itens estão críticos")
+
+        if any(k in q for k in ("gerar relatorio completo", "gerar relatório completo", "inventario completo", "inventário completo")):
+            self._ai_pending_action = "pdf"
+            return (
+                "Posso gerar o relatório completo agora.\n"
+                "Se quiser continuar, responda: SIM."
+            )
+
+        if "diagnostico ia" in q or "diagnóstico ia" in q:
+            return (
+                "Diagnóstico rápido da IA:\n"
+                f"- mensagens processadas: {self._ai_metricas['mensagens']}\n"
+                f"- ações diretas executadas: {self._ai_metricas['acoes_diretas']}\n"
+                f"- fallbacks de banco: {self._ai_metricas['fallback_db']}\n"
+                f"- consultas diretas no banco: {self._ai_metricas['db_queries']}\n"
+                f"- zero-results detectados: {self._ai_metricas['zero_results']}\n"
+                f"- perfil atual de resposta: {self._ai_perfil_resposta}"
+            )
+        if "por que voce respondeu isso" in q or "por que você respondeu isso" in q or "explicar decisao" in q or "explicar decisão" in q:
+            if not self._ai_last_decision:
+                return "Ainda não tenho uma decisão recente para explicar."
+            d = self._ai_last_decision
+            return (
+                "Replay de decisão da última resposta:\n"
+                f"- pergunta: {d.get('pergunta')}\n"
+                f"- intent detectado: {d.get('intent')}\n"
+                f"- confiança: {d.get('confianca')}\n"
+                f"- usou banco: {d.get('usou_banco')}\n"
+                f"- perfil ativo: {d.get('perfil')}\n"
+                f"- houve resposta do banco: {d.get('tem_resposta_banco')}"
+            )
+        if "mapa do banco" in q or "auditoria do schema" in q or "estrutura do banco" in q:
+            return self._ai_schema_map_text()
+        if "recarregar fontes" in q or "limpar cache schema" in q:
+            self._ai_schema_cache = []
+            self._ai_schema_cache_ts = 0.0
+            return "Cache de schema limpo. Na próxima consulta, vou reler a estrutura do banco."
+        if "ultimos erros da ia" in q or "últimos erros da ia" in q:
+            if not self._ai_error_log:
+                return "Não há erros recentes registrados na IA."
+            return "Últimos erros da IA:\n- " + "\n- ".join(self._ai_error_log[-10:])
+        if "modo gestor" in q:
+            self._ai_perfil_resposta = "detalhado"
+            return "Perfil ajustado para GESTOR (respostas detalhadas e analíticas)."
+        if "modo compras" in q:
+            self._ai_perfil_resposta = "operacional"
+            return "Perfil ajustado para COMPRAS (foco em reposição e fornecedor)."
+        if "modo operacao" in q or "modo operação" in q:
+            self._ai_perfil_resposta = "objetivo"
+            return "Perfil ajustado para OPERAÇÃO (respostas curtas e diretas)."
+        if "modo auditoria" in q:
+            self._ai_perfil_resposta = "detalhado"
+            return "Perfil ajustado para AUDITORIA (explicações completas e diagnóstico)."
+
+        return None
+
     def _short_variations(self, base_text):
-        opts = [
-            "Quer que eu *exporte* essa lista?",
-            "Deseja ver *apenas os críticos*?",
-            "Posso *abrir um item* pelo código se preferir.",
-            "Gerar *PDF* com esses dados?",
-            "Quer que eu *salve* um relatório agora?"
-        ]
-        random.shuffle(opts)
-        return opts[:2]
+        # Evita ruído e loops de confirmação no chat.
+        return []
+
+    def _ajustar_perfil_resposta(self, text: str) -> None:
+        q = (text or "").lower()
+        if any(k in q for k in ("detalhado", "detalhe", "completo", "analitico", "analítico", "explique")):
+            self._ai_perfil_resposta = "detalhado"
+        elif any(k in q for k in ("rápido", "rapido", "resumo", "curto")):
+            self._ai_perfil_resposta = "objetivo"
+        else:
+            self._ai_perfil_resposta = "operacional"
 
     def _should_use_db_answer(self, text: str, intent: Optional[str], conf: float) -> bool:
         q = (text or "").strip().lower()
         if not q:
             return False
+        gatilhos_explicitos_banco = ("no banco", "direto no banco", "consulta sql", "query", "banco de dados")
+        if any(g in q for g in gatilhos_explicitos_banco):
+            return True
         if intent in {"saudacao", "ajuda", "contexto"} and conf >= 0.15:
+            return False
+        intents_locais_fortes = {
+            "listar_grupo", "contar_grupo", "resumo_grupo", "resumo_geral", "listar_todos_itens",
+            "itens_por_setor_detalhado", "itens_criticos", "contar_itens_distintos", "contar_codigos"
+        }
+        if intent in intents_locais_fortes and conf >= 0.70:
             return False
         termos_db = (
             "estoque", "item", "itens", "quantidade", "categoria", "local", "cor", "fornecedor",
@@ -3644,8 +3857,14 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         banco_txt = self._strip_markdown_tokens(resposta_banco)
         banco_l = banco_txt.lower()
+        estado = "ok"
+        if ("linhas: 0" in banco_l or "linhas:0" in banco_l) and local_txt and "não encontrei" not in local_txt.lower():
+            return local_txt
 
         if "nenhum resultado encontrado no banco" in banco_l or "não consegui consultar o banco" in banco_l:
+            estado = "no_match"
+            self._ai_metricas["fallback_db"] += 1
+            self._ai_metricas["zero_results"] += 1
             return (
                 f"{local_txt}\n\n"
                 "No banco não encontrei um resultado exato com esse filtro agora. "
@@ -3653,6 +3872,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             )
 
         if "verificação no banco concluída" in banco_l:
+            estado = "disambiguation"
             return (
                 "Entendi 👍\n"
                 f"{banco_txt}\n\n"
@@ -3660,11 +3880,85 @@ class AdvancedStockReport(ctk.CTkFrame):
                 "eu te devolvo uma resposta bem mais específica."
             )
 
-        return (
+        resposta = (
             "Perfeito, consultei no banco em tempo real:\n"
-            f"{banco_txt}\n\n"
-            "Se quiser, já te entrego também um resumo em formato de ação (o que comprar, o que está crítico, e prioridade)."
+            f"{banco_txt}"
         )
+        if self._ai_perfil_resposta == "detalhado" and estado == "ok":
+            resposta += "\n\nPróximo passo sugerido: peça 'análise de risco' ou 'curva abc' para aprofundar."
+        return resposta
+
+    def _ai_investigar_zero_resultado(self, cur, cte: str, where_sql: str, params: list, parsed: dict, foco: str) -> str:
+        self._ai_metricas["zero_results"] += 1
+        try:
+            sql_total = cte + " SELECT COUNT(*) FROM estoque_unificado"
+            cur.execute(sql_total)
+            total = int(cur.fetchone()[0] or 0)
+
+            sql_grupos = cte + " SELECT origem_grupo, COUNT(*) FROM estoque_unificado GROUP BY origem_grupo ORDER BY 2 DESC"
+            cur.execute(sql_grupos)
+            grupos = cur.fetchall() or []
+
+            sql_filtrado = cte + f" SELECT COUNT(*) FROM estoque_unificado {where_sql}"
+            cur.execute(sql_filtrado, tuple(params))
+            filtrado = int(cur.fetchone()[0] or 0)
+
+            linhas = [f"Nenhum resultado para foco '{foco}' com os filtros atuais."]
+            linhas.append(f"Diagnóstico: total de linhas no estoque_unificado = {total}")
+            linhas.append(f"Diagnóstico: linhas após filtro = {filtrado}")
+            if parsed.get("grupo_alvo"):
+                linhas.append(f"Grupo alvo detectado na pergunta: {parsed['grupo_alvo']}")
+            if grupos:
+                linhas.append("Distribuição por grupo detectado:")
+                for g, c in grupos[:10]:
+                    linhas.append(f"- {g}: {int(c)}")
+            amostras = self._ai_busca_aproximada(cur, cte, parsed)
+            if amostras:
+                linhas.append("Sugestões aproximadas para continuar:")
+                for a in amostras:
+                    linhas.append(f"- {a}")
+            linhas.append("Dica: peça 'mapa do banco' para ver estrutura completa detectada.")
+            return "\n".join(linhas)
+        except Exception:
+            return f"Nenhum resultado encontrado para '{foco}' e não consegui gerar diagnóstico detalhado agora."
+
+    def _ai_busca_aproximada(self, cur, cte: str, parsed: dict) -> List[str]:
+        try:
+            termos = parsed.get("termos_livres") or []
+            grupo = parsed.get("grupo_alvo")
+            if grupo:
+                sql = cte + """
+                    SELECT descricao, codigo, origem_grupo
+                      FROM estoque_unificado
+                     WHERE LOWER(COALESCE(origem_grupo,'')) = %s
+                     ORDER BY quantidade DESC, descricao ASC
+                     LIMIT 8
+                """
+                cur.execute(sql, (grupo.lower(),))
+            elif termos:
+                termo = f"%{termos[0]}%"
+                sql = cte + """
+                    SELECT descricao, codigo, origem_grupo
+                      FROM estoque_unificado
+                     WHERE LOWER(COALESCE(descricao,'')) LIKE %s
+                        OR LOWER(COALESCE(categoria,'')) LIKE %s
+                        OR LOWER(CAST(codigo AS text)) LIKE %s
+                     ORDER BY quantidade DESC, descricao ASC
+                     LIMIT 8
+                """
+                cur.execute(sql, (termo, termo, termo))
+            else:
+                sql = cte + """
+                    SELECT descricao, codigo, origem_grupo
+                      FROM estoque_unificado
+                     ORDER BY quantidade DESC, descricao ASC
+                     LIMIT 8
+                """
+                cur.execute(sql)
+            rows = cur.fetchall() or []
+            return [f"{r[0]} (código {r[1] or '—'}, grupo {r[2] or '—'})" for r in rows if r and r[0]]
+        except Exception:
+            return []
 
 
 # ---------- Execução Standalone ----------
