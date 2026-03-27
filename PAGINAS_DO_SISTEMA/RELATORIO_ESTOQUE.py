@@ -1349,6 +1349,8 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._ai_pending_action: Optional[str] = None
         self._ai_perfil_resposta = "operacional"
         self._ai_metricas = {"mensagens": 0, "acoes_diretas": 0, "fallback_db": 0, "db_queries": 0, "zero_results": 0}
+        self._ai_last_decision: Dict[str, Any] = {}
+        self._ai_error_log: List[str] = []
 
         self._setup_styles()
         self._create_main_layout()
@@ -3689,6 +3691,14 @@ class AdvancedStockReport(ctk.CTkFrame):
                     self._ai_metricas["db_queries"] += 1
                 resposta_banco = self._ai_query_database(text) if usar_banco else None
                 main = self._merge_local_and_db_response(resposta_local, resposta_banco, text)
+                self._ai_last_decision = {
+                    "pergunta": text,
+                    "intent": intent,
+                    "confianca": conf,
+                    "usou_banco": usar_banco,
+                    "perfil": self._ai_perfil_resposta,
+                    "tem_resposta_banco": bool(resposta_banco),
+                }
                 variations = [] if resposta_banco else self._short_variations(main)
                 out = main
                 if variations:
@@ -3697,6 +3707,8 @@ class AdvancedStockReport(ctk.CTkFrame):
                 self.assistente._remember("assistant", main)
             except Exception as e:
                 self._post_bot(f"⚠️ Erro ao gerar resposta: {e}", slow=False)
+                self._ai_error_log.append(f"{datetime.now().isoformat(timespec='seconds')} | {e}")
+                self._ai_error_log = self._ai_error_log[-20:]
             finally:
                 self._ai_queue.task_done()
 
@@ -3758,8 +3770,41 @@ class AdvancedStockReport(ctk.CTkFrame):
                 f"- zero-results detectados: {self._ai_metricas['zero_results']}\n"
                 f"- perfil atual de resposta: {self._ai_perfil_resposta}"
             )
+        if "por que voce respondeu isso" in q or "por que você respondeu isso" in q or "explicar decisao" in q or "explicar decisão" in q:
+            if not self._ai_last_decision:
+                return "Ainda não tenho uma decisão recente para explicar."
+            d = self._ai_last_decision
+            return (
+                "Replay de decisão da última resposta:\n"
+                f"- pergunta: {d.get('pergunta')}\n"
+                f"- intent detectado: {d.get('intent')}\n"
+                f"- confiança: {d.get('confianca')}\n"
+                f"- usou banco: {d.get('usou_banco')}\n"
+                f"- perfil ativo: {d.get('perfil')}\n"
+                f"- houve resposta do banco: {d.get('tem_resposta_banco')}"
+            )
         if "mapa do banco" in q or "auditoria do schema" in q or "estrutura do banco" in q:
             return self._ai_schema_map_text()
+        if "recarregar fontes" in q or "limpar cache schema" in q:
+            self._ai_schema_cache = []
+            self._ai_schema_cache_ts = 0.0
+            return "Cache de schema limpo. Na próxima consulta, vou reler a estrutura do banco."
+        if "ultimos erros da ia" in q or "últimos erros da ia" in q:
+            if not self._ai_error_log:
+                return "Não há erros recentes registrados na IA."
+            return "Últimos erros da IA:\n- " + "\n- ".join(self._ai_error_log[-10:])
+        if "modo gestor" in q:
+            self._ai_perfil_resposta = "detalhado"
+            return "Perfil ajustado para GESTOR (respostas detalhadas e analíticas)."
+        if "modo compras" in q:
+            self._ai_perfil_resposta = "operacional"
+            return "Perfil ajustado para COMPRAS (foco em reposição e fornecedor)."
+        if "modo operacao" in q or "modo operação" in q:
+            self._ai_perfil_resposta = "objetivo"
+            return "Perfil ajustado para OPERAÇÃO (respostas curtas e diretas)."
+        if "modo auditoria" in q:
+            self._ai_perfil_resposta = "detalhado"
+            return "Perfil ajustado para AUDITORIA (explicações completas e diagnóstico)."
 
         return None
 
@@ -3867,10 +3912,53 @@ class AdvancedStockReport(ctk.CTkFrame):
                 linhas.append("Distribuição por grupo detectado:")
                 for g, c in grupos[:10]:
                     linhas.append(f"- {g}: {int(c)}")
+            amostras = self._ai_busca_aproximada(cur, cte, parsed)
+            if amostras:
+                linhas.append("Sugestões aproximadas para continuar:")
+                for a in amostras:
+                    linhas.append(f"- {a}")
             linhas.append("Dica: peça 'mapa do banco' para ver estrutura completa detectada.")
             return "\n".join(linhas)
         except Exception:
             return f"Nenhum resultado encontrado para '{foco}' e não consegui gerar diagnóstico detalhado agora."
+
+    def _ai_busca_aproximada(self, cur, cte: str, parsed: dict) -> List[str]:
+        try:
+            termos = parsed.get("termos_livres") or []
+            grupo = parsed.get("grupo_alvo")
+            if grupo:
+                sql = cte + """
+                    SELECT descricao, codigo, origem_grupo
+                      FROM estoque_unificado
+                     WHERE LOWER(COALESCE(origem_grupo,'')) = %s
+                     ORDER BY quantidade DESC, descricao ASC
+                     LIMIT 8
+                """
+                cur.execute(sql, (grupo.lower(),))
+            elif termos:
+                termo = f"%{termos[0]}%"
+                sql = cte + """
+                    SELECT descricao, codigo, origem_grupo
+                      FROM estoque_unificado
+                     WHERE LOWER(COALESCE(descricao,'')) LIKE %s
+                        OR LOWER(COALESCE(categoria,'')) LIKE %s
+                        OR LOWER(CAST(codigo AS text)) LIKE %s
+                     ORDER BY quantidade DESC, descricao ASC
+                     LIMIT 8
+                """
+                cur.execute(sql, (termo, termo, termo))
+            else:
+                sql = cte + """
+                    SELECT descricao, codigo, origem_grupo
+                      FROM estoque_unificado
+                     ORDER BY quantidade DESC, descricao ASC
+                     LIMIT 8
+                """
+                cur.execute(sql)
+            rows = cur.fetchall() or []
+            return [f"{r[0]} (código {r[1] or '—'}, grupo {r[2] or '—'})" for r in rows if r and r[0]]
+        except Exception:
+            return []
 
 
 # ---------- Execução Standalone ----------
