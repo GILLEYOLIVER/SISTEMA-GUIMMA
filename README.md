@@ -4,6 +4,37 @@ Aplicação desktop para gestão de produção (modelos, corte, estoque, pagamen
 
 ---
 
+## Últimas mudanças identificadas (Git)
+
+Levantamento feito a partir dos commits mais recentes da branch `work`:
+
+### 2026-03-26 — `894c74f` — Sincronização local/GitHub
+- Evolução importante no relatório de estoque com grande refatoração de `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`.
+- Inclusão do novo módulo `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE_IA.py` para recursos de análise assistida por IA no contexto de estoque.
+- Ajustes em `PAGINAS_DO_SISTEMA/ENTRADA_ESTOQUE.py` (fluxos de entrada e consistência de dados).
+- Revisões de setup/conexão em `PAGINAS_DO_SISTEMA/SETUP_BANCO.py` e `configurar_postgres.py`.
+- Sincronização de arquivos de configuração (`config.json` em diferentes pontos do projeto).
+
+### 2026-03-25 — `95a043f` — Sincronização local/GitHub
+- Iterações extensas de protótipos de relatório em:
+  - `PAGINAS_DO_SISTEMA/NOVO RELATORIO.py`
+  - `PAGINAS_DO_SISTEMA/NOVO RELATORIO QUASE BOM.py`
+- Atualização significativa de `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`.
+- Ajustes em `PAGINAS_DO_SISTEMA/ENTRADA_ESTOQUE.py`.
+- Inclusão de memória de contexto IA em `PAGINAS_DO_SISTEMA/ia_memory.json`.
+- Mudanças de estrutura SQL em `SCRIPTS/3_CRIAR_TABELAS.sql`.
+
+### 2026-03-24 — `be2840e` — Melhoria de experiência no assistente
+- Humanização das respostas do assistente na interface principal.
+- Redução de fallback “seco” de banco nas respostas.
+- Arquivos centrais alterados:
+  - `PAGINAS_DO_SISTEMA/MENU_PRINCIPAL.py`
+  - `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`
+
+> Nota: os commits de merge de PR entre 2026-03-24 e 2026-03-25 foram excluídos do resumo por serem integrações de branch.
+
+---
+
 ## Estrutura real do repositório (atualizada)
 
 ```text
@@ -73,6 +104,7 @@ SISTEMA-GUIMMA/
 ### Relatórios e utilitários de UI
 - `DASHBOARD.py`
 - `RELATORIO_ESTOQUE.py`
+- `RELATORIO_ESTOQUE_IA.py`  ← cérebro/engine de IA separado da tela
 - `RELATORIO_ACABAMENTO.py`
 - `RELATORIO_ENVIO_DETALHADO.py`
 - `RELATORIO_MODELOS_PRODUZIDOS.py`
@@ -84,6 +116,17 @@ SISTEMA-GUIMMA/
 - `TEMAS.py`
 - `I18N_PAGE_ADAPTER.py`
 - `route_map.json`
+
+---
+
+## Arquitetura atual do Relatório de Estoque com IA
+
+Sim — agora o “cérebro” de IA do relatório de estoque está desacoplado da página principal:
+
+- `RELATORIO_ESTOQUE.py`: responsável por UI, filtros, eventos da tela e integração com os componentes visuais.
+- `RELATORIO_ESTOQUE_IA.py`: responsável por lógica de IA, interpretação de perguntas/comandos e geração de respostas/contexto do relatório.
+
+Esse desacoplamento melhora manutenção, testes e evolução do assistente sem poluir o arquivo da tela.
 
 ---
 
@@ -129,4 +172,3 @@ python packaging/build.py --platform macos
 - Para mudanças de banco, mantenha sincronizados:
   1. `SCRIPTS/3_CRIAR_TABELAS.sql`
   2. scripts de instalação em `data/INSTAL_BANCO_APP/scripts/`
-
