@@ -61,6 +61,7 @@ except Exception:
 
 # === ACESSO AO POSTGRES ===
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
+from PAGINAS_DO_SISTEMA.RELATORIO_ESTOQUE_IA import EstoqueIA as EstoqueIAAvancada
 
 
 # ------------------------------------------------------------------
@@ -2760,7 +2761,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         self._recalc_stats()
         self._create_analytics_charts()
         self._create_metrics_panel()
-        self.assistente = EstoqueIA(self.resultados)
+        self.assistente = EstoqueIAAvancada(self.resultados)
 
     # ---------- IA + BANCO (consultas inteligentes) ----------
     def _get_ai_sources(self, cur, schema: str):
@@ -3219,7 +3220,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         """Janela leve: carrega só a categoria escolhida. Evita travamentos."""
         try:
             if not hasattr(self, "assistente") or self.assistente is None:
-                self.assistente = EstoqueIA(self.resultados)
+                self.assistente = EstoqueIAAvancada(self.resultados)
         except Exception:
             pass
 
@@ -3589,7 +3590,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                 continue
             try:
                 if self.assistente is None:
-                    self.assistente = EstoqueIA(self.resultados)
+                    self.assistente = EstoqueIAAvancada(self.resultados)
                 resposta_local = self.assistente.responder(text)
                 intent, conf = self.assistente._intent_score(text)
                 usar_banco = self._should_use_db_answer(text, intent, conf)
