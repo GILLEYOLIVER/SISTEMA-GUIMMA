@@ -20,6 +20,8 @@ from urllib.parse import urlparse, parse_qs
 
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
+import threading
 
 
 # ==============================================================================
@@ -241,6 +243,10 @@ DEFAULT_CFG: Dict[str, Any] = {
     "connect_timeout": 8,
     "auto_detect_ports": True,
     "fallback_to_postgres": True,
+    "use_connection_pool": True,
+    "pool_minconn": 1,
+    "pool_maxconn": max(2, min((os.cpu_count() or 2) * 2, 16)),
+    "statement_timeout_ms": 0,
     # opcional:
     # "dsn": "postgresql://user:pass@host:port/dbname"
 }
@@ -332,6 +338,8 @@ if CONFIG.get("auto_detect_ports", True) and not ENV_DSN and not str(CONFIG.get(
 # CONEXÃO
 # ==============================================================================
 _cached_conn = None
+_connection_pool = None
+_pool_lock = threading.Lock()
 _env_dsn_disabled = os.environ.get("OPERA_SKIP_ENV_DSN", "0") == "1"
 _env_dsn_disable_reason = os.environ.get("OPERA_SKIP_ENV_DSN_REASON", "")
 
@@ -383,11 +391,15 @@ def _precheck_env_dsn() -> Optional[str]:
 def _apply_session_settings(conn) -> None:
     schema = CONFIG.get("schema", "opera")
     appname = CONFIG.get("appname", "OPERA_APP")
+    statement_timeout_ms = int(CONFIG.get("statement_timeout_ms", 0) or 0)
     try:
         with conn.cursor() as cur:
+            cur.execute("SET client_encoding TO 'UTF8';")
             cur.execute(f"SET search_path TO {schema}, public;")
             if appname:
                 cur.execute("SET application_name TO %s;", (str(appname),))
+            if statement_timeout_ms > 0:
+                cur.execute("SET statement_timeout TO %s;", (statement_timeout_ms,))
     except Exception:
         # não quebra
         pass
@@ -401,6 +413,7 @@ def _create_connection_simple(host: str, port: int, dbname: str, user: str, pass
         user=user,
         password=password,
         connect_timeout=timeout,
+        application_name=str(CONFIG.get("appname", "OPERA_APP")),
     )
 
 
@@ -512,8 +525,75 @@ def _create_connection():
     raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
 
 
+def _get_pool():
+    global _connection_pool
+    if not CONFIG.get("use_connection_pool", True):
+        return None
+    if _connection_pool is not None:
+        return _connection_pool
+
+    with _pool_lock:
+        if _connection_pool is not None:
+            return _connection_pool
+
+        try:
+            minconn = max(1, int(CONFIG.get("pool_minconn", 1) or 1))
+            maxconn = max(minconn, int(CONFIG.get("pool_maxconn", 4) or 4))
+            defaults = CONFIG.get("defaults") or {}
+            pwd = defaults.get("password", "postgres")
+
+            cfg_dsn = str(CONFIG.get("dsn", "")).strip()
+            dsn = ENV_DSN if ENV_DSN and not _env_dsn_disabled else cfg_dsn
+            if dsn:
+                _connection_pool = psycopg2.pool.ThreadedConnectionPool(minconn, maxconn, dsn=dsn)
+            else:
+                bootstrap = _create_connection()
+                params = bootstrap.get_dsn_parameters() if bootstrap else {}
+                if bootstrap:
+                    try:
+                        bootstrap.close()
+                    except Exception:
+                        pass
+                _connection_pool = psycopg2.pool.ThreadedConnectionPool(
+                    minconn,
+                    maxconn,
+                    host=params.get("host") or (CONFIG.get("hosts") or ["localhost"])[0],
+                    port=int(params.get("port") or (CONFIG.get("ports") or [5432])[0]),
+                    database=params.get("dbname") or defaults.get("dbname", "BANCO_OPERA"),
+                    user=params.get("user") or defaults.get("user", "postgres"),
+                    password=pwd,
+                    connect_timeout=int(CONFIG.get("connect_timeout", 8)),
+                    application_name=str(CONFIG.get("appname", "OPERA_APP")),
+                )
+            log_ok(f"Pool de conexões PostgreSQL ativo ({minconn}-{maxconn}).")
+        except Exception as e:
+            _connection_pool = None
+            CONFIG["use_connection_pool"] = False
+            log_warn(
+                f"Falha ao iniciar pool de conexões ({_safe_exc_text(e)}). "
+                f"Fallback automático para conexão direta habilitado."
+            )
+            return None
+    return _connection_pool
+
+
 def get_connection():
     global _cached_conn
+    pool = _get_pool()
+    if pool is not None:
+        try:
+            conn = pool.getconn()
+            try:
+                _apply_session_settings(conn)
+            except Exception:
+                pass
+            return conn
+        except Exception as e:
+            log_warn(
+                f"Pool indisponível nesta tentativa ({_safe_exc_text(e)}). "
+                f"Usando conexão direta."
+            )
+
     if _cached_conn:
         try:
             # mantém o cache vivo
@@ -536,6 +616,7 @@ def get_conn():
 @contextmanager
 def get_conn_cursor():
     conn = get_connection()
+    pool = _get_pool()
     try:
         conn.rollback()
     except Exception:
@@ -555,20 +636,44 @@ def get_conn_cursor():
             cur.close()
         except Exception:
             pass
+        if pool is not None:
+            try:
+                pool.putconn(conn)
+            except Exception:
+                pass
+
+
+@contextmanager
+def get_read_cursor():
+    conn = get_connection()
+    pool = _get_pool()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        yield conn, cur
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        if pool is not None:
+            try:
+                pool.putconn(conn)
+            except Exception:
+                pass
 
 
 # ==============================================================================
 # FUNÇÕES PADRÃO
 # ==============================================================================
 def fetch_one(sql: str, params=None):
-    with get_conn_cursor() as (con, cur):
+    with get_read_cursor() as (con, cur):
         cur.execute(sql, params)
         r = cur.fetchone()
         return dict(r) if r else None
 
 
 def fetch_all(sql: str, params=None):
-    with get_conn_cursor() as (con, cur):
+    with get_read_cursor() as (con, cur):
         cur.execute(sql, params)
         rows = cur.fetchall()
         return [dict(r) for r in rows] if rows else []
@@ -628,7 +733,7 @@ def require_ready(schemas=None):
         return True, "OK"
 
     except Exception as e:
-        return False, f"Erro ao validar schema: {e}"
+        return False, f"Erro ao validar schema: {_safe_exc_text(e)}"
 
 
 def load_config():
