@@ -672,3 +672,9 @@ def abrir_janela_trocar_usuario(self):
             f"Falha ao abrir tela de login:\n{e}",
             parent=self,
         )
+
+if __name__ == "__main__":
+    try:
+        print(f"[TESTE_ISOLADO] Módulo carregado: {__file__}")
+    except Exception as e:
+        print(f"[TESTE_ISOLADO] Falha ao iniciar módulo: {e}")
