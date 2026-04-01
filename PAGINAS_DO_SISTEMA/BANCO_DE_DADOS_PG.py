@@ -246,6 +246,8 @@ DEFAULT_CFG: Dict[str, Any] = {
     "use_connection_pool": True,
     "pool_minconn": 1,
     "pool_maxconn": max(2, min((os.cpu_count() or 2) * 2, 16)),
+    "client_encoding": "UTF8",
+    "legacy_fallback_encoding": "LATIN1",
     "statement_timeout_ms": 0,
     # opcional:
     # "dsn": "postgresql://user:pass@host:port/dbname"
@@ -391,10 +393,11 @@ def _precheck_env_dsn() -> Optional[str]:
 def _apply_session_settings(conn) -> None:
     schema = CONFIG.get("schema", "opera")
     appname = CONFIG.get("appname", "OPERA_APP")
+    client_encoding = str(CONFIG.get("client_encoding", "UTF8") or "UTF8")
     statement_timeout_ms = int(CONFIG.get("statement_timeout_ms", 0) or 0)
     try:
         with conn.cursor() as cur:
-            cur.execute("SET client_encoding TO 'UTF8';")
+            cur.execute(f"SET client_encoding TO '{client_encoding}';")
             cur.execute(f"SET search_path TO {schema}, public;")
             if appname:
                 cur.execute("SET application_name TO %s;", (str(appname),))
@@ -662,21 +665,52 @@ def get_read_cursor():
                 pass
 
 
+def _is_utf8_sequence_error(exc: Exception) -> bool:
+    txt = _safe_exc_text(exc).lower()
+    return "invalid byte sequence for encoding" in txt or "sequência de bytes" in txt
+
+
+def _retry_with_legacy_encoding(cur, sql: str, params=None):
+    legacy_encoding = str(CONFIG.get("legacy_fallback_encoding", "LATIN1") or "LATIN1")
+    cur.execute(f"SET client_encoding TO '{legacy_encoding}';")
+    cur.execute(sql, params)
+
+
 # ==============================================================================
 # FUNÇÕES PADRÃO
 # ==============================================================================
 def fetch_one(sql: str, params=None):
     with get_read_cursor() as (con, cur):
-        cur.execute(sql, params)
-        r = cur.fetchone()
-        return dict(r) if r else None
+        try:
+            cur.execute(sql, params)
+            r = cur.fetchone()
+            return dict(r) if r else None
+        except Exception as e:
+            if _is_utf8_sequence_error(e):
+                try:
+                    _retry_with_legacy_encoding(cur, sql, params)
+                    r = cur.fetchone()
+                    return dict(r) if r else None
+                except Exception:
+                    pass
+            raise
 
 
 def fetch_all(sql: str, params=None):
     with get_read_cursor() as (con, cur):
-        cur.execute(sql, params)
-        rows = cur.fetchall()
-        return [dict(r) for r in rows] if rows else []
+        try:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            return [dict(r) for r in rows] if rows else []
+        except Exception as e:
+            if _is_utf8_sequence_error(e):
+                try:
+                    _retry_with_legacy_encoding(cur, sql, params)
+                    rows = cur.fetchall()
+                    return [dict(r) for r in rows] if rows else []
+                except Exception:
+                    pass
+            raise
 
 
 def execute(sql: str, params=None) -> int:
