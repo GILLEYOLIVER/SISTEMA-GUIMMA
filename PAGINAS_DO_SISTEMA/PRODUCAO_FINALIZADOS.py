@@ -31,3 +31,9 @@ class ProducaoFinalizadosPage(ctk.CTkFrame):
 
 
 attach_i18n_support(ProducaoFinalizadosPage, ProducaoFinalizadosPage.TRANSLATIONS)
+
+if __name__ == "__main__":
+    try:
+        print(f"[TESTE_ISOLADO] Módulo carregado: {__file__}")
+    except Exception as e:
+        print(f"[TESTE_ISOLADO] Falha ao iniciar módulo: {e}")
