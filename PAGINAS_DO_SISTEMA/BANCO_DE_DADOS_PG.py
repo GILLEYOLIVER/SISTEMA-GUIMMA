@@ -246,7 +246,7 @@ DEFAULT_CFG: Dict[str, Any] = {
     "use_connection_pool": True,
     "pool_minconn": 1,
     "pool_maxconn": max(2, min((os.cpu_count() or 2) * 2, 16)),
-    "client_encoding": "AUTO",
+    "client_encoding": "LATIN1",
     "legacy_fallback_encoding": "LATIN1",
     "statement_timeout_ms": 0,
     # opcional:
@@ -310,6 +310,11 @@ else:
 # aplica ENV_SCHEMA por cima
 if ENV_SCHEMA:
     CONFIG["schema"] = ENV_SCHEMA
+
+_cfg_encoding = str(CONFIG.get("client_encoding", "LATIN1") or "LATIN1").upper()
+if _cfg_encoding == "AUTO":
+    _cfg_encoding = "LATIN1"
+os.environ.setdefault("PGCLIENTENCODING", _cfg_encoding)
 
 # ==============================================================================
 # DETECÇÃO DE PORTAS
