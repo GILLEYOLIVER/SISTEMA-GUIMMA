@@ -246,7 +246,7 @@ DEFAULT_CFG: Dict[str, Any] = {
     "use_connection_pool": True,
     "pool_minconn": 1,
     "pool_maxconn": max(2, min((os.cpu_count() or 2) * 2, 16)),
-    "client_encoding": "UTF8",
+    "client_encoding": "AUTO",
     "legacy_fallback_encoding": "LATIN1",
     "statement_timeout_ms": 0,
     # opcional:
@@ -393,10 +393,15 @@ def _precheck_env_dsn() -> Optional[str]:
 def _apply_session_settings(conn) -> None:
     schema = CONFIG.get("schema", "opera")
     appname = CONFIG.get("appname", "OPERA_APP")
-    client_encoding = str(CONFIG.get("client_encoding", "UTF8") or "UTF8")
+    client_encoding = str(CONFIG.get("client_encoding", "AUTO") or "AUTO").upper()
     statement_timeout_ms = int(CONFIG.get("statement_timeout_ms", 0) or 0)
     try:
         with conn.cursor() as cur:
+            if client_encoding == "AUTO":
+                cur.execute("SHOW SERVER_ENCODING;")
+                server_enc_row = cur.fetchone()
+                server_encoding = str(server_enc_row[0]).upper() if server_enc_row else "UTF8"
+                client_encoding = "UTF8" if server_encoding in ("UTF8", "UNICODE") else "LATIN1"
             cur.execute(f"SET client_encoding TO '{client_encoding}';")
             cur.execute(f"SET search_path TO {schema}, public;")
             if appname:

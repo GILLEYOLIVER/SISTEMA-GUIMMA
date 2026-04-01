@@ -144,3 +144,9 @@ def safe_after_cancel(owner, after_id, root_attr: Optional[str] = None):
             pass
 
 #03/02/2025
+
+if __name__ == "__main__":
+    try:
+        print(f"[TESTE_ISOLADO] Módulo carregado: {__file__}")
+    except Exception as e:
+        print(f"[TESTE_ISOLADO] Falha ao iniciar módulo: {e}")

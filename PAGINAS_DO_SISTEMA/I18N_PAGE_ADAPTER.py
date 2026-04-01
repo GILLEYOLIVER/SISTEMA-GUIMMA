@@ -242,3 +242,9 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
     page_cls.refresh_texts = _refresh_texts
     page_cls.set_idioma = getattr(page_cls, "set_idioma", _set_idioma)
     page_cls.on_language_changed = getattr(page_cls, "on_language_changed", _set_idioma)
+
+if __name__ == "__main__":
+    try:
+        print(f"[TESTE_ISOLADO] Módulo carregado: {__file__}")
+    except Exception as e:
+        print(f"[TESTE_ISOLADO] Falha ao iniciar módulo: {e}")
