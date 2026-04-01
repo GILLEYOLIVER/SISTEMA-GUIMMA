@@ -564,3 +564,9 @@ for _cls_name, _map in AUTO_PAGE_TRANSLATIONS.items():
         if not hasattr(_cls, "TRANSLATIONS") and not hasattr(_cls, "_TRANSLATIONS"):
             _cls.TRANSLATIONS = _map
         _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))
+
+if __name__ == "__main__":
+    try:
+        print(f"[TESTE_ISOLADO] Módulo carregado: {__file__}")
+    except Exception as e:
+        print(f"[TESTE_ISOLADO] Falha ao iniciar módulo: {e}")
