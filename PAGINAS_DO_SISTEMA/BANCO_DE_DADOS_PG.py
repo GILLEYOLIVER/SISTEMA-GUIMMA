@@ -243,7 +243,7 @@ DEFAULT_CFG: Dict[str, Any] = {
     "connect_timeout": 8,
     "auto_detect_ports": True,
     "fallback_to_postgres": True,
-    "use_connection_pool": True,
+    "use_connection_pool": False,
     "pool_minconn": 1,
     "pool_maxconn": max(2, min((os.cpu_count() or 2) * 2, 16)),
     "client_encoding": "LATIN1",
