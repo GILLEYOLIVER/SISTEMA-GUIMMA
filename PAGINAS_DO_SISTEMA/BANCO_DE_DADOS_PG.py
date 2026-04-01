@@ -536,35 +536,44 @@ def _get_pool():
         if _connection_pool is not None:
             return _connection_pool
 
-        minconn = max(1, int(CONFIG.get("pool_minconn", 1) or 1))
-        maxconn = max(minconn, int(CONFIG.get("pool_maxconn", 4) or 4))
-        defaults = CONFIG.get("defaults") or {}
-        pwd = defaults.get("password", "postgres")
+        try:
+            minconn = max(1, int(CONFIG.get("pool_minconn", 1) or 1))
+            maxconn = max(minconn, int(CONFIG.get("pool_maxconn", 4) or 4))
+            defaults = CONFIG.get("defaults") or {}
+            pwd = defaults.get("password", "postgres")
 
-        cfg_dsn = str(CONFIG.get("dsn", "")).strip()
-        dsn = ENV_DSN if ENV_DSN and not _env_dsn_disabled else cfg_dsn
-        if dsn:
-            _connection_pool = psycopg2.pool.ThreadedConnectionPool(minconn, maxconn, dsn=dsn)
-        else:
-            bootstrap = _create_connection()
-            params = bootstrap.get_dsn_parameters() if bootstrap else {}
-            if bootstrap:
-                try:
-                    bootstrap.close()
-                except Exception:
-                    pass
-            _connection_pool = psycopg2.pool.ThreadedConnectionPool(
-                minconn,
-                maxconn,
-                host=params.get("host") or (CONFIG.get("hosts") or ["localhost"])[0],
-                port=int(params.get("port") or (CONFIG.get("ports") or [5432])[0]),
-                database=params.get("dbname") or defaults.get("dbname", "BANCO_OPERA"),
-                user=params.get("user") or defaults.get("user", "postgres"),
-                password=pwd,
-                connect_timeout=int(CONFIG.get("connect_timeout", 8)),
-                application_name=str(CONFIG.get("appname", "OPERA_APP")),
+            cfg_dsn = str(CONFIG.get("dsn", "")).strip()
+            dsn = ENV_DSN if ENV_DSN and not _env_dsn_disabled else cfg_dsn
+            if dsn:
+                _connection_pool = psycopg2.pool.ThreadedConnectionPool(minconn, maxconn, dsn=dsn)
+            else:
+                bootstrap = _create_connection()
+                params = bootstrap.get_dsn_parameters() if bootstrap else {}
+                if bootstrap:
+                    try:
+                        bootstrap.close()
+                    except Exception:
+                        pass
+                _connection_pool = psycopg2.pool.ThreadedConnectionPool(
+                    minconn,
+                    maxconn,
+                    host=params.get("host") or (CONFIG.get("hosts") or ["localhost"])[0],
+                    port=int(params.get("port") or (CONFIG.get("ports") or [5432])[0]),
+                    database=params.get("dbname") or defaults.get("dbname", "BANCO_OPERA"),
+                    user=params.get("user") or defaults.get("user", "postgres"),
+                    password=pwd,
+                    connect_timeout=int(CONFIG.get("connect_timeout", 8)),
+                    application_name=str(CONFIG.get("appname", "OPERA_APP")),
+                )
+            log_ok(f"Pool de conexões PostgreSQL ativo ({minconn}-{maxconn}).")
+        except Exception as e:
+            _connection_pool = None
+            CONFIG["use_connection_pool"] = False
+            log_warn(
+                f"Falha ao iniciar pool de conexões ({_safe_exc_text(e)}). "
+                f"Fallback automático para conexão direta habilitado."
             )
-        log_ok(f"Pool de conexões PostgreSQL ativo ({minconn}-{maxconn}).")
+            return None
     return _connection_pool
 
 
@@ -572,12 +581,18 @@ def get_connection():
     global _cached_conn
     pool = _get_pool()
     if pool is not None:
-        conn = pool.getconn()
         try:
-            _apply_session_settings(conn)
-        except Exception:
-            pass
-        return conn
+            conn = pool.getconn()
+            try:
+                _apply_session_settings(conn)
+            except Exception:
+                pass
+            return conn
+        except Exception as e:
+            log_warn(
+                f"Pool indisponível nesta tentativa ({_safe_exc_text(e)}). "
+                f"Usando conexão direta."
+            )
 
     if _cached_conn:
         try:
