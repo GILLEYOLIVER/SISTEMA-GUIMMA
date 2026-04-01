@@ -394,6 +394,7 @@ def _apply_session_settings(conn) -> None:
     statement_timeout_ms = int(CONFIG.get("statement_timeout_ms", 0) or 0)
     try:
         with conn.cursor() as cur:
+            cur.execute("SET client_encoding TO 'UTF8';")
             cur.execute(f"SET search_path TO {schema}, public;")
             if appname:
                 cur.execute("SET application_name TO %s;", (str(appname),))
@@ -717,7 +718,7 @@ def require_ready(schemas=None):
         return True, "OK"
 
     except Exception as e:
-        return False, f"Erro ao validar schema: {e}"
+        return False, f"Erro ao validar schema: {_safe_exc_text(e)}"
 
 
 def load_config():
