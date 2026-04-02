@@ -302,10 +302,10 @@ class PagamentoModernUI(ctk.CTkFrame):
         # evita múltiplos reencaixes visíveis na abertura
         self._last_fit_signature = None
         self._initial_fit_done = False
-        # IMPORTANTE:
-        # Não disparar auto-ajuste atrasado ao abrir a página.
-        # Isso causava efeito visual de "torcer/encaixar" alguns instantes
-        # após renderizar o conteúdo.
+        self._layout_static_applied = False
+        # Ajusta uma única vez de forma imediata para abrir estático
+        # e evitar "piscadas"/"torções" sucessivas no layout.
+        self._apply_initial_fit_once()
 
     # ===================== Tema / estilo =====================
     def obter_cores_por_tema(self):
@@ -1243,7 +1243,9 @@ class PagamentoModernUI(ctk.CTkFrame):
             pass
 
     def on_host_resize(self, width: int, height: int, scale: float = 1.0):
-        """Mantém sempre o mesmo layout de tela grande, apenas encolhendo proporcionalmente."""
+        """Aplica encaixe responsivo apenas uma vez para manter abertura estável."""
+        if getattr(self, "_layout_static_applied", False):
+            return
         try:
             width = max(760, int(width or self.winfo_width() or 760))
         except Exception:
@@ -1390,6 +1392,8 @@ class PagamentoModernUI(ctk.CTkFrame):
                     frame.grid_configure(padx=compact, pady=compact)
         except Exception:
             pass
+
+        self._layout_static_applied = True
 
     # ===================== Lógica auxiliar =====================
     def _toggle_bonificacao(self):
