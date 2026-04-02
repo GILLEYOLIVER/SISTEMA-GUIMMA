@@ -172,7 +172,6 @@ class FechamentoMensalPage(ctk.CTkFrame):
     def __init__(self, parent, host=None, *args, **kwargs):
         self._host = host or parent
         self.theme = _Theme(self._host)
-        self._apply_ctk_global_theme()
         super().__init__(parent, fg_color=self.theme.cor_fundo, *args, **kwargs)
         self._init_i18n()
         self._build_ui()
@@ -296,11 +295,10 @@ class FechamentoMensalPage(ctk.CTkFrame):
         self.kpi_adi = make_card(5, self._get_text("kpi_advance"), "R$ 0,00")
 
     def _apply_ctk_global_theme(self):
-        try:
-            modo = getattr(self._host, "modo", None) or "dark"
-            ctk.set_appearance_mode("dark" if str(modo).lower().startswith("d") else "light")
-        except Exception:
-            ctk.set_appearance_mode("dark")
+        # Mantido apenas por compatibilidade.
+        # Não alterar ctk.set_appearance_mode() dentro da página, pois
+        # isso muda o tema global do sistema inteiro.
+        return
 
     def _style_tree(self):
         st = ttk.Style()

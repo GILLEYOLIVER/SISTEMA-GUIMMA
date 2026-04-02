@@ -28,7 +28,10 @@ except Exception as e:
         return False, "Módulo de banco de dados não disponível"
 
 # ===================== Aparência base / tema =====================
-ctk.set_appearance_mode("System")
+# IMPORTANTE:
+# Não chamar ctk.set_appearance_mode() no import deste módulo.
+# Essa configuração é global no processo e estava alterando o tema
+# do sistema inteiro ao abrir "Pagamento de Serviços".
 
 SERVICE_FILTER_OPTIONS = [
     "Todos", "Facção", "Bordado", "Caseador", "Botões",
@@ -299,10 +302,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         # evita múltiplos reencaixes visíveis na abertura
         self._last_fit_signature = None
         self._initial_fit_done = False
-        try:
-            self.after(30, self._apply_initial_fit_once)
-        except Exception:
-            pass
+        self._layout_static_applied = True
 
     # ===================== Tema / estilo =====================
     def obter_cores_por_tema(self):
@@ -1240,7 +1240,8 @@ class PagamentoModernUI(ctk.CTkFrame):
             pass
 
     def on_host_resize(self, width: int, height: int, scale: float = 1.0):
-        """Mantém sempre o mesmo layout de tela grande, apenas encolhendo proporcionalmente."""
+        """Desabilitado para manter a página estática e sem reencaixes visuais."""
+        return
         try:
             width = max(760, int(width or self.winfo_width() or 760))
         except Exception:
@@ -1387,6 +1388,8 @@ class PagamentoModernUI(ctk.CTkFrame):
                     frame.grid_configure(padx=compact, pady=compact)
         except Exception:
             pass
+
+        self._layout_static_applied = True
 
     # ===================== Lógica auxiliar =====================
     def _toggle_bonificacao(self):

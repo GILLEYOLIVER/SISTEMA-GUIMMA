@@ -433,8 +433,9 @@ def test_connection(cfg: DBConfig) -> Tuple[bool, str]:
 # ============================================================
 class SetupBancoWindow:
     def __init__(self, parent=None):
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
+        # IMPORTANTE:
+        # Esta janela não deve sobrescrever tema global da aplicação.
+        # O modo/tema ativo deve ser herdado do processo principal.
 
         if parent is not None:
             self.root = ctk.CTkToplevel(parent)
