@@ -3951,9 +3951,17 @@ def _ml_walk(widget):
 def _ml_refresh_texts(self):
     if _ctk_ml is None:
         return
+    text_widgets = tuple(
+        cls for cls in (
+            getattr(_ctk_ml, "CTkLabel", None),
+            getattr(_ctk_ml, "CTkButton", None),
+            getattr(_ctk_ml, "CTkCheckBox", None),
+            getattr(_ctk_ml, "CTkRadioButton", None),
+        ) if cls is not None
+    )
     for w in _ml_walk(self):
         try:
-            if hasattr(w, 'cget'):
+            if text_widgets and isinstance(w, text_widgets):
                 try:
                     txt = w.cget('text')
                 except Exception:
@@ -3965,6 +3973,7 @@ def _ml_refresh_texts(self):
                             w.configure(text=new)
                         except Exception:
                             pass
+            if hasattr(w, 'cget'):
                 try:
                     ph = w.cget('placeholder_text')
                 except Exception:
@@ -4035,17 +4044,7 @@ def _ml_refresh_texts(self):
             except Exception:
                 pass
 
-    # page title class attr
-    try:
-        if hasattr(self.__class__, 'PAGE_TITLE'):
-            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
-    except Exception:
-        pass
-
-    try:
-        self.update_idletasks()
-    except Exception:
-        pass
+    # Não forçar update_idletasks aqui para evitar reflows visuais repetidos.
 
 def _ml_on_language_changed(self, *_args, **_kwargs):
     try:
@@ -4057,15 +4056,16 @@ def _ml_on_language_changed(self, *_args, **_kwargs):
             pass
 
 _TRANSLATIONS = {
- 'pt_BR': {'PAGAMENTO DE SERVIÇOS':'PAGAMENTO DE SERVIÇOS','SERVICE PAYMENT':'PAGAMENTO DE SERVIÇOS','Origem:':'Origem:','Source:':'Origem:','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes a Pagar','Cuts to Pay':'Cortes a Pagar','Cortes Pagos':'Cortes Pagos','Paid Cuts':'Cortes Pagos','Tipo de serviço:':'Tipo de serviço:','Service type:':'Tipo de serviço:','Todos':'Todos','All':'Todos','Facção':'Facção','Outsourcing':'Facção','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Caseador','Buttonhole':'Caseador','Botões':'Botões','Buttons':'Botões','Estamparia':'Estamparia','Printing':'Estamparia','Tingimento':'Tingimento','Dyeing':'Tingimento','Outros Trabalhos':'Outros Trabalhos','Other Services':'Outros Trabalhos','Pesquisar':'Pesquisar','Search':'Pesquisar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Serviço','Pay Service':'Pagar Serviço'},
- 'en_US': {'PAGAMENTO DE SERVIÇOS':'SERVICE PAYMENT','SERVICE PAYMENT':'SERVICE PAYMENT','Origem:':'Source:','Source:':'Source:','Finalizados':'Completed','Completed':'Completed','Cortes a Pagar':'Cuts to Pay','Cuts to Pay':'Cuts to Pay','Cortes Pagos':'Paid Cuts','Paid Cuts':'Paid Cuts','Tipo de serviço:':'Service type:','Service type:':'Service type:','Todos':'All','All':'All','Facção':'Outsourcing','Outsourcing':'Outsourcing','Bordado':'Embroidery','Embroidery':'Embroidery','Caseador':'Buttonhole','Buttonhole':'Buttonhole','Botões':'Buttons','Buttons':'Buttons','Estamparia':'Printing','Printing':'Printing','Tingimento':'Dyeing','Dyeing':'Dyeing','Outros Trabalhos':'Other Services','Other Services':'Other Services','Pesquisar':'Search','Search':'Search','Exportar CSV':'Export CSV','Export CSV':'Export CSV','Pagar Serviço':'Pay Service','Pay Service':'Pay Service'},
- 'es_ES': {'PAGAMENTO DE SERVIÇOS':'PAGO DE SERVICIOS','SERVICE PAYMENT':'PAGO DE SERVICIOS','Origem:':'Origen:','Source:':'Origen:','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes por Pagar','Cuts to Pay':'Cortes por Pagar','Cortes Pagos':'Cortes Pagados','Paid Cuts':'Cortes Pagados','Tipo de serviço:':'Tipo de servicio:','Service type:':'Tipo de servicio:','Todos':'Todos','All':'Todos','Facção':'Facción','Outsourcing':'Facción','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Ojales','Buttonhole':'Ojales','Botões':'Botones','Buttons':'Botones','Estamparia':'Estampado','Printing':'Estampado','Tingimento':'Teñido','Dyeing':'Teñido','Outros Trabalhos':'Otros Servicios','Other Services':'Otros Servicios','Pesquisar':'Buscar','Search':'Buscar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Servicio','Pay Service':'Pagar Servicio'}
+ 'pt_BR': {'PAGAMENTO DE SERVIÇOS':'PAGAMENTO DE SERVIÇOS','SERVICE PAYMENT':'PAGAMENTO DE SERVIÇOS','Origem:':'Origem:','Source:':'Origem:','Setor / Serviço:':'Setor / Serviço:','Sector / Service:':'Setor / Serviço:','Finalizações / Entradas':'Finalizações / Entradas','Completions / Entries':'Finalizações / Entradas','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes a Pagar','Cuts to Pay':'Cortes a Pagar','Cortes Pagos':'Cortes Pagos','Paid Cuts':'Cortes Pagos','Tipo de serviço:':'Tipo de serviço:','Service type:':'Tipo de serviço:','Todos':'Todos','All':'Todos','Facção':'Facção','Outsourcing':'Facção','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Caseador','Buttonhole':'Caseador','Botões':'Botões','Buttons':'Botões','Estamparia':'Estamparia','Printing':'Estamparia','Tingimento':'Tingimento','Dyeing':'Tingimento','Outros Trabalhos':'Outros Trabalhos','Other Services':'Outros Trabalhos','Pesquisar':'Pesquisar','Search':'Pesquisar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Serviço','Pay Service':'Pagar Serviço'},
+ 'en_US': {'PAGAMENTO DE SERVIÇOS':'SERVICE PAYMENT','SERVICE PAYMENT':'SERVICE PAYMENT','Origem:':'Source:','Source:':'Source:','Setor / Serviço:':'Sector / Service:','Sector / Service:':'Sector / Service:','Finalizações / Entradas':'Completions / Entries','Completions / Entries':'Completions / Entries','Finalizados':'Completed','Completed':'Completed','Cortes a Pagar':'Cuts to Pay','Cuts to Pay':'Cuts to Pay','Cortes Pagos':'Paid Cuts','Paid Cuts':'Paid Cuts','Tipo de serviço:':'Service type:','Service type:':'Service type:','Todos':'All','All':'All','Facção':'Outsourcing','Outsourcing':'Outsourcing','Bordado':'Embroidery','Embroidery':'Embroidery','Caseador':'Buttonhole','Buttonhole':'Buttonhole','Botões':'Buttons','Buttons':'Buttons','Estamparia':'Printing','Printing':'Printing','Tingimento':'Dyeing','Dyeing':'Dyeing','Outros Trabalhos':'Other Services','Other Services':'Other Services','Pesquisar':'Search','Search':'Search','Exportar CSV':'Export CSV','Export CSV':'Export CSV','Pagar Serviço':'Pay Service','Pay Service':'Pay Service'},
+ 'es_ES': {'PAGAMENTO DE SERVIÇOS':'PAGO DE SERVICIOS','SERVICE PAYMENT':'PAGO DE SERVICIOS','Origem:':'Origen:','Source:':'Origen:','Setor / Serviço:':'Sector / Servicio:','Sector / Service:':'Sector / Servicio:','Finalizações / Entradas':'Finalizaciones / Entradas','Completions / Entries':'Finalizaciones / Entradas','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes por Pagar','Cuts to Pay':'Cortes por Pagar','Cortes Pagos':'Cortes Pagados','Paid Cuts':'Cortes Pagados','Tipo de serviço:':'Tipo de servicio:','Service type:':'Tipo de servicio:','Todos':'Todos','All':'Todos','Facção':'Facción','Outsourcing':'Facción','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Ojales','Buttonhole':'Ojales','Botões':'Botones','Buttons':'Botones','Estamparia':'Estampado','Printing':'Estampado','Tingimento':'Teñido','Dyeing':'Teñido','Outros Trabalhos':'Otros Servicios','Other Services':'Otros Servicios','Pesquisar':'Buscar','Search':'Buscar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Servicio','Pay Service':'Pagar Servicio'}
 }
 _TREE_HEADINGS = {
-    'tree': {'servico':'Serviço','fornecedor':'Fornecedor','quantidade':'Quantidade','valor_unitario':'Valor Unit.','valor_total':'Valor Total','origem':'Origem','status':'Status'}
+    'tree': {'id':'ID','tipo_servico':'Serviço','codigo':'Código','descricao':'Descrição','costureira':'Costureira','data_envio':'Envio','data_chegada':'Chegada','total_qtd':'Qtd'},
+    'defeitos_tree': {'id':'ID','prestador':'Prestador','codigo':'Código','descricao':'Descrição','tamanho':'Tam','quantidade':'Qtd','data_retorno':'Retorno','status':'Status'}
 }
 _PLACEHOLDERS = {}
-_COMBOS = {'orig_seg':['Cortes a Pagar','Cortes Pagos']}
+_COMBOS = {'orig_seg':['Cortes a Pagar','Cortes Pagos'], 'filtro_servico_combo': SERVICE_FILTER_OPTIONS, 'servico_combo': SERVICE_OPTIONS}
 _TABS = []
 
 PagamentoModernUI._TRANSLATIONS = _TRANSLATIONS
