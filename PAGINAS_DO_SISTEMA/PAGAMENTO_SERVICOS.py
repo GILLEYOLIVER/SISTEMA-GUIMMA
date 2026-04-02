@@ -4060,6 +4060,46 @@ _TRANSLATIONS = {
  'en_US': {'PAGAMENTO DE SERVIÇOS':'SERVICE PAYMENT','SERVICE PAYMENT':'SERVICE PAYMENT','Origem:':'Source:','Source:':'Source:','Setor / Serviço:':'Sector / Service:','Sector / Service:':'Sector / Service:','Finalizações / Entradas':'Completions / Entries','Completions / Entries':'Completions / Entries','Finalizados':'Completed','Completed':'Completed','Cortes a Pagar':'Cuts to Pay','Cuts to Pay':'Cuts to Pay','Cortes Pagos':'Paid Cuts','Paid Cuts':'Paid Cuts','Tipo de serviço:':'Service type:','Service type:':'Service type:','Todos':'All','All':'All','Facção':'Outsourcing','Outsourcing':'Outsourcing','Bordado':'Embroidery','Embroidery':'Embroidery','Caseador':'Buttonhole','Buttonhole':'Buttonhole','Botões':'Buttons','Buttons':'Buttons','Estamparia':'Printing','Printing':'Printing','Tingimento':'Dyeing','Dyeing':'Dyeing','Outros Trabalhos':'Other Services','Other Services':'Other Services','Pesquisar':'Search','Search':'Search','Exportar CSV':'Export CSV','Export CSV':'Export CSV','Pagar Serviço':'Pay Service','Pay Service':'Pay Service'},
  'es_ES': {'PAGAMENTO DE SERVIÇOS':'PAGO DE SERVICIOS','SERVICE PAYMENT':'PAGO DE SERVICIOS','Origem:':'Origen:','Source:':'Origen:','Setor / Serviço:':'Sector / Servicio:','Sector / Service:':'Sector / Servicio:','Finalizações / Entradas':'Finalizaciones / Entradas','Completions / Entries':'Finalizaciones / Entradas','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes por Pagar','Cuts to Pay':'Cortes por Pagar','Cortes Pagos':'Cortes Pagados','Paid Cuts':'Cortes Pagados','Tipo de serviço:':'Tipo de servicio:','Service type:':'Tipo de servicio:','Todos':'Todos','All':'Todos','Facção':'Facción','Outsourcing':'Facción','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Ojales','Buttonhole':'Ojales','Botões':'Botones','Buttons':'Botones','Estamparia':'Estampado','Printing':'Estampado','Tingimento':'Teñido','Dyeing':'Teñido','Outros Trabalhos':'Otros Servicios','Other Services':'Otros Servicios','Pesquisar':'Buscar','Search':'Buscar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Servicio','Pay Service':'Pagar Servicio'}
 }
+_TRANSLATION_EXTRAS = {
+    'pt_BR': {
+        'Resumo de Pagamento': 'Resumo de Pagamento', 'Payment Summary': 'Resumo de Pagamento',
+        '1. Identificação / Quantidades': '1. Identificação / Quantidades', '1. Identification / Quantities': '1. Identificação / Quantidades',
+        '2. Ajustes Financeiros': '2. Ajustes Financeiros', '2. Financial Adjustments': '2. Ajustes Financeiros',
+        '3. Defeitos & Adiantamento': '3. Defeitos & Adiantamento', '3. Defects & Advance': '3. Defeitos & Adiantamento',
+        '4. Dados Bancários': '4. Dados Bancários', '4. Bank Details': '4. Dados Bancários',
+    },
+    'en_US': {
+        'Resumo de Pagamento': 'Payment Summary', 'Payment Summary': 'Payment Summary',
+        'Serviços': 'Services', 'Defeitos': 'Defects', 'Marcar Pago': 'Mark as Paid',
+        'Base (R$)': 'Base (R$)', 'Desconto (R$)': 'Discount (R$)', 'Total a Pagar': 'Amount to Pay', 'Total a pagar': 'Total to pay',
+        '1. Identificação / Quantidades': '1. Identification / Quantities',
+        '2. Ajustes Financeiros': '2. Financial Adjustments',
+        '3. Defeitos & Adiantamento': '3. Defects & Advance',
+        '4. Dados Bancários': '4. Bank Details',
+        'Serviço:': 'Service:', 'Código:': 'Code:', 'Descrição:': 'Description:', 'Costureira:': 'Seamstress:',
+        'Data Envio:': 'Sent Date:', 'Data Chegada:': 'Arrival Date:', 'Qtd Finalizada:': 'Completed Qty:', 'Valor/Peça:': 'Value/Piece:',
+        'Adiantamento (R$):': 'Advance (R$):', 'Ajuda de Custo (R$):': 'Cost Help (R$):',
+        'Faltantes:': 'Missing:', 'Estragadas:': 'Damaged:', 'Bonificação (R$):': 'Bonus (R$):',
+        'Peças c/ Defeito:': 'Defective Pieces:', 'Valor Defeito (R$):': 'Defect Value (R$):', 'Observações:': 'Notes:',
+        'Adiantamento Registrado': 'Registered Advance', 'Valor:': 'Value:', 'Parcelas:': 'Installments:', 'Saldo:': 'Balance:',
+        'Valor atual:': 'Current value:', 'Valor a descontar:': 'Amount to discount:', 'Aplicar': 'Apply',
+        'Descontar 1 parcela': 'Discount 1 installment',
+        'Titular:': 'Holder:', 'CPF:': 'Tax ID:', 'Conta:': 'Account:', 'Banco:': 'Bank:', 'Agência:': 'Branch:', 'PIX:': 'PIX:',
+        'Salvar': 'Save', 'Recalcular': 'Recalculate', 'Imprimir': 'Print',
+        'Prestador': 'Provider', 'Retorno': 'Return', 'Tam': 'Size', 'Status': 'Status',
+    },
+    'es_ES': {
+        'Resumo de Pagamento': 'Resumen de Pago',
+        'Serviços': 'Servicios', 'Defeitos': 'Defectos', 'Marcar Pago': 'Marcar Pagado',
+        'Base (R$)': 'Base (R$)', 'Desconto (R$)': 'Descuento (R$)', 'Total a Pagar': 'Total a Pagar', 'Total a pagar': 'Total a pagar',
+        '1. Identificação / Quantidades': '1. Identificación / Cantidades',
+        '2. Ajustes Financeiros': '2. Ajustes Financieros',
+        '3. Defeitos & Adiantamento': '3. Defectos y Adelanto',
+        '4. Dados Bancários': '4. Datos Bancarios',
+    }
+}
+for _lang, _extra in _TRANSLATION_EXTRAS.items():
+    _TRANSLATIONS.setdefault(_lang, {}).update(_extra)
 _TREE_HEADINGS = {
     'tree': {'id':'ID','tipo_servico':'Serviço','codigo':'Código','descricao':'Descrição','costureira':'Costureira','data_envio':'Envio','data_chegada':'Chegada','total_qtd':'Qtd'},
     'defeitos_tree': {'id':'ID','prestador':'Prestador','codigo':'Código','descricao':'Descrição','tamanho':'Tam','quantidade':'Qtd','data_retorno':'Retorno','status':'Status'}
