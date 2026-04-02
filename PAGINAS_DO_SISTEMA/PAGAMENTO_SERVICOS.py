@@ -302,10 +302,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         # evita múltiplos reencaixes visíveis na abertura
         self._last_fit_signature = None
         self._initial_fit_done = False
-        self._layout_static_applied = False
-        # Ajusta uma única vez de forma imediata para abrir estático
-        # e evitar "piscadas"/"torções" sucessivas no layout.
-        self._apply_initial_fit_once()
+        self._layout_static_applied = True
 
     # ===================== Tema / estilo =====================
     def obter_cores_por_tema(self):
@@ -1243,9 +1240,8 @@ class PagamentoModernUI(ctk.CTkFrame):
             pass
 
     def on_host_resize(self, width: int, height: int, scale: float = 1.0):
-        """Aplica encaixe responsivo apenas uma vez para manter abertura estável."""
-        if getattr(self, "_layout_static_applied", False):
-            return
+        """Desabilitado para manter a página estática e sem reencaixes visuais."""
+        return
         try:
             width = max(760, int(width or self.winfo_width() or 760))
         except Exception:
