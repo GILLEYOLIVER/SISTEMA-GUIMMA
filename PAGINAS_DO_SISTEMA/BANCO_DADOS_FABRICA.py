@@ -447,13 +447,10 @@ class GerenciadorBancoDados:
         self.result_tree = None
         self.modo_admin = True  # FORÇAR MODO ADMIN SEMPRE
         # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
-        # Aparência (se o sistema tiver atributos de tema)
-        if self.sistema:
-            try:
-                ctk.set_appearance_mode(self.sistema.aparencia_atual)
-                ctk.set_default_color_theme(self.sistema.tema_atual)
-            except AttributeError:
-                pass
+        # IMPORTANTE:
+        # Não alterar aparência global (ctk.set_appearance_mode / set_default_color_theme)
+        # dentro desta página. O tema deve vir do host/menu para evitar que outras
+        # telas mudem visualmente ao abrir "Banco de Dados".
 
         # Componentes da interface gráfica
         self.main_frame = None
