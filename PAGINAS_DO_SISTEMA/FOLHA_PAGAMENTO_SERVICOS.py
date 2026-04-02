@@ -228,8 +228,9 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
             except Exception: pass
 
     def _sync_theme(self):
-        try: ctk.set_appearance_mode(getattr(self._host, "modo", "Dark"))
-        except Exception: pass
+        # IMPORTANTE:
+        # Não alterar ctk.set_appearance_mode() aqui.
+        # Esse ajuste é global no processo e afeta todas as telas abertas.
         try: self.configure(fg_color=self.main_bg)
         except Exception: pass
         for w in self._all_children(self):

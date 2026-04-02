@@ -214,8 +214,10 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
     def _apply_theme_to_ui(self):
         """Aplica o tema personalizado na interface"""
         try:
-            # Configurar appearance mode
-            ctk.set_appearance_mode("dark")
+            # IMPORTANTE:
+            # Não alterar ctk.set_appearance_mode aqui.
+            # Esse ajuste é global no processo e estava trocando o tema
+            # do sistema inteiro ao abrir esta página pelo menu.
 
             # Aplicar tema ao frame principal
             self.configure(fg_color=self.cor_fundo)
