@@ -28,7 +28,10 @@ except Exception as e:
         return False, "Módulo de banco de dados não disponível"
 
 # ===================== Aparência base / tema =====================
-ctk.set_appearance_mode("System")
+# IMPORTANTE:
+# Não chamar ctk.set_appearance_mode() no import deste módulo.
+# Essa configuração é global no processo e estava alterando o tema
+# do sistema inteiro ao abrir "Pagamento de Serviços".
 
 SERVICE_FILTER_OPTIONS = [
     "Todos", "Facção", "Bordado", "Caseador", "Botões",
