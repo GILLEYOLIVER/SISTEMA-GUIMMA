@@ -15,6 +15,7 @@ import os
 import sys
 import threading
 import time
+import queue
 from datetime import datetime
 
 import tkinter as tk
@@ -2007,6 +2008,13 @@ class OperaMenuApp(ctk.CTk):
             return
         self._closing = True
         try:
+            if hasattr(self, "_activity_db_worker_stop"):
+                self._activity_db_worker_stop.set()
+            if hasattr(self, "_activity_db_queue"):
+                self._activity_db_queue.put_nowait(None)
+        except Exception:
+            pass
+        try:
             cancel_all_afters(self)
             cancel_all_after_info(self)
         except Exception:
@@ -2046,11 +2054,23 @@ class OperaMenuApp(ctk.CTk):
         self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
         self._activity_logger.set_pagina(self.current_page or "MenuPrincipal")
         self._activity_log_cache = {}
-        self._limpar_logs_antigos()
+        self._activity_db_queue = queue.Queue(maxsize=300)
+        self._activity_db_worker_stop = threading.Event()
+        self._activity_db_worker = threading.Thread(
+            target=self._db_log_worker_loop,
+            name="opera-db-log-worker",
+            daemon=True,
+        )
+        self._activity_db_worker.start()
+        self._limpar_logs_antigos_async()
         self.bind_all("<ButtonRelease-1>", self._on_user_click, add="+")
         self.bind_all("<<TreeviewSelect>>", self._on_treeview_select, add="+")
         self.bind_all("<<ComboboxSelected>>", self._on_combobox_select, add="+")
         self.bind_all("<KeyRelease>", self._on_user_key, add="+")
+
+    def _limpar_logs_antigos_async(self):
+        """Evita travar o startup executando limpeza pesada em background."""
+        threading.Thread(target=self._limpar_logs_antigos, name="opera-log-cleanup", daemon=True).start()
 
     def _limpar_logs_antigos(self):
         try:
@@ -2070,6 +2090,33 @@ class OperaMenuApp(ctk.CTk):
         except Exception as e:
             _dprint(f"⚠️ Erro ao limpar logs no banco: {e}")
 
+    def _db_log_worker_loop(self):
+        while not getattr(self, "_closing", False) and not self._activity_db_worker_stop.is_set():
+            try:
+                item = self._activity_db_queue.get(timeout=0.8)
+            except queue.Empty:
+                continue
+            if item is None:
+                self._activity_db_queue.task_done()
+                break
+            try:
+                registrar_log_db(*item)
+            except Exception as e:
+                _dprint(f"⚠️ Falha ao gravar log no banco em background: {e}")
+            finally:
+                self._activity_db_queue.task_done()
+
+    def _enqueue_db_log(self, usuario: str, pagina: str, acao: str, detalhe: str):
+        if not LOGS_DISPONIVEIS or not MENU_POSTGRES_AVAILABLE:
+            return
+        try:
+            self._activity_db_queue.put_nowait((usuario, pagina, acao, detalhe))
+        except queue.Full:
+            # evita bloquear a interface se o banco estiver lento/indisponível
+            _dprint("⚠️ Fila de logs cheia; evento descartado para manter responsividade.")
+        except Exception as e:
+            _dprint(f"⚠️ Falha ao enfileirar log de atividade: {e}")
+
     def _log_user_activity(self, acao: str, detalhe: str = "", pagina: str | None = None):
         pagina_log = pagina or self.current_page or "MenuPrincipal"
         self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
@@ -2078,7 +2125,7 @@ class OperaMenuApp(ctk.CTk):
         if pagina_log and "Página:" not in detalhe_log:
             detalhe_log = f"Página: {pagina_log} | {detalhe_log}".strip(" |")
         self._activity_logger.log_usuario(acao, {"detalhe": detalhe_log, "pagina": pagina_log})
-        registrar_log_db(self.usuario_nome, acao, pagina_log, detalhe_log)
+        self._enqueue_db_log(self.usuario_nome, pagina_log, acao, detalhe_log)
 
     def _should_log_event(self, chave: str, intervalo: float = 0.4) -> bool:
         agora = time.monotonic()
