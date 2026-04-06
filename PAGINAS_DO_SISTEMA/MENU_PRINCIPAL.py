@@ -1419,6 +1419,12 @@ class OperaMenuApp(ctk.CTk):
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         reset_tk_default_root()
         super().__init__()
+        # Evita efeito de "janela pequena" no startup:
+        # mantém oculta até layout/zoom serem aplicados.
+        try:
+            self.withdraw()
+        except Exception:
+            pass
 
         self._preload_complete = False
         initialize_after_guard(self)
@@ -1500,10 +1506,11 @@ class OperaMenuApp(ctk.CTk):
         self._setup_responsive_watcher()
         self._preload_complete = True
 
+        self._apply_initial_layout()
+        self.update_idletasks()
         self.deiconify()
         self.lift()
         self.focus_force()
-        self._apply_initial_layout()
         self._open_dashboard_agora()
         self._agendar_after(180, lambda: self._apply_theme_to_frame_safely(self._current_frame))
         self._agendar_after(420, lambda: self._apply_theme_to_frame_safely(self._current_frame))
