@@ -2378,8 +2378,8 @@ class OperaMenuApp(ctk.CTk):
             if page_name in self._page_cache_order:
                 self._page_cache_order.remove(page_name)
 
-    def _refresh_current_page_language(self):
-        frame = getattr(self, "_current_frame", None)
+    def _refresh_frame_language(self, frame=None):
+        frame = frame or getattr(self, "_current_frame", None)
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
             return
         idioma = getattr(self, "idioma_atual", "pt_BR")
@@ -2520,7 +2520,10 @@ class OperaMenuApp(ctk.CTk):
         try:
             _aplicar_idioma(frame)
         except Exception as e:
-            _dprint(f"⚠️ Erro ao atualizar idioma da página atual: {e}")
+            _dprint(f"⚠️ Erro ao atualizar idioma do frame {getattr(frame, '__class__', type(frame)).__name__}: {e}")
+
+    def _refresh_current_page_language(self):
+        self._refresh_frame_language(getattr(self, "_current_frame", None))
 
     def _change_language(self, selected_value=None):
         novo_idioma = selected_value if selected_value in self.SUPPORTED_LANGUAGES else None
@@ -2557,6 +2560,14 @@ class OperaMenuApp(ctk.CTk):
             self._refresh_language_widgets()
         except Exception as e:
             _dprint(f"⚠️ Erro ao atualizar widgets de idioma: {e}")
+
+        # Atualiza idioma em todos os frames já carregados (cache + página atual),
+        # para que qualquer página aberta após a troca já apareça no idioma novo.
+        try:
+            for frame in list(getattr(self, "_page_cache", {}).values()):
+                self._refresh_frame_language(frame)
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao atualizar idioma dos frames em cache: {e}")
 
         try:
             if pagina_atual and hasattr(self, "title_label") and self.title_label.winfo_exists():
@@ -3432,6 +3443,10 @@ class OperaMenuApp(ctk.CTk):
                 frame = self._load_page_direct(page_name)
                 self._cache_page(page_name, frame)
             if frame:
+                try:
+                    self._refresh_frame_language(frame)
+                except Exception as _exc:
+                    _dprint(f"⚠️ Erro ao aplicar idioma ao abrir '{page_name}': {_exc}")
                 frame.place(x=0, y=0, relwidth=1, relheight=1)
                 # Ajuste responsivo: informa a página o tamanho real do container
                 try:

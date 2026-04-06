@@ -2820,7 +2820,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
             if not col_cod:
                 if hasattr(self, "modelo_ocf_cb"):
-                    self.modelo_ocf_cb.configure(values=[f"[{self._tr("no_models_found")}]"])
+                    self.modelo_ocf_cb.configure(values=[f"[{self._tr('no_models_found')}]"])
                     self.modelo_ocf_cb.set(self._tr("select_model"))
                 return
 
