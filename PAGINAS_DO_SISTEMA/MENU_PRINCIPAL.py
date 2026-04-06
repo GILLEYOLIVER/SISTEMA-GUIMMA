@@ -2106,11 +2106,11 @@ class OperaMenuApp(ctk.CTk):
             finally:
                 self._activity_db_queue.task_done()
 
-    def _enqueue_db_log(self, usuario: str, acao: str, pagina: str, detalhe: str):
+    def _enqueue_db_log(self, usuario: str, pagina: str, acao: str, detalhe: str):
         if not LOGS_DISPONIVEIS or not MENU_POSTGRES_AVAILABLE:
             return
         try:
-            self._activity_db_queue.put_nowait((usuario, acao, pagina, detalhe))
+            self._activity_db_queue.put_nowait((usuario, pagina, acao, detalhe))
         except queue.Full:
             # evita bloquear a interface se o banco estiver lento/indisponível
             _dprint("⚠️ Fila de logs cheia; evento descartado para manter responsividade.")
@@ -2125,7 +2125,7 @@ class OperaMenuApp(ctk.CTk):
         if pagina_log and "Página:" not in detalhe_log:
             detalhe_log = f"Página: {pagina_log} | {detalhe_log}".strip(" |")
         self._activity_logger.log_usuario(acao, {"detalhe": detalhe_log, "pagina": pagina_log})
-        self._enqueue_db_log(self.usuario_nome, acao, pagina_log, detalhe_log)
+        self._enqueue_db_log(self.usuario_nome, pagina_log, acao, detalhe_log)
 
     def _should_log_event(self, chave: str, intervalo: float = 0.4) -> bool:
         agora = time.monotonic()
