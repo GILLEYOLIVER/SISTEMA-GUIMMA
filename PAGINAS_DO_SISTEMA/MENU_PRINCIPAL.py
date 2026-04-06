@@ -25,6 +25,7 @@ from PIL import Image, ImageTk
 import customtkinter as ctk
 
 OPERA_DEBUG = bool(os.environ.get('OPERA_DEBUG', '').strip())
+ACTIVITY_DB_LOG_ENABLED = str(os.environ.get("OPERA_DB_ACTIVITY_LOG", "0")).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _dprint(*args, **kwargs):
@@ -2077,7 +2078,7 @@ class OperaMenuApp(ctk.CTk):
             self._activity_logger.limpar_logs_antigos(dias_manter=365)
         except Exception as e:
             _dprint(f"⚠️ Erro ao limpar logs em arquivo: {e}")
-        if not MENU_POSTGRES_AVAILABLE:
+        if not MENU_POSTGRES_AVAILABLE or not ACTIVITY_DB_LOG_ENABLED:
             return
         try:
             schema = get_schema()
@@ -2125,7 +2126,11 @@ class OperaMenuApp(ctk.CTk):
         if pagina_log and "Página:" not in detalhe_log:
             detalhe_log = f"Página: {pagina_log} | {detalhe_log}".strip(" |")
         self._activity_logger.log_usuario(acao, {"detalhe": detalhe_log, "pagina": pagina_log})
-        self._enqueue_db_log(self.usuario_nome, pagina_log, acao, detalhe_log)
+        if ACTIVITY_DB_LOG_ENABLED and LOGS_DISPONIVEIS and MENU_POSTGRES_AVAILABLE:
+            try:
+                registrar_log_db(self.usuario_nome, pagina_log, acao, detalhe_log)
+            except Exception as e:
+                _dprint(f"⚠️ Falha ao gravar log de atividade no banco: {e}")
 
     def _should_log_event(self, chave: str, intervalo: float = 0.4) -> bool:
         agora = time.monotonic()
