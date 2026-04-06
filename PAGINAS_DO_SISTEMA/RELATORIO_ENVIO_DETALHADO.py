@@ -145,9 +145,164 @@ def _sizes_sum_expr(cols: list[str], prefix=""):
 class RelatorioEnvioDetalhado(ctk.CTkFrame):
     PAGE_TITLE = "Relatório Detalhado — Envio de Cortes"
 
+    _TRANSLATIONS = {
+        "pt_BR": {
+            "Relatório Detalhado — Envio de Cortes": "Relatório Detalhado — Envio de Cortes",
+            "Relatório detalhado do fluxo de cortes": "Relatório detalhado do fluxo de cortes",
+            "Relatório de Envio Detalhado": "Relatório de Envio Detalhado",
+            "Aviso": "Aviso",
+            "Erro": "Erro",
+            "Exportar": "Exportar",
+            "Relatório": "Relatório",
+            "Banco de dados não está pronto\n{msg}\nLeitura pode falhar.": "Banco de dados não está pronto\n{msg}\nLeitura pode falhar.",
+            "Algumas tabelas necessárias não foram encontradas\n{tables}\nAlguns relatórios podem não funcionar corretamente.": "Algumas tabelas necessárias não foram encontradas\n{tables}\nAlguns relatórios podem não funcionar corretamente.",
+            "De:": "De:",
+            "Até:": "Até:",
+            "Período:": "Período:",
+            "Buscar:": "Buscar:",
+            "Este mês": "Este mês",
+            "Últimos 30 dias": "Últimos 30 dias",
+            "Todos os períodos": "Todos os períodos",
+            "código / descrição / destino / prestador": "código / descrição / destino / prestador",
+            "🔍 Buscar": "🔍 Buscar",
+            "Interna": "Interna",
+            "Enviados": "Enviados",
+            "Retorno": "Retorno",
+            "Finalizados": "Finalizados",
+            "📤 Exportar CSV (Aba atual)": "📤 Exportar CSV (Aba atual)",
+            "🖨️ Relatório HTML": "🖨️ Relatório HTML",
+            "Imprimir seções:": "Imprimir seções:",
+            "Imprimir em paisagem": "Imprimir em paisagem",
+            "🖨️ Imprimir (seções marcadas)": "🖨️ Imprimir (seções marcadas)",
+            "Busque primeiro.": "Busque primeiro.",
+            "Salvar CSV - {name}": "Salvar CSV - {name}",
+            "Arquivo salvo em\n{path}": "Arquivo salvo em\n{path}",
+            "Falha ao salvar CSV\n{error}": "Falha ao salvar CSV\n{error}",
+            "Falha na pesquisa\n{error}": "Falha na pesquisa\n{error}",
+            "Selecione pelo menos uma seção para imprimir.": "Selecione pelo menos uma seção para imprimir.",
+            "Período": "Período",
+            "Busca": "Busca",
+            "Sem dados nesta seção.": "Sem dados nesta seção.",
+            "Retrato": "Retrato",
+            "Paisagem": "Paisagem",
+            "Imprimir": "Imprimir",
+            "Gerado em {now}": "Gerado em {now}",
+            "Falha ao gravar arquivo\n{error}": "Falha ao gravar arquivo\n{error}",
+            "Relatório gerado, mas não consegui abrir automaticamente\n{path}": "Relatório gerado, mas não consegui abrir automaticamente\n{path}",
+            "Relatório gerado\n{path}": "Relatório gerado\n{path}",
+            "ENVIO": "ENVIO", "DATA": "DATA", "HORA": "HORA", "CÓDIGO": "CÓDIGO", "DESCRIÇÃO": "DESCRIÇÃO",
+            "SERVIÇO": "SERVIÇO", "DESTINO": "DESTINO", "TOTAL": "TOTAL", "PILOTOS": "PILOTOS", "V.PEÇA": "V.PEÇA",
+            "V.TOTAL": "V.TOTAL", "OBS": "OBS", "RETORNO": "RETORNO", "PRESTADOR": "PRESTADOR", "AVIAMENTOS": "AVIAMENTOS",
+            "OUTROS": "OUTROS", "STATUS": "STATUS", "DATA ENV.": "DATA ENV.", "TOT.ENV": "TOT.ENV", "DATA RET.": "DATA RET.",
+            "PILOTOS RET.": "PILOTOS RET.", "DATA FIN.": "DATA FIN.",
+        },
+        "en_US": {
+            "Relatório Detalhado — Envio de Cortes": "Detailed Report — Cut Shipments",
+            "Relatório detalhado do fluxo de cortes": "Detailed report of the cut flow",
+            "Relatório de Envio Detalhado": "Detailed Shipping Report",
+            "Aviso": "Warning",
+            "Erro": "Error",
+            "Exportar": "Export",
+            "Relatório": "Report",
+            "Banco de dados não está pronto\n{msg}\nLeitura pode falhar.": "The database is not ready\n{msg}\nReading may fail.",
+            "Algumas tabelas necessárias não foram encontradas\n{tables}\nAlguns relatórios podem não funcionar corretamente.": "Some required tables were not found\n{tables}\nSome reports may not work correctly.",
+            "De:": "From:",
+            "Até:": "To:",
+            "Período:": "Period:",
+            "Buscar:": "Search:",
+            "Este mês": "This month",
+            "Últimos 30 dias": "Last 30 days",
+            "Todos os períodos": "All periods",
+            "código / descrição / destino / prestador": "code / description / destination / provider",
+            "🔍 Buscar": "🔍 Search",
+            "Interna": "Internal",
+            "Enviados": "Sent",
+            "Retorno": "Return",
+            "Finalizados": "Finished",
+            "📤 Exportar CSV (Aba atual)": "📤 Export CSV (Current tab)",
+            "🖨️ Relatório HTML": "🖨️ HTML Report",
+            "Imprimir seções:": "Print sections:",
+            "Imprimir em paisagem": "Print in landscape",
+            "🖨️ Imprimir (seções marcadas)": "🖨️ Print (selected sections)",
+            "Busque primeiro.": "Run a search first.",
+            "Salvar CSV - {name}": "Save CSV - {name}",
+            "Arquivo salvo em\n{path}": "File saved at\n{path}",
+            "Falha ao salvar CSV\n{error}": "Failed to save CSV\n{error}",
+            "Falha na pesquisa\n{error}": "Search failed\n{error}",
+            "Selecione pelo menos uma seção para imprimir.": "Select at least one section to print.",
+            "Período": "Period",
+            "Busca": "Search",
+            "Sem dados nesta seção.": "No data in this section.",
+            "Retrato": "Portrait",
+            "Paisagem": "Landscape",
+            "Imprimir": "Print",
+            "Gerado em {now}": "Generated on {now}",
+            "Falha ao gravar arquivo\n{error}": "Failed to write file\n{error}",
+            "Relatório gerado, mas não consegui abrir automaticamente\n{path}": "Report generated, but I could not open it automatically\n{path}",
+            "Relatório gerado\n{path}": "Report generated\n{path}",
+            "ENVIO": "SHIPMENT", "DATA": "DATE", "HORA": "TIME", "CÓDIGO": "CODE", "DESCRIÇÃO": "DESCRIPTION",
+            "SERVIÇO": "SERVICE", "DESTINO": "DESTINATION", "TOTAL": "TOTAL", "PILOTOS": "SAMPLES", "V.PEÇA": "UNIT PRICE",
+            "V.TOTAL": "TOTAL PRICE", "OBS": "NOTES", "RETORNO": "RETURN", "PRESTADOR": "PROVIDER", "AVIAMENTOS": "TRIMS",
+            "OUTROS": "OTHERS", "STATUS": "STATUS", "DATA ENV.": "SHIP DATE", "TOT.ENV": "SHIP TOT.", "DATA RET.": "RETURN DATE",
+            "PILOTOS RET.": "RETURN SAMPLES", "DATA FIN.": "FINISH DATE",
+        },
+        "es_ES": {
+            "Relatório Detalhado — Envio de Cortes": "Informe Detallado — Envío de Cortes",
+            "Relatório detalhado do fluxo de cortes": "Informe detallado del flujo de cortes",
+            "Relatório de Envio Detalhado": "Informe Detallado de Envío",
+            "Aviso": "Aviso",
+            "Erro": "Error",
+            "Exportar": "Exportar",
+            "Relatório": "Informe",
+            "Banco de dados não está pronto\n{msg}\nLeitura pode falhar.": "La base de datos no está lista\n{msg}\nLa lectura puede fallar.",
+            "Algumas tabelas necessárias não foram encontradas\n{tables}\nAlguns relatórios podem não funcionar corretamente.": "No se encontraron algunas tablas necesarias\n{tables}\nAlgunos informes pueden no funcionar correctamente.",
+            "De:": "Desde:",
+            "Até:": "Hasta:",
+            "Período:": "Período:",
+            "Buscar:": "Buscar:",
+            "Este mês": "Este mes",
+            "Últimos 30 dias": "Últimos 30 días",
+            "Todos os períodos": "Todos los períodos",
+            "código / descrição / destino / prestador": "código / descripción / destino / proveedor",
+            "🔍 Buscar": "🔍 Buscar",
+            "Interna": "Interna",
+            "Enviados": "Enviados",
+            "Retorno": "Retorno",
+            "Finalizados": "Finalizados",
+            "📤 Exportar CSV (Aba atual)": "📤 Exportar CSV (Pestaña actual)",
+            "🖨️ Relatório HTML": "🖨️ Informe HTML",
+            "Imprimir seções:": "Imprimir secciones:",
+            "Imprimir em paisagem": "Imprimir en horizontal",
+            "🖨️ Imprimir (seções marcadas)": "🖨️ Imprimir (secciones marcadas)",
+            "Busque primeiro.": "Realice una búsqueda primero.",
+            "Salvar CSV - {name}": "Guardar CSV - {name}",
+            "Arquivo salvo em\n{path}": "Archivo guardado en\n{path}",
+            "Falha ao salvar CSV\n{error}": "Error al guardar CSV\n{error}",
+            "Falha na pesquisa\n{error}": "Error en la búsqueda\n{error}",
+            "Selecione pelo menos uma seção para imprimir.": "Seleccione al menos una sección para imprimir.",
+            "Período": "Período",
+            "Busca": "Búsqueda",
+            "Sem dados nesta seção.": "No hay datos en esta sección.",
+            "Retrato": "Vertical",
+            "Paisagem": "Horizontal",
+            "Imprimir": "Imprimir",
+            "Gerado em {now}": "Generado el {now}",
+            "Falha ao gravar arquivo\n{error}": "Error al guardar el archivo\n{error}",
+            "Relatório gerado, mas não consegui abrir automaticamente\n{path}": "El informe fue generado, pero no pude abrirlo automáticamente\n{path}",
+            "Relatório gerado\n{path}": "Informe generado\n{path}",
+            "ENVIO": "ENVÍO", "DATA": "FECHA", "HORA": "HORA", "CÓDIGO": "CÓDIGO", "DESCRIÇÃO": "DESCRIPCIÓN",
+            "SERVIÇO": "SERVICIO", "DESTINO": "DESTINO", "TOTAL": "TOTAL", "PILOTOS": "PILOTOS", "V.PEÇA": "V.UNIDAD",
+            "V.TOTAL": "V.TOTAL", "OBS": "OBS", "RETORNO": "RETORNO", "PRESTADOR": "PROVEEDOR", "AVIAMENTOS": "AVIAMENTOS",
+            "OUTROS": "OTROS", "STATUS": "ESTADO", "DATA ENV.": "FECHA ENV.", "TOT.ENV": "TOT.ENV.", "DATA RET.": "FECHA RET.",
+            "PILOTOS RET.": "PILOTOS RET.", "DATA FIN.": "FECHA FIN.",
+        },
+    }
+
     def __init__(self, parent, host=None):
         super().__init__(parent)
         self.host = host
+        self.idioma_atual = getattr(host, "idioma_atual", "pt_BR")
+        self._tab_keys = ["Interna", "Enviados", "Retorno", "Finalizados", "Relatório"]
 
         # ✅ CORREÇÃO: Obter cores do host de forma robusta
         self._definir_cores_do_tema(host)
@@ -177,6 +332,114 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         self._build_ui()
         self._apply_theme_to_ui()
         self._search()
+
+    def _t(self, text, **kwargs):
+        idioma = getattr(self, "idioma_atual", "pt_BR")
+        base = self._TRANSLATIONS.get("pt_BR", {})
+        atual = self._TRANSLATIONS.get(idioma, {})
+        valor = atual.get(text, base.get(text, text))
+        try:
+            return valor.format(**kwargs)
+        except Exception:
+            return valor
+
+    def _period_options(self):
+        return [self._t("Este mês"), self._t("Últimos 30 dias"), self._t("Todos os períodos")]
+
+    def set_idioma(self, idioma):
+        self.idioma_atual = idioma if idioma in self._TRANSLATIONS else "pt_BR"
+        self.refresh_texts()
+
+    def refresh_texts(self):
+        try:
+            self.PAGE_TITLE = self._t("Relatório Detalhado — Envio de Cortes")
+        except Exception:
+            pass
+
+        widgets = [
+            ("title_label", "Relatório Detalhado — Envio de Cortes"),
+            ("lbl_de", "De:"),
+            ("lbl_ate", "Até:"),
+            ("lbl_periodo", "Período:"),
+            ("lbl_buscar", "Buscar:"),
+            ("btn_buscar", "🔍 Buscar"),
+            ("btn_export_top", "📤 Exportar CSV (Aba atual)"),
+            ("btn_html_top", "🖨️ Relatório HTML"),
+            ("lbl_print_sections", "Imprimir seções:"),
+            ("chk_interna", "Interna"),
+            ("chk_env", "Enviados"),
+            ("chk_ret", "Retorno"),
+            ("chk_fin", "Finalizados"),
+            ("chk_landscape", "Imprimir em paisagem"),
+            ("btn_export_bottom", "📤 Exportar CSV (Aba atual)"),
+            ("btn_print_bottom", "🖨️ Imprimir (seções marcadas)"),
+        ]
+        for attr, key in widgets:
+            widget = getattr(self, attr, None)
+            if widget is not None:
+                try:
+                    widget.configure(text=self._t(key))
+                except Exception:
+                    pass
+
+        if getattr(self, "ent_busca", None) is not None:
+            try:
+                self.ent_busca.configure(placeholder_text=self._t("código / descrição / destino / prestador"))
+            except Exception:
+                pass
+
+        if getattr(self, "periodo_menu", None) is not None:
+            valor_atual = self.periodo_var.get()
+            try:
+                self.periodo_menu.configure(values=self._period_options())
+            except Exception:
+                pass
+            equivalencias = {
+                self._TRANSLATIONS["pt_BR"]["Este mês"]: "Este mês",
+                self._TRANSLATIONS["pt_BR"]["Últimos 30 dias"]: "Últimos 30 dias",
+                self._TRANSLATIONS["pt_BR"]["Todos os períodos"]: "Todos os períodos",
+                self._TRANSLATIONS["en_US"]["Este mês"]: "Este mês",
+                self._TRANSLATIONS["en_US"]["Últimos 30 dias"]: "Últimos 30 dias",
+                self._TRANSLATIONS["en_US"]["Todos os períodos"]: "Todos os períodos",
+                self._TRANSLATIONS["es_ES"]["Este mês"]: "Este mês",
+                self._TRANSLATIONS["es_ES"]["Últimos 30 dias"]: "Últimos 30 dias",
+                self._TRANSLATIONS["es_ES"]["Todos os períodos"]: "Todos os períodos",
+            }
+            chave = equivalencias.get(valor_atual, "Este mês")
+            self.periodo_var.set(self._t(chave))
+
+        tabview = getattr(self, "tabs", None)
+        if tabview is not None:
+            try:
+                tabview._segmented_button.configure(values=[self._t(k) for k in self._tab_keys])
+            except Exception:
+                pass
+
+        header_sets = {
+            "tree_env": ["ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "SERVIÇO", "DESTINO", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOTAL", "PILOTOS", "V.PEÇA", "V.TOTAL", "OBS"],
+            "tree_ret": ["RETORNO", "ENVIO", "DATA", "HORA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "PILOTOS", "AVIAMENTOS", "OUTROS", "OBS"],
+            "tree_fin": ["DATA", "CÓDIGO", "DESCRIÇÃO", "PRESTADOR", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "V.PEÇA", "STATUS", "OBS"],
+            "tree_int": ["DATA ENV.", "CÓDIGO", "DESCRIÇÃO", "DESTINO", "PP", "P", "M", "G", "GG", "G1", "G2", "G3", "TOT.ENV", "PILOTOS", "V.PEÇA", "DATA RET.", "PILOTOS RET.", "DATA FIN.", "PP", "P", "M", "G", "GG", "G1", "G2", "G3"],
+        }
+        cols_map = {
+            "tree_env": getattr(self, "cols_env", []),
+            "tree_ret": getattr(self, "cols_ret", []),
+            "tree_fin": getattr(self, "cols_fin", []),
+            "tree_int": getattr(self, "cols_int", []),
+        }
+        for tree_attr, headers in header_sets.items():
+            tree = getattr(self, tree_attr, None)
+            cols = cols_map.get(tree_attr, [])
+            if tree is None:
+                continue
+            for col, header in zip(cols, headers):
+                try:
+                    tree.heading(col, text=self._t(header))
+                except Exception:
+                    pass
+
+    def on_language_changed(self, idioma):
+        self.set_idioma(idioma)
 
     def _definir_cores_do_tema(self, host):
         """Define as cores do tema de forma robusta"""
@@ -302,8 +565,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         top.grid(row=0, column=0, sticky="ew")
         top.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(top, text=self.PAGE_TITLE, font=ctk.CTkFont(size=16, weight="bold"),
-                     text_color=self.cor_texto).grid(row=0, column=0, padx=16, pady=10, sticky="w")
+        self.title_label = ctk.CTkLabel(top, text=self.PAGE_TITLE, font=ctk.CTkFont(size=16, weight="bold"),
+                     text_color=self.cor_texto)
+        self.title_label.grid(row=0, column=0, padx=16, pady=10, sticky="w")
 
         # Frame de filtros
         filt = ctk.CTkFrame(self, fg_color=self.cor_secundaria)
@@ -322,40 +586,45 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         self.ini_var = ctk.StringVar(value=_first_day(hoje).strftime("%Y-%m-%d"))
         self.fim_var = ctk.StringVar(value=_last_day(hoje).strftime("%Y-%m-%d"))
         self.busca_var = ctk.StringVar(value="")
-        self.periodo_var = ctk.StringVar(value="Este mês")
+        self.periodo_var = ctk.StringVar(value=self._t("Este mês"))
 
-        ctk.CTkLabel(filt, text="De:").grid(row=0, column=0, padx=(8, 4), pady=8, sticky="e")
+        self.lbl_de = ctk.CTkLabel(filt, text=self._t("De:"))
+        self.lbl_de.grid(row=0, column=0, padx=(8, 4), pady=8, sticky="e")
         ctk.CTkEntry(filt, width=120, textvariable=self.ini_var).grid(row=0, column=1, padx=4, pady=8)
-        ctk.CTkLabel(filt, text="Até:").grid(row=0, column=2, padx=(8, 4), pady=8, sticky="e")
+        self.lbl_ate = ctk.CTkLabel(filt, text=self._t("Até:"))
+        self.lbl_ate.grid(row=0, column=2, padx=(8, 4), pady=8, sticky="e")
         ctk.CTkEntry(filt, width=120, textvariable=self.fim_var).grid(row=0, column=3, padx=4, pady=8)
 
-        ctk.CTkLabel(filt, text="Período:").grid(row=0, column=4, padx=(8, 4), pady=8, sticky="e")
-        periodo_menu = ctk.CTkOptionMenu(
+        self.lbl_periodo = ctk.CTkLabel(filt, text=self._t("Período:"))
+        self.lbl_periodo.grid(row=0, column=4, padx=(8, 4), pady=8, sticky="e")
+        self.periodo_menu = ctk.CTkOptionMenu(
             filt,
-            values=["Este mês", "Últimos 30 dias", "Todos os períodos"],
+            values=self._period_options(),
             variable=self.periodo_var,
             command=lambda _: self._apply_periodo()
         )
-        periodo_menu.grid(row=0, column=5, padx=4, pady=8)
+        self.periodo_menu.grid(row=0, column=5, padx=4, pady=8)
 
-        ctk.CTkLabel(filt, text="Buscar:").grid(row=0, column=6, padx=(8, 4), pady=8, sticky="e")
-        ent = ctk.CTkEntry(filt, width=280, textvariable=self.busca_var,
-                           placeholder_text="código / descrição / destino / prestador")
-        ent.grid(row=0, column=7, padx=4, pady=8)
-        ent.bind("<Return>", lambda e: self._search())
+        self.lbl_buscar = ctk.CTkLabel(filt, text=self._t("Buscar:"))
+        self.lbl_buscar.grid(row=0, column=6, padx=(8, 4), pady=8, sticky="e")
+        self.ent_busca = ctk.CTkEntry(filt, width=280, textvariable=self.busca_var,
+                           placeholder_text=self._t("código / descrição / destino / prestador"))
+        self.ent_busca.grid(row=0, column=7, padx=4, pady=8)
+        self.ent_busca.bind("<Return>", lambda e: self._search())
 
-        ctk.CTkButton(filt, text="🔍 Buscar", width=120, command=self._search).grid(
+        self.btn_buscar = ctk.CTkButton(filt, text=self._t("🔍 Buscar"), width=120, command=self._search)
+        self.btn_buscar.grid(
             row=0, column=8, padx=8, pady=8, sticky="e"
         )
 
         # Abas
-        tabs = ctk.CTkTabview(self)
-        tabs.grid(row=2, column=0, sticky="nsew", padx=8, pady=8)
-        self.tab_interna = tabs.add("Interna")
-        self.tab_env = tabs.add("Enviados")
-        self.tab_ret = tabs.add("Retorno")
-        self.tab_fin = tabs.add("Finalizados")
-        self.tab_rel = tabs.add("Relatório")
+        self.tabs = ctk.CTkTabview(self)
+        self.tabs.grid(row=2, column=0, sticky="nsew", padx=8, pady=8)
+        self.tab_interna = self.tabs.add(self._t("Interna"))
+        self.tab_env = self.tabs.add(self._t("Enviados"))
+        self.tab_ret = self.tabs.add(self._t("Retorno"))
+        self.tab_fin = self.tabs.add(self._t("Finalizados"))
+        self.tab_rel = self.tabs.add(self._t("Relatório"))
 
         # Tabelas
         self._build_table(self.tab_interna, "int")
@@ -366,10 +635,10 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # Relatório
         box_rel = ctk.CTkFrame(self.tab_rel, fg_color=self.cor_primaria)
         box_rel.grid(row=0, column=0, sticky="nw", padx=10, pady=10)
-        ctk.CTkButton(box_rel, text="📤 Exportar CSV (Aba atual)", command=self._export_csv).grid(row=0, column=0,
-                                                                                                 padx=6, pady=6)
-        ctk.CTkButton(box_rel, text="🖨️ Relatório HTML", command=self._report_html).grid(row=0, column=1, padx=6,
-                                                                                         pady=6)
+        self.btn_export_top = ctk.CTkButton(box_rel, text=self._t("📤 Exportar CSV (Aba atual)"), command=self._export_csv)
+        self.btn_export_top.grid(row=0, column=0, padx=6, pady=6)
+        self.btn_html_top = ctk.CTkButton(box_rel, text=self._t("🖨️ Relatório HTML"), command=self._report_html)
+        self.btn_html_top.grid(row=0, column=1, padx=6, pady=6)
 
         self._build_report_controls()
 
@@ -444,30 +713,36 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         self.print_fin_var = ctk.BooleanVar(value=True)
         self.print_landscape_var = ctk.BooleanVar(value=False)
 
-        ctk.CTkLabel(bar, text="Imprimir seções:").grid(row=0, column=0, padx=(0, 8), pady=(0, 8), sticky="w")
-        ctk.CTkCheckBox(bar, text="Interna", variable=self.print_interna_var).grid(row=0, column=1, padx=6, pady=(0, 8))
-        ctk.CTkCheckBox(bar, text="Enviados", variable=self.print_env_var).grid(row=0, column=2, padx=6, pady=(0, 8))
-        ctk.CTkCheckBox(bar, text="Retorno", variable=self.print_ret_var).grid(row=0, column=3, padx=6, pady=(0, 8))
-        ctk.CTkCheckBox(bar, text="Finalizados", variable=self.print_fin_var).grid(row=0, column=4, padx=6, pady=(0, 8))
-        ctk.CTkCheckBox(bar, text="Imprimir em paisagem", variable=self.print_landscape_var).grid(
+        self.lbl_print_sections = ctk.CTkLabel(bar, text=self._t("Imprimir seções:"))
+        self.lbl_print_sections.grid(row=0, column=0, padx=(0, 8), pady=(0, 8), sticky="w")
+        self.chk_interna = ctk.CTkCheckBox(bar, text=self._t("Interna"), variable=self.print_interna_var)
+        self.chk_interna.grid(row=0, column=1, padx=6, pady=(0, 8))
+        self.chk_env = ctk.CTkCheckBox(bar, text=self._t("Enviados"), variable=self.print_env_var)
+        self.chk_env.grid(row=0, column=2, padx=6, pady=(0, 8))
+        self.chk_ret = ctk.CTkCheckBox(bar, text=self._t("Retorno"), variable=self.print_ret_var)
+        self.chk_ret.grid(row=0, column=3, padx=6, pady=(0, 8))
+        self.chk_fin = ctk.CTkCheckBox(bar, text=self._t("Finalizados"), variable=self.print_fin_var)
+        self.chk_fin.grid(row=0, column=4, padx=6, pady=(0, 8))
+        self.chk_landscape = ctk.CTkCheckBox(bar, text=self._t("Imprimir em paisagem"), variable=self.print_landscape_var)
+        self.chk_landscape.grid(
             row=0, column=5, padx=6, pady=(0, 8)
         )
 
         # botões
         btns = ctk.CTkFrame(self.tab_rel, fg_color=self.cor_primaria)
         btns.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
-        ctk.CTkButton(btns, text="📤 Exportar CSV (Aba atual)", command=self._export_csv).grid(row=0, column=0,
-                                                                                              padx=(0, 8))
-        ctk.CTkButton(btns, text="🖨️ Imprimir (seções marcadas)", command=self._report_html).grid(row=0, column=1,
-                                                                                                  padx=(0, 8))
+        self.btn_export_bottom = ctk.CTkButton(btns, text=self._t("📤 Exportar CSV (Aba atual)"), command=self._export_csv)
+        self.btn_export_bottom.grid(row=0, column=0, padx=(0, 8))
+        self.btn_print_bottom = ctk.CTkButton(btns, text=self._t("🖨️ Imprimir (seções marcadas)"), command=self._report_html)
+        self.btn_print_bottom.grid(row=0, column=1, padx=(0, 8))
 
     def _apply_periodo(self):
         hoje = date.today()
-        if self.periodo_var.get() == "Todos os períodos":
+        if self.periodo_var.get() == self._t("Todos os períodos"):
             self.ini_var.set("")
             self.fim_var.set("")
             return
-        if self.periodo_var.get() == "Últimos 30 dias":
+        if self.periodo_var.get() == self._t("Últimos 30 dias"):
             ini = hoje - timedelta(days=30)
             self.ini_var.set(ini.strftime("%Y-%m-%d"))
             self.fim_var.set(hoje.strftime("%Y-%m-%d"))
@@ -811,27 +1086,27 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
     def _export_csv(self):
         """Exporta dados para CSV"""
         if not getattr(self, "_cache", None):
-            messagebox.showinfo("Exportar", "Busque primeiro.")
+            messagebox.showinfo(self._t("Exportar"), self._t("Busque primeiro."))
             return
 
         # detecta aba ativa
         current = None
         if hasattr(self, "tree_int") and self.tree_int.winfo_ismapped():
-            current = ("Interna", self.tree_int, self.cols_int, self._cache["interna"])
+            current = (self._t("Interna"), self.tree_int, self.cols_int, self._cache["interna"])
         if hasattr(self, "tree_env") and self.tree_env.winfo_ismapped():
-            current = ("Enviados", self.tree_env, self.cols_env, self._cache["env"])
+            current = (self._t("Enviados"), self.tree_env, self.cols_env, self._cache["env"])
         if hasattr(self, "tree_ret") and self.tree_ret.winfo_ismapped():
-            current = ("Retorno", self.tree_ret, self.cols_ret, self._cache["ret"])
+            current = (self._t("Retorno"), self.tree_ret, self.cols_ret, self._cache["ret"])
         if hasattr(self, "tree_fin") and self.tree_fin.winfo_ismapped():
-            current = ("Finalizados", self.tree_fin, self.cols_fin, self._cache["fin"])
+            current = (self._t("Finalizados"), self.tree_fin, self.cols_fin, self._cache["fin"])
 
         # fallback: interna
         if current is None:
-            current = ("Interna", self.tree_int, self.cols_int, self._cache["interna"])
+            current = (self._t("Interna"), self.tree_int, self.cols_int, self._cache["interna"])
 
         nome, _, cols, data = current
         fp = filedialog.asksaveasfilename(
-            title=f"Salvar CSV - {nome}",
+            title=self._t("Salvar CSV - {name}", name=nome),
             defaultextension=".csv",
             filetypes=[("CSV", "*.csv")]
         )
@@ -857,7 +1132,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
     def _report_html(self):
         """Gera HTML para impressão (corrigido e mais robusto)"""
         if not getattr(self, "_cache", None):
-            messagebox.showinfo("Relatório", "Busque primeiro.")
+            messagebox.showinfo(self._t("Relatório"), self._t("Busque primeiro."))
             return
 
         # =========================
@@ -978,7 +1253,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             ))
 
         if not selected:
-            messagebox.showwarning("Relatório", "Selecione pelo menos uma seção para imprimir.")
+            messagebox.showwarning(self._t("Relatório"), self._t("Selecione pelo menos uma seção para imprimir."))
             return
 
         # =========================
@@ -1087,7 +1362,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # =========================
         def table_html(rows, cols, headers):
             if not rows:
-                return "<div class='k'>Sem dados nesta seção.</div>"
+                return f"<div class='k'>{_html.escape(self._t("Sem dados nesta seção."))}</div>"
 
             # Se headers não bater com cols, usa cols como fallback para não desalinha
             if not headers or len(headers) != len(cols):
@@ -1127,8 +1402,8 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # =========================
         sections_html = []
         sections_html.append(
-            f"<div class='k'>Período: <b>{_html.escape(str(ini) or '-')}</b> a <b>{_html.escape(str(fim) or '-')}</b>"
-            f" &nbsp;•&nbsp; Busca: <b>{_html.escape(str(termo) or '-')}</b></div>"
+            f"<div class='k'>{_html.escape(self._t("Período"))}: <b>{_html.escape(str(ini) or '-')}</b> a <b>{_html.escape(str(fim) or '-')}</b>"
+            f" &nbsp;•&nbsp; {_html.escape(self._t("Busca"))}: <b>{_html.escape(str(termo) or '-')}</b></div>"
         )
 
         for idx, (titulo, data, cols, headers) in enumerate(selected, start=1):
@@ -1138,11 +1413,11 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                 sections_html.append("<div class='break'></div>")
 
         logo_img = f"<img class='logo' src='{logo_data_uri}' alt='logo'>" if logo_data_uri else ""
-        print_controls = """
+        print_controls = f"""
         <div class="controls">
-          <button type="button" data-orient="portrait">Retrato</button>
-          <button type="button" data-orient="landscape">Paisagem</button>
-          <button type="button" class="primary" id="btn-print">Imprimir</button>
+          <button type="button" data-orient="portrait">{self._t("Retrato")}</button>
+          <button type="button" data-orient="landscape">{self._t("Paisagem")}</button>
+          <button type="button" class="primary" id="btn-print">{self._t("Imprimir")}</button>
         </div>
         """
 
@@ -1156,9 +1431,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
 <body>
 <header>
   {logo_img}
-  <div class="t">Relatório Detalhado — Envio de Cortes</div>
+  <div class="t">{self._t("Relatório Detalhado — Envio de Cortes")}</div>
   {print_controls}
-  <div class="m">Gerado em {now}</div>
+  <div class="m">{self._t("Gerado em {now}", now=now)}</div>
 </header>
 
 <div class="wrap">
@@ -1226,57 +1501,12 @@ if __name__ == "__main__":
     app.pack(fill="both", expand=True)
     root.mainloop()
 
-#03/02/2025
-
-# --- Suporte trilíngue individual desta página ---
-RelatorioEnvioDetalhado_TRANSLATIONS = {
-    "pt_BR": {
-        "title": "Relatório de Envio Detalhado",
-        "Atualizar": "Atualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpar",
-        "Exportar": "Exportar",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-    },
-    "en_US": {
-        "title": "Detailed Shipping Report",
-        "Atualizar": "Refresh",
-        "Filtrar": "Filter",
-        "Limpar": "Clear",
-        "Exportar": "Export",
-        "Imprimir": "Print",
-        "Buscar": "Search",
-    },
-    "es_ES": {
-        "title": "Reporte Detallado de Envío",
-        "Atualizar": "Actualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpiar",
-        "Exportar": "Exportar",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-    },
-}
-
-
-def _apply_relatorioenviodetalhado_translations(self):
-    """Aplica tradução individual desta página."""
-    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
-    if idioma not in RelatorioEnvioDetalhado_TRANSLATIONS:
-        idioma = "pt_BR"
-    if hasattr(self, "titulo"):
-        try:
-            self.titulo.configure(text=RelatorioEnvioDetalhado_TRANSLATIONS[idioma]["title"])
-        except Exception:
-            pass
-
+# Compatibilidade com adaptadores externos de idioma
+RelatorioEnvioDetalhado_TRANSLATIONS = RelatorioEnvioDetalhado._TRANSLATIONS
+RelatorioEnvioDetalhado.TRANSLATIONS = RelatorioEnvioDetalhado._TRANSLATIONS
 
 try:
     from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    RelatorioEnvioDetalhado.TRANSLATIONS = RelatorioEnvioDetalhado_TRANSLATIONS
-    if not hasattr(RelatorioEnvioDetalhado, "apply_page_translations"):
-        RelatorioEnvioDetalhado.apply_page_translations = _apply_relatorioenviodetalhado_translations
-    attach_i18n_support(RelatorioEnvioDetalhado, RelatorioEnvioDetalhado_TRANSLATIONS)
+    attach_i18n_support(RelatorioEnvioDetalhado, RelatorioEnvioDetalhado._TRANSLATIONS)
 except Exception:
     pass

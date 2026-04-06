@@ -304,118 +304,136 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Suporte trilíngue individual desta página ---
-RelatorioServicosExternosPage_TRANSLATIONS = {
-    "pt_BR": {
-        "title": "Serviços Externos",
-        "Atualizar": "Atualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpar",
-        "Exportar": "Exportar",
-        "Exportar CSV": "Exportar CSV",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-        "Relatório de Serviços Externos": "Relatório de Serviços Externos",
-        "Data": "Data",
-        "Início": "Início",
-        "Fim": "Fim",
-        "Start": "Início",
-        "End": "Fim",
-        "Facção": "Facção",
-        "Serviço": "Serviço",
-        "Ordem": "Ordem",
-        "Modelo": "Modelo",
-        "Qtd": "Qtd",
-        "Quantidade": "Quantidade",
-        "VALOR_UN": "VALOR_UN",
-        "TOTAL": "TOTAL",
-        "Total Geral": "Total Geral",
-        "Total Geral (R$)": "Total Geral (R$)",
-        "Todos": "Todos",
-        "Todas": "Todas",
-        "Pesquisar": "Pesquisar",
-        "Search": "Pesquisar",
-    },
-    "en_US": {
-        "title": "External Services",
-        "Atualizar": "Refresh",
-        "Filtrar": "Filter",
-        "Limpar": "Clear",
-        "Exportar": "Export",
-        "Exportar CSV": "Export CSV",
-        "Imprimir": "Print",
-        "Buscar": "Search",
-        "Relatório de Serviços Externos": "External Services Report",
-        "Data": "Date",
-        "Início": "Start",
-        "Fim": "End",
-        "Start": "Start",
-        "End": "End",
-        "Facção": "Contractor",
-        "Serviço": "Service",
-        "Ordem": "Order",
-        "Modelo": "Model",
-        "Qtd": "Qty",
-        "Quantidade": "Quantity",
-        "VALOR_UN": "UNIT_VALUE",
-        "TOTAL": "TOTAL",
-        "Total Geral": "Grand Total",
-        "Total Geral (R$)": "Grand Total ($)",
-        "Todos": "All",
-        "Todas": "All",
-        "Pesquisar": "Search",
-        "Search": "Search",
-    },
-    "es_ES": {
-        "title": "Servicios Externos",
-        "Atualizar": "Actualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpiar",
-        "Exportar": "Exportar",
-        "Exportar CSV": "Exportar CSV",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-        "Relatório de Serviços Externos": "Informe de Servicios Externos",
-        "Data": "Fecha",
-        "Início": "Inicio",
-        "Fim": "Fin",
-        "Start": "Inicio",
-        "End": "Fin",
-        "Facção": "Facción",
-        "Serviço": "Servicio",
-        "Ordem": "Orden",
-        "Modelo": "Modelo",
-        "Qtd": "Cant.",
-        "Quantidade": "Cantidad",
-        "VALOR_UN": "VALOR_UN",
-        "TOTAL": "TOTAL",
-        "Total Geral": "Total General",
-        "Total Geral (R$)": "Total General ($)",
-        "Todos": "Todos",
-        "Todas": "Todas",
-        "Pesquisar": "Buscar",
-        "Search": "Buscar",
-    },
-}
+
+# --- Suporte de idioma consolidado desta página ---
+import tkinter as _tk_i18n
+from tkinter import ttk as _ttk_i18n
 
 
-def _apply_relatorioservicosexternospage_translations(self):
-    """Aplica tradução individual desta página."""
-    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
-    if idioma not in RelatorioServicosExternosPage_TRANSLATIONS:
-        idioma = "pt_BR"
-    if hasattr(self, "titulo"):
+def _opera_page_lang(instance):
+    idioma = getattr(getattr(instance, "sistema", None), "idioma_atual", None)
+    if not idioma:
+        idioma = getattr(getattr(instance, "host", None), "idioma_atual", None)
+    if not idioma:
+        idioma = getattr(instance, "idioma_atual", None)
+    return idioma or "pt_BR"
+
+
+def _opera_translate_widget_tree(instance, widget, translation_map):
+    try:
+        for opt in ("text", "placeholder_text"):
+            try:
+                current = widget.cget(opt)
+            except Exception:
+                continue
+            if isinstance(current, str) and current in translation_map:
+                try:
+                    widget.configure(**{opt: translation_map[current]})
+                except Exception:
+                    pass
+
         try:
-            self.titulo.configure(text=RelatorioServicosExternosPage_TRANSLATIONS[idioma]["title"])
+            values = widget.cget("values")
+        except Exception:
+            values = None
+        if isinstance(values, (list, tuple)):
+            mapped = [translation_map.get(v, v) if isinstance(v, str) else v for v in values]
+            if list(mapped) != list(values):
+                try:
+                    widget.configure(values=mapped)
+                except Exception:
+                    pass
+
+        if isinstance(widget, _ttk_i18n.Treeview):
+            try:
+                heading = widget.heading("#0")
+                text = heading.get("text", "")
+                if text in translation_map:
+                    widget.heading("#0", text=translation_map[text])
+            except Exception:
+                pass
+            try:
+                for col in widget["columns"]:
+                    heading = widget.heading(col)
+                    text = heading.get("text", "")
+                    if text in translation_map:
+                        widget.heading(col, text=translation_map[text])
+            except Exception:
+                pass
+
+        if isinstance(widget, _tk_i18n.Menu):
+            try:
+                end = widget.index("end")
+            except Exception:
+                end = None
+            if end is not None:
+                for idx in range(end + 1):
+                    try:
+                        label = widget.entrycget(idx, "label")
+                    except Exception:
+                        continue
+                    if isinstance(label, str) and label in translation_map:
+                        try:
+                            widget.entryconfigure(idx, label=translation_map[label])
+                        except Exception:
+                            pass
+
+        for child in widget.winfo_children():
+            _opera_translate_widget_tree(instance, child, translation_map)
+    except Exception:
+        pass
+
+
+def _opera_apply_page_i18n(instance, class_ref, page_title=None):
+    idioma = _opera_page_lang(instance)
+    maps = getattr(class_ref, "_TRANSLATIONS", {}) or {}
+    base = maps.get("pt_BR", {}) if isinstance(maps.get("pt_BR", {}), dict) else {}
+    current = maps.get(idioma, {}) if isinstance(maps.get(idioma, {}), dict) else {}
+    translation_map = dict(base)
+    translation_map.update(current)
+
+    for attr in ("titulo", "title_label", "lbl_titulo", "header_title", "page_title_label"):
+        widget = getattr(instance, attr, None)
+        if widget is not None:
+            try:
+                current_text = widget.cget("text")
+                if isinstance(current_text, str):
+                    widget.configure(text=translation_map.get(current_text, current_text))
+            except Exception:
+                pass
+
+    if page_title:
+        try:
+            instance.PAGE_TITLE = translation_map.get(page_title, page_title)
         except Exception:
             pass
 
+    _opera_translate_widget_tree(instance, instance, translation_map)
 
-try:
-    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    RelatorioServicosExternosPage.TRANSLATIONS = RelatorioServicosExternosPage_TRANSLATIONS
-    if not hasattr(RelatorioServicosExternosPage, "apply_page_translations"):
-        RelatorioServicosExternosPage.apply_page_translations = _apply_relatorioservicosexternospage_translations
-    attach_i18n_support(RelatorioServicosExternosPage, RelatorioServicosExternosPage_TRANSLATIONS)
-except Exception:
-    pass
+
+def _opera_set_idioma_factory(class_ref, page_title=None):
+    def set_idioma(self, idioma):
+        self.idioma_atual = idioma
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    def on_language_changed(self, idioma=None):
+        if idioma:
+            self.idioma_atual = idioma
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    def refresh_texts(self):
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    return set_idioma, on_language_changed, refresh_texts
+
+
+
+RelatorioServicosExternosPage._TRANSLATIONS = {
+    "pt_BR": {'🚚 Relatório de Serviços Externos': '🚚 Relatório de Serviços Externos', 'Início': 'Início', 'Fim': 'Fim', 'Facção': 'Facção', 'Serviço': 'Serviço', '🔍 Buscar': '🔍 Buscar', '⬇️ Exportar CSV': '⬇️ Exportar CSV', 'Todas': 'Todas', 'Todos': 'Todos', 'Total Geral (R$):': 'Total Geral (R$):', 'DATA': 'DATA', 'FACÇÃO': 'FACÇÃO', 'SERVIÇO': 'SERVIÇO', 'ORDEM': 'ORDEM', 'MODELO': 'MODELO', 'QTD': 'QTD', 'VALOR_UN': 'VALOR_UN', 'TOTAL': 'TOTAL'},
+    "en_US": {'🚚 Relatório de Serviços Externos': '🚚 External Services Report', 'Início': 'Start', 'Fim': 'End', 'Facção': 'Contractor', 'Serviço': 'Service', '🔍 Buscar': '🔍 Search', '⬇️ Exportar CSV': '⬇️ Export CSV', 'Todas': 'All', 'Todos': 'All', 'Total Geral (R$):': 'Grand Total (R$):', 'DATA': 'DATE', 'FACÇÃO': 'CONTRACTOR', 'SERVIÇO': 'SERVICE', 'ORDEM': 'ORDER', 'MODELO': 'MODEL', 'QTD': 'QTY', 'VALOR_UN': 'UNIT_VALUE', 'TOTAL': 'TOTAL'},
+    "es_ES": {'🚚 Relatório de Serviços Externos': '🚚 Reporte de Servicios Externos', 'Início': 'Inicio', 'Fim': 'Fin', 'Facção': 'Facción', 'Serviço': 'Servicio', '🔍 Buscar': '🔍 Buscar', '⬇️ Exportar CSV': '⬇️ Exportar CSV', 'Todas': 'Todas', 'Todos': 'Todos', 'Total Geral (R$):': 'Total General (R$):', 'DATA': 'FECHA', 'FACÇÃO': 'FACCIÓN', 'SERVIÇO': 'SERVICIO', 'ORDEM': 'ORDEN', 'MODELO': 'MODELO', 'QTD': 'CANT.', 'VALOR_UN': 'VALOR_UN', 'TOTAL': 'TOTAL'},
+}
+
+RelatorioServicosExternosPage.TRANSLATIONS = RelatorioServicosExternosPage._TRANSLATIONS
+RelatorioServicosExternosPage.PAGE_TITLE = 'Relatório de Serviços Externos'
+RelatorioServicosExternosPage.set_idioma, RelatorioServicosExternosPage.on_language_changed, RelatorioServicosExternosPage.refresh_texts = _opera_set_idioma_factory(RelatorioServicosExternosPage, 'Relatório de Serviços Externos')

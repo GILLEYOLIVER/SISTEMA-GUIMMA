@@ -487,136 +487,136 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Suporte trilíngue individual desta página ---
-RelatorioAcabamentoPage_TRANSLATIONS = {
-    "pt_BR": {
-        "title": "Relatório de Acabamento",
-        "Atualizar": "Atualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpar",
-        "Exportar": "Exportar",
-        "Exportar CSV": "Exportar CSV",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-        "Relatório de Acabamento": "Relatório de Acabamento",
-        "Data": "Data",
-        "Início": "Início",
-        "Fim": "Fim",
-        "Start": "Início",
-        "End": "Fim",
-        "Código/Modelo": "Código/Modelo",
-        "Código": "Código",
-        "Modelo": "Modelo",
-        "Ordem": "Ordem",
-        "Facção": "Facção",
-        "Serviço": "Serviço",
-        "Status": "Status",
-        "Qtd": "Qtd",
-        "Quantidade": "Quantidade",
-        "VALOR_UN": "VALOR_UN",
-        "TOTAL": "TOTAL",
-        "Total Geral": "Total Geral",
-        "Total Geral (R$)": "Total Geral (R$)",
-        "Total Geral (peças)": "Total Geral (peças)",
-        "Finalizado": "Finalizado",
-        "Pendente": "Pendente",
-        "Todos": "Todos",
-        "Todas": "Todas",
-        "Pesquisar": "Pesquisar",
-        "Search": "Pesquisar",
-    },
-    "en_US": {
-        "title": "Finishing Report",
-        "Atualizar": "Refresh",
-        "Filtrar": "Filter",
-        "Limpar": "Clear",
-        "Exportar": "Export",
-        "Exportar CSV": "Export CSV",
-        "Imprimir": "Print",
-        "Buscar": "Search",
-        "Relatório de Acabamento": "Finishing Report",
-        "Data": "Date",
-        "Início": "Start",
-        "Fim": "End",
-        "Start": "Start",
-        "End": "End",
-        "Código/Modelo": "Code/Model",
-        "Código": "Code",
-        "Modelo": "Model",
-        "Ordem": "Order",
-        "Facção": "Contractor",
-        "Serviço": "Service",
-        "Status": "Status",
-        "Qtd": "Qty",
-        "Quantidade": "Quantity",
-        "VALOR_UN": "UNIT_VALUE",
-        "TOTAL": "TOTAL",
-        "Total Geral": "Grand Total",
-        "Total Geral (R$)": "Grand Total ($)",
-        "Total Geral (peças)": "Grand Total (pieces)",
-        "Finalizado": "Finished",
-        "Pendente": "Pending",
-        "Todos": "All",
-        "Todas": "All",
-        "Pesquisar": "Search",
-        "Search": "Search",
-    },
-    "es_ES": {
-        "title": "Reporte de Acabado",
-        "Atualizar": "Actualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpiar",
-        "Exportar": "Exportar",
-        "Exportar CSV": "Exportar CSV",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-        "Relatório de Acabamento": "Reporte de Acabado",
-        "Data": "Fecha",
-        "Início": "Inicio",
-        "Fim": "Fin",
-        "Start": "Inicio",
-        "End": "Fin",
-        "Código/Modelo": "Código/Modelo",
-        "Código": "Código",
-        "Modelo": "Modelo",
-        "Ordem": "Orden",
-        "Facção": "Facción",
-        "Serviço": "Servicio",
-        "Status": "Estado",
-        "Qtd": "Cant.",
-        "Quantidade": "Cantidad",
-        "VALOR_UN": "VALOR_UN",
-        "TOTAL": "TOTAL",
-        "Total Geral": "Total General",
-        "Total Geral (R$)": "Total General ($)",
-        "Total Geral (peças)": "Total General (piezas)",
-        "Finalizado": "Finalizado",
-        "Pendente": "Pendiente",
-        "Todos": "Todos",
-        "Todas": "Todas",
-        "Pesquisar": "Buscar",
-        "Search": "Buscar",
-    },
-}
+
+# --- Suporte de idioma consolidado desta página ---
+import tkinter as _tk_i18n
+from tkinter import ttk as _ttk_i18n
 
 
-def _apply_relatorioacabamentopage_translations(self):
-    """Aplica tradução individual desta página."""
-    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
-    if idioma not in RelatorioAcabamentoPage_TRANSLATIONS:
-        idioma = "pt_BR"
-    if hasattr(self, "titulo"):
+def _opera_page_lang(instance):
+    idioma = getattr(getattr(instance, "sistema", None), "idioma_atual", None)
+    if not idioma:
+        idioma = getattr(getattr(instance, "host", None), "idioma_atual", None)
+    if not idioma:
+        idioma = getattr(instance, "idioma_atual", None)
+    return idioma or "pt_BR"
+
+
+def _opera_translate_widget_tree(instance, widget, translation_map):
+    try:
+        for opt in ("text", "placeholder_text"):
+            try:
+                current = widget.cget(opt)
+            except Exception:
+                continue
+            if isinstance(current, str) and current in translation_map:
+                try:
+                    widget.configure(**{opt: translation_map[current]})
+                except Exception:
+                    pass
+
         try:
-            self.titulo.configure(text=RelatorioAcabamentoPage_TRANSLATIONS[idioma]["title"])
+            values = widget.cget("values")
+        except Exception:
+            values = None
+        if isinstance(values, (list, tuple)):
+            mapped = [translation_map.get(v, v) if isinstance(v, str) else v for v in values]
+            if list(mapped) != list(values):
+                try:
+                    widget.configure(values=mapped)
+                except Exception:
+                    pass
+
+        if isinstance(widget, _ttk_i18n.Treeview):
+            try:
+                heading = widget.heading("#0")
+                text = heading.get("text", "")
+                if text in translation_map:
+                    widget.heading("#0", text=translation_map[text])
+            except Exception:
+                pass
+            try:
+                for col in widget["columns"]:
+                    heading = widget.heading(col)
+                    text = heading.get("text", "")
+                    if text in translation_map:
+                        widget.heading(col, text=translation_map[text])
+            except Exception:
+                pass
+
+        if isinstance(widget, _tk_i18n.Menu):
+            try:
+                end = widget.index("end")
+            except Exception:
+                end = None
+            if end is not None:
+                for idx in range(end + 1):
+                    try:
+                        label = widget.entrycget(idx, "label")
+                    except Exception:
+                        continue
+                    if isinstance(label, str) and label in translation_map:
+                        try:
+                            widget.entryconfigure(idx, label=translation_map[label])
+                        except Exception:
+                            pass
+
+        for child in widget.winfo_children():
+            _opera_translate_widget_tree(instance, child, translation_map)
+    except Exception:
+        pass
+
+
+def _opera_apply_page_i18n(instance, class_ref, page_title=None):
+    idioma = _opera_page_lang(instance)
+    maps = getattr(class_ref, "_TRANSLATIONS", {}) or {}
+    base = maps.get("pt_BR", {}) if isinstance(maps.get("pt_BR", {}), dict) else {}
+    current = maps.get(idioma, {}) if isinstance(maps.get(idioma, {}), dict) else {}
+    translation_map = dict(base)
+    translation_map.update(current)
+
+    for attr in ("titulo", "title_label", "lbl_titulo", "header_title", "page_title_label"):
+        widget = getattr(instance, attr, None)
+        if widget is not None:
+            try:
+                current_text = widget.cget("text")
+                if isinstance(current_text, str):
+                    widget.configure(text=translation_map.get(current_text, current_text))
+            except Exception:
+                pass
+
+    if page_title:
+        try:
+            instance.PAGE_TITLE = translation_map.get(page_title, page_title)
         except Exception:
             pass
 
+    _opera_translate_widget_tree(instance, instance, translation_map)
 
-try:
-    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    RelatorioAcabamentoPage.TRANSLATIONS = RelatorioAcabamentoPage_TRANSLATIONS
-    if not hasattr(RelatorioAcabamentoPage, "apply_page_translations"):
-        RelatorioAcabamentoPage.apply_page_translations = _apply_relatorioacabamentopage_translations
-    attach_i18n_support(RelatorioAcabamentoPage, RelatorioAcabamentoPage_TRANSLATIONS)
-except Exception:
-    pass
+
+def _opera_set_idioma_factory(class_ref, page_title=None):
+    def set_idioma(self, idioma):
+        self.idioma_atual = idioma
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    def on_language_changed(self, idioma=None):
+        if idioma:
+            self.idioma_atual = idioma
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    def refresh_texts(self):
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    return set_idioma, on_language_changed, refresh_texts
+
+
+
+RelatorioAcabamentoPage._TRANSLATIONS = {
+    "pt_BR": {'🎯 Relatório de Acabamento': '🎯 Relatório de Acabamento', 'Início': 'Início', 'Fim': 'Fim', 'Código/Modelo': 'Código/Modelo', 'Ordem': 'Ordem', 'Facção': 'Facção', 'Status': 'Status', '🔍 Buscar': '🔍 Buscar', '⬇️ Exportar CSV': '⬇️ Exportar CSV', 'Total Geral (peças):': 'Total Geral (peças):', 'Total Geral (R$):': 'Total Geral (R$):', 'vazio = todos': 'vazio = todos', 'vazio = todas': 'vazio = todas', 'Todos': 'Todos', 'Pendente': 'Pendente', 'Finalizado': 'Finalizado', 'Estornado': 'Estornado', 'DATA': 'DATA', 'ORDEM': 'ORDEM', 'MODELO': 'MODELO', 'DESCRIÇÃO': 'DESCRIÇÃO', 'FACÇÃO': 'FACÇÃO', 'SERVIÇO': 'SERVIÇO', 'QTD': 'QTD', 'VALOR_UN': 'VALOR_UN', 'TOTAL': 'TOTAL', 'STATUS': 'STATUS'},
+    "en_US": {'🎯 Relatório de Acabamento': '🎯 Finishing Report', 'Início': 'Start', 'Fim': 'End', 'Código/Modelo': 'Code/Model', 'Ordem': 'Order', 'Facção': 'Contractor', 'Status': 'Status', '🔍 Buscar': '🔍 Search', '⬇️ Exportar CSV': '⬇️ Export CSV', 'Total Geral (peças):': 'Grand Total (pieces):', 'Total Geral (R$):': 'Grand Total (R$):', 'vazio = todos': 'empty = all', 'vazio = todas': 'empty = all', 'Todos': 'All', 'Pendente': 'Pending', 'Finalizado': 'Finished', 'Estornado': 'Reversed', 'DATA': 'DATE', 'ORDEM': 'ORDER', 'MODELO': 'MODEL', 'DESCRIÇÃO': 'DESCRIPTION', 'FACÇÃO': 'CONTRACTOR', 'SERVIÇO': 'SERVICE', 'QTD': 'QTY', 'VALOR_UN': 'UNIT_VALUE', 'TOTAL': 'TOTAL', 'STATUS': 'STATUS'},
+    "es_ES": {'🎯 Relatório de Acabamento': '🎯 Reporte de Acabado', 'Início': 'Inicio', 'Fim': 'Fin', 'Código/Modelo': 'Código/Modelo', 'Ordem': 'Orden', 'Facção': 'Facción', 'Status': 'Estado', '🔍 Buscar': '🔍 Buscar', '⬇️ Exportar CSV': '⬇️ Exportar CSV', 'Total Geral (peças):': 'Total General (piezas):', 'Total Geral (R$):': 'Total General (R$):', 'vazio = todos': 'vacío = todos', 'vazio = todas': 'vacío = todas', 'Todos': 'Todos', 'Pendente': 'Pendiente', 'Finalizado': 'Finalizado', 'Estornado': 'Revertido', 'DATA': 'FECHA', 'ORDEM': 'ORDEN', 'MODELO': 'MODELO', 'DESCRIÇÃO': 'DESCRIPCIÓN', 'FACÇÃO': 'FACCIÓN', 'SERVIÇO': 'SERVICIO', 'QTD': 'CANT.', 'VALOR_UN': 'VALOR_UN', 'TOTAL': 'TOTAL', 'STATUS': 'ESTADO'},
+}
+
+RelatorioAcabamentoPage.TRANSLATIONS = RelatorioAcabamentoPage._TRANSLATIONS
+RelatorioAcabamentoPage.PAGE_TITLE = 'Relatório de Acabamento'
+RelatorioAcabamentoPage.set_idioma, RelatorioAcabamentoPage.on_language_changed, RelatorioAcabamentoPage.refresh_texts = _opera_set_idioma_factory(RelatorioAcabamentoPage, 'Relatório de Acabamento')

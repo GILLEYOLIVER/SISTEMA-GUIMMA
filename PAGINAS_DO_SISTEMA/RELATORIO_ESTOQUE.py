@@ -4632,3 +4632,33 @@ if __name__ == "__main__":
     app.pack(fill="both", expand=True)
 
     root.mainloop()
+
+# --- Integração de idioma consolidada da página ---
+def _advancedstockreport_set_idioma(self, idioma):
+    self.idioma_atual = idioma
+    try:
+        self._refresh_texts_runtime()
+    except Exception:
+        pass
+
+
+def _advancedstockreport_on_language_changed(self, idioma=None):
+    if idioma:
+        self.idioma_atual = idioma
+    try:
+        self._refresh_texts_runtime()
+    except Exception:
+        pass
+
+
+def _advancedstockreport_refresh_texts(self):
+    try:
+        self._refresh_texts_runtime()
+    except Exception:
+        pass
+
+
+AdvancedStockReport.set_idioma = _advancedstockreport_set_idioma
+AdvancedStockReport.on_language_changed = _advancedstockreport_on_language_changed
+AdvancedStockReport.refresh_texts = _advancedstockreport_refresh_texts
+

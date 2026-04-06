@@ -645,55 +645,136 @@ if __name__ == "__main__":
 
 #03/02/2025
 
-# --- Suporte trilíngue individual desta página ---
-RecibosPagamentosPage_TRANSLATIONS = {
-    "pt_BR": {
-        "title": "Recibos de Pagamentos",
-        "Atualizar": "Atualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpar",
-        "Exportar": "Exportar",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-    },
-    "en_US": {
-        "title": "Payment Receipts",
-        "Atualizar": "Refresh",
-        "Filtrar": "Filter",
-        "Limpar": "Clear",
-        "Exportar": "Export",
-        "Imprimir": "Print",
-        "Buscar": "Search",
-    },
-    "es_ES": {
-        "title": "Recibos de Pago",
-        "Atualizar": "Actualizar",
-        "Filtrar": "Filtrar",
-        "Limpar": "Limpiar",
-        "Exportar": "Exportar",
-        "Imprimir": "Imprimir",
-        "Buscar": "Buscar",
-    },
-}
+
+# --- Suporte de idioma consolidado desta página ---
+import tkinter as _tk_i18n
+from tkinter import ttk as _ttk_i18n
 
 
-def _apply_recibospagamentospage_translations(self):
-    """Aplica tradução individual desta página."""
-    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
-    if idioma not in RecibosPagamentosPage_TRANSLATIONS:
-        idioma = "pt_BR"
-    if hasattr(self, "titulo"):
+def _opera_page_lang(instance):
+    idioma = getattr(getattr(instance, "sistema", None), "idioma_atual", None)
+    if not idioma:
+        idioma = getattr(getattr(instance, "host", None), "idioma_atual", None)
+    if not idioma:
+        idioma = getattr(instance, "idioma_atual", None)
+    return idioma or "pt_BR"
+
+
+def _opera_translate_widget_tree(instance, widget, translation_map):
+    try:
+        for opt in ("text", "placeholder_text"):
+            try:
+                current = widget.cget(opt)
+            except Exception:
+                continue
+            if isinstance(current, str) and current in translation_map:
+                try:
+                    widget.configure(**{opt: translation_map[current]})
+                except Exception:
+                    pass
+
         try:
-            self.titulo.configure(text=RecibosPagamentosPage_TRANSLATIONS[idioma]["title"])
+            values = widget.cget("values")
+        except Exception:
+            values = None
+        if isinstance(values, (list, tuple)):
+            mapped = [translation_map.get(v, v) if isinstance(v, str) else v for v in values]
+            if list(mapped) != list(values):
+                try:
+                    widget.configure(values=mapped)
+                except Exception:
+                    pass
+
+        if isinstance(widget, _ttk_i18n.Treeview):
+            try:
+                heading = widget.heading("#0")
+                text = heading.get("text", "")
+                if text in translation_map:
+                    widget.heading("#0", text=translation_map[text])
+            except Exception:
+                pass
+            try:
+                for col in widget["columns"]:
+                    heading = widget.heading(col)
+                    text = heading.get("text", "")
+                    if text in translation_map:
+                        widget.heading(col, text=translation_map[text])
+            except Exception:
+                pass
+
+        if isinstance(widget, _tk_i18n.Menu):
+            try:
+                end = widget.index("end")
+            except Exception:
+                end = None
+            if end is not None:
+                for idx in range(end + 1):
+                    try:
+                        label = widget.entrycget(idx, "label")
+                    except Exception:
+                        continue
+                    if isinstance(label, str) and label in translation_map:
+                        try:
+                            widget.entryconfigure(idx, label=translation_map[label])
+                        except Exception:
+                            pass
+
+        for child in widget.winfo_children():
+            _opera_translate_widget_tree(instance, child, translation_map)
+    except Exception:
+        pass
+
+
+def _opera_apply_page_i18n(instance, class_ref, page_title=None):
+    idioma = _opera_page_lang(instance)
+    maps = getattr(class_ref, "_TRANSLATIONS", {}) or {}
+    base = maps.get("pt_BR", {}) if isinstance(maps.get("pt_BR", {}), dict) else {}
+    current = maps.get(idioma, {}) if isinstance(maps.get(idioma, {}), dict) else {}
+    translation_map = dict(base)
+    translation_map.update(current)
+
+    for attr in ("titulo", "title_label", "lbl_titulo", "header_title", "page_title_label"):
+        widget = getattr(instance, attr, None)
+        if widget is not None:
+            try:
+                current_text = widget.cget("text")
+                if isinstance(current_text, str):
+                    widget.configure(text=translation_map.get(current_text, current_text))
+            except Exception:
+                pass
+
+    if page_title:
+        try:
+            instance.PAGE_TITLE = translation_map.get(page_title, page_title)
         except Exception:
             pass
 
+    _opera_translate_widget_tree(instance, instance, translation_map)
 
-try:
-    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
-    RecibosPagamentosPage.TRANSLATIONS = RecibosPagamentosPage_TRANSLATIONS
-    if not hasattr(RecibosPagamentosPage, "apply_page_translations"):
-        RecibosPagamentosPage.apply_page_translations = _apply_recibospagamentospage_translations
-    attach_i18n_support(RecibosPagamentosPage, RecibosPagamentosPage_TRANSLATIONS)
-except Exception:
-    pass
+
+def _opera_set_idioma_factory(class_ref, page_title=None):
+    def set_idioma(self, idioma):
+        self.idioma_atual = idioma
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    def on_language_changed(self, idioma=None):
+        if idioma:
+            self.idioma_atual = idioma
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    def refresh_texts(self):
+        _opera_apply_page_i18n(self, class_ref, page_title)
+
+    return set_idioma, on_language_changed, refresh_texts
+
+
+
+RecibosPagamentosPage._TRANSLATIONS = {
+    "pt_BR": {'Recibos de Pagamentos': 'Recibos de Pagamentos', '🔄 Atualizar': '🔄 Atualizar', '🖨️ Imprimir': '🖨️ Imprimir', '📤 Exportar': '📤 Exportar', 'Buscar': 'Buscar', 'Dica: use o campo de busca para filtrar por prestador, data ou valor.': 'Dica: use o campo de busca para filtrar por prestador, data ou valor.', 'Tema de teste:': 'Tema de teste:', 'Recarregar página': 'Recarregar página', 'Todos': 'Todos', 'Facção': 'Facção', 'Bordado': 'Bordado', 'Caseador': 'Caseador', 'Botões': 'Botões', 'Estamparia': 'Estamparia', 'Tingimento': 'Tingimento', 'Outros Trabalhos': 'Outros Trabalhos', 'Prestador': 'Prestador', 'Serviço': 'Serviço', 'Data': 'Data', 'Valor': 'Valor', 'Arquivo': 'Arquivo', 'Abrir': 'Abrir', 'Excluir': 'Excluir', 'Nenhum recibo encontrado.': 'Nenhum recibo encontrado.'},
+    "en_US": {'Recibos de Pagamentos': 'Payment Receipts', '🔄 Atualizar': '🔄 Refresh', '🖨️ Imprimir': '🖨️ Print', '📤 Exportar': '📤 Export', 'Buscar': 'Search', 'Dica: use o campo de busca para filtrar por prestador, data ou valor.': 'Tip: use the search field to filter by provider, date, or amount.', 'Tema de teste:': 'Test theme:', 'Recarregar página': 'Reload page', 'Todos': 'All', 'Facção': 'Contractor', 'Bordado': 'Embroidery', 'Caseador': 'Buttonhole', 'Botões': 'Buttons', 'Estamparia': 'Printing', 'Tingimento': 'Dyeing', 'Outros Trabalhos': 'Other Services', 'Prestador': 'Provider', 'Serviço': 'Service', 'Data': 'Date', 'Valor': 'Amount', 'Arquivo': 'File', 'Abrir': 'Open', 'Excluir': 'Delete', 'Nenhum recibo encontrado.': 'No receipt found.'},
+    "es_ES": {'Recibos de Pagamentos': 'Recibos de Pagos', '🔄 Atualizar': '🔄 Actualizar', '🖨️ Imprimir': '🖨️ Imprimir', '📤 Exportar': '📤 Exportar', 'Buscar': 'Buscar', 'Dica: use o campo de busca para filtrar por prestador, data ou valor.': 'Consejo: use el campo de búsqueda para filtrar por prestador, fecha o valor.', 'Tema de teste:': 'Tema de prueba:', 'Recarregar página': 'Recargar página', 'Todos': 'Todos', 'Facção': 'Facción', 'Bordado': 'Bordado', 'Caseador': 'Ojalado', 'Botões': 'Botones', 'Estamparia': 'Estampado', 'Tingimento': 'Teñido', 'Outros Trabalhos': 'Otros Trabajos', 'Prestador': 'Prestador', 'Serviço': 'Servicio', 'Data': 'Fecha', 'Valor': 'Valor', 'Arquivo': 'Archivo', 'Abrir': 'Abrir', 'Excluir': 'Eliminar', 'Nenhum recibo encontrado.': 'No se encontró ningún recibo.'},
+}
+
+RecibosPagamentosPage.TRANSLATIONS = RecibosPagamentosPage._TRANSLATIONS
+RecibosPagamentosPage.PAGE_TITLE = 'Recibos de Pagamentos'
+RecibosPagamentosPage.set_idioma, RecibosPagamentosPage.on_language_changed, RecibosPagamentosPage.refresh_texts = _opera_set_idioma_factory(RecibosPagamentosPage, 'Recibos de Pagamentos')

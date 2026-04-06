@@ -1419,8 +1419,6 @@ class OperaMenuApp(ctk.CTk):
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         reset_tk_default_root()
         super().__init__()
-        # Evita efeito de "janela pequena" no startup:
-        # mantém oculta até layout/zoom serem aplicados.
         try:
             self.withdraw()
         except Exception:
@@ -1435,6 +1433,9 @@ class OperaMenuApp(ctk.CTk):
         self._window_scale_applied = False
         self._startup_responsive_ready = False
         self._last_configure_size = None
+        self._last_resize_seen = None
+        self._last_responsive_signature = None
+        self._menu_layout_signature = None
 
         self.cor_fundo = "#1e1e1e"
         self.cor_primaria = "#2d2d30"
@@ -1506,15 +1507,15 @@ class OperaMenuApp(ctk.CTk):
         self._setup_responsive_watcher()
         self._preload_complete = True
 
-        self._apply_initial_layout()
-        self.update_idletasks()
+        self._show_startup_loading()
         self.deiconify()
         self.lift()
         self.focus_force()
-        self._open_dashboard_agora()
-        self._agendar_after(180, lambda: self._apply_theme_to_frame_safely(self._current_frame))
-        self._agendar_after(420, lambda: self._apply_theme_to_frame_safely(self._current_frame))
-        self._agendar_after(1200, self._smart_preload_pages)
+        self._apply_initial_layout()
+        self._agendar_after(10, self._startup_open_initial_page)
+        self._agendar_after(220, lambda: self._apply_theme_to_frame_safely(self._current_frame))
+        self._agendar_after(350, self._enable_startup_responsive_ready)
+        self._agendar_after(2500, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
         self._agendar_after(5000, self._ativar_backup_silencioso)
         self._update_menu_buttons_colors()
@@ -1564,6 +1565,66 @@ class OperaMenuApp(ctk.CTk):
         self._maximize_window()
         self.update_idletasks()
 
+    def _enable_startup_responsive_ready(self):
+        self._startup_responsive_ready = True
+
+    def _show_startup_loading(self):
+        """Mostra um painel leve enquanto a primeira página ainda está carregando."""
+        try:
+            if not hasattr(self, "content") or not self.content.winfo_exists():
+                return
+            for widget in self.content.winfo_children():
+                try:
+                    widget.destroy()
+                except Exception:
+                    pass
+            card = ctk.CTkFrame(
+                self.content,
+                fg_color=self.cor_secundaria,
+                corner_radius=14,
+                border_color=self.cor_borda,
+                border_width=1,
+            )
+            card.place(relx=0.5, rely=0.5, anchor="center")
+            ctk.CTkLabel(
+                card,
+                text=self._get_text("system_title"),
+                font=("Arial", 18, "bold"),
+                text_color=self.cor_texto,
+            ).pack(padx=24, pady=(20, 8))
+            ctk.CTkLabel(
+                card,
+                text=self._get_text("loading_page"),
+                font=("Arial", 14),
+                text_color=self.cor_texto,
+            ).pack(padx=24, pady=(0, 18))
+            self._startup_loading_card = card
+            self.update_idletasks()
+        except Exception:
+            self._startup_loading_card = None
+
+    def _startup_open_initial_page(self):
+        if getattr(self, "_closing", False):
+            return
+
+        def _do_open():
+            if getattr(self, "_closing", False):
+                return
+            try:
+                self._open_dashboard_agora()
+            finally:
+                try:
+                    if getattr(self, "_startup_loading_card", None) and self._startup_loading_card.winfo_exists():
+                        self._startup_loading_card.destroy()
+                except Exception:
+                    pass
+                self._update_menu_buttons_colors()
+
+        try:
+            self.after_idle(_do_open)
+        except Exception:
+            _do_open()
+
     def _setup_responsive_watcher(self):
         self.bind("<Configure>", self._on_window_configure, add="+")
 
@@ -1572,8 +1633,15 @@ class OperaMenuApp(ctk.CTk):
             return
         if not getattr(self, "_preload_complete", False):
             return
-        size_key = (int(event.width), int(event.height))
-        if getattr(self, "_last_resize_seen", None) == size_key and self._pending_responsive_job:
+        if not getattr(self, "_startup_responsive_ready", False):
+            return
+        width = int(event.width or 0)
+        height = int(event.height or 0)
+        if width <= 1 or height <= 1:
+            return
+        size_key = (width, height)
+        last_size = getattr(self, "_last_resize_seen", None)
+        if last_size and abs(last_size[0] - width) < 8 and abs(last_size[1] - height) < 8:
             return
         self._last_resize_seen = size_key
         if self._pending_responsive_job:
@@ -1591,7 +1659,7 @@ class OperaMenuApp(ctk.CTk):
             except Exception:
                 pass
 
-        self._pending_responsive_job = self.after(120, _apply_resize)
+        self._pending_responsive_job = self.after(180, _apply_resize)
 
     def _calculate_ui_scale(self, width: int, height: int) -> float:
         if width < 1500 or height < 900:
@@ -1611,12 +1679,10 @@ class OperaMenuApp(ctk.CTk):
             if initial or current_width <= 1 or current_height <= 1:
                 current_width, current_height = screen_width, screen_height
             new_scale = self._calculate_ui_scale(current_width, current_height)
-            old_scale = float(getattr(self, "ui_scale", 1.0))
-            mode_changed = initial or abs(old_scale - new_scale) >= 0.01
-            if not mode_changed:
-                if self._active_submenu and self._active_submenu in self.submenu_frames:
-                    self.after_idle(lambda: self._show_submenu(self._active_submenu))
+            layout_signature = (new_scale, current_width < 1500 or current_height < 900)
+            if not initial and getattr(self, "_last_responsive_signature", None) == layout_signature:
                 return
+            self._last_responsive_signature = layout_signature
             self.ui_scale = new_scale
             self._responsive_mode = "compact" if new_scale < 1.0 else "normal"
             self.SIDEBAR_WIDTH = max(220, int(300 * self.ui_scale))
@@ -1632,13 +1698,20 @@ class OperaMenuApp(ctk.CTk):
                 self.sidebar.configure(width=self.SIDEBAR_WIDTH)
             if hasattr(self, "topbar") and self.topbar.winfo_exists():
                 self.topbar.configure(height=self.TOPBAR_HEIGHT)
-            if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists():
+            menu_signature = (self.SIDEBAR_WIDTH, self.ITEM_HEIGHT, self.icon_size_sidebar, self.idioma_atual)
+            if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() and (
+                initial or getattr(self, "_menu_layout_signature", None) != menu_signature
+            ):
+                self._menu_layout_signature = menu_signature
                 self._hide_all_submenus()
                 self._load_icons()
                 self._build_menu_content()
             self.update_idletasks()
-            if self._active_submenu and self._active_submenu in self.submenu_frames:
-                self.after_idle(lambda: self._show_submenu(self._active_submenu))
+            if self._current_frame and getattr(self._current_frame, "winfo_exists", lambda: False)():
+                try:
+                    self._current_frame.place_configure(x=0, y=0, relwidth=1, relheight=1)
+                except Exception:
+                    pass
         finally:
             self._responsive_reflow_lock = False
 
@@ -1771,8 +1844,10 @@ class OperaMenuApp(ctk.CTk):
             _dprint(f"⚠️ Erro ao abrir página inicial: {e}")
 
     def _smart_preload_pages(self):
-        """Pré-carrega a última página usada sem bloquear a abertura inicial."""
+        """Pré-carrega a última página usada só quando a UI já estabilizou."""
         if getattr(self, "_closing", False):
+            return
+        if str(os.environ.get("OPERA_PRELOAD_LAST_PAGE", "0")).strip().lower() not in {"1", "true", "yes", "on"}:
             return
         last_page = (self.settings or {}).get("last_page")
         if not last_page or last_page == self.current_page:
@@ -1783,6 +1858,8 @@ class OperaMenuApp(ctk.CTk):
             return
 
         def _do_preload():
+            if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
+                return
             try:
                 frame = self._load_page_direct(last_page)
                 if frame:
@@ -1795,7 +1872,7 @@ class OperaMenuApp(ctk.CTk):
             except Exception as exc:
                 _dprint(f"⚠️ Pré-cache ignorado para '{last_page}': {exc}")
 
-        self._agendar_after(250, _do_preload)
+        self._agendar_after(600, _do_preload)
 
     def _setup_window(self):
         self.title("OPERA • Sistema de Gestão")
@@ -3477,14 +3554,8 @@ class OperaMenuApp(ctk.CTk):
                 except Exception as _exc:
                     _dprint(f"⚠️ Erro ao atualizar página ao abrir '{page_name}': {_exc}")
                 self._apply_theme_to_frame_safely(frame)
-                # Reforços para widgets que são criados após o primeiro draw
-                self.after(120,
-                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
-                self.after(320,
-                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
-                self.after(750,
-                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
-                self.after(1500,
+                # Um único reforço tardio evita travar a abertura com várias reaplicações em cascata.
+                self.after(220,
                            lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.current_page = page_name
                 self._current_frame = frame
@@ -3492,6 +3563,11 @@ class OperaMenuApp(ctk.CTk):
                     self.settings["last_page"] = page_name
                     ConfigManager.save_settings(self.settings)
                 except:
+                    pass
+                try:
+                    if getattr(self, "_startup_loading_card", None) and self._startup_loading_card.winfo_exists():
+                        self._startup_loading_card.destroy()
+                except Exception:
                     pass
                 _dprint(f"✅ Página '{page_name}' carregada")
         except Exception as e:
