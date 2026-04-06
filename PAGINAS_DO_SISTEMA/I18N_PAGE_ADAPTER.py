@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import ttk
+import re
+import unicodedata
 
 _TERM_TRIPLETS = [
     ("Atualizar", "Refresh", "Actualizar"),
@@ -222,6 +224,87 @@ def _merge_maps(lang: str, page_map: dict | None = None) -> dict:
     return merged
 
 
+def _normalize_text(value: str) -> str:
+    if not isinstance(value, str):
+        return ""
+    txt = value.strip().lower()
+    txt = unicodedata.normalize("NFKD", txt)
+    txt = "".join(ch for ch in txt if not unicodedata.combining(ch))
+    txt = re.sub(r"\s+", " ", txt)
+    return txt
+
+
+def _build_bidirectional_page_map(page_map: dict | None, lang: str) -> dict:
+    """
+    Constrói mapa bidirecional para páginas:
+    qualquer variante PT/EN/ES conhecida passa a apontar para o idioma alvo.
+    """
+    if not isinstance(page_map, dict):
+        return {}
+
+    pt = page_map.get("pt_BR", {}) if isinstance(page_map.get("pt_BR", {}), dict) else {}
+    en = page_map.get("en_US", {}) if isinstance(page_map.get("en_US", {}), dict) else {}
+    es = page_map.get("es_ES", {}) if isinstance(page_map.get("es_ES", {}), dict) else {}
+    target = page_map.get(lang, {}) if isinstance(page_map.get(lang, {}), dict) else {}
+    if not target:
+        target = pt
+
+    result = {}
+    canonical_keys = set(pt.keys()) | set(en.keys()) | set(es.keys()) | set(target.keys())
+
+    for key in canonical_keys:
+        target_val = target.get(key, pt.get(key, en.get(key, es.get(key, key))))
+        variants = {
+            key,
+            pt.get(key, key),
+            en.get(key, key),
+            es.get(key, key),
+        }
+        variants = {v for v in variants if isinstance(v, str) and v.strip()}
+        for v in variants:
+            result[v] = target_val
+            result[_normalize_text(v)] = target_val
+
+    return result
+
+
+def _translate_flexible(text: str, mp: dict) -> str:
+    if not isinstance(text, str) or not text.strip():
+        return text
+
+    # 1) match exato
+    if text in mp:
+        return mp[text]
+
+    # 2) match normalizado (case/acento/espaço)
+    norm = _normalize_text(text)
+    if norm in mp:
+        return mp[norm]
+
+    # 3) substituição por partes (frases mistas e labels compostas)
+    translated = text
+    replacements = []
+    for k, v in mp.items():
+        if not isinstance(k, str) or not isinstance(v, str):
+            continue
+        k_clean = k.strip()
+        if not k_clean or len(k_clean) < 3:
+            continue
+        replacements.append((k_clean, v))
+
+    # evita substituir termos curtos antes de termos longos
+    replacements.sort(key=lambda item: len(item[0]), reverse=True)
+
+    for src, dst in replacements:
+        try:
+            pattern = re.compile(rf"(?<!\w){re.escape(src)}(?!\w)", re.IGNORECASE)
+            translated = pattern.sub(dst, translated)
+        except Exception:
+            continue
+
+    return translated
+
+
 def _translate_widget_tree(root, translate_fn):
     def _translate(value):
         if isinstance(value, str):
@@ -334,7 +417,8 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
     def _tr(self, text):
         lang = _language_of(self)
         mp = _merge_maps(lang, page_map)
-        return mp.get(text, text)
+        mp.update(_build_bidirectional_page_map(page_map, lang))
+        return _translate_flexible(text, mp)
 
     def _refresh_texts(self):
         if callable(old_refresh):
@@ -352,6 +436,15 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
         except Exception:
             pass
         _refresh_texts(self)
+        # Reaplica após delays curtos para cobrir widgets/títulos de Treeview
+        # criados ou atualizados depois da montagem inicial da tela.
+        try:
+            if hasattr(self, "after"):
+                self.after(80, lambda: _refresh_texts(self))
+                self.after(260, lambda: _refresh_texts(self))
+                self.after(700, lambda: _refresh_texts(self))
+        except Exception:
+            pass
 
     page_cls._get_idioma_atual = getattr(page_cls, "_get_idioma_atual", _get_idioma_atual)
     page_cls._tr = getattr(page_cls, "_tr", _tr)
