@@ -166,7 +166,12 @@ class ConfigManager:
     @staticmethod
     def load_settings() -> dict:
         """Carrega configurações do arquivo settings.json."""
-        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard", "language": "pt_BR"}
+        default = {
+            "theme": "CLÁSSICO CLARO",
+            "last_page": "Dashboard",
+            "language": "pt_BR",
+            "preload_last_page": True,
+        }
         if os.path.exists(SETTINGS_PATH):
             try:
                 with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
@@ -1849,7 +1854,12 @@ class OperaMenuApp(ctk.CTk):
         """Pré-carrega a última página usada só quando a UI já estabilizou."""
         if getattr(self, "_closing", False):
             return
-        if str(os.environ.get("OPERA_PRELOAD_LAST_PAGE", "0")).strip().lower() not in {"1", "true", "yes", "on"}:
+        env_flag = str(os.environ.get("OPERA_PRELOAD_LAST_PAGE", "")).strip().lower()
+        if env_flag:
+            preload_enabled = env_flag in {"1", "true", "yes", "on"}
+        else:
+            preload_enabled = bool((self.settings or {}).get("preload_last_page", True))
+        if not preload_enabled:
             return
         last_page = (self.settings or {}).get("last_page")
         if not last_page or last_page == self.current_page:
