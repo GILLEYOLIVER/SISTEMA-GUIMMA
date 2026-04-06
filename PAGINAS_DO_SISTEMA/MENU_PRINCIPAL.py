@@ -11,6 +11,7 @@ import importlib
 import importlib.util
 import inspect
 import functools
+import gc
 import os
 import sys
 import threading
@@ -166,7 +167,7 @@ class ConfigManager:
     @staticmethod
     def load_settings() -> dict:
         """Carrega configurações do arquivo settings.json."""
-        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard", "language": "pt_BR"}
+        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard", "language": "pt_BR", "preload_last_page": False}
         if os.path.exists(SETTINGS_PATH):
             try:
                 with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
@@ -1481,6 +1482,7 @@ class OperaMenuApp(ctk.CTk):
 
         self._closing = False
         self._page_loading = False
+        self._no_hover = str(os.environ.get("OPERA_NO_HOVER", "")).strip().lower() in {"1", "true", "yes", "on"}
         self.current_theme_name = None
         self.current_page = None
         self.submenu_frames = {}
@@ -1517,7 +1519,8 @@ class OperaMenuApp(ctk.CTk):
         self._agendar_after(10, self._startup_open_initial_page)
         self._agendar_after(220, lambda: self._apply_theme_to_frame_safely(self._current_frame))
         self._agendar_after(350, self._enable_startup_responsive_ready)
-        self._agendar_after(2500, self._smart_preload_pages)
+        if bool((self.settings or {}).get("preload_last_page", False)):
+            self._agendar_after(2500, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
         self._agendar_after(5000, self._ativar_backup_silencioso)
         self._update_menu_buttons_colors()
@@ -1849,7 +1852,12 @@ class OperaMenuApp(ctk.CTk):
         """Pré-carrega a última página usada só quando a UI já estabilizou."""
         if getattr(self, "_closing", False):
             return
-        if str(os.environ.get("OPERA_PRELOAD_LAST_PAGE", "0")).strip().lower() not in {"1", "true", "yes", "on"}:
+        env_flag = str(os.environ.get("OPERA_PRELOAD_LAST_PAGE", "")).strip().lower()
+        if env_flag:
+            preload_enabled = env_flag in {"1", "true", "yes", "on"}
+        else:
+            preload_enabled = bool((self.settings or {}).get("preload_last_page", False))
+        if not preload_enabled:
             return
         last_page = (self.settings or {}).get("last_page")
         if not last_page or last_page == self.current_page:
@@ -2064,10 +2072,14 @@ class OperaMenuApp(ctk.CTk):
         )
         self._activity_db_worker.start()
         self._limpar_logs_antigos_async()
-        self.bind_all("<ButtonRelease-1>", self._on_user_click, add="+")
+        bind_all_user_input = str(os.environ.get("OPERA_ACTIVITY_BIND_ALL", "")).strip().lower() in {
+            "1", "true", "yes", "on"
+        }
+        if bind_all_user_input:
+            self.bind_all("<ButtonRelease-1>", self._on_user_click, add="+")
+            self.bind_all("<KeyRelease>", self._on_user_key, add="+")
         self.bind_all("<<TreeviewSelect>>", self._on_treeview_select, add="+")
         self.bind_all("<<ComboboxSelected>>", self._on_combobox_select, add="+")
-        self.bind_all("<KeyRelease>", self._on_user_key, add="+")
 
     def _limpar_logs_antigos_async(self):
         """Evita travar o startup executando limpeza pesada em background."""
@@ -2262,17 +2274,26 @@ class OperaMenuApp(ctk.CTk):
             return
         self.icons_cache = {}
         self._icon_size_signature = requested_size
-        for categoria, filename in self.ICON_MAPPING.items():
-            try:
-                icon_path = os.path.join(ICONS_DIR, filename)
-                image = self._load_icon_asset(icon_path)
-                if image is not None:
-                    self.icons_cache[categoria] = ctk.CTkImage(
-                        light_image=image, dark_image=image, size=requested_size
-                    )
-            except Exception as e:
-                _dprint(f"❌ Erro ao carregar ícone {filename}: {e}")
-        _dprint(f"✅ {len(self.icons_cache)} ícones carregados")
+        _dprint("✅ Cache de ícones resetado (lazy loading ativo)")
+
+    def _get_menu_icon(self, categoria: str):
+        icon = self.icons_cache.get(categoria)
+        if icon is not None:
+            return icon
+        filename = self.ICON_MAPPING.get(categoria, "")
+        if not filename:
+            return None
+        try:
+            icon_path = os.path.join(ICONS_DIR, filename)
+            image = self._load_icon_asset(icon_path)
+            if image is None:
+                return None
+            icon = ctk.CTkImage(light_image=image, dark_image=image, size=(24, 24))
+            self.icons_cache[categoria] = icon
+            return icon
+        except Exception as e:
+            _dprint(f"❌ Erro ao carregar ícone {filename}: {e}")
+            return None
 
     def _get_submenu_icon(self, categoria: str, item: str):
         cache_key = f"{categoria}_{item}"
@@ -3130,17 +3151,20 @@ class OperaMenuApp(ctk.CTk):
     def _apply_menu_hover_behavior(self, widget, fg, texto, hover_fg, hover_texto, *, border_width=1,
                                    border_color=None):
         """Aplica no menu o mesmo padrão de hover da página de temas: fundo muda no hover e o texto acompanha."""
+        hover_enabled = not getattr(self, "_no_hover", False)
         try:
             widget.configure(
                 fg_color=fg,
-                hover=True,
-                hover_color=hover_fg,
+                hover=hover_enabled,
+                hover_color=hover_fg if hover_enabled else fg,
                 text_color=texto,
                 border_width=border_width,
                 border_color=border_color if border_color is not None else self.cor_borda,
             )
         except Exception:
             pass
+        if not hover_enabled:
+            return
 
         widget._opera_menu_hover_cfg = {
             "fg": fg,
@@ -3257,7 +3281,7 @@ class OperaMenuApp(ctk.CTk):
         btn_frame.pack(fill="x", padx=(10, 10), pady=max(1, int(2 * self.ui_scale)))
         btn_frame.pack_propagate(False)
 
-        icon = self.icons_cache.get(categoria)
+        icon = self._get_menu_icon(categoria)
         style = self._get_menu_style_tokens()
 
         ativo = (categoria == self._active_submenu)
@@ -3315,7 +3339,7 @@ class OperaMenuApp(ctk.CTk):
 
         btn.pack(fill="both", expand=True, padx=max(2, int(4 * self.ui_scale)))
 
-        if categoria != "Dashboard":
+        if categoria != "Dashboard" and not getattr(self, "_no_hover", False):
             def _menu_mouse_enter(_event=None, cat=categoria):
                 self._cancel_submenu_hide_timer()
                 self._show_submenu(cat)
@@ -3541,10 +3565,14 @@ class OperaMenuApp(ctk.CTk):
                     old_frame.destroy()
                 except:
                     pass
+                gc.collect()
 
     def _apply_theme_to_frame_safely(self, frame):
         """Reaplica tema no frame informado (incluindo widgets criados com atraso)."""
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
+            return
+        theme_token = (getattr(self, "current_theme_name", None), getattr(self, "idioma_atual", "pt_BR"))
+        if getattr(frame, "_opera_theme_token", None) == theme_token:
             return
         try:
             if hasattr(frame, "host"):
@@ -3557,6 +3585,7 @@ class OperaMenuApp(ctk.CTk):
                 self.theme_manager.apply_theme_to_widget(frame)
             if hasattr(self, "_update_menu_buttons_colors"):
                 self._update_menu_buttons_colors()
+            frame._opera_theme_token = theme_token
         except Exception as e:
             _dprint(f"⚠️ Erro ao reaplicar tema no frame: {e}")
 
@@ -3584,11 +3613,8 @@ class OperaMenuApp(ctk.CTk):
                 except Exception as _exc:
                     _dprint(f"⚠️ Erro ao aplicar idioma ao abrir '{page_name}': {_exc}")
                 frame.place(x=0, y=0, relwidth=1, relheight=1)
-                # Ajuste responsivo: informa a página o tamanho real do container
-                try:
-                    self.after(80, self._notify_current_page_resize)
-                except Exception:
-                    pass
+                self.update_idletasks()
+                self._notify_current_page_resize()
                 if page_name == "Nova Ordem" and hasattr(self,
                                                          "_ordem_planejada_prefill") and self._ordem_planejada_prefill:
                     try:
@@ -3606,9 +3632,6 @@ class OperaMenuApp(ctk.CTk):
                 except Exception as _exc:
                     _dprint(f"⚠️ Erro ao atualizar página ao abrir '{page_name}': {_exc}")
                 self._apply_theme_to_frame_safely(frame)
-                # Um único reforço tardio evita travar a abertura com várias reaplicações em cascata.
-                self.after(220,
-                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.current_page = page_name
                 self._current_frame = frame
                 try:
