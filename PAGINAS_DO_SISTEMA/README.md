@@ -346,6 +346,19 @@ Também foi conferido que o arquivo `DEF.py` está completo, com:
 - ✅ Geração de PDF para impressão  
 - ✅ Interface responsiva e moderna  
 
+### Novo apoio para QA de fluxo
+
+Para facilitar validação ponta a ponta (telas + banco), este diretório inclui:
+
+- `flow_smoke_check.py`: varredura técnica automática (compilação, rotas, dependências de PostgreSQL).
+- `QA_FLUXO_E2E_CHECKLIST.md`: checklist funcional para execução manual dos fluxos críticos com validação de persistência.
+
+Execução recomendada:
+
+```bash
+python PAGINAS_DO_SISTEMA/flow_smoke_check.py
+```
+
 ---
 
 ## 🤝 Contribuições

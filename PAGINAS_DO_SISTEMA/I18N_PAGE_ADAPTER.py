@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import ttk
+import re
+import unicodedata
 
 _TERM_TRIPLETS = [
     ("Atualizar", "Refresh", "Actualizar"),
@@ -65,6 +67,122 @@ _TERM_TRIPLETS = [
     ("Cortador", "Cutter", "Cortador"),
     ("Auxiliar", "Assistant", "Auxiliar"),
     ("Composição", "Composition", "Composición"),
+    # Navegação/Menu
+    ("Menu Principal", "Main Menu", "Menú Principal"),
+    ("Dashboard", "Dashboard", "Dashboard"),
+    ("Modelos", "Models", "Modelos"),
+    ("Ordens de Corte", "Cut Orders", "Órdenes de Corte"),
+    ("Registro de Corte", "Cut Records", "Registro de Corte"),
+    ("Mão de Obra", "Labor", "Mano de Obra"),
+    ("Compras", "Purchasing", "Compras"),
+    ("Estoque", "Inventory", "Inventario"),
+    ("Vendas", "Sales", "Ventas"),
+    ("Fornecedores", "Providers", "Proveedores"),
+    ("Acabamento", "Finishing", "Acabado"),
+    ("Planejamento", "Planning", "Planificación"),
+    ("Financeiro", "Financial", "Financiero"),
+    ("Relatórios", "Reports", "Reportes"),
+    ("Configurações", "Settings", "Configuración"),
+    ("Banco de Dados", "Database", "Base de Datos"),
+    # Filtros/consulta
+    ("Buscar", "Search", "Buscar"),
+    ("Pesquisar", "Search", "Buscar"),
+    ("Pesquisar...", "Search...", "Buscar..."),
+    ("Filtrar", "Filter", "Filtrar"),
+    ("Todos", "All", "Todos"),
+    ("Todas", "All", "Todas"),
+    ("Selecionar", "Select", "Seleccionar"),
+    ("Código/Modelo", "Code/Model", "Código/Modelo"),
+    ("Código", "Code", "Código"),
+    ("Modelo", "Model", "Modelo"),
+    ("Ordem", "Order", "Orden"),
+    ("Facção", "Contractor", "Facción"),
+    ("Serviço", "Service", "Servicio"),
+    ("Ação", "Action", "Acción"),
+    ("Usuário", "User", "Usuario"),
+    ("Data/Hora", "Date/Time", "Fecha/Hora"),
+    ("Data", "Date", "Fecha"),
+    ("De", "From", "De"),
+    ("Até", "To", "Hasta"),
+    ("Início", "Start", "Inicio"),
+    ("Fim", "End", "Fin"),
+    ("Status", "Status", "Estado"),
+    # Tabelas/colunas
+    ("Descrição", "Description", "Descripción"),
+    ("Qtd", "Qty", "Cant."),
+    ("Quantidade", "Quantity", "Cantidad"),
+    ("Valor Un.", "Unit Value", "Valor Unit."),
+    ("Valor_UN", "Unit Value", "Valor_UN"),
+    ("Total", "Total", "Total"),
+    ("Total Geral", "Grand Total", "Total General"),
+    ("Total Geral (R$)", "Grand Total ($)", "Total General ($)"),
+    ("Total Geral (peças)", "Grand Total (pieces)", "Total General (piezas)"),
+    ("Cor", "Color", "Color"),
+    ("Tamanho", "Size", "Talla"),
+    ("Detalhes", "Details", "Detalles"),
+    ("Página", "Page", "Página"),
+    ("ID", "ID", "ID"),
+    ("Hierarquia", "Hierarchy", "Jerarquía"),
+    ("Ativo", "Active", "Activo"),
+    ("Último Login", "Last Login", "Último Acceso"),
+    # Botões/ações
+    ("Salvar", "Save", "Guardar"),
+    ("Excluir", "Delete", "Eliminar"),
+    ("Editar", "Edit", "Editar"),
+    ("Novo Usuário", "New User", "Nuevo Usuario"),
+    ("Gerenciar Permissões", "Manage Permissions", "Gestionar Permisos"),
+    ("Marcar Todos", "Mark All", "Marcar Todos"),
+    ("Desmarcar Todos", "Unmark All", "Desmarcar Todos"),
+    ("Marcar VER", "Mark VIEW", "Marcar VER"),
+    ("Marcar EDITAR", "Mark EDIT", "Marcar EDITAR"),
+    ("Marcar IMPRIMIR", "Mark PRINT", "Marcar IMPRIMIR"),
+    ("Marcar EXCLUIR", "Mark DELETE", "Marcar ELIMINAR"),
+    ("Marcar ADMIN", "Mark ADMIN", "Marcar ADMIN"),
+    ("Recarregar", "Reload", "Recargar"),
+    ("Estatísticas", "Statistics", "Estadísticas"),
+    ("Relatório Completo", "Full Report", "Informe Completo"),
+    ("Exportar CSV", "Export CSV", "Exportar CSV"),
+    ("Limpar", "Clear", "Limpiar"),
+    # Logs e atividades
+    ("Logs e Atividades", "Logs and Activities", "Registros y Actividades"),
+    ("Filtro de Logs", "Log Filter", "Filtro de Registros"),
+    ("Filtrar Registros de Atividade", "Filter Activity Logs", "Filtrar Registros de Actividad"),
+    ("Registros de Atividade", "Activity Logs", "Registros de Actividad"),
+    ("Últimas ações no sistema", "Latest actions in system", "Últimas acciones en el sistema"),
+    ("Histórico completo de ações no sistema", "Full action history in system", "Historial completo de acciones en el sistema"),
+    ("Permissões Mais Usadas", "Most Used Permissions", "Permisos Más Usados"),
+    ("Distribuição de Hierarquias", "Hierarchy Distribution", "Distribución de Jerarquías"),
+    ("Por tipo de usuário", "By user type", "Por tipo de usuario"),
+    ("Logs Hoje", "Logs Today", "Registros Hoy"),
+    ("Usuários Ativos", "Active Users", "Usuarios Activos"),
+    ("Administradores", "Administrators", "Administradores"),
+    ("Atividades", "Activities", "Actividades"),
+    # Situações e mensagens comuns
+    ("Finalizado", "Finished", "Finalizado"),
+    ("Pendente", "Pending", "Pendiente"),
+    ("Pronto produção", "Production ready", "Listo para producción"),
+    ("Nenhum usuário selecionado", "No user selected", "Ningún usuario seleccionado"),
+    ("Gerencie usuários, permissões e acessos ao sistema", "Manage users, permissions and system access", "Gestione usuarios, permisos y accesos al sistema"),
+    ("Gerencie todos os usuários do sistema", "Manage all system users", "Gestione todos los usuarios del sistema"),
+    ("Dica", "Tip", "Consejo"),
+    # Cadastro de modelos
+    ("Cadastro de Modelos", "Model Registry", "Registro de Modelos"),
+    ("Coleção", "Collection", "Colección"),
+    ("Tam Base", "Base Size", "Talla Base"),
+    ("Dificuldade", "Difficulty", "Dificultad"),
+    ("Piloto", "Sample Maker", "Piloto"),
+    ("Gasto/Peça", "Cost/Piece", "Costo/Pieza"),
+    ("Grade disp.", "Available size range", "Rango de tallas disponible"),
+    ("Imagens do Modelo", "Model Images", "Imágenes del Modelo"),
+    ("Frente", "Front", "Frente"),
+    ("Costas", "Back", "Espalda"),
+    ("Adicionar", "Add", "Agregar"),
+    ("Remover", "Remove", "Quitar"),
+    # Relatórios específicos
+    ("Relatório de Acabamento", "Finishing Report", "Informe de Acabado"),
+    ("Relatório de Serviços Externos", "External Services Report", "Informe de Servicios Externos"),
+    ("Relatório de Modelos Produzidos", "Produced Models Report", "Informe de Modelos Producidos"),
+    ("Incluir peças de acabamento", "Include finishing pieces", "Incluir piezas de acabado"),
 ]
 
 
@@ -80,6 +198,67 @@ def _build_common_map():
 
 
 COMMON_PAGE_TRANSLATIONS = _build_common_map()
+
+_WORD_TRIPLETS = [
+    ("gestão", "management", "gestión"),
+    ("usuários", "users", "usuarios"),
+    ("usuário", "user", "usuario"),
+    ("permissões", "permissions", "permisos"),
+    ("permissão", "permission", "permiso"),
+    ("logs", "logs", "registros"),
+    ("atividades", "activities", "actividades"),
+    ("atividade", "activity", "actividad"),
+    ("relatório", "report", "informe"),
+    ("relatórios", "reports", "informes"),
+    ("filtro", "filter", "filtro"),
+    ("buscar", "search", "buscar"),
+    ("limpar", "clear", "limpiar"),
+    ("salvar", "save", "guardar"),
+    ("excluir", "delete", "eliminar"),
+    ("editar", "edit", "editar"),
+    ("novo", "new", "nuevo"),
+    ("todos", "all", "todos"),
+    ("todas", "all", "todas"),
+    ("data", "date", "fecha"),
+    ("hora", "time", "hora"),
+    ("detalhes", "details", "detalles"),
+    ("página", "page", "página"),
+    ("ação", "action", "acción"),
+    ("ações", "actions", "acciones"),
+    ("status", "status", "estado"),
+    ("modelo", "model", "modelo"),
+    ("ordem", "order", "orden"),
+    ("serviço", "service", "servicio"),
+    ("facção", "contractor", "facción"),
+    ("quantidade", "quantity", "cantidad"),
+    ("total", "total", "total"),
+    ("valor", "value", "valor"),
+    ("código", "code", "código"),
+]
+
+
+def _build_word_maps():
+    def _norm_local(value: str) -> str:
+        txt = value.strip().lower()
+        txt = unicodedata.normalize("NFKD", txt)
+        txt = "".join(ch for ch in txt if not unicodedata.combining(ch))
+        txt = re.sub(r"\s+", " ", txt)
+        return txt
+
+    maps = {"pt_BR": {}, "en_US": {}, "es_ES": {}}
+    for pt, en, es in _WORD_TRIPLETS:
+        variants = {pt, en, es}
+        for v in variants:
+            maps["pt_BR"][v] = pt
+            maps["en_US"][v] = en
+            maps["es_ES"][v] = es
+            maps["pt_BR"][_norm_local(v)] = pt
+            maps["en_US"][_norm_local(v)] = en
+            maps["es_ES"][_norm_local(v)] = es
+    return maps
+
+
+WORD_TRANSLATIONS = _build_word_maps()
 
 
 def _language_of(owner) -> str:
@@ -104,6 +283,117 @@ def _merge_maps(lang: str, page_map: dict | None = None) -> dict:
         merged.update(base)
         merged.update(cur)
     return merged
+
+
+def _normalize_text(value: str) -> str:
+    if not isinstance(value, str):
+        return ""
+    txt = value.strip().lower()
+    txt = unicodedata.normalize("NFKD", txt)
+    txt = "".join(ch for ch in txt if not unicodedata.combining(ch))
+    txt = re.sub(r"\s+", " ", txt)
+    return txt
+
+
+def _build_bidirectional_page_map(page_map: dict | None, lang: str) -> dict:
+    """
+    Constrói mapa bidirecional para páginas:
+    qualquer variante PT/EN/ES conhecida passa a apontar para o idioma alvo.
+    """
+    if not isinstance(page_map, dict):
+        return {}
+
+    pt = page_map.get("pt_BR", {}) if isinstance(page_map.get("pt_BR", {}), dict) else {}
+    en = page_map.get("en_US", {}) if isinstance(page_map.get("en_US", {}), dict) else {}
+    es = page_map.get("es_ES", {}) if isinstance(page_map.get("es_ES", {}), dict) else {}
+    target = page_map.get(lang, {}) if isinstance(page_map.get(lang, {}), dict) else {}
+    if not target:
+        target = pt
+
+    result = {}
+    canonical_keys = set(pt.keys()) | set(en.keys()) | set(es.keys()) | set(target.keys())
+
+    for key in canonical_keys:
+        target_val = target.get(key, pt.get(key, en.get(key, es.get(key, key))))
+        variants = {
+            key,
+            pt.get(key, key),
+            en.get(key, key),
+            es.get(key, key),
+        }
+        variants = {v for v in variants if isinstance(v, str) and v.strip()}
+        for v in variants:
+            result[v] = target_val
+            result[_normalize_text(v)] = target_val
+
+    return result
+
+
+def _translate_flexible(text: str, mp: dict) -> str:
+    if not isinstance(text, str) or not text.strip():
+        return text
+
+    # 1) match exato
+    if text in mp:
+        return mp[text]
+
+    # 2) match normalizado (case/acento/espaço)
+    norm = _normalize_text(text)
+    if norm in mp:
+        return mp[norm]
+
+    # 3) substituição por partes (frases mistas e labels compostas)
+    translated = text
+    replacements = []
+    for k, v in mp.items():
+        if not isinstance(k, str) or not isinstance(v, str):
+            continue
+        k_clean = k.strip()
+        if not k_clean or len(k_clean) < 3:
+            continue
+        replacements.append((k_clean, v))
+
+    # evita substituir termos curtos antes de termos longos
+    replacements.sort(key=lambda item: len(item[0]), reverse=True)
+
+    for src, dst in replacements:
+        try:
+            pattern = re.compile(rf"(?<!\w){re.escape(src)}(?!\w)", re.IGNORECASE)
+            translated = pattern.sub(dst, translated)
+        except Exception:
+            continue
+
+    # 4) fallback por palavra: cobre frases ainda não catalogadas integralmente
+    lang_words = WORD_TRANSLATIONS.get("pt_BR", {})
+    for _k, _v in WORD_TRANSLATIONS.items():
+        if _k == "pt_BR":
+            continue
+        lang_words.update(_v)
+
+    target_lang = "pt_BR"
+    if "Search" in mp.values() or "Save" in mp.values():
+        target_lang = "en_US"
+    if "Buscar" in mp.values() and "Guardar" in mp.values():
+        target_lang = "es_ES"
+    target_words = WORD_TRANSLATIONS.get(target_lang, {})
+
+    def _word_sub(match):
+        token = match.group(0)
+        norm_token = _normalize_text(token)
+        canonical = lang_words.get(token) or lang_words.get(norm_token) or token
+        repl = target_words.get(canonical) or target_words.get(_normalize_text(canonical)) or token
+        if token.isupper():
+            return repl.upper()
+        if token[:1].isupper():
+            return repl[:1].upper() + repl[1:]
+        return repl
+
+    try:
+        translated = re.sub(r"[A-Za-zÀ-ÿ_]+", _word_sub, translated)
+    except Exception:
+        pass
+
+    return translated
 
 
 def _translate_widget_tree(root, translate_fn):
@@ -218,7 +508,8 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
     def _tr(self, text):
         lang = _language_of(self)
         mp = _merge_maps(lang, page_map)
-        return mp.get(text, text)
+        mp.update(_build_bidirectional_page_map(page_map, lang))
+        return _translate_flexible(text, mp)
 
     def _refresh_texts(self):
         if callable(old_refresh):
@@ -236,6 +527,16 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
         except Exception:
             pass
         _refresh_texts(self)
+        # Reaplica após delays curtos para cobrir widgets/títulos de Treeview
+        # criados ou atualizados depois da montagem inicial da tela.
+        try:
+            if hasattr(self, "after"):
+                self.after(80, lambda: _refresh_texts(self))
+                self.after(260, lambda: _refresh_texts(self))
+                self.after(700, lambda: _refresh_texts(self))
+                self.after(1500, lambda: _refresh_texts(self))
+        except Exception:
+            pass
 
     page_cls._get_idioma_atual = getattr(page_cls, "_get_idioma_atual", _get_idioma_atual)
     page_cls._tr = getattr(page_cls, "_tr", _tr)
