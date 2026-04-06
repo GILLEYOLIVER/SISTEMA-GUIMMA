@@ -199,6 +199,67 @@ def _build_common_map():
 
 COMMON_PAGE_TRANSLATIONS = _build_common_map()
 
+_WORD_TRIPLETS = [
+    ("gestão", "management", "gestión"),
+    ("usuários", "users", "usuarios"),
+    ("usuário", "user", "usuario"),
+    ("permissões", "permissions", "permisos"),
+    ("permissão", "permission", "permiso"),
+    ("logs", "logs", "registros"),
+    ("atividades", "activities", "actividades"),
+    ("atividade", "activity", "actividad"),
+    ("relatório", "report", "informe"),
+    ("relatórios", "reports", "informes"),
+    ("filtro", "filter", "filtro"),
+    ("buscar", "search", "buscar"),
+    ("limpar", "clear", "limpiar"),
+    ("salvar", "save", "guardar"),
+    ("excluir", "delete", "eliminar"),
+    ("editar", "edit", "editar"),
+    ("novo", "new", "nuevo"),
+    ("todos", "all", "todos"),
+    ("todas", "all", "todas"),
+    ("data", "date", "fecha"),
+    ("hora", "time", "hora"),
+    ("detalhes", "details", "detalles"),
+    ("página", "page", "página"),
+    ("ação", "action", "acción"),
+    ("ações", "actions", "acciones"),
+    ("status", "status", "estado"),
+    ("modelo", "model", "modelo"),
+    ("ordem", "order", "orden"),
+    ("serviço", "service", "servicio"),
+    ("facção", "contractor", "facción"),
+    ("quantidade", "quantity", "cantidad"),
+    ("total", "total", "total"),
+    ("valor", "value", "valor"),
+    ("código", "code", "código"),
+]
+
+
+def _build_word_maps():
+    def _norm_local(value: str) -> str:
+        txt = value.strip().lower()
+        txt = unicodedata.normalize("NFKD", txt)
+        txt = "".join(ch for ch in txt if not unicodedata.combining(ch))
+        txt = re.sub(r"\s+", " ", txt)
+        return txt
+
+    maps = {"pt_BR": {}, "en_US": {}, "es_ES": {}}
+    for pt, en, es in _WORD_TRIPLETS:
+        variants = {pt, en, es}
+        for v in variants:
+            maps["pt_BR"][v] = pt
+            maps["en_US"][v] = en
+            maps["es_ES"][v] = es
+            maps["pt_BR"][_norm_local(v)] = pt
+            maps["en_US"][_norm_local(v)] = en
+            maps["es_ES"][_norm_local(v)] = es
+    return maps
+
+
+WORD_TRANSLATIONS = _build_word_maps()
+
 
 def _language_of(owner) -> str:
     for attr in ("idioma_atual",):
@@ -301,6 +362,36 @@ def _translate_flexible(text: str, mp: dict) -> str:
             translated = pattern.sub(dst, translated)
         except Exception:
             continue
+
+    # 4) fallback por palavra: cobre frases ainda não catalogadas integralmente
+    lang_words = WORD_TRANSLATIONS.get("pt_BR", {})
+    for _k, _v in WORD_TRANSLATIONS.items():
+        if _k == "pt_BR":
+            continue
+        lang_words.update(_v)
+
+    target_lang = "pt_BR"
+    if "Search" in mp.values() or "Save" in mp.values():
+        target_lang = "en_US"
+    if "Buscar" in mp.values() and "Guardar" in mp.values():
+        target_lang = "es_ES"
+    target_words = WORD_TRANSLATIONS.get(target_lang, {})
+
+    def _word_sub(match):
+        token = match.group(0)
+        norm_token = _normalize_text(token)
+        canonical = lang_words.get(token) or lang_words.get(norm_token) or token
+        repl = target_words.get(canonical) or target_words.get(_normalize_text(canonical)) or token
+        if token.isupper():
+            return repl.upper()
+        if token[:1].isupper():
+            return repl[:1].upper() + repl[1:]
+        return repl
+
+    try:
+        translated = re.sub(r"[A-Za-zÀ-ÿ_]+", _word_sub, translated)
+    except Exception:
+        pass
 
     return translated
 
@@ -443,6 +534,7 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
                 self.after(80, lambda: _refresh_texts(self))
                 self.after(260, lambda: _refresh_texts(self))
                 self.after(700, lambda: _refresh_texts(self))
+                self.after(1500, lambda: _refresh_texts(self))
         except Exception:
             pass
 
