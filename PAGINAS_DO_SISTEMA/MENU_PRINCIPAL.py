@@ -167,7 +167,7 @@ class ConfigManager:
     @staticmethod
     def load_settings() -> dict:
         """Carrega configurações do arquivo settings.json."""
-        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard", "language": "pt_BR", "preload_last_page": False}
+        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard", "language": "pt_BR", "preload_last_page": True}
         if os.path.exists(SETTINGS_PATH):
             try:
                 with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
@@ -1519,8 +1519,7 @@ class OperaMenuApp(ctk.CTk):
         self._agendar_after(10, self._startup_open_initial_page)
         self._agendar_after(220, lambda: self._apply_theme_to_frame_safely(self._current_frame))
         self._agendar_after(350, self._enable_startup_responsive_ready)
-        if bool((self.settings or {}).get("preload_last_page", False)):
-            self._agendar_after(2500, self._smart_preload_pages)
+        self._agendar_after(1800, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
         self._agendar_after(5000, self._ativar_backup_silencioso)
         self._update_menu_buttons_colors()
@@ -1722,6 +1721,11 @@ class OperaMenuApp(ctk.CTk):
 
     def _show_submenu(self, categoria: str):
         self._cancel_submenu_hide_timer()
+        if categoria not in self.submenu_frames:
+            try:
+                self._create_submenu(categoria)
+            except Exception as e:
+                _dprint(f"⚠️ Erro ao criar submenu '{categoria}': {e}")
         frame = self.submenu_frames.get(categoria)
         btn_frame = self.botoes_menu.get(categoria)
         if not frame or not btn_frame:
@@ -1849,40 +1853,63 @@ class OperaMenuApp(ctk.CTk):
             _dprint(f"⚠️ Erro ao abrir página inicial: {e}")
 
     def _smart_preload_pages(self):
-        """Pré-carrega a última página usada só quando a UI já estabilizou."""
+        """Pré-carrega páginas prováveis em fila, sem bloquear abertura inicial."""
         if getattr(self, "_closing", False):
             return
         env_flag = str(os.environ.get("OPERA_PRELOAD_LAST_PAGE", "")).strip().lower()
         if env_flag:
             preload_enabled = env_flag in {"1", "true", "yes", "on"}
         else:
-            preload_enabled = bool((self.settings or {}).get("preload_last_page", False))
+            preload_enabled = bool((self.settings or {}).get("preload_last_page", True))
         if not preload_enabled:
             return
         last_page = (self.settings or {}).get("last_page")
-        if not last_page or last_page == self.current_page:
-            return
-        if last_page in self._page_cache:
-            return
-        if not self.user_manager.has_permission(last_page, "ver"):
+        preload_candidates = []
+        if last_page:
+            preload_candidates.append(last_page)
+        if "Dashboard" not in preload_candidates:
+            preload_candidates.append("Dashboard")
+
+        max_preload = 2
+        forced = str(os.environ.get("OPERA_PRELOAD_MAX_PAGES", "")).strip()
+        if forced.isdigit():
+            max_preload = max(1, min(4, int(forced)))
+
+        queue_pages = []
+        for page in preload_candidates:
+            if page == self.current_page or page in self._page_cache:
+                continue
+            if not self.user_manager.has_permission(page, "ver"):
+                continue
+            if page not in queue_pages:
+                queue_pages.append(page)
+            if len(queue_pages) >= max_preload:
+                break
+        if not queue_pages:
             return
 
-        def _do_preload():
+        def _preload_next(pages):
             if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
+                self._agendar_after(600, lambda: _preload_next(pages))
                 return
+            if not pages:
+                return
+            page = pages.pop(0)
             try:
-                frame = self._load_page_direct(last_page)
+                frame = self._load_page_direct(page)
                 if frame:
                     try:
                         frame.place_forget()
                     except Exception:
                         pass
-                    self._cache_page(last_page, frame)
-                    _dprint(f"⚡ Pré-cache da página '{last_page}' concluído")
+                    self._cache_page(page, frame)
+                    _dprint(f"⚡ Pré-cache da página '{page}' concluído")
             except Exception as exc:
-                _dprint(f"⚠️ Pré-cache ignorado para '{last_page}': {exc}")
+                _dprint(f"⚠️ Pré-cache ignorado para '{page}': {exc}")
+            if pages:
+                self._agendar_after(450, lambda: _preload_next(pages))
 
-        self._agendar_after(600, _do_preload)
+        self._agendar_after(500, lambda: _preload_next(queue_pages))
 
     def _setup_window(self):
         self.title("OPERA • Sistema de Gestão")
@@ -3355,7 +3382,6 @@ class OperaMenuApp(ctk.CTk):
                     pass
 
         self.botoes_menu[categoria] = btn_frame
-        self._create_submenu(categoria)
 
     def _create_submenu_item(self, parent, categoria: str, item: str):
         item_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -3394,6 +3420,8 @@ class OperaMenuApp(ctk.CTk):
         btn.pack(fill="x", expand=True, padx=4, pady=2)
 
     def _create_submenu(self, categoria: str):
+        if categoria in self.submenu_frames:
+            return
         itens = self.MENU_ESTRUTURA.get(categoria, [])
         itens_visiveis = [
             item for item in itens
