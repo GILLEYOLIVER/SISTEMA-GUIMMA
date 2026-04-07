@@ -1624,10 +1624,12 @@ class OperaMenuApp(ctk.CTk):
                     pass
                 self._update_menu_buttons_colors()
 
-        try:
-            self.after_idle(_do_open)
-        except Exception:
-            _do_open()
+        handle = self._agendar_after(30, _do_open)
+        if handle is None:
+            try:
+                self.after_idle(_do_open)
+            except Exception:
+                _do_open()
 
     def _setup_responsive_watcher(self):
         self.bind("<Configure>", self._on_window_configure, add="+")
