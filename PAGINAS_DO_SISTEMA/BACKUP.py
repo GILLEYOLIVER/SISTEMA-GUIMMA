@@ -2,6 +2,7 @@
 # Tela de backup do banco PostgreSQL - compatível com MENU_PRINCIPAL
 
 from __future__ import annotations
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 import os
 import sys
 import subprocess
@@ -513,7 +514,7 @@ class BackupPage(ctk.CTkFrame):
         btns = ctk.CTkFrame(actions, fg_color=self.cor_fundo)
         btns.pack(fill="x", padx=10, pady=(0, 10))
 
-        self.btn_backup = ctk.CTkButton(
+        self.btn_backup = BotaoPadronizado.criar_botao(
             btns,
             text=self._get_text("backup_now"),
             fg_color=self.cor_primaria,
@@ -525,7 +526,7 @@ class BackupPage(ctk.CTkFrame):
         self._ui_refs["btn_backup"] = self.btn_backup
         self.btn_backup.pack(side="left", padx=(0, 10))
 
-        self._ui_refs["btn_open_folder"] = ctk.CTkButton(
+        self._ui_refs["btn_open_folder"] = BotaoPadronizado.criar_botao(
             btns,
             text=self._get_text("open_folder"),
             fg_color=self.cor_destaque,
@@ -616,7 +617,7 @@ class BackupPage(ctk.CTkFrame):
         )
         self.entry_auto_pasta.grid(row=1, column=1, columnspan=2, sticky="w", padx=(0, 10), pady=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             config_frame,
             text="📁",
             width=40,
@@ -627,7 +628,7 @@ class BackupPage(ctk.CTkFrame):
         control_frame = ctk.CTkFrame(auto_frame, fg_color=self.cor_fundo)
         control_frame.pack(fill="x", padx=10, pady=(0, 10))
 
-        self.btn_iniciar_auto = ctk.CTkButton(
+        self.btn_iniciar_auto = BotaoPadronizado.criar_botao(
             control_frame,
             text=self._get_text("start_auto"),
             fg_color="#059669",
@@ -639,7 +640,7 @@ class BackupPage(ctk.CTkFrame):
         self._ui_refs["btn_iniciar_auto"] = self.btn_iniciar_auto
         self.btn_iniciar_auto.pack(side="left", padx=(0, 10))
 
-        self.btn_parar_auto = ctk.CTkButton(
+        self.btn_parar_auto = BotaoPadronizado.criar_botao(
             control_frame,
             text=self._get_text("stop_auto"),
             fg_color="#dc2626",
@@ -659,7 +660,7 @@ class BackupPage(ctk.CTkFrame):
             text_color="#9ca3af",
             font=ctk.CTkFont(weight="bold")
         )
-        self.btn_executar_agora = ctk.CTkButton(
+        self.btn_executar_agora = BotaoPadronizado.criar_botao(
             control_frame,
             text=self._get_text("run_now"),
             fg_color="#7c3aed",

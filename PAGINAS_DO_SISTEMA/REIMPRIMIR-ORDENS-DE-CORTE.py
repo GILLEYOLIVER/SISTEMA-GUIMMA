@@ -14,6 +14,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 try:
     import importlib.util as _importlib_util
     from pathlib import Path as _Path
@@ -369,7 +370,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         else:
             self.chk_nao_impressas = None
 
-        btn_buscar = ctk.CTkButton(
+        btn_buscar = BotaoPadronizado.criar_botao(
             filtros,
             text="Buscar",
             command=self.atualizar_lista,
@@ -380,7 +381,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         )
         btn_buscar.grid(row=0, column=5, padx=(0, 4), pady=4, sticky="e")
 
-        btn_limpar = ctk.CTkButton(
+        btn_limpar = BotaoPadronizado.criar_botao(
             filtros,
             text="Limpar",
             command=self._limpar_filtros,
@@ -473,7 +474,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         )
         self.lbl_total.grid(row=0, column=0, sticky="w")
 
-        btn_imprimir = ctk.CTkButton(
+        btn_imprimir = BotaoPadronizado.criar_botao(
             rodape,
             text="Imprimir ordem selecionada",
             command=self.imprimir_selecionada,
@@ -484,7 +485,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         )
         btn_imprimir.grid(row=0, column=1, padx=8, pady=4, sticky="e")
 
-        btn_atualizar = ctk.CTkButton(
+        btn_atualizar = BotaoPadronizado.criar_botao(
             rodape,
             text="Atualizar lista",
             command=self.atualizar_lista,
@@ -495,7 +496,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         )
         btn_atualizar.grid(row=0, column=2, padx=8, pady=4, sticky="e")
 
-        btn_fechar = ctk.CTkButton(
+        btn_fechar = BotaoPadronizado.criar_botao(
             rodape,
             text="Fechar",
             command=self._fechar,
@@ -716,7 +717,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         )
         lbl_hint.grid(row=0, column=0, sticky="w", padx=2, pady=4)
 
-        btn_gerar = ctk.CTkButton(
+        btn_gerar = BotaoPadronizado.criar_botao(
             rodape,
             text="Gerar PDF (não abre navegador)",
             fg_color=self.cor_imprimir,
@@ -727,7 +728,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         )
         btn_gerar.grid(row=0, column=1, padx=8, pady=4, sticky="e")
 
-        btn_fechar = ctk.CTkButton(
+        btn_fechar = BotaoPadronizado.criar_botao(
             rodape,
             text="Fechar",
             fg_color=self.cor_alerta,
