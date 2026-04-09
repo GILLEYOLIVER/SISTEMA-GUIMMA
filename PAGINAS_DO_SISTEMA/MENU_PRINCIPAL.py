@@ -54,6 +54,7 @@ from PAGINAS_DO_SISTEMA.TEMAS import (
     aplicar_estilo_treeview,
     get_contraste_texto,
     is_dark_color,
+    padronizar_botoes_container,
     padronizar_treeview,
     remover_bordas_botoes_tema,
 )
@@ -3836,6 +3837,31 @@ class OperaMenuApp(ctk.CTk):
                     pass
                 gc.collect()
 
+    def _inventory_page_buttons(self, frame, page_name: str):
+        """Rastreia botões CTkButton existentes na página (exclui topbar/menu principal)."""
+        try:
+            if not frame or not getattr(frame, "winfo_exists", lambda: False)():
+                return
+            buttons = []
+            stack = [frame]
+            while stack:
+                node = stack.pop()
+                try:
+                    children = node.winfo_children()
+                except Exception:
+                    children = []
+                for child in children:
+                    if isinstance(child, ctk.CTkButton):
+                        try:
+                            txt = child.cget("text") or "<sem texto>"
+                        except Exception:
+                            txt = "<indisponível>"
+                        buttons.append(txt)
+                    stack.append(child)
+            _trace_print(f"[PADRAO_BOTOES] Página '{page_name}': {len(buttons)} botão(ões) rastreados.")
+        except Exception as e:
+            _dprint(f"⚠️ Falha ao rastrear botões da página '{page_name}': {e}")
+
     def _apply_theme_to_frame_safely(self, frame):
         """Reaplica tema no frame informado (incluindo widgets criados com atraso)."""
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
@@ -3852,6 +3878,7 @@ class OperaMenuApp(ctk.CTk):
                 frame.app = self
             if hasattr(self, "theme_manager") and self.theme_manager:
                 self.theme_manager.apply_theme_to_widget(frame)
+            padronizar_botoes_container(frame)
             if hasattr(self, "_update_menu_buttons_colors"):
                 self._update_menu_buttons_colors()
             frame._opera_theme_token = theme_token
@@ -3903,6 +3930,7 @@ class OperaMenuApp(ctk.CTk):
                 except Exception as _exc:
                     _dprint(f"⚠️ Erro ao atualizar página ao abrir '{page_name}': {_exc}")
                 self._apply_theme_to_frame_safely(frame)
+                self._inventory_page_buttons(frame, page_name)
                 self.current_page = page_name
                 self._current_frame = frame
                 try:

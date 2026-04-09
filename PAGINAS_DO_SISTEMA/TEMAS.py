@@ -294,7 +294,7 @@ def padronizar_botoes_container(widget):
 
 
 def padronizar_botao(widget: ctk.CTkButton):
-    """Aplica padrão de cores a um botão baseado no texto."""
+    """Aplica padrão único inspirado nos botões de rodapé da NOVA_ORDEM."""
     try:
         texto = widget.cget("text")
         if not texto:
@@ -308,30 +308,32 @@ def padronizar_botao(widget: ctk.CTkButton):
 
         if any(chave in texto_norm for chave in negativos):
             estilo = {
-                "fg_color": "#FA0000",
-                "hover_color": "#7A0101",
-                "text_color": "#000000",
+                "fg_color": "#C62828",
+                "hover_color": "#8E1D1D",
+                "text_color": "#FFFFFF",
                 "text_color_hover": "#FFFFFF",
             }
         elif any(chave in texto_norm for chave in positivos):
             estilo = {
-                "fg_color": "#1B8305",
-                "hover_color": "#2A671F",
-                "text_color": "#000000",
+                # referência: botão "Salvar Ordem" (NOVA_ORDEM.py)
+                "fg_color": "#2E7D32",
+                "hover_color": "#1B5E20",
+                "text_color": "#FFFFFF",
                 "text_color_hover": "#FFFFFF",
             }
         elif any(chave in texto_norm for chave in destaques):
             estilo = {
-                "fg_color": "#FF5C00",
-                "hover_color": "#6E2800",
-                "text_color": "#000000",
+                # referência: botão "Imprimir Pré-visualização" (NOVA_ORDEM.py)
+                "fg_color": "#4A90E2",
+                "hover_color": "#357ABD",
+                "text_color": "#FFFFFF",
                 "text_color_hover": "#FFFFFF",
             }
         else:
             estilo = {
-                "fg_color": "#7AB8F5",
-                "hover_color": "#5A9BDF",
-                "text_color": "#000000",
+                "fg_color": "#4A90E2",
+                "hover_color": "#357ABD",
+                "text_color": "#FFFFFF",
                 "text_color_hover": "#FFFFFF",
             }
 
@@ -340,6 +342,9 @@ def padronizar_botao(widget: ctk.CTkButton):
             hover_color=estilo["hover_color"],
             text_color=estilo["text_color"],
             border_width=0,
+            corner_radius=8,
+            height=32,
+            font=("Arial", 12, "bold"),
         )
         _aplicar_hover_texto_botao(widget, estilo["text_color"], estilo["text_color_hover"])
     except Exception:
