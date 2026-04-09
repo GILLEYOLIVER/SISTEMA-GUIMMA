@@ -1511,17 +1511,23 @@ class OperaMenuApp(ctk.CTk):
         self._setup_responsive_watcher()
         self._preload_complete = True
 
+        self._db_required_warning_visible = False
+        self._db_available = self._quick_database_available()
+
         self._show_startup_loading()
         self.deiconify()
         self.lift()
         self.focus_force()
         self._apply_initial_layout()
-        self._agendar_after(10, self._startup_open_initial_page)
-        self._agendar_after(220, lambda: self._apply_theme_to_frame_safely(self._current_frame))
-        self._agendar_after(350, self._enable_startup_responsive_ready)
-        self._agendar_after(1800, self._smart_preload_pages)
+        if self._db_available:
+            self._agendar_after(10, self._startup_open_initial_page)
+            self._agendar_after(220, lambda: self._apply_theme_to_frame_safely(self._current_frame))
+            self._agendar_after(350, self._enable_startup_responsive_ready)
+            self._agendar_after(1800, self._smart_preload_pages)
+            self._agendar_after(5000, self._ativar_backup_silencioso)
+        else:
+            self._agendar_after(80, self._show_database_setup_required)
         self._agendar_after(100, self._update_user_display)
-        self._agendar_after(5000, self._ativar_backup_silencioso)
         self._update_menu_buttons_colors()
 
         _dprint(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
@@ -1572,6 +1578,130 @@ class OperaMenuApp(ctk.CTk):
     def _enable_startup_responsive_ready(self):
         self._startup_responsive_ready = True
 
+    def _quick_database_available(self) -> bool:
+        """Validação rápida para decidir se o menu deve abrir normalmente."""
+        if not MENU_POSTGRES_AVAILABLE:
+            return False
+        try:
+            schema = get_schema()
+            with get_conn() as conn, conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+                try:
+                    cur.execute(f"SET search_path TO {schema}")
+                except Exception:
+                    pass
+            return True
+        except Exception as e:
+            _dprint(f"⚠️ Banco indisponível no startup: {e}")
+            return False
+
+    def _open_setup_banco_window(self):
+        try:
+            from PAGINAS_DO_SISTEMA.SETUP_BANCO import SetupBancoWindow
+        except Exception:
+            try:
+                from SETUP_BANCO import SetupBancoWindow
+            except Exception as e:
+                messagebox.showerror(
+                    "Configuração do banco",
+                    f"Não foi possível abrir a tela de configuração do banco.\n\n{e}",
+                    parent=self,
+                )
+                return
+        try:
+            win = SetupBancoWindow(self)
+            root = getattr(win, "root", None)
+            if root is not None:
+                try:
+                    root.lift()
+                    root.focus_force()
+                except Exception:
+                    pass
+        except Exception as e:
+            messagebox.showerror(
+                "Configuração do banco",
+                f"Não foi possível abrir a tela de configuração do banco.\n\n{e}",
+                parent=self,
+            )
+
+    def _show_database_setup_required(self):
+        """Exibe aviso central quando o banco não está configurado ou indisponível."""
+        if getattr(self, "_db_required_warning_visible", False):
+            return
+        self._db_required_warning_visible = True
+        try:
+            if not hasattr(self, "content") or not self.content.winfo_exists():
+                return
+            for widget in self.content.winfo_children():
+                try:
+                    widget.destroy()
+                except Exception:
+                    pass
+
+            card = ctk.CTkFrame(
+                self.content,
+                fg_color=self.cor_secundaria,
+                corner_radius=16,
+                border_color=self.cor_borda,
+                border_width=1,
+            )
+            card.place(relx=0.5, rely=0.5, anchor="center")
+
+            ctk.CTkLabel(
+                card,
+                text="Banco de dados não configurado",
+                font=("Arial", 22, "bold"),
+                text_color=self.cor_texto,
+            ).pack(padx=30, pady=(26, 10))
+
+            ctk.CTkLabel(
+                card,
+                text=(
+                    "O sistema não conseguiu se conectar ao banco de dados.\n\n"
+                    "Para continuar, configure a conexão na página de setup do banco."
+                ),
+                font=("Arial", 14),
+                text_color=self.cor_texto,
+                justify="center",
+            ).pack(padx=30, pady=(0, 18))
+
+            btns = ctk.CTkFrame(card, fg_color="transparent")
+            btns.pack(padx=24, pady=(0, 24))
+
+            ctk.CTkButton(
+                btns,
+                text="Abrir setup banco",
+                command=self._open_setup_banco_window,
+                width=190,
+            ).pack(side="left", padx=8)
+
+            ctk.CTkButton(
+                btns,
+                text="Tentar novamente",
+                command=self._retry_database_startup,
+                width=190,
+            ).pack(side="left", padx=8)
+
+            self._startup_loading_card = card
+            self.update_idletasks()
+        except Exception as e:
+            _dprint(f"Erro ao exibir aviso de banco: {e}")
+
+    def _retry_database_startup(self):
+        self._db_required_warning_visible = False
+        self._show_startup_loading()
+        self.update_idletasks()
+        self._db_available = self._quick_database_available()
+        if self._db_available:
+            self._startup_open_initial_page()
+            self._agendar_after(150, lambda: self._apply_theme_to_frame_safely(self._current_frame))
+            self._agendar_after(250, self._enable_startup_responsive_ready)
+            self._agendar_after(800, self._smart_preload_pages)
+            self._agendar_after(1200, self._ativar_backup_silencioso)
+        else:
+            self._show_database_setup_required()
+
     def _show_startup_loading(self):
         """Mostra um painel leve enquanto a primeira página ainda está carregando."""
         try:
@@ -1609,6 +1739,9 @@ class OperaMenuApp(ctk.CTk):
 
     def _startup_open_initial_page(self):
         if getattr(self, "_closing", False):
+            return
+        if not getattr(self, "_db_available", True):
+            self._show_database_setup_required()
             return
 
         def _do_open():
@@ -3835,18 +3968,33 @@ class OperaMenuApp(ctk.CTk):
                 pass
             if callable(attach_i18n_support):
                 try:
-                    attach_i18n_support(frame_obj.__class__)
+                    cls = frame_obj.__class__
+                    if not getattr(cls, "_opera_i18n_attached", False):
+                        attach_i18n_support(cls)
+                        cls._opera_i18n_attached = True
                 except Exception:
                     pass
+
+            def _apply_language_later():
+                try:
+                    idioma_atual = getattr(self, "idioma_atual", "pt_BR")
+                    if hasattr(frame_obj, "set_idioma"):
+                        frame_obj.set_idioma(idioma_atual)
+                    elif hasattr(frame_obj, "on_language_changed"):
+                        frame_obj.on_language_changed(idioma_atual)
+                    elif hasattr(frame_obj, "refresh_texts"):
+                        frame_obj.refresh_texts()
+                except Exception:
+                    pass
+
             try:
-                if hasattr(frame_obj, "set_idioma"):
-                    frame_obj.set_idioma(getattr(self, "idioma_atual", "pt_BR"))
-                elif hasattr(frame_obj, "on_language_changed"):
-                    frame_obj.on_language_changed(getattr(self, "idioma_atual", "pt_BR"))
-                elif hasattr(frame_obj, "refresh_texts"):
-                    frame_obj.refresh_texts()
+                if hasattr(self, "_agendar_after"):
+                    self._agendar_after(1, _apply_language_later)
+                else:
+                    _apply_language_later()
             except Exception:
-                pass
+                _apply_language_later()
+
             return frame_obj
 
         # 1) padrão principal do sistema
@@ -3919,6 +4067,8 @@ class OperaMenuApp(ctk.CTk):
             self.open_page(self.current_page)
 
     def _ativar_backup_silencioso(self):
+        if not getattr(self, "_db_available", True):
+            return
         if getattr(self, "_backup_launch_scheduled", False):
             self._backup_launch_scheduled = False
         try:
@@ -4014,7 +4164,290 @@ def remover_foco_e_bordas_menu(widget_root):
     limpar(widget_root)
 
 
+def _startup_database_ready_for_main() -> tuple[bool, str]:
+    """Valida rapidamente o acesso ao banco antes de abrir a UI principal."""
+    if not MENU_POSTGRES_AVAILABLE:
+        return False, (
+            "Não foi possível inicializar o acesso ao banco de dados.\n\n"
+            "Use o Configurador de Banco do Sistema Opera para configurar o acesso ao banco."
+        )
+
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+        return True, ""
+    except Exception as e:
+        try:
+            detalhe = str(e).strip()
+        except Exception:
+            detalhe = ""
+
+        if detalhe:
+            return False, (
+                "Não foi possível conectar ao banco de dados.\n\n"
+                "Use o Configurador de Banco do Sistema Opera para configurar o acesso ao banco.\n\n"
+                f"Detalhe técnico: {detalhe}"
+            )
+
+        return False, (
+            "Não foi possível conectar ao banco de dados.\n\n"
+            "Use o Configurador de Banco do Sistema Opera para configurar o acesso ao banco."
+        )
+
+
+def _show_database_setup_message_and_exit(message: str):
+    root = None
+    dialog = None
+
+    texts = {
+        "pt_BR": {
+            "window_title": "Banco de dados indisponível",
+            "headline": "Banco de dados indisponível",
+            "subtitle": "Sistema Opera",
+            "body": "O sistema não conseguiu acessar o banco de dados.\n\nUse o Configurador de Banco do Sistema Opera para configurar o acesso ao banco.",
+            "details_prefix": "Detalhes técnicos",
+            "language": "Idioma",
+            "close": "Fechar",
+        },
+        "en_US": {
+            "window_title": "Database unavailable",
+            "headline": "Database unavailable",
+            "subtitle": "Sistema Opera",
+            "body": "The system could not access the database.\n\nUse the Sistema Opera Database Setup to configure database access.",
+            "details_prefix": "Technical details",
+            "language": "Language",
+            "close": "Close",
+        },
+        "es_ES": {
+            "window_title": "Base de datos no disponible",
+            "headline": "Base de datos no disponible",
+            "subtitle": "Sistema Opera",
+            "body": "El sistema no pudo acceder a la base de datos.\n\nUse el Configurador de Base de Datos de Sistema Opera para configurar el acceso.",
+            "details_prefix": "Detalles técnicos",
+            "language": "Idioma",
+            "close": "Cerrar",
+        },
+    }
+    language_map = {
+        "Português": "pt_BR",
+        "English": "en_US",
+        "Español": "es_ES",
+    }
+
+    try:
+        ctk.set_appearance_mode("dark")
+    except Exception:
+        pass
+
+    try:
+        root = ctk.CTk()
+        root.withdraw()
+
+        dialog = ctk.CTkToplevel(root)
+        dialog.resizable(False, False)
+        dialog.transient(root)
+        dialog.grab_set()
+        dialog.configure(fg_color="#0b1220")
+
+        largura = 720
+        altura = 450
+        dialog.update_idletasks()
+        sx = dialog.winfo_screenwidth()
+        sy = dialog.winfo_screenheight()
+        px = max(0, (sx - largura) // 2)
+        py = max(0, (sy - altura) // 2)
+        dialog.geometry(f"{largura}x{altura}+{px}+{py}")
+
+        card = ctk.CTkFrame(
+            dialog,
+            fg_color="#111827",
+            corner_radius=18,
+            border_width=1,
+            border_color="#334155",
+        )
+        card.pack(fill="both", expand=True, padx=18, pady=18)
+
+        header = ctk.CTkFrame(card, fg_color="transparent")
+        header.pack(fill="x", padx=24, pady=(20, 8))
+
+        left_header = ctk.CTkFrame(header, fg_color="transparent")
+        left_header.pack(side="left", fill="x", expand=True)
+
+        try:
+            if os.path.exists(ICONE_SISTEMA):
+                img = Image.open(ICONE_SISTEMA).convert("RGBA")
+                logo = ctk.CTkImage(light_image=img, dark_image=img, size=(46, 46))
+                dialog._db_error_logo = logo
+                ctk.CTkLabel(left_header, image=logo, text="").pack(side="left", padx=(0, 14))
+        except Exception:
+            pass
+
+        titles = ctk.CTkFrame(left_header, fg_color="transparent")
+        titles.pack(side="left", fill="x", expand=True)
+
+        headline_label = ctk.CTkLabel(
+            titles,
+            text="",
+            font=("Arial", 24, "bold"),
+            text_color="#f8fafc",
+        )
+        headline_label.pack(anchor="w")
+
+        subtitle_label = ctk.CTkLabel(
+            titles,
+            text="Sistema Opera",
+            font=("Arial", 13),
+            text_color="#93c5fd",
+        )
+        subtitle_label.pack(anchor="w", pady=(2, 0))
+
+        right_header = ctk.CTkFrame(header, fg_color="transparent")
+        right_header.pack(side="right", anchor="ne", padx=(12, 0))
+
+        language_label = ctk.CTkLabel(
+            right_header,
+            text="",
+            font=("Arial", 12, "bold"),
+            text_color="#cbd5e1",
+        )
+        language_label.pack(anchor="e", pady=(2, 6))
+
+        language_var = tk.StringVar(value="Português")
+        language_combo = ctk.CTkComboBox(
+            right_header,
+            values=["Português", "English", "Español"],
+            variable=language_var,
+            width=150,
+            height=34,
+            state="readonly",
+            corner_radius=9,
+            fg_color="#0f172a",
+            border_color="#334155",
+            button_color="#1e3a8a",
+            button_hover_color="#1d4ed8",
+            dropdown_fg_color="#0f172a",
+            dropdown_hover_color="#1e293b",
+            dropdown_text_color="#e5e7eb",
+            text_color="#f8fafc",
+            font=("Arial", 12, "bold"),
+        )
+        language_combo.pack(anchor="e")
+
+        body_label = ctk.CTkLabel(
+            card,
+            text="",
+            justify="left",
+            anchor="w",
+            wraplength=640,
+            font=("Arial", 16),
+            text_color="#e5e7eb",
+        )
+        body_label.pack(fill="x", padx=24, pady=(8, 12))
+
+        details_title = ctk.CTkLabel(
+            card,
+            text="",
+            justify="left",
+            anchor="w",
+            font=("Arial", 13, "bold"),
+            text_color="#cbd5e1",
+        )
+        details_title.pack(fill="x", padx=24, pady=(0, 6))
+
+        box = ctk.CTkTextbox(
+            card,
+            height=120,
+            fg_color="#0f172a",
+            border_width=1,
+            border_color="#334155",
+            text_color="#cbd5e1",
+            corner_radius=10,
+            font=("Consolas", 12),
+        )
+        box.pack(fill="both", expand=True, padx=24, pady=(0, 14))
+        box.insert("1.0", message.strip())
+        box.configure(state="disabled")
+
+        footer = ctk.CTkFrame(card, fg_color="transparent", height=54)
+        footer.pack(fill="x", padx=24, pady=(0, 20))
+        footer.pack_propagate(False)
+
+        def _close():
+            try:
+                dialog.destroy()
+            except Exception:
+                pass
+            try:
+                root.destroy()
+            except Exception:
+                pass
+
+        close_button = ctk.CTkButton(
+            footer,
+            text="",
+            width=160,
+            height=42,
+            corner_radius=10,
+            fg_color="#2563eb",
+            hover_color="#1d4ed8",
+            font=("Arial", 15, "bold"),
+            command=_close,
+        )
+        close_button.pack(side="right")
+
+        def _apply_language(lang_code: str):
+            lang_data = texts.get(lang_code, texts["pt_BR"])
+            dialog.title(lang_data["window_title"])
+            headline_label.configure(text=lang_data["headline"])
+            subtitle_label.configure(text=lang_data["subtitle"])
+            language_label.configure(text=lang_data["language"])
+            body_label.configure(text=lang_data["body"])
+            details_title.configure(text=lang_data["details_prefix"])
+            close_button.configure(text=lang_data["close"])
+
+        def _change_language(choice: str):
+            _apply_language(language_map.get(choice, "pt_BR"))
+
+        language_combo.configure(command=_change_language)
+        _apply_language("pt_BR")
+
+        dialog.protocol("WM_DELETE_WINDOW", _close)
+        dialog.bind("<Escape>", lambda e: _close())
+        dialog.focus_force()
+        root.wait_window(dialog)
+    except Exception:
+        try:
+            if root is None:
+                root = tk.Tk()
+                root.withdraw()
+            messagebox.showerror("Banco de dados indisponível", message, parent=root)
+        except Exception:
+            try:
+                messagebox.showerror("Banco de dados indisponível", message)
+            except Exception:
+                print(message)
+    finally:
+        try:
+            if dialog is not None and dialog.winfo_exists():
+                dialog.destroy()
+        except Exception:
+            pass
+        try:
+            if root is not None and root.winfo_exists():
+                root.destroy()
+        except Exception:
+            pass
+
+
 def main():
+    ok, erro_banco = _startup_database_ready_for_main()
+    if not ok:
+        _dprint(f"⛔ Inicialização cancelada por falha no banco: {erro_banco}")
+        _show_database_setup_message_and_exit(erro_banco)
+        return
+
     try:
         _dprint("🚀 Iniciando sistema OPERA...")
         app = OperaMenuApp()
@@ -4046,4 +4479,6 @@ for _cls_name, _map in AUTO_PAGE_TRANSLATIONS.items():
     if isinstance(_cls, type):
         if not hasattr(_cls, "TRANSLATIONS") and not hasattr(_cls, "_TRANSLATIONS"):
             _cls.TRANSLATIONS = _map
-        _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))
+        if not getattr(_cls, "_opera_i18n_attached", False):
+            _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))
+            setattr(_cls, "_opera_i18n_attached", True)

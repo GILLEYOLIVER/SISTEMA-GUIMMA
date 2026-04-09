@@ -98,6 +98,7 @@ import customtkinter as ctk
 
 from PAGINAS_DO_SISTEMA.SPLASH import SplashScreenModern
 from PAGINAS_DO_SISTEMA.LOGUIN import SistemaLoginModerno
+from PAGINAS_DO_SISTEMA.ui_after_guard import reset_tk_default_root
 
 
 def main():
@@ -120,14 +121,24 @@ def main():
     except Exception:
         pass
 
-    holder = {"login": None}
+    holder = {"login": None, "login_success": None}
+
+    def _on_login_success(payload: dict):
+        holder["login_success"] = dict(payload or {})
+        try:
+            root.after(10, root.destroy)
+        except Exception:
+            try:
+                root.destroy()
+            except Exception:
+                pass
 
     def preparar_login_em_background():
         """Monta a interface de login enquanto o splash ainda está visível."""
         if holder["login"] is not None:
             return
         try:
-            holder["login"] = SistemaLoginModerno(root, iniciar_oculto=True)
+            holder["login"] = SistemaLoginModerno(root, iniciar_oculto=True, on_login_success=_on_login_success)
             root.protocol("WM_DELETE_WINDOW", holder["login"].ao_fechar)
             # Evita mostrar a janela raiz (fundo preto) antes do login
             # terminar de montar toda a interface.
@@ -175,6 +186,21 @@ def main():
     )
 
     root.mainloop()
+
+    payload = holder.get("login_success") or {}
+    if payload:
+        try:
+            reset_tk_default_root()
+        except Exception:
+            pass
+        from PAGINAS_DO_SISTEMA.MENU_PRINCIPAL import OperaMenuApp
+        app = OperaMenuApp(
+            usuario_id=int(payload.get("user_id", 0) or 0),
+            usuario_nome=str(payload.get("usuario", "")),
+            usuario_hierarquia=str(payload.get("hierarquia", "Padrão")),
+            tema_preferido=str(payload.get("tema_preferido", "CLÁSSICO CLARO")),
+        )
+        app.mainloop()
 
 
 if __name__ == "__main__":

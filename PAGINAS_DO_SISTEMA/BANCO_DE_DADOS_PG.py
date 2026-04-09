@@ -93,6 +93,28 @@ def _safe_exc_text(exc: Exception) -> str:
 
 
 
+def _sanitize_env_text(value: Any) -> str:
+    """
+    Normaliza texto vindo de variável de ambiente/cópia-cola.
+    Remove BOM, byte nulo e caracteres invisíveis, mas preserva espaços válidos do DSN.
+    """
+    if value is None:
+        return ""
+
+    if isinstance(value, bytes):
+        try:
+            value = value.decode("utf-8", "replace")
+        except Exception:
+            value = value.decode("latin-1", "replace")
+    else:
+        value = str(value)
+
+    value = value.replace("\ufeff", "").replace("\x00", "")
+    value = "".join(ch for ch in value if ch >= " " or ch in "\t")
+    return value.strip()
+
+
+
 # ==============================================================================
 # IDIOMA / MENSAGENS PÚBLICAS
 # ==============================================================================
@@ -246,7 +268,7 @@ DEFAULT_CFG: Dict[str, Any] = {
     "use_connection_pool": False,
     "pool_minconn": 1,
     "pool_maxconn": max(2, min((os.cpu_count() or 2) * 2, 16)),
-    "client_encoding": "LATIN1",
+    "client_encoding": "UTF8",
     "legacy_fallback_encoding": "LATIN1",
     "statement_timeout_ms": 0,
     # opcional:
@@ -254,8 +276,8 @@ DEFAULT_CFG: Dict[str, Any] = {
 }
 
 # Variáveis de ambiente (PRIORIDADE MÁXIMA)
-ENV_DSN = (os.environ.get("OPERA_PG_DSN") or "").strip()
-ENV_SCHEMA = (os.environ.get("OPERA_PG_SCHEMA") or "").strip()
+ENV_DSN = _sanitize_env_text(os.environ.get("OPERA_PG_DSN"))
+ENV_SCHEMA = _sanitize_env_text(os.environ.get("OPERA_PG_SCHEMA"))
 
 # candidatos do config.json
 _MODULE_DIR = os.path.dirname(__file__)
@@ -311,10 +333,10 @@ else:
 if ENV_SCHEMA:
     CONFIG["schema"] = ENV_SCHEMA
 
-_cfg_encoding = str(CONFIG.get("client_encoding", "LATIN1") or "LATIN1").upper()
+_cfg_encoding = str(CONFIG.get("client_encoding", "UTF8") or "UTF8").upper()
 if _cfg_encoding == "AUTO":
-    _cfg_encoding = "LATIN1"
-os.environ.setdefault("PGCLIENTENCODING", _cfg_encoding)
+    _cfg_encoding = "UTF8"
+os.environ["PGCLIENTENCODING"] = _cfg_encoding
 
 # ==============================================================================
 # DETECÇÃO DE PORTAS
@@ -432,6 +454,7 @@ def _create_connection_simple(host: str, port: int, dbname: str, user: str, pass
 
 def _create_connection_by_dsn(dsn: str):
     timeout = int(CONFIG.get("connect_timeout", 8))
+    dsn = _sanitize_env_text(dsn)
     conn = psycopg2.connect(dsn, connect_timeout=timeout)
     _apply_session_settings(conn)
     return conn
@@ -444,9 +467,14 @@ def _create_connection():
     2) CONFIG["dsn"] (config.json)
     3) host/port/dbname/user/pass + autodetect + create db (se habilitado)
     """
-    # 1) ENV DSN
+        # 1) ENV DSN
     global _env_dsn_disabled, _env_dsn_disable_reason
-    if ENV_DSN and not _env_dsn_disabled:
+    local_mode = str(CONFIG.get("mode", "") or "").strip().lower() == "local"
+    cfg_has_explicit_dsn = bool(str(CONFIG.get("dsn", "")).strip())
+
+    if local_mode and not cfg_has_explicit_dsn and ENV_DSN:
+        log_info("Modo local detectado no config.json; ignorando OPERA_PG_DSN e usando host/porta.")
+    elif ENV_DSN and not _env_dsn_disabled:
         precheck_reason = _precheck_env_dsn()
         if precheck_reason:
             _mark_env_dsn_disabled(precheck_reason)
@@ -463,7 +491,6 @@ def _create_connection():
                 log_warn("OPERA_PG_DSN desativado para esta execução; usando fallback de config/porta.")
     elif ENV_DSN and _env_dsn_disabled:
         log_debug("OPERA_PG_DSN ignorado (já falhou nesta execução).")
-
     # 2) config DSN
     cfg_dsn = str(CONFIG.get("dsn", "")).strip()
     if cfg_dsn:

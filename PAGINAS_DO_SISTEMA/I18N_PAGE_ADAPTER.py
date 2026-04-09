@@ -342,8 +342,12 @@ def _translate_flexible(text: str, mp: dict) -> str:
     if norm in mp:
         return mp[norm]
 
-    # 3) substituição por partes (frases mistas e labels compostas)
     translated = text
+    cache = getattr(_translate_flexible, "_pattern_cache", None)
+    if cache is None:
+        cache = {}
+        setattr(_translate_flexible, "_pattern_cache", cache)
+
     replacements = []
     for k, v in mp.items():
         if not isinstance(k, str) or not isinstance(v, str):
@@ -353,12 +357,18 @@ def _translate_flexible(text: str, mp: dict) -> str:
             continue
         replacements.append((k_clean, v))
 
-    # evita substituir termos curtos antes de termos longos
     replacements.sort(key=lambda item: len(item[0]), reverse=True)
 
     for src, dst in replacements:
+        cache_key = src.lower()
+        pattern = cache.get(cache_key)
+        if pattern is None:
+            try:
+                pattern = re.compile(r"(?<!\w)" + re.escape(src) + r"(?!\w)", re.IGNORECASE)
+            except Exception:
+                continue
+            cache[cache_key] = pattern
         try:
-            pattern = re.compile(rf"(?<!\w){re.escape(src)}(?!\w)", re.IGNORECASE)
             translated = pattern.sub(dst, translated)
         except Exception:
             continue
@@ -394,7 +404,6 @@ def _translate_flexible(text: str, mp: dict) -> str:
         pass
 
     return translated
-
 
 def _translate_widget_tree(root, translate_fn):
     def _translate(value):
@@ -497,6 +506,9 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
     if page_cls is None:
         return
 
+    if getattr(page_cls, "_opera_i18n_support_installed", False):
+        return
+
     page_map = translations if isinstance(translations, dict) else getattr(page_cls, "TRANSLATIONS", None)
     page_map = page_map if isinstance(page_map, dict) else getattr(page_cls, "_TRANSLATIONS", None)
 
@@ -505,36 +517,59 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
     def _get_idioma_atual(self):
         return _language_of(self)
 
+    def _get_i18n_cache(self):
+        cache = getattr(self, "_opera_i18n_cache", None)
+        if not isinstance(cache, dict):
+            cache = {}
+            setattr(self, "_opera_i18n_cache", cache)
+        return cache
+
     def _tr(self, text):
         lang = _language_of(self)
-        mp = _merge_maps(lang, page_map)
-        mp.update(_build_bidirectional_page_map(page_map, lang))
+        cache = _get_i18n_cache(self)
+        mp = cache.get(lang)
+        if mp is None:
+            mp = _merge_maps(lang, page_map)
+            mp.update(_build_bidirectional_page_map(page_map, lang))
+            cache[lang] = mp
         return _translate_flexible(text, mp)
 
     def _refresh_texts(self):
-        if callable(old_refresh):
-            try:
-                old_refresh(self)
-            except TypeError:
-                old_refresh()
-            except Exception:
-                pass
-        _translate_widget_tree(self, lambda t: _tr(self, t))
+        if getattr(self, "_opera_refreshing_texts", False):
+            return
+
+        self._opera_refreshing_texts = True
+        try:
+            if callable(old_refresh):
+                try:
+                    old_refresh(self)
+                except TypeError:
+                    old_refresh()
+                except Exception:
+                    pass
+            _translate_widget_tree(self, lambda t: _tr(self, t))
+        finally:
+            self._opera_refreshing_texts = False
 
     def _set_idioma(self, idioma="pt_BR"):
         try:
             self.idioma_atual = idioma or "pt_BR"
+            self._opera_i18n_cache = {}
         except Exception:
             pass
+
         _refresh_texts(self)
-        # Reaplica após delays curtos para cobrir widgets/títulos de Treeview
-        # criados ou atualizados depois da montagem inicial da tela.
+
+        try:
+            after_id = getattr(self, "_opera_i18n_after_id", None)
+            if after_id and hasattr(self, "after_cancel"):
+                self.after_cancel(after_id)
+        except Exception:
+            pass
+
         try:
             if hasattr(self, "after"):
-                self.after(80, lambda: _refresh_texts(self))
-                self.after(260, lambda: _refresh_texts(self))
-                self.after(700, lambda: _refresh_texts(self))
-                self.after(1500, lambda: _refresh_texts(self))
+                self._opera_i18n_after_id = self.after(220, lambda: _refresh_texts(self))
         except Exception:
             pass
 
@@ -543,6 +578,7 @@ def attach_i18n_support(page_cls, translations: dict | None = None):
     page_cls.refresh_texts = _refresh_texts
     page_cls.set_idioma = getattr(page_cls, "set_idioma", _set_idioma)
     page_cls.on_language_changed = getattr(page_cls, "on_language_changed", _set_idioma)
+    page_cls._opera_i18n_support_installed = True
 
 if __name__ == "__main__":
     try:

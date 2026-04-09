@@ -271,7 +271,7 @@ class SistemaLoginModerno:
         except Exception:
             pass
 
-        self.root.bind("<Return>", lambda evento: self.entrar_no_sistema())
+        self.root.bind("<Return>", self._on_enter_login)
         try:
             self.refresh_texts()
         except Exception:
@@ -294,6 +294,19 @@ class SistemaLoginModerno:
             quick_audit_log(acao, "Autenticação", f"Usuário: {usuario} | {detalhes}")
         except Exception as e:
             print(f"⚠️  Erro no registro de auditoria: {e}")
+
+    def _on_enter_login(self, evento=None):
+        try:
+            if evento is not None and hasattr(evento, "widget"):
+                try:
+                    evento.widget.after_idle(self.entrar_no_sistema)
+                    return "break"
+                except Exception:
+                    pass
+            self.root.after_idle(self.entrar_no_sistema)
+        except Exception:
+            self.entrar_no_sistema()
+        return "break"
 
     def entrar_no_sistema(self):
         """Processa login e abre o sistema normalmente (versão final corrigida)."""
@@ -401,25 +414,30 @@ class SistemaLoginModerno:
             # ============================================
             print(f"[LOGIN] Login OK → Abrindo sistema para {usuario_digitado}...")
 
-            self.root.destroy()
-
             # Caso esteja em modo troca de usuário
             if getattr(self, "modo_troca", False) and callable(getattr(self, "callback_troca", None)):
-                self.callback_troca(
-                    user["id"],
-                    user["usuario"],
-                    user["hierarquia"],
-                    user["tema"]
+                self.root.after_idle(
+                    lambda: self.callback_troca(
+                        user["id"],
+                        user["usuario"],
+                        user["hierarquia"],
+                        user["tema"]
+                    )
                 )
                 return
 
-            # Abre o sistema normalmente
-            self._abrir_sistema_principal_apos_login(
-                user_id=user["id"],
-                usuario=user["usuario"],
-                hierarquia=user["hierarquia"],
-                tema_preferido=user["tema"]
-            )
+            self._login_result = {
+                "user_id": int(user["id"]),
+                "usuario": user["usuario"],
+                "hierarquia": user["hierarquia"],
+                "tema_preferido": user["tema"],
+            }
+
+            try:
+                self.root.after_idle(self.root.quit)
+            except Exception:
+                self.root.quit()
+            return
 
         except Exception as e:
             self._registrar_auditoria_login(usuario_digitado, False, f"Erro: {str(e)}")
@@ -467,41 +485,17 @@ class SistemaLoginModerno:
 
     def _abrir_sistema_principal_apos_login(self, user_id, usuario, hierarquia, tema_preferido="Noite Urbana",
                                             modo_callback=False):
-        """Abre o MENU diretamente (sem splash). O splash já roda no BOOT."""
-        print(f"[LOGIN] Abrindo sistema para: {usuario} (Tema: {tema_preferido})")
-
+        """Compatibilidade: apenas sinaliza o resultado do login para o MAIN abrir o menu."""
+        self._login_result = {
+            "user_id": int(user_id),
+            "usuario": usuario,
+            "hierarquia": hierarquia,
+            "tema_preferido": tema_preferido,
+        }
         try:
-            # Fecha janela de login
-            if hasattr(self, "root") and self.root:
-                try:
-                    self._fechando = True
-                    cancel_all_afters(self, root_attr="root")
-                    cancel_all_after_info(self, root_attr="root")
-                    self.root.quit()
-                    self.root.destroy()
-                    reset_tk_default_root()
-                except Exception:
-                    pass
-
-            # Abre direto o MENU
-            from MENU_PRINCIPAL import OperaMenuApp
-            app = OperaMenuApp(
-                usuario_id=int(user_id),
-                usuario_nome=usuario,
-                usuario_hierarquia=hierarquia,
-                tema_preferido=tema_preferido
-            )
-            app.mainloop()
-
-        except Exception as erro:
-            print(f"[LOGIN] Erro ao abrir MENU: {erro}")
-            import traceback
-            traceback.print_exc()
-            try:
-                from tkinter import messagebox
-                messagebox.showerror("Erro", f"Falha ao iniciar o sistema:\n{erro}")
-            except Exception:
-                pass
+            self.root.after_idle(self.root.quit)
+        except Exception:
+            self.root.quit()
 
     def abrir_modo_troca(self, callback):
         """
@@ -895,8 +889,8 @@ class SistemaLoginModerno:
         self.root.bind("<Map>", lambda evento: self._agendar_after(50, _forcar_foco))
         self._agendar_after(250, _forcar_foco)
 
-        self.entrada_usuario.bind("<Return>", lambda evento: self.entrar_no_sistema())
-        self.entrada_senha.bind("<Return>", lambda evento: self.entrar_no_sistema())
+        self.entrada_usuario.bind("<Return>", self._on_enter_login)
+        self.entrada_senha.bind("<Return>", self._on_enter_login)
 
         self.entrada_usuario.bind("<FocusIn>", lambda evento: self.root.config(cursor="xterm"))
         self.entrada_senha.bind("<FocusIn>", lambda evento: self.root.config(cursor="xterm"))
