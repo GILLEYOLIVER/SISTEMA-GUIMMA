@@ -1,4 +1,5 @@
 # BANCO_DADOS_FABRICA_usa-es-pt.py
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
 
 _cfg = db.load_config()
@@ -655,7 +656,7 @@ class GerenciadorBancoDados:
         schema = db.get_schema()
         self.db_entry.insert(0, schema or "")
 
-        self.btn_connect = ctk.CTkButton(
+        self.btn_connect = BotaoPadronizado.criar_botao(
             top_frame,
             text=self._get_text("connect"),
             command=self.conectar_como_admin,
@@ -664,7 +665,7 @@ class GerenciadorBancoDados:
         )
         self.btn_connect.pack(side="left", padx=5)
 
-        self.admin_btn = ctk.CTkButton(
+        self.admin_btn = BotaoPadronizado.criar_botao(
             top_frame,
             text=self._get_text("admin_button"),
             command=self.mostrar_status_admin,
@@ -679,7 +680,7 @@ class GerenciadorBancoDados:
         self.lbl_table.pack(side="left", padx=5)
 
         self.selected_table_var = ctk.StringVar()
-        self.table_button = ctk.CTkButton(
+        self.table_button = BotaoPadronizado.criar_botao(
             top_frame,
             text=self._get_text("select_table"),
             width=200,
@@ -689,7 +690,7 @@ class GerenciadorBancoDados:
         )
         self.table_button.pack(side="left", padx=5)
 
-        self.btn_refresh = ctk.CTkButton(
+        self.btn_refresh = BotaoPadronizado.criar_botao(
             top_frame,
             text=self._get_text("refresh"),
             command=self.atualizar_lista_tabelas,
@@ -698,7 +699,7 @@ class GerenciadorBancoDados:
         )
         self.btn_refresh.pack(side="left", padx=5)
 
-        self.btn_new_table = ctk.CTkButton(
+        self.btn_new_table = BotaoPadronizado.criar_botao(
             top_frame,
             text=self._get_text("new_table"),
             command=self.criar_nova_tabela,
@@ -708,9 +709,9 @@ class GerenciadorBancoDados:
         self.btn_new_table.pack(side="left", padx=5)
 
         # setas com cor fixa
-        ctk.CTkButton(top_frame, text='▲', width=30, command=self.on_arrow_up,
+        BotaoPadronizado.criar_botao(top_frame, text='▲', width=30, command=self.on_arrow_up,
                       fg_color="#17a2b8", hover_color="#138496").pack(side="left", padx=2)
-        ctk.CTkButton(top_frame, text='▼', width=30, command=self.on_arrow_down,
+        BotaoPadronizado.criar_botao(top_frame, text='▼', width=30, command=self.on_arrow_down,
                       fg_color="#17a2b8", hover_color="#138496").pack(side="left", padx=2)
 
         self.tree_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
@@ -719,7 +720,7 @@ class GerenciadorBancoDados:
         bottom_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         bottom_frame.grid(row=2, column=0, sticky="ew", pady=5)
 
-        self.btn_admin_operations = ctk.CTkButton(
+        self.btn_admin_operations = BotaoPadronizado.criar_botao(
             bottom_frame,
             text=self._get_text("admin_operations"),
             command=self.operacoes_avancadas,
@@ -740,7 +741,7 @@ class GerenciadorBancoDados:
                 return
             self.excluir_registro()
 
-        self.btn_delete = ctk.CTkButton(
+        self.btn_delete = BotaoPadronizado.criar_botao(
             bottom_frame,
             text=self._get_text("delete"),
             command=confirmar_exclusao_registro,
@@ -749,7 +750,7 @@ class GerenciadorBancoDados:
         )
         self.btn_delete.pack(side="left", padx=5)
 
-        self.btn_edit_table = ctk.CTkButton(
+        self.btn_edit_table = BotaoPadronizado.criar_botao(
             bottom_frame,
             text=self._get_text("edit_table"),
             command=self.editar_tabela_completa,
@@ -758,7 +759,7 @@ class GerenciadorBancoDados:
         )
         self.btn_edit_table.pack(side="left", padx=5)
 
-        self.btn_sql = ctk.CTkButton(
+        self.btn_sql = BotaoPadronizado.criar_botao(
             bottom_frame,
             text=self._get_text("sql"),
             command=self.executar_sql_personalizado,
@@ -767,7 +768,7 @@ class GerenciadorBancoDados:
         )
         self.btn_sql.pack(side="right", padx=5)
 
-        self.btn_export = ctk.CTkButton(
+        self.btn_export = BotaoPadronizado.criar_botao(
             bottom_frame,
             text=self._get_text("export"),
             command=self.exportar_dados,
@@ -776,7 +777,7 @@ class GerenciadorBancoDados:
         )
         self.btn_export.pack(side="right", padx=5)
 
-        self.btn_edit = ctk.CTkButton(
+        self.btn_edit = BotaoPadronizado.criar_botao(
             bottom_frame,
             text=self._get_text("edit"),
             command=self.editar_registro,
@@ -786,7 +787,7 @@ class GerenciadorBancoDados:
         )
         self.btn_edit.pack(side="right", padx=5)
 
-        self.btn_add = ctk.CTkButton(
+        self.btn_add = BotaoPadronizado.criar_botao(
             bottom_frame,
             text=self._get_text("add"),
             command=self.adicionar_registro,
@@ -1100,9 +1101,9 @@ class GerenciadorBancoDados:
                 self.conn.rollback()
                 messagebox.showerror(self._t("error"), self._t("create_table_fail", e=e))
 
-        ctk.CTkButton(button_frame, text=self._t("create"), command=criar,
+        BotaoPadronizado.criar_botao(button_frame, text=self._t("create"), command=criar,
                       fg_color="#28a745", hover_color="#218838").pack(side="left", padx=5)
-        ctk.CTkButton(button_frame, text=self._t("cancel"), command=dialog.destroy,
+        BotaoPadronizado.criar_botao(button_frame, text=self._t("cancel"), command=dialog.destroy,
                       fg_color="#6c757d", hover_color="#5a6268").pack(side="left", padx=5)
 
     def excluir_tabela(self):
@@ -1166,7 +1167,7 @@ class GerenciadorBancoDados:
                 self.conn.rollback()
                 messagebox.showerror(self._t("error"), f"Falha ao adicionar coluna:\n{e}")
 
-        ctk.CTkButton(frame, text=self._t("add"), command=adicionar,
+        BotaoPadronizado.criar_botao(frame, text=self._t("add"), command=adicionar,
                       fg_color="#28a745", hover_color="#218838").pack(pady=15)
 
     def renomear_coluna(self, tree, parent_window):
@@ -1210,7 +1211,7 @@ class GerenciadorBancoDados:
                 self.conn.rollback()
                 messagebox.showerror(self._t("error"), f"Falha ao renomear:\n{e}")
 
-        ctk.CTkButton(frame, text=self._t("rename"), command=executar,
+        BotaoPadronizado.criar_botao(frame, text=self._t("rename"), command=executar,
                       fg_color="#28a745", hover_color="#218838").pack(pady=10)
 
     def adicionar_registro(self):
@@ -1276,9 +1277,9 @@ class GerenciadorBancoDados:
 
         btn = ctk.CTkFrame(main)
         btn.pack(fill="x", pady=10)
-        ctk.CTkButton(btn, text=self._t("save"), command=salvar,
+        BotaoPadronizado.criar_botao(btn, text=self._t("save"), command=salvar,
                       fg_color="#28a745", hover_color="#218838").pack(side="left", padx=5)
-        ctk.CTkButton(btn, text=self._t("cancel"), command=dialog.destroy,
+        BotaoPadronizado.criar_botao(btn, text=self._t("cancel"), command=dialog.destroy,
                       fg_color="#6c757d", hover_color="#5a6268").pack(side="right", padx=5)
 
     def editar_registro(self):
@@ -1355,9 +1356,9 @@ class GerenciadorBancoDados:
 
         btn = ctk.CTkFrame(main)
         btn.pack(fill="x", pady=10)
-        ctk.CTkButton(btn, text=self._t("save"), command=salvar_edicao,
+        BotaoPadronizado.criar_botao(btn, text=self._t("save"), command=salvar_edicao,
                       fg_color="#28a745", hover_color="#218838").pack(side="left", padx=5)
-        ctk.CTkButton(btn, text=self._t("cancel"), command=dialog.destroy,
+        BotaoPadronizado.criar_botao(btn, text=self._t("cancel"), command=dialog.destroy,
                       fg_color="#6c757d", hover_color="#5a6268").pack(side="right", padx=5)
 
     def excluir_registro(self):
@@ -1597,15 +1598,15 @@ class GerenciadorBancoDados:
 
         btn_frame = ctk.CTkFrame(main)
         btn_frame.pack(fill="x", pady=10)
-        ctk.CTkButton(btn_frame, text=self._t("run_sql"), command=executar_sql,
+        BotaoPadronizado.criar_botao(btn_frame, text=self._t("run_sql"), command=executar_sql,
                       fg_color="#28a745", hover_color="#218838").pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text=self._t("save_script"), command=salvar_script,
+        BotaoPadronizado.criar_botao(btn_frame, text=self._t("save_script"), command=salvar_script,
                       fg_color="#17a2b8", hover_color="#138496").pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text=self._t("open_script"), command=abrir_script,
+        BotaoPadronizado.criar_botao(btn_frame, text=self._t("open_script"), command=abrir_script,
                       fg_color="#007bff", hover_color="#0056b3").pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text=self._t("export_csv"), command=exportar_csv,
+        BotaoPadronizado.criar_botao(btn_frame, text=self._t("export_csv"), command=exportar_csv,
                       fg_color="#ffc107", hover_color="#e0a800", text_color="black").pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text=self._t("close"), command=dialog.destroy,
+        BotaoPadronizado.criar_botao(btn_frame, text=self._t("close"), command=dialog.destroy,
                       fg_color="#6c757d", hover_color="#5a6268").pack(side="right", padx=5)
 
         dialog.bind("<Control-Return>", executar_sql)
@@ -1641,7 +1642,7 @@ class GerenciadorBancoDados:
         ]
 
         for texto, comando in ops:
-            btn = ctk.CTkButton(main, text=texto, command=comando,
+            btn = BotaoPadronizado.criar_botao(main, text=texto, command=comando,
                                 fg_color="#17a2b8", hover_color="#138496", height=40)
             btn.pack(fill="x", pady=5)
 
@@ -1762,7 +1763,7 @@ class GerenciadorBancoDados:
                 ctk.CTkLabel(frame, text=schema['schema_name']).pack(side="left", padx=5)
 
                 if schema['schema_name'] != db.get_schema():
-                    ctk.CTkButton(frame, text=self._t("use_schema"), width=60,
+                    BotaoPadronizado.criar_botao(frame, text=self._t("use_schema"), width=60,
                                   command=lambda s=schema['schema_name']: self.usar_schema(s, dialog),
                                   fg_color="#28a745", hover_color="#218838").pack(side="right", padx=2)
 
@@ -1873,18 +1874,18 @@ class GerenciadorBancoDados:
 
         frame_controles = ctk.CTkFrame(tab_estrutura)
         frame_controles.pack(fill="x", pady=10)
-        ctk.CTkButton(frame_controles, text=f"➕ {self._t('add_column')}", command=lambda: self._adicionar_coluna_dialog(dialog),
+        BotaoPadronizado.criar_botao(frame_controles, text=f"➕ {self._t('add_column')}", command=lambda: self._adicionar_coluna_dialog(dialog),
                       fg_color="#28a745", hover_color="#218838", width=150).pack(side="left", padx=5)
-        ctk.CTkButton(frame_controles, text=f"➖ {self._t('remove_column')}",
+        BotaoPadronizado.criar_botao(frame_controles, text=f"➖ {self._t('remove_column')}",
                       command=lambda: self._remover_coluna_dialog(tree_estrutura, dialog),
                       fg_color="#dc3545", hover_color="#c82333", width=150).pack(side="left", padx=5)
-        ctk.CTkButton(frame_controles, text=f"✏️ {self._t('rename_column')}",
+        BotaoPadronizado.criar_botao(frame_controles, text=f"✏️ {self._t('rename_column')}",
                       command=lambda: self._renomear_coluna_dialog(tree_estrutura, dialog),
                       fg_color="#17a2b8", hover_color="#138496", width=150).pack(side="left", padx=5)
-        ctk.CTkButton(frame_controles, text=f"🗑️ {self._t('delete_table')}",
+        BotaoPadronizado.criar_botao(frame_controles, text=f"🗑️ {self._t('delete_table')}",
                       command=lambda: self._confirmar_exclusao_tabela(dialog),
                       fg_color="#dc3545", hover_color="#c82333", width=150).pack(side="left", padx=5)
-        ctk.CTkButton(frame_controles, text=f"❌ {self._t('close_editor')}", command=dialog.destroy,
+        BotaoPadronizado.criar_botao(frame_controles, text=f"❌ {self._t('close_editor')}", command=dialog.destroy,
                       fg_color="#6c757d", hover_color="#5a6268").pack(side="right", padx=5)
 
         tab_dados = ctk.CTkFrame(notebook)
@@ -2015,7 +2016,7 @@ class GerenciadorBancoDados:
                 b.destroy()
             botoes.clear()
             for t in [t for t in todas if termo in t.lower()]:
-                b = ctk.CTkButton(scroll, text=t, command=lambda _t=t: self._selecionar_tabela(_t, dialog),
+                b = BotaoPadronizado.criar_botao(scroll, text=t, command=lambda _t=t: self._selecionar_tabela(_t, dialog),
                                   fg_color="#17a2b8", hover_color="#138496")
                 b.pack(fill="x", padx=5, pady=2)
                 botoes.append(b)

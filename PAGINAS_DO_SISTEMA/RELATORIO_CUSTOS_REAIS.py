@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 import webbrowser
 from tkinter import messagebox, ttk
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import customtkinter as ctk
 from reportlab.lib.pagesizes import A4
@@ -61,14 +62,14 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
         toolbar.grid_columnconfigure(4, weight=1)
 
-        ctk.CTkButton(toolbar, text="Atualizar", command=self._carregar_dados_custos).grid(row=0, column=0, padx=(0, 8))
-        ctk.CTkButton(toolbar, text="Exportar PDF", command=self._exportar_custos).grid(
+        BotaoPadronizado.criar_botao(toolbar, text="Atualizar", command=self._carregar_dados_custos).grid(row=0, column=0, padx=(0, 8))
+        BotaoPadronizado.criar_botao(toolbar, text="Exportar PDF", command=self._exportar_custos).grid(
             row=0, column=1, padx=(0, 8)
         )
-        ctk.CTkButton(toolbar, text="Imprimir", command=self._imprimir_custos).grid(
+        BotaoPadronizado.criar_botao(toolbar, text="Imprimir", command=self._imprimir_custos).grid(
             row=0, column=2, padx=(0, 8)
         )
-        ctk.CTkButton(toolbar, text="Comparar OPs", command=self._comparar_ops).grid(row=0, column=3)
+        BotaoPadronizado.criar_botao(toolbar, text="Comparar OPs", command=self._comparar_ops).grid(row=0, column=3)
 
     def _build_filters(self):
         filters = ctk.CTkFrame(self)
@@ -78,7 +79,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         ctk.CTkLabel(filters, text="Período").grid(row=0, column=0, padx=(12, 6), pady=8)
         self.custos_inicio_entry = ctk.CTkEntry(filters, placeholder_text="De")
         self.custos_inicio_entry.grid(row=0, column=1, padx=(0, 6), pady=8)
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             filters,
             text="📅",
             width=32,
@@ -86,7 +87,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         ).grid(row=0, column=2, padx=(0, 6), pady=8)
         self.custos_fim_entry = ctk.CTkEntry(filters, placeholder_text="Até")
         self.custos_fim_entry.grid(row=0, column=3, padx=(0, 12), pady=8)
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             filters,
             text="📅",
             width=32,
@@ -102,7 +103,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         self.filtro_status.grid(
             row=0, column=8, padx=(0, 12), pady=8
         )
-        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_dados_custos).grid(row=0, column=9, padx=(0, 12), pady=8)
+        BotaoPadronizado.criar_botao(filters, text="Filtrar", command=self._carregar_dados_custos).grid(row=0, column=9, padx=(0, 12), pady=8)
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
@@ -510,9 +511,9 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         nav.pack(fill="x", padx=10, pady=5)
 
         lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
-        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        BotaoPadronizado.criar_botao(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
-        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        BotaoPadronizado.criar_botao(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
@@ -544,7 +545,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = ctk.CTkButton(
+                    btn = BotaoPadronizado.criar_botao(
                         frame_dias,
                         text=str(dia),
                         width=30,

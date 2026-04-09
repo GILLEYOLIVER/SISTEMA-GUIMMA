@@ -380,8 +380,9 @@ def _aplicar_hover_texto_botao(widget: ctk.CTkButton, normal: str, hover: str):
         except Exception:
             pass
 
-    widget.bind("<Enter>", on_enter)
-    widget.bind("<Leave>", on_leave)
+    # add="+" evita sobrescrever handlers internos do CustomTkinter (hover visual)
+    widget.bind("<Enter>", on_enter, add="+")
+    widget.bind("<Leave>", on_leave, add="+")
     widget._opera_hover_texto = True
 
 
