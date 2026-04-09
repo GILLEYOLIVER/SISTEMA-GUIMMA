@@ -2117,11 +2117,15 @@ class OperaMenuApp(ctk.CTk):
     def ask_quit(self, event=None):
         if getattr(self, "_closing", False):
             return
+        _trace_print("ask_quit acionado")
         titulo_saida = self._get_text("exit_title")
         mensagem_saida = self._get_text("exit_confirm")
         confirmar = self._show_exit_dialog(titulo_saida, mensagem_saida)
         if confirmar:
+            _trace_print("Saída confirmada pelo usuário")
             self._agendar_after(1, self.destroy)
+        else:
+            _trace_print("Saída cancelada pelo usuário")
 
     def _show_exit_dialog(self, titulo: str, mensagem: str) -> bool:
         resposta = {"ok": False}
@@ -2211,6 +2215,7 @@ class OperaMenuApp(ctk.CTk):
     def destroy(self):
         if getattr(self, "_closing", False):
             return
+        _trace_print("destroy() acionado — iniciando encerramento da aplicação")
         self._closing = True
         try:
             if hasattr(self, "_activity_db_worker_stop"):
@@ -4558,15 +4563,10 @@ def main():
         _dprint("🚀 Iniciando sistema OPERA...")
         _install_runtime_debug_hooks()
         app = OperaMenuApp()
-        def _on_close_request():
-            _dprint("🛑 [UI] Fechamento solicitado pelo usuário.")
-            app.destroy()
-
         app.bind("<Map>", lambda _e: _dprint("🪟 [UI] Janela mapeada/exibida."))
         app.bind("<Unmap>", lambda _e: _dprint("🪟 [UI] Janela minimizada/oculta."))
         app.bind("<FocusIn>", lambda _e: _dprint("🎯 [UI] Aplicação recebeu foco."))
         app.bind("<FocusOut>", lambda _e: _dprint("🎯 [UI] Aplicação perdeu foco."))
-        app.protocol("WM_DELETE_WINDOW", _on_close_request)
         _attach_mainloop_watchdog(app, interval_ms=30000)
         _dprint("✅ Aplicação iniciada, entrando no mainloop...")
         app.mainloop()
