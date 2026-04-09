@@ -1536,6 +1536,8 @@ class OperaMenuApp(ctk.CTk):
         self.lift()
         self.focus_force()
         self._apply_initial_layout()
+        self._agendar_after(50, self._ensure_window_visible)
+        self._agendar_after(800, self._ensure_window_visible)
         _trace_print("Janela exibida ao usuário (deiconify + layout)")
         if self._db_available:
             self._agendar_after(10, self._startup_open_initial_page)
@@ -1593,6 +1595,40 @@ class OperaMenuApp(ctk.CTk):
     def _apply_initial_layout(self):
         self._maximize_window()
         self.update_idletasks()
+
+    def _ensure_window_visible(self):
+        """Força a janela principal a ficar visível no desktop."""
+        try:
+            state = self.state()
+        except Exception:
+            state = "unknown"
+        _trace_print(f"Estado da janela antes do ensure_visible: {state}")
+
+        try:
+            if state in {"withdrawn", "iconic"}:
+                self.deiconify()
+        except Exception as e:
+            _trace_print(f"Falha ao deiconify no ensure_visible: {e}")
+
+        try:
+            self.lift()
+            self.focus_force()
+        except Exception as e:
+            _trace_print(f"Falha ao trazer janela para frente: {e}")
+
+        try:
+            self.attributes("-topmost", True)
+            self.after(250, lambda: self.attributes("-topmost", False))
+        except Exception as e:
+            _trace_print(f"Falha ao alternar topmost: {e}")
+
+        try:
+            _trace_print(
+                f"Janela visível? viewable={self.winfo_viewable()} "
+                f"mapped={self.winfo_ismapped()} geometry={self.winfo_geometry()}"
+            )
+        except Exception:
+            pass
 
     def _enable_startup_responsive_ready(self):
         self._startup_responsive_ready = True
@@ -1779,6 +1815,7 @@ class OperaMenuApp(ctk.CTk):
                 except Exception:
                     pass
                 self._update_menu_buttons_colors()
+                self._agendar_after(50, self._ensure_window_visible)
 
         handle = self._agendar_after(30, _do_open)
         if handle is None:
