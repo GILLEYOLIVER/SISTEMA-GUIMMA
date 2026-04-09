@@ -1427,6 +1427,15 @@ class OperaMenuApp(ctk.CTk):
         "Backup": {"pt_BR": "Backup", "en_US": "Backup", "es_ES": "Respaldo"},
     }
 
+    USER_NAME_LABELS = {
+        "administrador local": {"pt_BR": "Administrador Local", "en_US": "Local Administrator", "es_ES": "Administrador Local"},
+    }
+
+    USER_ROLE_LABELS = {
+        "admin": {"pt_BR": "Admin", "en_US": "Administrator", "es_ES": "Administrador"},
+        "administrador": {"pt_BR": "Administrador", "en_US": "Administrator", "es_ES": "Administrador"},
+    }
+
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
         _trace_print("OperaMenuApp.__init__ iniciado")
         reset_tk_default_root()
@@ -2752,6 +2761,18 @@ class OperaMenuApp(ctk.CTk):
             return self._get_text("topbar_dashboard")
         return self._translate_menu_label(page_name)
 
+    def _translate_user_identity(self, user_name: str, user_role: str) -> tuple[str, str]:
+        idioma = getattr(self, "idioma_atual", "pt_BR")
+        nome_base = (user_name or "").strip()
+        role_base = (user_role or "").strip()
+
+        nome_map = self.USER_NAME_LABELS.get(nome_base.lower(), {})
+        role_map = self.USER_ROLE_LABELS.get(role_base.lower(), {})
+
+        nome_traduzido = nome_map.get(idioma, nome_base) if nome_map else nome_base
+        role_traduzida = role_map.get(idioma, role_base) if role_map else role_base
+        return nome_traduzido, role_traduzida
+
     def _save_language_preference(self):
         try:
             self.settings["language"] = self.idioma_atual
@@ -3282,9 +3303,10 @@ class OperaMenuApp(ctk.CTk):
         if not hasattr(self, 'user_info_label'):
             return
         now = datetime.now().strftime(self._get_text("clock_format"))
-        user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
+        nome_usuario, hierarquia = self._translate_user_identity(self.usuario_nome, self.usuario_hierarquia)
+        user_text = f"{now} | 👤 {nome_usuario} • {hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
-            user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
+            user_text = f"{now} | 👑 {nome_usuario} • {hierarquia}"
         try:
             self.user_info_label.configure(text=user_text)
         except Exception as e:
@@ -3294,9 +3316,10 @@ class OperaMenuApp(ctk.CTk):
         if not hasattr(self, 'user_info_label') or not self.winfo_exists():
             return
         now = datetime.now().strftime(self._get_text("clock_format"))
-        user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
+        nome_usuario, hierarquia = self._translate_user_identity(self.usuario_nome, self.usuario_hierarquia)
+        user_text = f"{now} | 👤 {nome_usuario} • {hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
-            user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
+            user_text = f"{now} | 👑 {nome_usuario} • {hierarquia}"
         try:
             self.user_info_label.configure(text=user_text)
         except Exception as e:
