@@ -26,6 +26,7 @@ from PIL import Image, ImageTk
 import customtkinter as ctk
 
 OPERA_DEBUG = bool(os.environ.get('OPERA_DEBUG', '').strip())
+OPERA_STARTUP_TRACE = str(os.environ.get("OPERA_STARTUP_TRACE", "1")).strip().lower() in {"1", "true", "yes", "on"}
 ACTIVITY_DB_LOG_ENABLED = str(os.environ.get("OPERA_DB_ACTIVITY_LOG", "0")).strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -33,6 +34,13 @@ def _dprint(*args, **kwargs):
     """Print controlado por OPERA_DEBUG para não atrasar o startup."""
     if OPERA_DEBUG:
         print(*args, **kwargs)
+
+
+def _trace_print(*args, **kwargs):
+    """Logs de rastreio de startup (habilitado por padrão para diagnóstico)."""
+    if OPERA_STARTUP_TRACE:
+        ts = datetime.now().strftime("%H:%M:%S")
+        print(f"[TRACE {ts}]", *args, **kwargs)
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1420,6 +1428,7 @@ class OperaMenuApp(ctk.CTk):
     }
 
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
+        _trace_print("OperaMenuApp.__init__ iniciado")
         reset_tk_default_root()
         super().__init__()
         try:
@@ -1500,12 +1509,18 @@ class OperaMenuApp(ctk.CTk):
         self.permissoes_usuario = {}
 
         self._calculate_initial_scale_and_fonts()
+        _trace_print("Escala inicial calculada")
         self._setup_window()
+        _trace_print("Janela base configurada")
         _dprint("🎨 Iniciando carregamento do tema...")
         self._load_initial_theme()
+        _trace_print("Tema inicial carregado")
         self._load_icons()
+        _trace_print("Ícones carregados")
         self._build_interface()
+        _trace_print("Interface base construída")
         self._load_user_permissions()
+        _trace_print("Permissões do usuário carregadas")
         self._setup_bindings()
         self._setup_activity_logging()
         self._setup_responsive_watcher()
@@ -1513,12 +1528,15 @@ class OperaMenuApp(ctk.CTk):
 
         self._db_required_warning_visible = False
         self._db_available = self._quick_database_available()
+        _trace_print(f"Status do banco no startup: {'OK' if self._db_available else 'INDISPONÍVEL'}")
 
         self._show_startup_loading()
+        _trace_print("Card de loading exibido")
         self.deiconify()
         self.lift()
         self.focus_force()
         self._apply_initial_layout()
+        _trace_print("Janela exibida ao usuário (deiconify + layout)")
         if self._db_available:
             self._agendar_after(10, self._startup_open_initial_page)
             self._agendar_after(220, lambda: self._apply_theme_to_frame_safely(self._current_frame))
@@ -1529,6 +1547,7 @@ class OperaMenuApp(ctk.CTk):
             self._agendar_after(80, self._show_database_setup_required)
         self._agendar_after(100, self._update_user_display)
         self._update_menu_buttons_colors()
+        _trace_print("Inicialização do menu finalizada")
 
         _dprint(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         _dprint(f"🎨 Tema aplicado: {self.current_theme_name}")
@@ -1747,9 +1766,13 @@ class OperaMenuApp(ctk.CTk):
         def _do_open():
             if getattr(self, "_closing", False):
                 return
+            start_t = time.time()
+            _trace_print("Abrindo página inicial...")
             try:
                 self._open_dashboard_agora()
             finally:
+                elapsed = time.time() - start_t
+                _trace_print(f"Rotina de abertura inicial finalizada em {elapsed:.2f}s")
                 try:
                     if getattr(self, "_startup_loading_card", None) and self._startup_loading_card.winfo_exists():
                         self._startup_loading_card.destroy()
@@ -1763,6 +1786,17 @@ class OperaMenuApp(ctk.CTk):
                 self.after_idle(_do_open)
             except Exception:
                 _do_open()
+
+        def _warn_if_still_loading():
+            if getattr(self, "_closing", False):
+                return
+            if getattr(self, "_page_loading", False):
+                _trace_print("⚠️ Página inicial ainda carregando após 8s. Verifique logs de import/instanciação da página.")
+            card = getattr(self, "_startup_loading_card", None)
+            if card is not None and getattr(card, "winfo_exists", lambda: False)():
+                _trace_print("⚠️ Card de loading ainda visível após 8s.")
+
+        self._agendar_after(8000, _warn_if_still_loading)
 
     def _setup_responsive_watcher(self):
         self.bind("<Configure>", self._on_window_configure, add="+")
@@ -3763,6 +3797,8 @@ class OperaMenuApp(ctk.CTk):
             self._show_temporary_message(self._get_text("no_permission", page=self._translate_page_name(page_name)))
             return
         self._page_loading = True
+        op_start = time.time()
+        _trace_print(f"open_page('{page_name}') iniciado")
         try:
             if self._current_frame and self._current_frame.winfo_exists():
                 self._current_frame.place_forget()
@@ -3808,10 +3844,12 @@ class OperaMenuApp(ctk.CTk):
                 except Exception:
                     pass
                 _dprint(f"✅ Página '{page_name}' carregada")
+                _trace_print(f"open_page('{page_name}') concluído em {time.time() - op_start:.2f}s")
         except Exception as e:
             messagebox.showerror(self._get_text("error"),
                                  f"Falha ao abrir {self._translate_page_name(page_name)}:\n{e}", parent=self)
             _dprint(f"❌ Erro: {e}")
+            _trace_print(f"❌ open_page('{page_name}') falhou após {time.time() - op_start:.2f}s: {e}")
         finally:
             self._page_loading = False
 
@@ -3904,6 +3942,8 @@ class OperaMenuApp(ctk.CTk):
             self.open_page("Dashboard")
 
     def _load_page_direct(self, page_name: str, reload_module: bool = False):
+        load_start = time.time()
+        _trace_print(f"_load_page_direct('{page_name}') iniciado")
         route = self.routes.get(page_name)
         if not route:
             raise ValueError(f"Rota não encontrada: {page_name}")
@@ -3999,7 +4039,9 @@ class OperaMenuApp(ctk.CTk):
 
         # 1) padrão principal do sistema
         try:
-            return _finalize_frame(page_class(master=self.content, sistema=self))
+            frame = _finalize_frame(page_class(master=self.content, sistema=self))
+            _trace_print(f"_load_page_direct('{page_name}') finalizado em {time.time() - load_start:.2f}s")
+            return frame
         except Exception as e:
             last_error = e
 
@@ -4059,6 +4101,7 @@ class OperaMenuApp(ctk.CTk):
             pass
 
         _dprint(f"❌ Falha ao instanciar '{page_name}': {last_error}")
+        _trace_print(f"❌ _load_page_direct('{page_name}') falhou após {time.time() - load_start:.2f}s: {last_error}")
         return fallback
 
     def reload_current_page(self):
