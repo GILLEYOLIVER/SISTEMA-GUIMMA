@@ -2211,11 +2211,18 @@ class OperaMenuApp(ctk.CTk):
             ctk.CTkLabel(
                 card,
                 text=mensagem,
-                font=("Arial", 18, "bold"),
+                font=("Arial", 24, "bold"),
                 text_color=self.cor_texto,
                 wraplength=400,
                 justify="center",
-            ).pack(fill="x", padx=20, pady=(8, 22))
+            ).pack(fill="x", padx=20, pady=(8, 8))
+
+            ctk.CTkLabel(
+                card,
+                text=self._get_text("exit_title"),
+                font=("Arial", 12, "bold"),
+                text_color=self.cor_texto_secundario if hasattr(self, "cor_texto_secundario") else self.cor_texto,
+            ).pack(fill="x", padx=20, pady=(0, 18))
 
             botoes = ctk.CTkFrame(card, fg_color="transparent")
             botoes.pack(pady=(0, 16))
@@ -2226,27 +2233,27 @@ class OperaMenuApp(ctk.CTk):
 
             ctk.CTkButton(
                 botoes,
-                text=self._get_text("yes"),
-                width=140,
-                fg_color=self.cor_primaria,
-                hover_color=self.cor_hover,
-                text_color=self._contrast_text_for_color(self.cor_primaria, fallback="#FFFFFF"),
-                font=("Arial", 14, "bold"),
-                border_width=1,
-                border_color=self.cor_borda,
-                command=lambda: _set(True),
-            ).pack(side="left", padx=8)
-            ctk.CTkButton(
-                botoes,
                 text=self._get_text("no"),
                 width=140,
                 fg_color=self._darker(self.cor_secundaria, 0.97),
                 hover_color=self._realcar_cor(self.cor_secundaria, 1.05),
                 text_color=self._contrast_text_for_color(self.cor_secundaria, fallback=self.cor_texto),
+                font=("Arial", 14, "bold"),
+                border_width=1,
+                border_color=self.cor_borda,
+                command=lambda: _set(False),
+            ).pack(side="left", padx=8)
+            ctk.CTkButton(
+                botoes,
+                text=self._get_text("yes"),
+                width=140,
+                fg_color="#dc2626",
+                hover_color="#b91c1c",
+                text_color="#FFFFFF",
                 border_width=1,
                 border_color=self.cor_borda,
                 font=("Arial", 14, "bold"),
-                command=lambda: _set(False),
+                command=lambda: _set(True),
             ).pack(side="left", padx=8)
 
             dlg.protocol("WM_DELETE_WINDOW", lambda: _set(False))
