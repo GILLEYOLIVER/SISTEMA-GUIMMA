@@ -510,7 +510,23 @@ def _create_connection():
     timeout = int(CONFIG.get("connect_timeout", 8))
     fallback_to_postgres = bool(CONFIG.get("fallback_to_postgres", True))
 
-    ports = CONFIG.get("ports") or [5432]
+    raw_ports = CONFIG.get("ports")
+    if not raw_ports:
+        single_port = CONFIG.get("port")
+        if single_port not in (None, ""):
+            raw_ports = [single_port]
+    if not raw_ports:
+        raw_ports = [5432, 5433]
+
+    ports = []
+    for raw_port in raw_ports:
+        try:
+            ports.append(int(raw_port))
+        except (TypeError, ValueError):
+            log_warn(f"Porta inválida no config ignorada: {raw_port!r}")
+
+    if not ports:
+        ports = [5432, 5433]
 
     for port in ports:
         try:
@@ -562,7 +578,10 @@ def _create_connection():
             log_err(f"Falha na porta {port}: {_safe_exc_text(e)}")
             continue
 
-    raise Exception(f"Não foi possível conectar. Portas testadas: {ports}")
+    raise Exception(
+        f"Não foi possível conectar ao PostgreSQL em {host}. "
+        f"Banco: {target_db}. Usuário: {user}. Portas testadas: {ports}"
+    )
 
 
 def _get_pool():
