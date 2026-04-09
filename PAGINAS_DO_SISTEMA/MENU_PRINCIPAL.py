@@ -4441,6 +4441,69 @@ def _show_database_setup_message_and_exit(message: str):
             pass
 
 
+def _install_runtime_debug_hooks():
+    """
+    Instala hooks de debug para facilitar diagnóstico em produção/local.
+    Não altera fluxo normal; apenas registra mais contexto quando algo falha.
+    """
+    def _log_callback_exception(exc, val, tb):
+        import traceback
+        _dprint("💥 [TK CALLBACK] Exceção em callback do tkinter/customtkinter")
+        _dprint("   Tipo:", getattr(exc, "__name__", str(exc)))
+        _dprint("   Valor:", val)
+        _dprint("   Traceback:")
+        _dprint("".join(traceback.format_exception(exc, val, tb)))
+
+    def _log_unhandled_exception(exc_type, exc_value, exc_tb):
+        import traceback
+        _dprint("💥 [UNHANDLED] Exceção não tratada no processo principal")
+        _dprint("   Tipo:", getattr(exc_type, "__name__", str(exc_type)))
+        _dprint("   Valor:", exc_value)
+        _dprint("   Traceback:")
+        _dprint("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
+
+    def _log_thread_exception(args):
+        import traceback
+        _dprint(f"💥 [THREAD] Exceção não tratada na thread '{getattr(args, 'thread', None)}'")
+        _dprint("   Tipo:", getattr(args.exc_type, "__name__", str(args.exc_type)))
+        _dprint("   Valor:", args.exc_value)
+        _dprint("   Traceback:")
+        _dprint("".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)))
+
+    sys.excepthook = _log_unhandled_exception
+    if hasattr(threading, "excepthook"):
+        threading.excepthook = _log_thread_exception
+    tk.Tk.report_callback_exception = staticmethod(_log_callback_exception)
+    _dprint("🪝 Hooks de debug de runtime instalados (tk/sys/thread).")
+
+
+def _attach_mainloop_watchdog(app, interval_ms: int = 30000):
+    """
+    Emite heartbeat periódico durante o mainloop para ajudar a identificar travamentos.
+    """
+    start_ts = time.time()
+
+    def _heartbeat():
+        elapsed = int(time.time() - start_ts)
+        try:
+            _dprint(
+                f"💓 [MAINLOOP] ativo há {elapsed}s | "
+                f"foco={app.focus_displayof()} | janela={app.state()}"
+            )
+        except Exception as heartbeat_err:
+            _dprint(f"⚠️ [MAINLOOP] Falha no heartbeat: {heartbeat_err}")
+        try:
+            app.after(interval_ms, _heartbeat)
+        except Exception as schedule_err:
+            _dprint(f"⚠️ [MAINLOOP] Não foi possível reagendar heartbeat: {schedule_err}")
+
+    try:
+        app.after(interval_ms, _heartbeat)
+        _dprint(f"🩺 Watchdog do mainloop ativado (intervalo={interval_ms}ms).")
+    except Exception as e:
+        _dprint(f"⚠️ Não foi possível ativar watchdog do mainloop: {e}")
+
+
 def main():
     ok, erro_banco = _startup_database_ready_for_main()
     if not ok:
@@ -4450,9 +4513,23 @@ def main():
 
     try:
         _dprint("🚀 Iniciando sistema OPERA...")
+        _install_runtime_debug_hooks()
         app = OperaMenuApp()
+        def _on_close_request():
+            _dprint("🛑 [UI] Fechamento solicitado pelo usuário.")
+            app.destroy()
+
+        app.bind("<Map>", lambda _e: _dprint("🪟 [UI] Janela mapeada/exibida."))
+        app.bind("<Unmap>", lambda _e: _dprint("🪟 [UI] Janela minimizada/oculta."))
+        app.bind("<FocusIn>", lambda _e: _dprint("🎯 [UI] Aplicação recebeu foco."))
+        app.bind("<FocusOut>", lambda _e: _dprint("🎯 [UI] Aplicação perdeu foco."))
+        app.protocol("WM_DELETE_WINDOW", _on_close_request)
+        _attach_mainloop_watchdog(app, interval_ms=30000)
         _dprint("✅ Aplicação iniciada, entrando no mainloop...")
         app.mainloop()
+        _dprint("✅ Mainloop encerrado sem exceção.")
+    except KeyboardInterrupt:
+        _dprint("⏹️ Execução interrompida por KeyboardInterrupt (Ctrl+C).")
     except Exception as e:
         _dprint(f"💥 ERRO CRÍTICO: {e}")
         import traceback
