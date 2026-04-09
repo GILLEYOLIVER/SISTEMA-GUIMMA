@@ -26,6 +26,7 @@ from PIL import Image, ImageTk
 import customtkinter as ctk
 
 OPERA_DEBUG = bool(os.environ.get('OPERA_DEBUG', '').strip())
+OPERA_STARTUP_TRACE = str(os.environ.get("OPERA_STARTUP_TRACE", "1")).strip().lower() in {"1", "true", "yes", "on"}
 ACTIVITY_DB_LOG_ENABLED = str(os.environ.get("OPERA_DB_ACTIVITY_LOG", "0")).strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -33,6 +34,13 @@ def _dprint(*args, **kwargs):
     """Print controlado por OPERA_DEBUG para não atrasar o startup."""
     if OPERA_DEBUG:
         print(*args, **kwargs)
+
+
+def _trace_print(*args, **kwargs):
+    """Logs de rastreio de startup (habilitado por padrão para diagnóstico)."""
+    if OPERA_STARTUP_TRACE:
+        ts = datetime.now().strftime("%H:%M:%S")
+        print(f"[TRACE {ts}]", *args, **kwargs)
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +54,7 @@ from PAGINAS_DO_SISTEMA.TEMAS import (
     aplicar_estilo_treeview,
     get_contraste_texto,
     is_dark_color,
+    padronizar_botoes_container,
     padronizar_treeview,
     remover_bordas_botoes_tema,
 )
@@ -1419,7 +1428,17 @@ class OperaMenuApp(ctk.CTk):
         "Backup": {"pt_BR": "Backup", "en_US": "Backup", "es_ES": "Respaldo"},
     }
 
+    USER_NAME_LABELS = {
+        "administrador local": {"pt_BR": "Administrador Local", "en_US": "Local Administrator", "es_ES": "Administrador Local"},
+    }
+
+    USER_ROLE_LABELS = {
+        "admin": {"pt_BR": "Admin", "en_US": "Administrator", "es_ES": "Administrador"},
+        "administrador": {"pt_BR": "Administrador", "en_US": "Administrator", "es_ES": "Administrador"},
+    }
+
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
+        _trace_print("OperaMenuApp.__init__ iniciado")
         reset_tk_default_root()
         super().__init__()
         try:
@@ -1500,12 +1519,18 @@ class OperaMenuApp(ctk.CTk):
         self.permissoes_usuario = {}
 
         self._calculate_initial_scale_and_fonts()
+        _trace_print("Escala inicial calculada")
         self._setup_window()
+        _trace_print("Janela base configurada")
         _dprint("🎨 Iniciando carregamento do tema...")
         self._load_initial_theme()
+        _trace_print("Tema inicial carregado")
         self._load_icons()
+        _trace_print("Ícones carregados")
         self._build_interface()
+        _trace_print("Interface base construída")
         self._load_user_permissions()
+        _trace_print("Permissões do usuário carregadas")
         self._setup_bindings()
         self._setup_activity_logging()
         self._setup_responsive_watcher()
@@ -1513,12 +1538,17 @@ class OperaMenuApp(ctk.CTk):
 
         self._db_required_warning_visible = False
         self._db_available = self._quick_database_available()
+        _trace_print(f"Status do banco no startup: {'OK' if self._db_available else 'INDISPONÍVEL'}")
 
         self._show_startup_loading()
+        _trace_print("Card de loading exibido")
         self.deiconify()
         self.lift()
         self.focus_force()
         self._apply_initial_layout()
+        self._agendar_after(50, self._ensure_window_visible)
+        self._agendar_after(800, self._ensure_window_visible)
+        _trace_print("Janela exibida ao usuário (deiconify + layout)")
         if self._db_available:
             self._agendar_after(10, self._startup_open_initial_page)
             self._agendar_after(220, lambda: self._apply_theme_to_frame_safely(self._current_frame))
@@ -1529,6 +1559,7 @@ class OperaMenuApp(ctk.CTk):
             self._agendar_after(80, self._show_database_setup_required)
         self._agendar_after(100, self._update_user_display)
         self._update_menu_buttons_colors()
+        _trace_print("Inicialização do menu finalizada")
 
         _dprint(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         _dprint(f"🎨 Tema aplicado: {self.current_theme_name}")
@@ -1574,6 +1605,40 @@ class OperaMenuApp(ctk.CTk):
     def _apply_initial_layout(self):
         self._maximize_window()
         self.update_idletasks()
+
+    def _ensure_window_visible(self):
+        """Força a janela principal a ficar visível no desktop."""
+        try:
+            state = self.state()
+        except Exception:
+            state = "unknown"
+        _trace_print(f"Estado da janela antes do ensure_visible: {state}")
+
+        try:
+            if state in {"withdrawn", "iconic"}:
+                self.deiconify()
+        except Exception as e:
+            _trace_print(f"Falha ao deiconify no ensure_visible: {e}")
+
+        try:
+            self.lift()
+            self.focus_force()
+        except Exception as e:
+            _trace_print(f"Falha ao trazer janela para frente: {e}")
+
+        try:
+            self.attributes("-topmost", True)
+            self.after(250, lambda: self.attributes("-topmost", False))
+        except Exception as e:
+            _trace_print(f"Falha ao alternar topmost: {e}")
+
+        try:
+            _trace_print(
+                f"Janela visível? viewable={self.winfo_viewable()} "
+                f"mapped={self.winfo_ismapped()} geometry={self.winfo_geometry()}"
+            )
+        except Exception:
+            pass
 
     def _enable_startup_responsive_ready(self):
         self._startup_responsive_ready = True
@@ -1747,15 +1812,20 @@ class OperaMenuApp(ctk.CTk):
         def _do_open():
             if getattr(self, "_closing", False):
                 return
+            start_t = time.time()
+            _trace_print("Abrindo página inicial...")
             try:
                 self._open_dashboard_agora()
             finally:
+                elapsed = time.time() - start_t
+                _trace_print(f"Rotina de abertura inicial finalizada em {elapsed:.2f}s")
                 try:
                     if getattr(self, "_startup_loading_card", None) and self._startup_loading_card.winfo_exists():
                         self._startup_loading_card.destroy()
                 except Exception:
                     pass
                 self._update_menu_buttons_colors()
+                self._agendar_after(50, self._ensure_window_visible)
 
         handle = self._agendar_after(30, _do_open)
         if handle is None:
@@ -1763,6 +1833,17 @@ class OperaMenuApp(ctk.CTk):
                 self.after_idle(_do_open)
             except Exception:
                 _do_open()
+
+        def _warn_if_still_loading():
+            if getattr(self, "_closing", False):
+                return
+            if getattr(self, "_page_loading", False):
+                _trace_print("⚠️ Página inicial ainda carregando após 8s. Verifique logs de import/instanciação da página.")
+            card = getattr(self, "_startup_loading_card", None)
+            if card is not None and getattr(card, "winfo_exists", lambda: False)():
+                _trace_print("⚠️ Card de loading ainda visível após 8s.")
+
+        self._agendar_after(8000, _warn_if_still_loading)
 
     def _setup_responsive_watcher(self):
         self.bind("<Configure>", self._on_window_configure, add="+")
@@ -2083,11 +2164,15 @@ class OperaMenuApp(ctk.CTk):
     def ask_quit(self, event=None):
         if getattr(self, "_closing", False):
             return
+        _trace_print("ask_quit acionado")
         titulo_saida = self._get_text("exit_title")
         mensagem_saida = self._get_text("exit_confirm")
         confirmar = self._show_exit_dialog(titulo_saida, mensagem_saida)
         if confirmar:
+            _trace_print("Saída confirmada pelo usuário")
             self._agendar_after(1, self.destroy)
+        else:
+            _trace_print("Saída cancelada pelo usuário")
 
     def _show_exit_dialog(self, titulo: str, mensagem: str) -> bool:
         resposta = {"ok": False}
@@ -2127,11 +2212,18 @@ class OperaMenuApp(ctk.CTk):
             ctk.CTkLabel(
                 card,
                 text=mensagem,
-                font=("Arial", 18, "bold"),
+                font=("Arial", 24, "bold"),
                 text_color=self.cor_texto,
                 wraplength=400,
                 justify="center",
-            ).pack(fill="x", padx=20, pady=(8, 22))
+            ).pack(fill="x", padx=20, pady=(8, 8))
+
+            ctk.CTkLabel(
+                card,
+                text=self._get_text("exit_title"),
+                font=("Arial", 12, "bold"),
+                text_color=self.cor_texto_secundario if hasattr(self, "cor_texto_secundario") else self.cor_texto,
+            ).pack(fill="x", padx=20, pady=(0, 18))
 
             botoes = ctk.CTkFrame(card, fg_color="transparent")
             botoes.pack(pady=(0, 16))
@@ -2142,27 +2234,27 @@ class OperaMenuApp(ctk.CTk):
 
             ctk.CTkButton(
                 botoes,
-                text=self._get_text("yes"),
-                width=140,
-                fg_color=self.cor_primaria,
-                hover_color=self.cor_hover,
-                text_color=self._contrast_text_for_color(self.cor_primaria, fallback="#FFFFFF"),
-                font=("Arial", 14, "bold"),
-                border_width=1,
-                border_color=self.cor_borda,
-                command=lambda: _set(True),
-            ).pack(side="left", padx=8)
-            ctk.CTkButton(
-                botoes,
                 text=self._get_text("no"),
                 width=140,
                 fg_color=self._darker(self.cor_secundaria, 0.97),
                 hover_color=self._realcar_cor(self.cor_secundaria, 1.05),
                 text_color=self._contrast_text_for_color(self.cor_secundaria, fallback=self.cor_texto),
+                font=("Arial", 14, "bold"),
+                border_width=1,
+                border_color=self.cor_borda,
+                command=lambda: _set(False),
+            ).pack(side="left", padx=8)
+            ctk.CTkButton(
+                botoes,
+                text=self._get_text("yes"),
+                width=140,
+                fg_color="#dc2626",
+                hover_color="#b91c1c",
+                text_color="#FFFFFF",
                 border_width=1,
                 border_color=self.cor_borda,
                 font=("Arial", 14, "bold"),
-                command=lambda: _set(False),
+                command=lambda: _set(True),
             ).pack(side="left", padx=8)
 
             dlg.protocol("WM_DELETE_WINDOW", lambda: _set(False))
@@ -2177,6 +2269,7 @@ class OperaMenuApp(ctk.CTk):
     def destroy(self):
         if getattr(self, "_closing", False):
             return
+        _trace_print("destroy() acionado — iniciando encerramento da aplicação")
         self._closing = True
         try:
             if hasattr(self, "_activity_db_worker_stop"):
@@ -2675,6 +2768,18 @@ class OperaMenuApp(ctk.CTk):
         if page_name == "Dashboard":
             return self._get_text("topbar_dashboard")
         return self._translate_menu_label(page_name)
+
+    def _translate_user_identity(self, user_name: str, user_role: str) -> tuple[str, str]:
+        idioma = getattr(self, "idioma_atual", "pt_BR")
+        nome_base = (user_name or "").strip()
+        role_base = (user_role or "").strip()
+
+        nome_map = self.USER_NAME_LABELS.get(nome_base.lower(), {})
+        role_map = self.USER_ROLE_LABELS.get(role_base.lower(), {})
+
+        nome_traduzido = nome_map.get(idioma, nome_base) if nome_map else nome_base
+        role_traduzida = role_map.get(idioma, role_base) if role_map else role_base
+        return nome_traduzido, role_traduzida
 
     def _save_language_preference(self):
         try:
@@ -3206,9 +3311,10 @@ class OperaMenuApp(ctk.CTk):
         if not hasattr(self, 'user_info_label'):
             return
         now = datetime.now().strftime(self._get_text("clock_format"))
-        user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
+        nome_usuario, hierarquia = self._translate_user_identity(self.usuario_nome, self.usuario_hierarquia)
+        user_text = f"{now} | 👤 {nome_usuario} • {hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
-            user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
+            user_text = f"{now} | 👑 {nome_usuario} • {hierarquia}"
         try:
             self.user_info_label.configure(text=user_text)
         except Exception as e:
@@ -3218,9 +3324,10 @@ class OperaMenuApp(ctk.CTk):
         if not hasattr(self, 'user_info_label') or not self.winfo_exists():
             return
         now = datetime.now().strftime(self._get_text("clock_format"))
-        user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
+        nome_usuario, hierarquia = self._translate_user_identity(self.usuario_nome, self.usuario_hierarquia)
+        user_text = f"{now} | 👤 {nome_usuario} • {hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
-            user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
+            user_text = f"{now} | 👑 {nome_usuario} • {hierarquia}"
         try:
             self.user_info_label.configure(text=user_text)
         except Exception as e:
@@ -3730,6 +3837,31 @@ class OperaMenuApp(ctk.CTk):
                     pass
                 gc.collect()
 
+    def _inventory_page_buttons(self, frame, page_name: str):
+        """Rastreia botões CTkButton existentes na página (exclui topbar/menu principal)."""
+        try:
+            if not frame or not getattr(frame, "winfo_exists", lambda: False)():
+                return
+            buttons = []
+            stack = [frame]
+            while stack:
+                node = stack.pop()
+                try:
+                    children = node.winfo_children()
+                except Exception:
+                    children = []
+                for child in children:
+                    if isinstance(child, ctk.CTkButton):
+                        try:
+                            txt = child.cget("text") or "<sem texto>"
+                        except Exception:
+                            txt = "<indisponível>"
+                        buttons.append(txt)
+                    stack.append(child)
+            _trace_print(f"[PADRAO_BOTOES] Página '{page_name}': {len(buttons)} botão(ões) rastreados.")
+        except Exception as e:
+            _dprint(f"⚠️ Falha ao rastrear botões da página '{page_name}': {e}")
+
     def _apply_theme_to_frame_safely(self, frame):
         """Reaplica tema no frame informado (incluindo widgets criados com atraso)."""
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
@@ -3746,6 +3878,7 @@ class OperaMenuApp(ctk.CTk):
                 frame.app = self
             if hasattr(self, "theme_manager") and self.theme_manager:
                 self.theme_manager.apply_theme_to_widget(frame)
+            padronizar_botoes_container(frame)
             if hasattr(self, "_update_menu_buttons_colors"):
                 self._update_menu_buttons_colors()
             frame._opera_theme_token = theme_token
@@ -3763,6 +3896,8 @@ class OperaMenuApp(ctk.CTk):
             self._show_temporary_message(self._get_text("no_permission", page=self._translate_page_name(page_name)))
             return
         self._page_loading = True
+        op_start = time.time()
+        _trace_print(f"open_page('{page_name}') iniciado")
         try:
             if self._current_frame and self._current_frame.winfo_exists():
                 self._current_frame.place_forget()
@@ -3795,6 +3930,7 @@ class OperaMenuApp(ctk.CTk):
                 except Exception as _exc:
                     _dprint(f"⚠️ Erro ao atualizar página ao abrir '{page_name}': {_exc}")
                 self._apply_theme_to_frame_safely(frame)
+                self._inventory_page_buttons(frame, page_name)
                 self.current_page = page_name
                 self._current_frame = frame
                 try:
@@ -3808,10 +3944,12 @@ class OperaMenuApp(ctk.CTk):
                 except Exception:
                     pass
                 _dprint(f"✅ Página '{page_name}' carregada")
+                _trace_print(f"open_page('{page_name}') concluído em {time.time() - op_start:.2f}s")
         except Exception as e:
             messagebox.showerror(self._get_text("error"),
                                  f"Falha ao abrir {self._translate_page_name(page_name)}:\n{e}", parent=self)
             _dprint(f"❌ Erro: {e}")
+            _trace_print(f"❌ open_page('{page_name}') falhou após {time.time() - op_start:.2f}s: {e}")
         finally:
             self._page_loading = False
 
@@ -3904,6 +4042,8 @@ class OperaMenuApp(ctk.CTk):
             self.open_page("Dashboard")
 
     def _load_page_direct(self, page_name: str, reload_module: bool = False):
+        load_start = time.time()
+        _trace_print(f"_load_page_direct('{page_name}') iniciado")
         route = self.routes.get(page_name)
         if not route:
             raise ValueError(f"Rota não encontrada: {page_name}")
@@ -3999,7 +4139,9 @@ class OperaMenuApp(ctk.CTk):
 
         # 1) padrão principal do sistema
         try:
-            return _finalize_frame(page_class(master=self.content, sistema=self))
+            frame = _finalize_frame(page_class(master=self.content, sistema=self))
+            _trace_print(f"_load_page_direct('{page_name}') finalizado em {time.time() - load_start:.2f}s")
+            return frame
         except Exception as e:
             last_error = e
 
@@ -4059,6 +4201,7 @@ class OperaMenuApp(ctk.CTk):
             pass
 
         _dprint(f"❌ Falha ao instanciar '{page_name}': {last_error}")
+        _trace_print(f"❌ _load_page_direct('{page_name}') falhou após {time.time() - load_start:.2f}s: {last_error}")
         return fallback
 
     def reload_current_page(self):
@@ -4441,6 +4584,69 @@ def _show_database_setup_message_and_exit(message: str):
             pass
 
 
+def _install_runtime_debug_hooks():
+    """
+    Instala hooks de debug para facilitar diagnóstico em produção/local.
+    Não altera fluxo normal; apenas registra mais contexto quando algo falha.
+    """
+    def _log_callback_exception(exc, val, tb):
+        import traceback
+        _dprint("💥 [TK CALLBACK] Exceção em callback do tkinter/customtkinter")
+        _dprint("   Tipo:", getattr(exc, "__name__", str(exc)))
+        _dprint("   Valor:", val)
+        _dprint("   Traceback:")
+        _dprint("".join(traceback.format_exception(exc, val, tb)))
+
+    def _log_unhandled_exception(exc_type, exc_value, exc_tb):
+        import traceback
+        _dprint("💥 [UNHANDLED] Exceção não tratada no processo principal")
+        _dprint("   Tipo:", getattr(exc_type, "__name__", str(exc_type)))
+        _dprint("   Valor:", exc_value)
+        _dprint("   Traceback:")
+        _dprint("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
+
+    def _log_thread_exception(args):
+        import traceback
+        _dprint(f"💥 [THREAD] Exceção não tratada na thread '{getattr(args, 'thread', None)}'")
+        _dprint("   Tipo:", getattr(args.exc_type, "__name__", str(args.exc_type)))
+        _dprint("   Valor:", args.exc_value)
+        _dprint("   Traceback:")
+        _dprint("".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)))
+
+    sys.excepthook = _log_unhandled_exception
+    if hasattr(threading, "excepthook"):
+        threading.excepthook = _log_thread_exception
+    tk.Tk.report_callback_exception = staticmethod(_log_callback_exception)
+    _dprint("🪝 Hooks de debug de runtime instalados (tk/sys/thread).")
+
+
+def _attach_mainloop_watchdog(app, interval_ms: int = 30000):
+    """
+    Emite heartbeat periódico durante o mainloop para ajudar a identificar travamentos.
+    """
+    start_ts = time.time()
+
+    def _heartbeat():
+        elapsed = int(time.time() - start_ts)
+        try:
+            _dprint(
+                f"💓 [MAINLOOP] ativo há {elapsed}s | "
+                f"foco={app.focus_displayof()} | janela={app.state()}"
+            )
+        except Exception as heartbeat_err:
+            _dprint(f"⚠️ [MAINLOOP] Falha no heartbeat: {heartbeat_err}")
+        try:
+            app.after(interval_ms, _heartbeat)
+        except Exception as schedule_err:
+            _dprint(f"⚠️ [MAINLOOP] Não foi possível reagendar heartbeat: {schedule_err}")
+
+    try:
+        app.after(interval_ms, _heartbeat)
+        _dprint(f"🩺 Watchdog do mainloop ativado (intervalo={interval_ms}ms).")
+    except Exception as e:
+        _dprint(f"⚠️ Não foi possível ativar watchdog do mainloop: {e}")
+
+
 def main():
     ok, erro_banco = _startup_database_ready_for_main()
     if not ok:
@@ -4450,9 +4656,18 @@ def main():
 
     try:
         _dprint("🚀 Iniciando sistema OPERA...")
+        _install_runtime_debug_hooks()
         app = OperaMenuApp()
+        app.bind("<Map>", lambda _e: _dprint("🪟 [UI] Janela mapeada/exibida."))
+        app.bind("<Unmap>", lambda _e: _dprint("🪟 [UI] Janela minimizada/oculta."))
+        app.bind("<FocusIn>", lambda _e: _dprint("🎯 [UI] Aplicação recebeu foco."))
+        app.bind("<FocusOut>", lambda _e: _dprint("🎯 [UI] Aplicação perdeu foco."))
+        _attach_mainloop_watchdog(app, interval_ms=30000)
         _dprint("✅ Aplicação iniciada, entrando no mainloop...")
         app.mainloop()
+        _dprint("✅ Mainloop encerrado sem exceção.")
+    except KeyboardInterrupt:
+        _dprint("⏹️ Execução interrompida por KeyboardInterrupt (Ctrl+C).")
     except Exception as e:
         _dprint(f"💥 ERRO CRÍTICO: {e}")
         import traceback
