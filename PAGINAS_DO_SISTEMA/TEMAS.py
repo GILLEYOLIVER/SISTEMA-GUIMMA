@@ -280,6 +280,23 @@ def padronizar_treeviews_container(widget):
             LOGGER.error(f"Erro ao padronizar Treeviews do container: {e}")
 
 
+def padronizar_botoes_container(widget):
+    """
+    Compatibilidade legada: mantido apenas para evitar ImportError
+    em módulos antigos que ainda importam essa função.
+    Não aplica padronização automática de botões.
+    """
+    return None
+
+
+def padronizar_botao(widget: ctk.CTkButton):
+    """
+    Compatibilidade legada: mantido apenas para evitar que chamadas
+    antigas quebrem em runtime. Não altera estilo do botão.
+    """
+    return None
+
+
 def _normalizar_texto_botao(texto: str) -> str:
     """Normaliza texto do botão para comparação."""
     try:
