@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import importlib
 import json
@@ -182,7 +183,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         self.btn_row = ctk.CTkFrame(info, corner_radius=12)
         self.btn_row.pack(fill="x", padx=20, pady=(0, 12))
 
-        self.btn_local = ctk.CTkButton(
+        self.btn_local = BotaoPadronizado.criar_botao(
             self.btn_row,
             text=self._get_text("choose_local_folder"),
             command=self._alterar_fonte_local,
@@ -190,7 +191,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         )
         self._ui_refs["btn_local"] = self.btn_local
 
-        self.btn_drive = ctk.CTkButton(
+        self.btn_drive = BotaoPadronizado.criar_botao(
             self.btn_row,
             text=self._get_text("paste_drive_link"),
             command=self._alterar_fonte_drive,
@@ -209,7 +210,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         actions = ctk.CTkFrame(self, corner_radius=12)
         actions.pack(fill="x", padx=20, pady=10)
 
-        self._ui_refs["btn_scan"] = ctk.CTkButton(
+        self._ui_refs["btn_scan"] = BotaoPadronizado.criar_botao(
             actions,
             text=self._get_text("search_updates"),
             command=self._scan_current_source,
@@ -217,7 +218,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         )
         self._ui_refs["btn_scan"].pack(side="left", padx=20, pady=16)
 
-        self._ui_refs["btn_update_all"] = ctk.CTkButton(
+        self._ui_refs["btn_update_all"] = BotaoPadronizado.criar_botao(
             actions,
             text=self._get_text("update_all"),
             command=self._atualizar_tudo_do_pacote,
@@ -225,7 +226,7 @@ class AtualizarSistemaPage(ctk.CTkFrame):
         )
         self._ui_refs["btn_update_all"].pack(side="left", padx=(0, 20), pady=16)
 
-        self._ui_refs["btn_restore"] = ctk.CTkButton(
+        self._ui_refs["btn_restore"] = BotaoPadronizado.criar_botao(
             actions,
             text=self._get_text("restore_previous"),
             command=self._restaurar_ultima_versao,

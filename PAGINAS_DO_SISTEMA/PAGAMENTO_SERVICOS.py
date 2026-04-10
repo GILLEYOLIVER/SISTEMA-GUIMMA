@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 import csv
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ===================== Acesso ao PostgreSQL =====================
 try:
@@ -576,7 +577,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.busca_entry.grid(row=0, column=4, padx=4, pady=6)
         self.busca_entry.bind("<Return>", lambda e: self.pesquisar_finalizados())
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             filter_frame,
             text="🔍",
             width=40,
@@ -672,7 +673,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         defeitos_actions = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
         defeitos_actions.grid(row=1, column=0, sticky="ew", pady=(6, 0))
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             defeitos_actions,
             text="Marcar Pago",
             command=self._pagar_defeito,
@@ -1027,7 +1028,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         )
         self.adiantamento_desconto_entry.grid(row=1, column=1, padx=4, sticky="w")
         self.adiantamento_desconto_entry.bind("<Return>", lambda e: self.aplicar_desconto_adiantamento())
-        self.aplicar_desconto_btn = ctk.CTkButton(
+        self.aplicar_desconto_btn = BotaoPadronizado.criar_botao(
             desconto_frame,
             text="Aplicar",
             width=80,
@@ -1038,7 +1039,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             command=self.aplicar_desconto_adiantamento
         )
         self.aplicar_desconto_btn.grid(row=1, column=2, padx=4)
-        self.descontar_parcela_btn = ctk.CTkButton(
+        self.descontar_parcela_btn = BotaoPadronizado.criar_botao(
             adiant_frame,
             text="Descontar 1 parcela",
             width=160,
@@ -1113,7 +1114,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         actions = ctk.CTkFrame(right_panel, fg_color=self.main_bg)
         self.actions_frame = actions
         actions.grid(row=3, column=0, columnspan=3, sticky="e", pady=(4, 2), padx=2)
-        self.salvar_btn = ctk.CTkButton(
+        self.salvar_btn = BotaoPadronizado.criar_botao(
             actions,
             text="💾 Salvar",
             width=130,
@@ -1124,7 +1125,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             font=("Arial", 12),
             command=self.salvar_pagamento
         )
-        self.exportar_btn = ctk.CTkButton(
+        self.exportar_btn = BotaoPadronizado.criar_botao(
             actions,
             text="📤 Exportar CSV",
             width=130,
@@ -1135,7 +1136,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             font=("Arial", 12),
             command=self.exportar_csv
         )
-        self.recalcular_btn = ctk.CTkButton(
+        self.recalcular_btn = BotaoPadronizado.criar_botao(
             actions,
             text="🔁 Recalcular",
             width=120,
@@ -1146,7 +1147,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             font=("Arial", 12),
             command=self.recalcular
         )
-        self.imprimir_btn = ctk.CTkButton(
+        self.imprimir_btn = BotaoPadronizado.criar_botao(
             actions,
             text="🖨️ Imprimir",
             width=130,

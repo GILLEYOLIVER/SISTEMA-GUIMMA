@@ -1,4 +1,5 @@
 # DEF.py - Módulo completo de Ordem de Corte
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 import customtkinter as ctk
 import sys
 from tkinter import messagebox
@@ -398,7 +399,7 @@ class OrdemCorte(ctk.CTkFrame):
         self.busca_entry.pack(side="left", padx=(6, 6))
         self.busca_entry.bind("<Return>", lambda e: self.buscar_modelo())
 
-        buscar_btn = ctk.CTkButton(
+        buscar_btn = BotaoPadronizado.criar_botao(
             busca,
             text="Buscar",
             height=28,
@@ -481,7 +482,7 @@ class OrdemCorte(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         btn_frame.pack(fill="x", pady=(10, 12), padx=12)
 
-        imprimir_btn = ctk.CTkButton(
+        imprimir_btn = BotaoPadronizado.criar_botao(
             btn_frame,
             text="Imprimir Pré-visualização",
             command=self.previsualizar_impressao,
@@ -492,7 +493,7 @@ class OrdemCorte(ctk.CTkFrame):
         )
         imprimir_btn.pack(side="right", padx=8)
 
-        salvar_btn = ctk.CTkButton(
+        salvar_btn = BotaoPadronizado.criar_botao(
             btn_frame,
             text="Salvar Ordem",
             command=self.salvar_ordem,
@@ -538,7 +539,7 @@ class OrdemCorte(ctk.CTkFrame):
         )
         self.combo_grade.pack(side="left", padx=4)
 
-        btn_salvar_pref = ctk.CTkButton(
+        btn_salvar_pref = BotaoPadronizado.criar_botao(
             pref_frame,
             text="Salvar grade como preferência",
             command=self.salvar_preferencia_grade,
@@ -549,7 +550,7 @@ class OrdemCorte(ctk.CTkFrame):
         )
         btn_salvar_pref.pack(side="left", padx=6)
 
-        btn_excluir_pref = ctk.CTkButton(
+        btn_excluir_pref = BotaoPadronizado.criar_botao(
             pref_frame,
             text="Excluir preferência",
             command=self.excluir_preferencia_grade,

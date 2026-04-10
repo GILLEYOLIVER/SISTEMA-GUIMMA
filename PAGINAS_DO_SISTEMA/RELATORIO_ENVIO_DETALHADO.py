@@ -10,6 +10,7 @@ from datetime import datetime, date, timedelta
 import customtkinter as ctk
 import tkinter.ttk as ttk
 from tkinter import messagebox, filedialog
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # -------------------- Acesso ao PostgreSQL --------------------
 try:
@@ -612,7 +613,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         self.ent_busca.grid(row=0, column=7, padx=4, pady=8)
         self.ent_busca.bind("<Return>", lambda e: self._search())
 
-        self.btn_buscar = ctk.CTkButton(filt, text=self._t("🔍 Buscar"), width=120, command=self._search)
+        self.btn_buscar = BotaoPadronizado.criar_botao(filt, text=self._t("🔍 Buscar"), width=120, command=self._search)
         self.btn_buscar.grid(
             row=0, column=8, padx=8, pady=8, sticky="e"
         )
@@ -635,9 +636,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # Relatório
         box_rel = ctk.CTkFrame(self.tab_rel, fg_color=self.cor_primaria)
         box_rel.grid(row=0, column=0, sticky="nw", padx=10, pady=10)
-        self.btn_export_top = ctk.CTkButton(box_rel, text=self._t("📤 Exportar CSV (Aba atual)"), command=self._export_csv)
+        self.btn_export_top = BotaoPadronizado.criar_botao(box_rel, text=self._t("📤 Exportar CSV (Aba atual)"), command=self._export_csv)
         self.btn_export_top.grid(row=0, column=0, padx=6, pady=6)
-        self.btn_html_top = ctk.CTkButton(box_rel, text=self._t("🖨️ Relatório HTML"), command=self._report_html)
+        self.btn_html_top = BotaoPadronizado.criar_botao(box_rel, text=self._t("🖨️ Relatório HTML"), command=self._report_html)
         self.btn_html_top.grid(row=0, column=1, padx=6, pady=6)
 
         self._build_report_controls()
@@ -731,9 +732,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # botões
         btns = ctk.CTkFrame(self.tab_rel, fg_color=self.cor_primaria)
         btns.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
-        self.btn_export_bottom = ctk.CTkButton(btns, text=self._t("📤 Exportar CSV (Aba atual)"), command=self._export_csv)
+        self.btn_export_bottom = BotaoPadronizado.criar_botao(btns, text=self._t("📤 Exportar CSV (Aba atual)"), command=self._export_csv)
         self.btn_export_bottom.grid(row=0, column=0, padx=(0, 8))
-        self.btn_print_bottom = ctk.CTkButton(btns, text=self._t("🖨️ Imprimir (seções marcadas)"), command=self._report_html)
+        self.btn_print_bottom = BotaoPadronizado.criar_botao(btns, text=self._t("🖨️ Imprimir (seções marcadas)"), command=self._report_html)
         self.btn_print_bottom.grid(row=0, column=1, padx=(0, 8))
 
     def _apply_periodo(self):
@@ -1362,7 +1363,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # =========================
         def table_html(rows, cols, headers):
             if not rows:
-                return f"<div class='k'>{_html.escape(self._t("Sem dados nesta seção."))}</div>"
+                return f"<div class='k'>{_html.escape(self._t('Sem dados nesta seção.'))}</div>"
 
             # Se headers não bater com cols, usa cols como fallback para não desalinha
             if not headers or len(headers) != len(cols):

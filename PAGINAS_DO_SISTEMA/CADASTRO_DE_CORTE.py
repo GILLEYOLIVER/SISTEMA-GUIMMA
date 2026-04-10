@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from tkinter import ttk, messagebox
 import tkinter.font as tkfont
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import customtkinter as ctk
 from PIL import Image, ImageTk
@@ -609,7 +610,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         self.modelo_ocf_cb.pack(side="left", padx=5)
         self.modelo_ocf_cb.set(self._tr("select_model"))
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             sel_frame,
             text=self._tr("reload"),
             width=40,
@@ -778,7 +779,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         button_frame.pack(fill="x", pady=5)
 
-        self.btn_adicionar_tecido = ctk.CTkButton(
+        self.btn_adicionar_tecido = BotaoPadronizado.criar_botao(
             button_frame,
             text=self._tr("add_fabric"),
             command=self.adicionar_tecido,
@@ -789,7 +790,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         )
         self.btn_adicionar_tecido.pack(side="left", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             button_frame,
             text=self._tr("remove_fabric"),
             command=self.remover_tecido,
@@ -799,7 +800,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             font=("Arial", 12)
         ).pack(side="left", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             button_frame,
             text=self._tr("clear_table"),
             command=self.limpar_tabela,
@@ -984,7 +985,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         action_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         action_frame.pack(fill="x", pady=10)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             action_frame,
             text=self._tr("clear_all"),
             command=self.limpar_tudo,
@@ -994,7 +995,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             font=("Arial", 12)
         ).pack(side="right", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             action_frame,
             text=self._tr("save_order"),
             command=self.salvar_ordem,
@@ -1647,7 +1648,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         btn_frame.pack(fill="x", pady=(10, 20))
 
-        btn_confirmar = ctk.CTkButton(
+        btn_confirmar = BotaoPadronizado.criar_botao(
             btn_frame,
             text=self._tr("confirm"),
             command=lambda: self._confirmar_adicao_tecido(
@@ -1661,7 +1662,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         )
         btn_confirmar.pack(side="left", padx=5)
 
-        btn_cancelar = ctk.CTkButton(
+        btn_cancelar = BotaoPadronizado.criar_botao(
             btn_frame,
             text=self._tr("cancel"),
             command=dialog.destroy,
@@ -1710,7 +1711,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 tecido_tree.focus(itens[0])
                 on_tecido_select()
 
-        btn_buscar = ctk.CTkButton(search_frame, text=self._tr("search"), width=80, command=do_busca,
+        btn_buscar = BotaoPadronizado.criar_botao(search_frame, text=self._tr("search"), width=80, command=do_busca,
                                    fg_color=self.cor_primaria, hover_color=self.cor_hover,
                                    text_color=self.cor_texto)
         btn_buscar.pack(side="left", padx=5)

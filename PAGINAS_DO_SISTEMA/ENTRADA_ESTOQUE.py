@@ -7,6 +7,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 from contextlib import contextmanager
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 
@@ -738,7 +739,7 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         button_frame.pack(fill="x", padx=10, pady=(0, 6))
 
-        self._ui_refs["register_button"] = ctk.CTkButton(
+        self._ui_refs["register_button"] = BotaoPadronizado.criar_botao(
             button_frame,
             text=self._get_text("register_entry"),
             command=self.salvar_entrada,
@@ -750,7 +751,7 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         )
         self._ui_refs["register_button"].pack(side="left", padx=(0, 6))
 
-        self._ui_refs["clear_button"] = ctk.CTkButton(
+        self._ui_refs["clear_button"] = BotaoPadronizado.criar_botao(
             button_frame,
             text=self._get_text("clear_fields"),
             command=self.limpar_campos,
@@ -1121,7 +1122,7 @@ class EntradaEstoqueApp(ctk.CTkFrame):
         )
         pesquisa_entry.pack(side="left", fill="x", expand=True, padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             frame,
             text="🔍",
             width=30,

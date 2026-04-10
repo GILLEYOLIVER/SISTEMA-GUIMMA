@@ -16,6 +16,7 @@ import platform
 import subprocess
 from datetime import datetime
 from typing import Tuple, Optional
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 try:
     import tkinter as tk  # type: ignore
@@ -594,8 +595,8 @@ class ImprimirFichasTecnicasPage(ctk.CTkFrame):
         self.search_entry.grid(row=0, column=1, sticky="ew")
         self.search_entry.bind("<Return>", lambda e: self._pesquisar())
 
-        self.search_btn = ctk.CTkButton(search, text="Buscar", command=self._pesquisar, fg_color=cor_prim, hover_color=cor_hover); self.search_btn.grid(row=0, column=2, padx=(8, 0))
-        self.clear_btn = ctk.CTkButton(search, text="Limpar", command=self._limpar_busca); self.clear_btn.grid(row=0, column=3, padx=(8, 0))
+        self.search_btn = BotaoPadronizado.criar_botao(search, text="Buscar", command=self._pesquisar, fg_color=cor_prim, hover_color=cor_hover); self.search_btn.grid(row=0, column=2, padx=(8, 0))
+        self.clear_btn = BotaoPadronizado.criar_botao(search, text="Limpar", command=self._limpar_busca); self.clear_btn.grid(row=0, column=3, padx=(8, 0))
 
         table_frame = ctk.CTkFrame(self, fg_color="transparent")
         table_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 10))
@@ -619,9 +620,9 @@ class ImprimirFichasTecnicasPage(ctk.CTkFrame):
 
         actions = ctk.CTkFrame(self, fg_color="transparent")
         actions.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 12))
-        self.print_btn = ctk.CTkButton(actions, text="Imprimir Ficha", command=self._imprimir_selecionado, fg_color=cor_prim, hover_color=cor_hover); self.print_btn.pack(side="left", padx=(0, 8))
-        self.save_pdf_btn = ctk.CTkButton(actions, text="Salvar PDF...", command=self._salvar_pdf); self.save_pdf_btn.pack(side="left", padx=(0, 8))
-        self.refresh_btn = ctk.CTkButton(actions, text="Atualizar Lista", command=self._carregar_modelos); self.refresh_btn.pack(side="left", padx=(0, 8))
+        self.print_btn = BotaoPadronizado.criar_botao(actions, text="Imprimir Ficha", command=self._imprimir_selecionado, fg_color=cor_prim, hover_color=cor_hover); self.print_btn.pack(side="left", padx=(0, 8))
+        self.save_pdf_btn = BotaoPadronizado.criar_botao(actions, text="Salvar PDF...", command=self._salvar_pdf); self.save_pdf_btn.pack(side="left", padx=(0, 8))
+        self.refresh_btn = BotaoPadronizado.criar_botao(actions, text="Atualizar Lista", command=self._carregar_modelos); self.refresh_btn.pack(side="left", padx=(0, 8))
 
     # -------------------- Dados / ações --------------------
     def _carregar_modelos(self):

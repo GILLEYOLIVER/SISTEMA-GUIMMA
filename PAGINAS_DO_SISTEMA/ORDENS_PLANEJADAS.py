@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 from datetime import datetime, date, time
 from tkinter import ttk, messagebox
@@ -68,7 +69,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         barra.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 6))
         barra.grid_columnconfigure(20, weight=1)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             barra,
             text="Atualizar",
             width=135,
@@ -76,7 +77,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             **self._button_style(self.cor_primaria),
         ).grid(row=0, column=0, padx=(0, 8), pady=4)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             barra,
             text="Abrir na Nova Ordem",
             width=170,
@@ -143,7 +144,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         )
         self.filtro_modelo.grid(row=0, column=7, padx=(0, 10), pady=4)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             filtros,
             text="Filtrar",
             width=100,
@@ -151,7 +152,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             **self._button_style(self.cor_primaria),
         ).grid(row=0, column=8, padx=(0, 6), pady=4)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             filtros,
             text="Limpar Filtros",
             width=120,
@@ -175,7 +176,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         self.filtro_data_de.pack(side="left", padx=(0, 4))
         self.filtro_data_de.bind("<Button-1>", lambda e: self._abrir_calendario(self.filtro_data_de))
 
-        self.btn_data_de = ctk.CTkButton(
+        self.btn_data_de = BotaoPadronizado.criar_botao(
             frame_data_de,
             text="📅",
             width=34,
@@ -199,7 +200,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
         self.filtro_data_ate.pack(side="left", padx=(0, 4))
         self.filtro_data_ate.bind("<Button-1>", lambda e: self._abrir_calendario(self.filtro_data_ate))
 
-        self.btn_data_ate = ctk.CTkButton(
+        self.btn_data_ate = BotaoPadronizado.criar_botao(
             frame_data_ate,
             text="📅",
             width=34,
@@ -719,7 +720,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             popup.destroy()
             self.after(50, self._carregar_ops)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             rodape,
             text=self._get_text("clear"),
             width=90,
@@ -732,7 +733,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             border_width=0,
         ).pack(side="left")
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             rodape,
             text=self._get_text("today"),
             width=90,
@@ -745,7 +746,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             border_width=0,
         ).pack(side="left", padx=6)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             rodape,
             text=self._get_text("confirm"),
             width=110,

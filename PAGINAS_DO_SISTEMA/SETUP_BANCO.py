@@ -12,6 +12,7 @@ Funcionalidades:
 """
 
 from __future__ import annotations
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import json
 import os
@@ -551,13 +552,13 @@ class SetupBancoWindow:
         )
         self.opt_found.pack(fill="x", padx=16, pady=(0, 10))
 
-        self.btn_detect_local = ctk.CTkButton(left, text="Detectar PostgreSQL local", command=self._on_detect_local)
+        self.btn_detect_local = BotaoPadronizado.criar_botao(left, text="Detectar PostgreSQL local", command=self._on_detect_local)
         self.btn_detect_local.pack(fill="x", padx=16, pady=(0, 8))
 
-        self.btn_scan = ctk.CTkButton(left, text="Detectar servidores na rede", command=self._on_scan_network)
+        self.btn_scan = BotaoPadronizado.criar_botao(left, text="Detectar servidores na rede", command=self._on_scan_network)
         self.btn_scan.pack(fill="x", padx=16, pady=(0, 8))
 
-        self.btn_cancel_scan = ctk.CTkButton(
+        self.btn_cancel_scan = BotaoPadronizado.criar_botao(
             left, text="Cancelar scan",
             fg_color="#7a1f1f", hover_color="#9a2a2a",
             command=self._on_cancel_scan, state="disabled"
@@ -637,13 +638,13 @@ class SetupBancoWindow:
         btns = ctk.CTkFrame(footer, fg_color="transparent")
         btns.grid(row=0, column=1, sticky="e")
 
-        self.btn_detect = ctk.CTkButton(btns, text="Detectar porta", width=140, command=self._on_detect_port)
+        self.btn_detect = BotaoPadronizado.criar_botao(btns, text="Detectar porta", width=140, command=self._on_detect_port)
         self.btn_detect.pack(side="left", padx=(0, 10))
 
-        self.btn_test = ctk.CTkButton(btns, text="Testar conexão", width=140, command=self._on_test)
+        self.btn_test = BotaoPadronizado.criar_botao(btns, text="Testar conexão", width=140, command=self._on_test)
         self.btn_test.pack(side="left", padx=(0, 10))
 
-        self.btn_save = ctk.CTkButton(btns, text="Salvar e continuar", width=170, command=self._on_save, state="disabled")
+        self.btn_save = BotaoPadronizado.criar_botao(btns, text="Salvar e continuar", width=170, command=self._on_save, state="disabled")
         self.btn_save.pack(side="left")
 
         self.root.bind("<Escape>", lambda e: self._on_close())
