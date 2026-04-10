@@ -10,6 +10,7 @@ Tela PROFISSIONAL de Precificação de Produto (CustomTkinter).
 
 from __future__ import annotations
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ------------------------- IMPORTS BÁSICOS -------------------------
 import os, csv, math, datetime, webbrowser, sys
@@ -342,7 +343,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         self.lbl_desc = ctk.CTkLabel(header, text="-", anchor="w", text_color=self.cor_texto)
         self.lbl_desc.grid(row=0, column=3, padx=12, sticky="w")
 
-        ctk.CTkButton(header, text="Recarregar", command=self._on_model_change,
+        BotaoPadronizado.criar_botao(header, text="Recarregar", command=self._on_model_change,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=0, column=4, padx=6)
 
@@ -452,7 +453,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         r += 1
         self._entry(self.tab_custos, "Lote planejado (peças)", "lote", r);
         r += 1
-        ctk.CTkButton(self.tab_custos, text="Calcular", command=self._recalc,
+        BotaoPadronizado.criar_botao(self.tab_custos, text="Calcular", command=self._recalc,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=r, column=0, columnspan=2, sticky="ew", pady=8);
         r += 1
@@ -490,11 +491,11 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         self.cmb_round.grid(row=r, column=1, padx=6, pady=4, sticky="e");
         r += 1
 
-        ctk.CTkButton(self.tab_impostos, text="Salvar perfil como...", command=self._save_profile_as,
+        BotaoPadronizado.criar_botao(self.tab_impostos, text="Salvar perfil como...", command=self._save_profile_as,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=r, column=0, columnspan=2, sticky="ew", pady=8);
         r += 1
-        ctk.CTkButton(self.tab_impostos, text="Carregar perfil...", command=self._load_profile_pick,
+        BotaoPadronizado.criar_botao(self.tab_impostos, text="Carregar perfil...", command=self._load_profile_pick,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=r, column=0, columnspan=2, sticky="ew", pady=(0, 8));
         r += 1
@@ -516,7 +517,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         tgt = ctk.CTkFrame(self.tab_simul, fg_color=self.cor_fundo)
         tgt.grid(row=1, column=0, sticky="ew", padx=4, pady=4)
         self._entry(tgt, "Preço alvo do mercado (R$)", "preco_alvo", 0)
-        ctk.CTkButton(tgt, text="Analisar preço alvo", command=self._analisar_preco_alvo,
+        BotaoPadronizado.criar_botao(tgt, text="Analisar preço alvo", command=self._analisar_preco_alvo,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=0, column=2, padx=6)
         ctk.CTkLabel(tgt, text="Margem atingida (%)", text_color=self.cor_texto).grid(row=0, column=3, padx=(18, 6))
@@ -524,7 +525,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
                                                  font=("Arial", 14, "bold"), text_color=self.cor_texto)
         self._out_margem_atingida.grid(row=0, column=4, padx=6)
 
-        ctk.CTkButton(self.tab_simul, text="Exportar simulações CSV", command=self._export_csv,
+        BotaoPadronizado.criar_botao(self.tab_simul, text="Exportar simulações CSV", command=self._export_csv,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=2, column=0, sticky="ew", padx=4, pady=(0, 8))
 
@@ -542,15 +543,15 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         ctk.CTkLabel(rel_frame, text="Relatório de Pré-Custo", font=("Arial", 16, "bold"),
                      text_color=self.cor_texto).grid(row=0, column=0, columnspan=2, pady=(6, 10), sticky="w")
 
-        ctk.CTkButton(rel_frame, text="Gerar & Abrir HTML", command=self._gerar_relatorio,
+        BotaoPadronizado.criar_botao(rel_frame, text="Gerar & Abrir HTML", command=self._gerar_relatorio,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=1, column=0, padx=6, pady=4, sticky="ew")
 
-        ctk.CTkButton(rel_frame, text="Imprimir (Windows)", command=self._imprimir_windows,
+        BotaoPadronizado.criar_botao(rel_frame, text="Imprimir (Windows)", command=self._imprimir_windows,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=1, column=1, padx=6, pady=4, sticky="ew")
 
-        ctk.CTkButton(rel_frame, text="Copiar preço sugerido", command=self._copy_price,
+        BotaoPadronizado.criar_botao(rel_frame, text="Copiar preço sugerido", command=self._copy_price,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).grid(row=2, column=0, columnspan=2, padx=6, pady=6, sticky="ew")
 

@@ -2,6 +2,7 @@
 # Relatório de Modelos Produzidos – compatível com MENU_PRINCIPAL
 
 from __future__ import annotations
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 from PAGINAS_DO_SISTEMA import TEMAS
 import csv
 from datetime import date, timedelta
@@ -211,7 +212,7 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
         acoes = ctk.CTkFrame(filtros, fg_color=self.cor_fundo)
         acoes.pack(side="right", padx=10, pady=10)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             acoes,
             text="🔍 Buscar",
             fg_color=self.cor_primaria,
@@ -221,7 +222,7 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             width=120,
         ).pack(side="left", padx=6)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             acoes,
             text="⬇️ Exportar CSV",
             fg_color=self.cor_destaque,

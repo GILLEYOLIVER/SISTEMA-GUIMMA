@@ -6,6 +6,7 @@ import os
 import webbrowser
 import tempfile
 from datetime import datetime
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -257,7 +258,7 @@ class EnvioCortes(ctk.CTkFrame):
         self.busca_entry.pack(side="left")
         self.busca_entry.bind("<Return>", lambda e: self.buscar_cortes())
 
-        self._ui_refs["btn_search"] = ctk.CTkButton(linha, text=self._get_text("search_button"), width=80, height=26, command=self.buscar_cortes,
+        self._ui_refs["btn_search"] = BotaoPadronizado.criar_botao(linha, text=self._get_text("search_button"), width=80, height=26, command=self.buscar_cortes,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto)
         self._ui_refs["btn_search"].pack(side="left", padx=6)
@@ -449,7 +450,7 @@ class EnvioCortes(ctk.CTkFrame):
                                            border_color=self.cor_borda, text_color=self.cor_texto)
         self.previsao_entry.pack(side="left", padx=(4, 0))
 
-        ctk.CTkButton(l1, text="📅", width=36, command=lambda: self._abrir_calendario(self.previsao_entry),
+        BotaoPadronizado.criar_botao(l1, text="📅", width=36, command=lambda: self._abrir_calendario(self.previsao_entry),
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=(6, 4))
 
@@ -616,19 +617,19 @@ class EnvioCortes(ctk.CTkFrame):
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         botoes.pack(fill="x", pady=(6, 8))
 
-        ctk.CTkButton(botoes, text="Confirmar Envio", width=160, command=self.confirmar_envio,
+        BotaoPadronizado.criar_botao(botoes, text="Confirmar Envio", width=160, command=self.confirmar_envio,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Pré-visualizar PDF", width=150, command=self.preview_impressao,
+        BotaoPadronizado.criar_botao(botoes, text="Pré-visualizar PDF", width=150, command=self.preview_impressao,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Exportar PDF", width=140, command=self.exportar_pdf,
+        BotaoPadronizado.criar_botao(botoes, text="Exportar PDF", width=140, command=self.exportar_pdf,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Limpar", width=120, command=self._limpar,
+        BotaoPadronizado.criar_botao(botoes, text="Limpar", width=120, command=self._limpar,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
@@ -668,7 +669,7 @@ class EnvioCortes(ctk.CTkFrame):
                      fg_color=self.cor_terciaria, border_color=self.cor_borda, text_color=self.cor_texto).pack(
             side="left", padx=4)
 
-        ctk.CTkButton(lp, text="Registrar", width=100, command=self._registrar_piloto,
+        BotaoPadronizado.criar_botao(lp, text="Registrar", width=100, command=self._registrar_piloto,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=6)
 
@@ -1572,9 +1573,9 @@ class EnvioCortes(ctk.CTkFrame):
         ]
 
         lbl_mes = ctk.CTkLabel(nav, text=f"{meses_pt[mes]} {ano}", font=("Arial", 14))
-        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        BotaoPadronizado.criar_botao(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
-        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        BotaoPadronizado.criar_botao(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         # Dias da semana
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
@@ -1607,7 +1608,7 @@ class EnvioCortes(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = ctk.CTkButton(
+                    btn = BotaoPadronizado.criar_botao(
                         frame_dias,
                         text=str(dia),
                         width=30,
@@ -2902,7 +2903,7 @@ class EnvioCortes(ctk.CTkFrame):
             resultado["valor"] = valor
             dialog.destroy()
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes,
             text="Sim",
             command=lambda: _finalizar(True),
@@ -2911,7 +2912,7 @@ class EnvioCortes(ctk.CTkFrame):
             text_color=self.cor_texto,
         ).pack(fill="x", pady=4)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes,
             text="Não",
             command=lambda: _finalizar(False),
@@ -2920,7 +2921,7 @@ class EnvioCortes(ctk.CTkFrame):
             text_color=self.cor_texto,
         ).pack(fill="x", pady=4)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes,
             text="Cancelar",
             command=lambda: _finalizar(None),

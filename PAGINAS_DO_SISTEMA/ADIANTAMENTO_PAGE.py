@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 import sys
 import subprocess
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ---- Banco de dados (PostgreSQL) ----
 try:
@@ -347,7 +348,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         self.entry_codigo_modelo.bind("<Return>", lambda e: self.buscar_cortes())
         self._ui_refs["search_entry"] = self.entry_codigo_modelo
 
-        self.btn_buscar = ctk.CTkButton(
+        self.btn_buscar = BotaoPadronizado.criar_botao(
             search_frame,
             text=self._get_text("search_button"),
             command=self.buscar_cortes,
@@ -537,7 +538,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         btn_frame.grid(row=3, column=0, sticky="e", pady=(10, 0))
 
-        self.btn_imprimir = ctk.CTkButton(
+        self.btn_imprimir = BotaoPadronizado.criar_botao(
             btn_frame,
             text=self._get_text("print_receipt"),
             command=self.imprimir_comprovante,
@@ -551,7 +552,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         self.btn_imprimir.pack(side="left", padx=5)
         self._ui_refs["print_button"] = self.btn_imprimir
 
-        self.btn_salvar = ctk.CTkButton(
+        self.btn_salvar = BotaoPadronizado.criar_botao(
             btn_frame,
             text=self._get_text("register_advancement"),
             command=self.registrar_adiantamento,
@@ -565,7 +566,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         self.btn_salvar.pack(side="left", padx=5)
         self._ui_refs["save_button"] = self.btn_salvar
 
-        self.btn_limpar = ctk.CTkButton(
+        self.btn_limpar = BotaoPadronizado.criar_botao(
             btn_frame,
             text=self._get_text("clear"),
             command=self.limpar_campos,

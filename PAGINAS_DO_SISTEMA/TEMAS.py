@@ -294,7 +294,7 @@ def padronizar_botoes_container(widget):
 
 
 def padronizar_botao(widget: ctk.CTkButton):
-    """Aplica padrão de cores a um botão baseado no texto."""
+    """Aplica padrão único inspirado nos botões de rodapé da NOVA_ORDEM."""
     try:
         texto = widget.cget("text")
         if not texto:
@@ -308,30 +308,32 @@ def padronizar_botao(widget: ctk.CTkButton):
 
         if any(chave in texto_norm for chave in negativos):
             estilo = {
-                "fg_color": "#FA0000",
-                "hover_color": "#7A0101",
-                "text_color": "#000000",
+                "fg_color": "#C62828",
+                "hover_color": ajustar_hover("#C62828", 0.76),
+                "text_color": "#FFFFFF",
                 "text_color_hover": "#FFFFFF",
             }
         elif any(chave in texto_norm for chave in positivos):
             estilo = {
-                "fg_color": "#1B8305",
-                "hover_color": "#2A671F",
-                "text_color": "#000000",
+                # referência: botão "Salvar Ordem" (NOVA_ORDEM.py)
+                "fg_color": "#2E7D32",
+                "hover_color": ajustar_hover("#2E7D32", 0.76),
+                "text_color": "#FFFFFF",
                 "text_color_hover": "#FFFFFF",
             }
         elif any(chave in texto_norm for chave in destaques):
             estilo = {
-                "fg_color": "#FF5C00",
-                "hover_color": "#6E2800",
-                "text_color": "#000000",
+                # referência: botão "Imprimir Pré-visualização" (NOVA_ORDEM.py)
+                "fg_color": "#4A90E2",
+                "hover_color": ajustar_hover("#4A90E2", 0.76),
+                "text_color": "#FFFFFF",
                 "text_color_hover": "#FFFFFF",
             }
         else:
             estilo = {
-                "fg_color": "#7AB8F5",
-                "hover_color": "#5A9BDF",
-                "text_color": "#000000",
+                "fg_color": "#4A90E2",
+                "hover_color": "#357ABD",
+                "text_color": "#FFFFFF",
                 "text_color_hover": "#FFFFFF",
             }
 
@@ -340,6 +342,9 @@ def padronizar_botao(widget: ctk.CTkButton):
             hover_color=estilo["hover_color"],
             text_color=estilo["text_color"],
             border_width=0,
+            corner_radius=8,
+            height=32,
+            font=("Arial", 12, "bold"),
         )
         _aplicar_hover_texto_botao(widget, estilo["text_color"], estilo["text_color_hover"])
     except Exception:
@@ -375,8 +380,9 @@ def _aplicar_hover_texto_botao(widget: ctk.CTkButton, normal: str, hover: str):
         except Exception:
             pass
 
-    widget.bind("<Enter>", on_enter)
-    widget.bind("<Leave>", on_leave)
+    # add="+" evita sobrescrever handlers internos do CustomTkinter (hover visual)
+    widget.bind("<Enter>", on_enter, add="+")
+    widget.bind("<Leave>", on_leave, add="+")
     widget._opera_hover_texto = True
 
 
@@ -775,6 +781,20 @@ class ModuloPaletas:
 
 class BotaoPadronizado:
     @staticmethod
+    def _resolver_tipo_por_texto(texto: str) -> str:
+        texto_norm = _normalizar_texto_botao(texto)
+        negativos = ("excluir", "deletar", "remover", "apagar", "inativar", "cancelar")
+        positivos = ("salvar", "adicionar", "buscar", "cadastrar", "importar", "confirmar")
+        destaques = ("exportar", "imprimir", "pdf", "gerar pdf", "comprovante", "visualizar pdf", "editar")
+        if any(ch in texto_norm for ch in negativos):
+            return "excluir"
+        if any(ch in texto_norm for ch in positivos):
+            return "salvar"
+        if any(ch in texto_norm for ch in destaques):
+            return "imprimir"
+        return "padrao"
+
+    @staticmethod
     def criar_botao(master, texto=None, tipo="padrao", **kwargs):
         if texto is None and "text" in kwargs:
             texto = kwargs.pop("text")
@@ -782,7 +802,10 @@ class BotaoPadronizado:
             texto = ""
 
         config_padrao = {
-            "height": 32, "font": ("Arial", 12), "corner_radius": 8, "border_width": 0
+            "height": 30,
+            "font": ("Segoe UI", 12, "bold"),
+            "corner_radius": 8,
+            "border_width": 1,
         }
 
         app = BotaoPadronizado._get_app(master)
@@ -790,10 +813,10 @@ class BotaoPadronizado:
 
         config_tipo = {
             "padrao": {
-                "fg_color": cores_tema.get("secundaria", "#2C2C2C"),
-                "hover_color": cores_tema.get("hover", "#3A3A3A"),
-                "text_color": cores_tema.get("texto", "#FFFFFF"),
-                "border_color": cores_tema.get("borda", "#333333")
+                "fg_color": "#2563EB",
+                "hover_color": ajustar_hover("#2563EB", 0.76),
+                "text_color": "#FFFFFF",
+                "border_color": cores_tema.get("borda", "#334155"),
             }
         }
 
@@ -801,12 +824,36 @@ class BotaoPadronizado:
             cor_especifica = cores_tema.get(tipo_btn, cor_padrao)
             config_tipo[tipo_btn.replace("botao_", "")] = {
                 "fg_color": cor_especifica,
-                "hover_color": ajustar_hover(cor_especifica),
+                "hover_color": ajustar_hover(cor_especifica, 0.76),
                 "text_color": get_contraste_texto(cor_especifica),
-                "border_color": ajustar_hover(cor_especifica, 0.7)
+                "border_color": ajustar_hover(cor_especifica, 0.7),
             }
 
-        config_final = {**config_padrao, **config_tipo.get(tipo, config_tipo["padrao"]), **kwargs}
+        # Modo padrão do sistema: força padronização e ignora overrides locais de estilo.
+        forcar_padrao = bool(kwargs.pop("forcar_padrao", True))
+        if forcar_padrao:
+            tipo_efetivo = BotaoPadronizado._resolver_tipo_por_texto(texto) if tipo == "padrao" else tipo
+            kwargs.pop("fg_color", None)
+            kwargs.pop("hover_color", None)
+            kwargs.pop("text_color", None)
+            kwargs.pop("border_color", None)
+            kwargs.pop("font", None)
+            kwargs.pop("height", None)
+            kwargs.pop("corner_radius", None)
+            kwargs.pop("border_width", None)
+        else:
+            tipo_efetivo = tipo
+            # Se não forçar padrão e houver fg custom, mantém coerência de hover/texto/borda.
+            if "fg_color" in kwargs:
+                fg_custom = kwargs.get("fg_color")
+                if "hover_color" not in kwargs:
+                    kwargs["hover_color"] = ajustar_hover(fg_custom, 0.76)
+                if "text_color" not in kwargs:
+                    kwargs["text_color"] = get_contraste_texto(fg_custom)
+                if "border_color" not in kwargs:
+                    kwargs["border_color"] = ajustar_hover(fg_custom, 0.7)
+
+        config_final = {**config_padrao, **config_tipo.get(tipo_efetivo, config_tipo["padrao"]), **kwargs}
         return ctk.CTkButton(master, text=texto, **config_final)
 
     @staticmethod
