@@ -4,6 +4,7 @@ RECIBOS_PAGAMENTOS.py
 Página para visualizar e organizar recibos de pagamentos salvos em disco.
 """
 from __future__ import annotations
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import os
 import re
@@ -190,7 +191,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
 
         # Botão Atualizar (AZUL)
         btn_atualizar_cor = CORES_BOTOES['atualizar']
-        self.btn_atualizar = ctk.CTkButton(
+        self.btn_atualizar = BotaoPadronizado.criar_botao(
             toolbar,
             text="🔄 Atualizar",
             command=self._load_receipts,
@@ -207,7 +208,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
 
         # Botão Imprimir (VERDE)
         btn_imprimir_cor = CORES_BOTOES['imprimir']
-        self.btn_imprimir = ctk.CTkButton(
+        self.btn_imprimir = BotaoPadronizado.criar_botao(
             toolbar,
             text="🖨️ Imprimir",
             command=self._imprimir_selecionado,
@@ -224,7 +225,7 @@ class RecibosPagamentosPage(ctk.CTkFrame):
 
         # Botão Exportar (LARANJA)
         btn_exportar_cor = CORES_BOTOES['exportar']
-        self.btn_exportar = ctk.CTkButton(
+        self.btn_exportar = BotaoPadronizado.criar_botao(
             toolbar,
             text="📤 Exportar",
             command=self._exportar_selecionado,
@@ -634,7 +635,7 @@ if __name__ == "__main__":
         command=_on_tema_change
     ).pack(side="left", padx=10)
 
-    ctk.CTkButton(
+    BotaoPadronizado.criar_botao(
         topbar,
         text="Recarregar página",
         command=_on_tema_change

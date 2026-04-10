@@ -14,6 +14,7 @@ from typing import Dict, List, Any
 import customtkinter as ctk
 from PAGINAS_DO_SISTEMA import TEMAS
 from tkinter import ttk, messagebox, filedialog
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ---------- Acesso PG ----------
 try:
@@ -433,7 +434,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
                                       text_color=self.cor_texto_entry,
                                       textvariable=self.ini_var)
         self.ini_entry.pack(side="left", padx=5)
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             periodo_frame,
             text="📅",
             width=28,
@@ -455,7 +456,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
                                       text_color=self.cor_texto_entry,
                                       textvariable=self.fim_var)
         self.fim_entry.pack(side="left", padx=5)
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             periodo_frame,
             text="📅",
             width=28,
@@ -499,7 +500,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self._ui_refs["service_combo"] = serv_combo
 
         # Botão buscar
-        buscar_btn = ctk.CTkButton(prestador_frame, text=self._get_text("search"), width=100,
+        buscar_btn = BotaoPadronizado.criar_botao(prestador_frame, text=self._get_text("search"), width=100,
                                    command=self._search,
                                    fg_color=self.cor_primaria,
                                    hover_color=self.cor_hover,
@@ -597,7 +598,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
         action_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         action_frame.pack(fill="x", pady=10)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             action_frame,
             text=self._get_text("export_csv"),
             command=self._export_csv,
@@ -609,7 +610,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
             height=35
         ).pack(side="right", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             action_frame,
             text=self._get_text("report"),
             command=self._generate_report,
@@ -819,9 +820,9 @@ class HistoricoServicosPage(ctk.CTkFrame):
         nav.pack(fill="x", padx=10, pady=5)
 
         lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
-        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        BotaoPadronizado.criar_botao(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
-        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        BotaoPadronizado.criar_botao(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
@@ -853,7 +854,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = ctk.CTkButton(
+                    btn = BotaoPadronizado.criar_botao(
                         frame_dias,
                         text=str(dia),
                         width=30,
