@@ -331,8 +331,8 @@ class FechamentoMensalPage(ctk.CTkFrame):
                         c.configure(fg_color=self.theme.cor_secundaria, text_color=self.theme.cor_texto,
                                     button_color=self.theme.cor_destaque, border_color=self.theme.cor_borda)
                     elif isinstance(c, ctk.CTkButton):
-                        txt = (c.cget("text") or "").lower()
-                        c.configure(fg_color=self.theme.cor_destaque, hover_color=self.theme.cor_hover)
+                        # Mantém aparência definida por BotaoPadronizado
+                        c.configure(border_color=self.theme.cor_borda)
                 except Exception: pass
                 walk(c)
         walk(self)
