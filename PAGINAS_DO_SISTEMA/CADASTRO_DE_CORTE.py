@@ -982,18 +982,11 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         # =========================
         # BOTÕES FINAIS
         # =========================
+        # =========================
+        # BOTÕES FINAIS
+        # =========================
         action_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         action_frame.pack(fill="x", pady=10)
-
-        BotaoPadronizado.criar_botao(
-            action_frame,
-            text=self._tr("clear_all"),
-            command=self.limpar_tudo,
-            fg_color=self.cor_secundaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
-            font=("Arial", 12)
-        ).pack(side="right", padx=5)
 
         BotaoPadronizado.criar_botao(
             action_frame,
@@ -1003,7 +996,17 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
             font=("Arial", 14, "bold")
-        ).pack(side="right", padx=5)
+        ).pack(side="left", padx=5)
+
+        BotaoPadronizado.criar_botao(
+            action_frame,
+            text=self._tr("clear_all"),
+            command=self.limpar_tudo,
+            fg_color=self.cor_secundaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            font=("Arial", 12)
+        ).pack(side="left", padx=5)
 
         # =========================
         # EVENTOS

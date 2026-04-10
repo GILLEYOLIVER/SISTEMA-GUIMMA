@@ -883,3 +883,5 @@ AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tag
 2026-04-06 15:50:08 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Acabamento: inicialização OK
 2026-04-06 23:38:51 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
 2026-04-06 23:39:57 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-04-10 15:42:25 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-04-10 15:42:35 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.

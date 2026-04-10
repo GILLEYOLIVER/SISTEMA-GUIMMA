@@ -1527,71 +1527,72 @@ class CadastroModelosApp(ctk.CTkFrame):
                       font=("Arial", 12)).pack(side="left", padx=5)
 
     def _create_action_buttons(self, parent):
-        """Cria os botões de ação na parte inferior - VERSÃO COMPACTA."""
-        btn_frame = ctk.CTkFrame(parent, fg_color="transparent", height=35)  # Altura fixa
-        btn_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=2)  # Menos padding
-        btn_frame.pack_propagate(False)
+        """Cria os botões de ação inferiores alinhados à esquerda."""
+        btn_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        btn_frame.grid(row=99, column=0, columnspan=10, sticky="w", padx=10, pady=10)
 
-        # Configurar colunas para alinhar os botões à direita
-        btn_frame.grid_columnconfigure(0, weight=1)
-        btn_frame.grid_columnconfigure(1, weight=0)
-        btn_frame.grid_columnconfigure(2, weight=0)
-        btn_frame.grid_columnconfigure(3, weight=0)
-        btn_frame.grid_columnconfigure(4, weight=0)
+        for i in range(5):
+            btn_frame.grid_columnconfigure(i, weight=0)
 
-        # Botão Novo Modelo - MAIS COMPACTO
-        # Botão Novo Modelo - MAIS COMPACTO com cores dinâmicas
-        _cor_btn = getattr(self.sistema, 'cor_primaria', '#007BFF')
         BotaoPadronizado.criar_botao(
             btn_frame,
             text=self._get_text("new"),
             command=self.novo_cadastro,
-            fg_color=_cor_btn,
-            hover_color=self._ajustar_hover(_cor_btn),
-            text_color=get_contraste_texto(_cor_btn),
-            font=("Arial", 10),  # Fonte menor
-            width=70,  # Largura reduzida
-            height=26  # Altura reduzida
-        ).grid(row=0, column=1, padx=2, sticky="e")
+            fg_color=getattr(self.sistema, "cor_secundaria", "#6C757D"),
+            hover_color=ajustar_hover(getattr(self.sistema, "cor_secundaria", "#6C757D")),
+            text_color=get_contraste_texto(getattr(self.sistema, "cor_secundaria", "#6C757D")),
+            font=("Arial", 10),
+            width=90,
+            height=28
+        ).grid(row=0, column=0, padx=(0, 4), sticky="w")
 
-        # Botão Gerar PDF - MAIS COMPACTO com cores dinâmicas
         BotaoPadronizado.criar_botao(
             btn_frame,
-            text=self._get_text("pdf"),
+            text=self._get_text("print_pdf"),
             command=self.on_click_imprimir,
-            fg_color=_cor_btn,
-            hover_color=self._ajustar_hover(_cor_btn),
-            text_color=get_contraste_texto(_cor_btn),
+            fg_color=getattr(self.sistema, "cor_primaria", "#007BFF"),
+            hover_color=ajustar_hover(getattr(self.sistema, "cor_primaria", "#007BFF")),
+            text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
             font=("Arial", 10),
-            width=70,
-            height=26
-        ).grid(row=0, column=2, padx=2, sticky="e")
+            width=90,
+            height=28
+        ).grid(row=0, column=1, padx=4, sticky="w")
 
-        # Botão Exportar - MAIS COMPACTO
         BotaoPadronizado.criar_botao(
             btn_frame,
             text=self._get_text("export"),
             command=self.exportar_cadastro,
-            fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'),
-            hover_color="#ff3333",
-            text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
+            fg_color=getattr(self.sistema, "cor_destaque", "#FFC107"),
+            hover_color=ajustar_hover(getattr(self.sistema, "cor_destaque", "#FFC107")),
+            text_color=get_contraste_texto(getattr(self.sistema, "cor_destaque", "#FFC107")),
             font=("Arial", 10),
-            width=70,
-            height=26
-        ).grid(row=0, column=3, padx=2, sticky="e")
+            width=90,
+            height=28
+        ).grid(row=0, column=2, padx=4, sticky="w")
 
-        # Botão Salvar (no canto inferior direito) - MAIS COMPACTO
         BotaoPadronizado.criar_botao(
             btn_frame,
             text=self._get_text("save"),
             command=self.salvar_cadastro,
-            fg_color=getattr(self.sistema, 'cor_sucesso', '#28A745'),
-            hover_color="#2ECC71",
-            text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
+            fg_color=getattr(self.sistema, "cor_sucesso", "#28A745"),
+            hover_color=ajustar_hover(getattr(self.sistema, "cor_sucesso", "#28A745")),
+            text_color=get_contraste_texto(getattr(self.sistema, "cor_sucesso", "#28A745")),
             font=("Arial", 10, "bold"),
-            width=70,
-            height=26
-        ).grid(row=0, column=4, padx=2, sticky="e")
+            width=90,
+            height=28
+        ).grid(row=0, column=3, padx=4, sticky="w")
+
+        BotaoPadronizado.criar_botao(
+            btn_frame,
+            text=self._get_text("cancel"),
+            command=self.sair,
+            fg_color=getattr(self.sistema, "cor_alerta", "#DC3545"),
+            hover_color=ajustar_hover(getattr(self.sistema, "cor_alerta", "#DC3545")),
+            text_color=get_contraste_texto(getattr(self.sistema, "cor_alerta", "#DC3545")),
+            font=("Arial", 10),
+            width=90,
+            height=28
+        ).grid(row=0, column=4, padx=(4, 0), sticky="w")
 
     def _initialize_data(self):
         """Inicializa dados e atualiza tabelas."""

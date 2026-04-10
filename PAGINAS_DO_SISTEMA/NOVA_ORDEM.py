@@ -322,6 +322,26 @@ class OrdemCorte(ctk.CTkFrame):
         self._op_planejada_data = None
         self.after(100, self.carregar_modelos_combo)
 
+    def _ml_translate(self, text):
+        if text is None or not isinstance(text, str) or not text:
+            return text
+        lang = getattr(getattr(self, "sistema", None), "idioma_atual", "pt_BR") or "pt_BR"
+        mapping = getattr(self.__class__, "_TRANSLATIONS", {})
+        current = mapping.get(lang, mapping.get("pt_BR", {}))
+        if text in current:
+            return current[text]
+        for _, mp in mapping.items():
+            if text in mp:
+                canon = mp[text]
+                return current.get(canon, canon)
+        return text
+
+    def _ml_translate_list(self, values):
+        return [self._ml_translate(v) for v in values]
+
+    def _t(self, text):
+        return self._ml_translate(text)
+
     def _is_dark_color(self, hex_color):
         try:
             hex_color = hex_color.lstrip('#')
@@ -491,7 +511,7 @@ class OrdemCorte(ctk.CTkFrame):
             hover_color="#357ABD",
             text_color="#FFFFFF"
         )
-        imprimir_btn.pack(side="right", padx=8)
+        imprimir_btn.pack(side="left", padx=8)
 
         salvar_btn = BotaoPadronizado.criar_botao(
             btn_frame,
@@ -502,7 +522,7 @@ class OrdemCorte(ctk.CTkFrame):
             hover_color="#1B5E20",
             text_color="#FFFFFF"
         )
-        salvar_btn.pack(side="right", padx=8)
+        salvar_btn.pack(side="left", padx=8)
 
     def criar_grade_corte(self):
         grade_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
