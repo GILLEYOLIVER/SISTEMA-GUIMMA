@@ -839,7 +839,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             fg_color=self.cor_sucesso,
             hover_color=self._hover(self.cor_sucesso),
             text_color="white",
-        ).pack(side="right", padx=8, pady=8)
+        ).pack(side="left", padx=8, pady=8)
 
         def modelo_info():
             valor = (cmb_modelo.get() or "").strip()
@@ -2050,7 +2050,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             hover_color=btn_confirmar_hover,
             text_color=texto_btn,
             border_width=0,
-        ).pack(side="right")
+        ).pack(side="left")
 
         popup.bind("<Escape>", lambda e: popup.destroy())
 

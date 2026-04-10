@@ -608,7 +608,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
             font=("Arial", 12),
             width=140,
             height=35
-        ).pack(side="right", padx=5)
+        ).pack(side="left", padx=5)
 
         BotaoPadronizado.criar_botao(
             action_frame,
@@ -620,7 +620,7 @@ class HistoricoServicosPage(ctk.CTkFrame):
             font=("Arial", 12),
             width=140,
             height=35
-        ).pack(side="right", padx=5)
+        ).pack(side="left", padx=5)
 
     def _atualizar_cores_linhas(self):
         """Atualiza zebra/seleção das Treeviews no padrão único"""

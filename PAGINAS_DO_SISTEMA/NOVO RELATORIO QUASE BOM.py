@@ -3606,7 +3606,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             width=120,
             text_color=self.cor_texto
         )
-        btn_cancelar.pack(side="right", padx=5)
+        btn_cancelar.pack(side="left", padx=5)
         search_entry.focus_set()
 
     def remover_tecido(self):
