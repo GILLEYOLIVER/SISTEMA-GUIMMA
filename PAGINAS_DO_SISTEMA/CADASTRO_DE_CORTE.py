@@ -1674,7 +1674,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             width=120,
             text_color=self.cor_texto
         )
-        btn_cancelar.pack(side="left", padx=5)
+        btn_cancelar.pack(side="right", padx=5)
 
         def on_tecido_select(event=None):
             selecionado = tecido_tree.selection()

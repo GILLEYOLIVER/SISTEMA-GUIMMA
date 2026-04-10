@@ -315,44 +315,90 @@ class OrdensCorteImpressao(ctk.CTkFrame):
     #   Construção da interface
     # ----------------------------------------------------------
     def _build_ui(self):
-        self.grid_rowconfigure(1, weight=1)
+        # A linha que deve expandir é a da tabela, não a dos filtros
+        self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        # Cabeçalho
-        header = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
+        # =========================
+        # CABEÇALHO
+        # =========================
+        header = ctk.CTkFrame(
+            self,
+            fg_color=self.cor_fundo,
+            corner_radius=10,
+            border_width=1,
+            border_color=self.cor_borda
+        )
+        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 8))
         header.grid_columnconfigure(0, weight=1)
 
-        titulo = ctk.CTkLabel(
+        self.lbl_titulo = ctk.CTkLabel(
             header,
             text="REIMPRIMIR-ORDENS",
-            font=("Arial", 18, "bold"),
+            font=("Arial", 20, "bold"),
             text_color=self.cor_texto,
         )
-        titulo.grid(row=0, column=0, sticky="w")
+        self.lbl_titulo.grid(row=0, column=0, sticky="w", padx=12, pady=12)
 
-        # Filtros
-        filtros = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        filtros.grid(row=1, column=0, sticky="ew", padx=10)
-        for i in range(5):
-            filtros.grid_columnconfigure(i, weight=0)
-        filtros.grid_columnconfigure(5, weight=1)
+        # =========================
+        # ÁREA CENTRAL
+        # =========================
+        corpo = ctk.CTkFrame(self, fg_color="transparent")
+        corpo.grid(row=1, column=0, rowspan=2, sticky="nsew", padx=10, pady=(0, 0))
+        corpo.grid_rowconfigure(1, weight=1)
+        corpo.grid_columnconfigure(0, weight=1)
+
+        # =========================
+        # FILTROS
+        # =========================
+        filtros = ctk.CTkFrame(
+            corpo,
+            fg_color=self.cor_fundo,
+            corner_radius=10,
+            border_width=1,
+            border_color=self.cor_borda
+        )
+        filtros.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        filtros.grid_columnconfigure(0, weight=0)
+        filtros.grid_columnconfigure(1, weight=0)
+        filtros.grid_columnconfigure(2, weight=0)
+        filtros.grid_columnconfigure(3, weight=1)
+        filtros.grid_columnconfigure(4, weight=0)
+        filtros.grid_columnconfigure(5, weight=0)
+        filtros.grid_columnconfigure(6, weight=0)
 
         ctk.CTkLabel(
-            filtros, text="Código:", text_color=self.cor_texto, font=("Arial", 12)
-        ).grid(row=0, column=0, padx=(0, 4), pady=4, sticky="w")
+            filtros,
+            text="Código:",
+            text_color=self.cor_texto,
+            font=("Arial", 12, "bold")
+        ).grid(row=0, column=0, padx=(12, 6), pady=12, sticky="w")
+
         self.filtro_codigo = ctk.CTkEntry(
-            filtros, width=120, fg_color="white", text_color="black"
+            filtros,
+            width=140,
+            height=32,
+            fg_color="white",
+            text_color="black",
+            border_color=self.cor_borda
         )
-        self.filtro_codigo.grid(row=0, column=1, padx=(0, 10), pady=4, sticky="w")
+        self.filtro_codigo.grid(row=0, column=1, padx=(0, 12), pady=12, sticky="w")
 
         ctk.CTkLabel(
-            filtros, text="Descrição:", text_color=self.cor_texto, font=("Arial", 12)
-        ).grid(row=0, column=2, padx=(0, 4), pady=4, sticky="w")
+            filtros,
+            text="Descrição:",
+            text_color=self.cor_texto,
+            font=("Arial", 12, "bold")
+        ).grid(row=0, column=2, padx=(0, 6), pady=12, sticky="w")
+
         self.filtro_descricao = ctk.CTkEntry(
-            filtros, width=260, fg_color="white", text_color="black"
+            filtros,
+            height=32,
+            fg_color="white",
+            text_color="black",
+            border_color=self.cor_borda
         )
-        self.filtro_descricao.grid(row=0, column=3, padx=(0, 10), pady=4, sticky="w")
+        self.filtro_descricao.grid(row=0, column=3, padx=(0, 12), pady=12, sticky="ew")
 
         self.var_apenas_nao_impressas = tk.BooleanVar(value=False)
         if self.col_impresso:
@@ -366,7 +412,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
                 text_color=self.cor_texto,
                 command=self.atualizar_lista,
             )
-            self.chk_nao_impressas.grid(row=0, column=4, padx=(0, 10), pady=4, sticky="w")
+            self.chk_nao_impressas.grid(row=0, column=4, padx=(0, 12), pady=12, sticky="w")
         else:
             self.chk_nao_impressas = None
 
@@ -377,9 +423,10 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             fg_color=self.cor_selecao,
             hover_color=self.cor_hover,
             text_color="white",
-            width=90,
+            width=110,
+            height=32,
         )
-        btn_buscar.grid(row=0, column=5, padx=(0, 4), pady=4, sticky="e")
+        btn_buscar.grid(row=0, column=5, padx=(0, 8), pady=12, sticky="e")
 
         btn_limpar = BotaoPadronizado.criar_botao(
             filtros,
@@ -388,13 +435,22 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
-            width=90,
+            width=110,
+            height=32,
         )
-        btn_limpar.grid(row=0, column=6, padx=(4, 0), pady=4, sticky="e")
+        btn_limpar.grid(row=0, column=6, padx=(0, 12), pady=12, sticky="e")
 
-        # Tabela
-        frame_tabela = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        frame_tabela.grid(row=2, column=0, sticky="nsew", padx=10, pady=(5, 5))
+        # =========================
+        # TABELA
+        # =========================
+        frame_tabela = ctk.CTkFrame(
+            corpo,
+            fg_color=self.cor_fundo,
+            corner_radius=10,
+            border_width=1,
+            border_color=self.cor_borda
+        )
+        frame_tabela.grid(row=1, column=0, sticky="nsew")
         frame_tabela.grid_rowconfigure(0, weight=1)
         frame_tabela.grid_columnconfigure(0, weight=1)
 
@@ -408,14 +464,16 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             "Treeview",
             background="white",
             foreground="black",
-            rowheight=24,
+            rowheight=28,
             fieldbackground="white",
+            borderwidth=0,
         )
         style.configure(
             "Treeview.Heading",
             background=self.cor_primaria,
             foreground=self.cor_texto,
             font=("Arial", 11, "bold"),
+            relief="flat",
         )
         style.map("Treeview", background=[("selected", self.cor_selecao)])
 
@@ -425,46 +483,61 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             show="headings",
             selectmode="browse",
         )
+
         vsb = ttk.Scrollbar(frame_tabela, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=vsb.set)
+        hsb = ttk.Scrollbar(frame_tabela, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        vsb.grid(row=0, column=1, sticky="ns")
+        self.tree.grid(row=0, column=0, sticky="nsew", padx=(10, 0), pady=(10, 0))
+        vsb.grid(row=0, column=1, sticky="ns", pady=(10, 0))
+        hsb.grid(row=1, column=0, sticky="ew", padx=(10, 0), pady=(0, 10))
 
-        # Headings amigáveis
         for col in self._logical_cols:
             if col == "id":
                 texto = "ID"
-                largura = 60
+                largura = 70
+                anchor = "center"
             elif col == "codigo":
                 texto = "Código"
-                largura = 100
+                largura = 130
+                anchor = "center"
             elif col == "descricao":
                 texto = "Descrição"
-                largura = 260
+                largura = 420
+                anchor = "w"
             elif col == "data_final":
                 texto = "Data Final"
-                largura = 120
+                largura = 130
+                anchor = "center"
             elif col == "quantidade":
                 texto = "Quantidade"
-                largura = 110
+                largura = 120
+                anchor = "center"
             elif col == "impresso":
                 texto = "Impresso?"
-                largura = 90
+                largura = 100
+                anchor = "center"
             else:
                 texto = col
-                largura = 100
+                largura = 120
+                anchor = "center"
 
             self.tree.heading(col, text=texto)
-            self.tree.column(col, width=largura, anchor="center")
+            self.tree.column(col, width=largura, anchor=anchor)
 
         self.tree.bind("<Double-1>", self._on_double_click)
 
-        # Rodapé / Botões
-        rodape = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        rodape.grid(row=3, column=0, sticky="ew", padx=10, pady=(5, 10))
-        rodape.grid_columnconfigure(0, weight=1)
-        rodape.grid_columnconfigure(3, weight=0)
+        # =========================
+        # RODAPÉ
+        # =========================
+        rodape = ctk.CTkFrame(
+            self,
+            fg_color=self.cor_fundo,
+            corner_radius=10,
+            border_width=1,
+            border_color=self.cor_borda
+        )
+        rodape.grid(row=3, column=0, sticky="ew", padx=10, pady=(8, 10))
 
         self.lbl_total = ctk.CTkLabel(
             rodape,
@@ -472,7 +545,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             text_color=self.cor_texto,
             font=("Arial", 11),
         )
-        self.lbl_total.grid(row=0, column=0, sticky="w")
+        self.lbl_total.pack(side="left", padx=(12, 16), pady=10)
 
         btn_imprimir = BotaoPadronizado.criar_botao(
             rodape,
@@ -482,8 +555,9 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             hover_color=self.cor_hover,
             text_color="white",
             width=220,
+            height=34,
         )
-        btn_imprimir.grid(row=0, column=1, padx=8, pady=4, sticky="e")
+        btn_imprimir.pack(side="left", padx=6, pady=8)
 
         btn_atualizar = BotaoPadronizado.criar_botao(
             rodape,
@@ -493,8 +567,9 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
             width=150,
+            height=34,
         )
-        btn_atualizar.grid(row=0, column=2, padx=8, pady=4, sticky="e")
+        btn_atualizar.pack(side="left", padx=6, pady=8)
 
         btn_fechar = BotaoPadronizado.criar_botao(
             rodape,
@@ -504,8 +579,9 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             hover_color=self.cor_hover,
             text_color="white",
             width=120,
+            height=34,
         )
-        btn_fechar.grid(row=0, column=3, padx=0, pady=4, sticky="e")
+        btn_fechar.pack(side="left", padx=6, pady=8)
 
     # ----------------------------------------------------------
     #   Ações da interface

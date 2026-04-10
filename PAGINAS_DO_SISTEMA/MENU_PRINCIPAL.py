@@ -2176,6 +2176,8 @@ class OperaMenuApp(ctk.CTk):
 
     def _show_exit_dialog(self, titulo: str, mensagem: str) -> bool:
         resposta = {"ok": False}
+
+        dlg = None
         try:
             dlg = ctk.CTkToplevel(self)
             dlg.title(titulo)
@@ -2183,88 +2185,157 @@ class OperaMenuApp(ctk.CTk):
             dlg.resizable(False, False)
             dlg.grab_set()
             dlg.configure(fg_color=self.cor_fundo)
-            w, h = 460, 230
-            x = self.winfo_rootx() + max(20, (self.winfo_width() - w) // 2)
-            y = self.winfo_rooty() + max(20, (self.winfo_height() - h) // 2)
-            dlg.geometry(f"{w}x{h}+{x}+{y}")
 
-            card = ctk.CTkFrame(dlg, fg_color=self.cor_secundaria, corner_radius=12, border_width=1, border_color=self.cor_borda)
-            card.pack(fill="both", expand=True, padx=14, pady=14)
+            largura = 470
+            altura = 220
+            x = self.winfo_rootx() + max(20, (self.winfo_width() - largura) // 2)
+            y = self.winfo_rooty() + max(20, (self.winfo_height() - altura) // 2)
+            dlg.geometry(f"{largura}x{altura}+{x}+{y}")
+
+            card = ctk.CTkFrame(
+                dlg,
+                fg_color=self.cor_secundaria,
+                corner_radius=14,
+                border_width=1,
+                border_color=self.cor_borda
+            )
+            card.pack(fill="both", expand=True, padx=12, pady=12)
 
             header = ctk.CTkFrame(card, fg_color="transparent")
-            header.pack(fill="x", padx=18, pady=(16, 4))
+            header.pack(fill="x", padx=18, pady=(14, 6))
+
+            logo_renderizada = False
             try:
                 if os.path.exists(ICONE_SISTEMA):
                     img = Image.open(ICONE_SISTEMA).convert("RGBA")
-                    logo = ctk.CTkImage(light_image=img, dark_image=img, size=(26, 26))
+                    logo = ctk.CTkImage(light_image=img, dark_image=img, size=(22, 22))
                     dlg._exit_logo = logo
                     ctk.CTkLabel(header, image=logo, text="").pack(side="left", padx=(0, 8))
+                    logo_renderizada = True
             except Exception:
-                pass
+                logo_renderizada = False
+
+            if not logo_renderizada:
+                ctk.CTkLabel(
+                    header,
+                    text="◉",
+                    font=("Arial", 15, "bold"),
+                    text_color=self.cor_primaria
+                ).pack(side="left", padx=(0, 8))
 
             ctk.CTkLabel(
                 header,
                 text=titulo,
-                font=("Arial", 16, "bold"),
-                text_color=self.cor_texto,
+                font=("Arial", 15, "bold"),
+                text_color=self.cor_texto
             ).pack(side="left")
 
             ctk.CTkLabel(
                 card,
                 text=mensagem,
-                font=("Arial", 24, "bold"),
+                font=("Arial", 16, "bold"),
                 text_color=self.cor_texto,
-                wraplength=400,
-                justify="center",
-            ).pack(fill="x", padx=20, pady=(8, 8))
+                wraplength=390,
+                justify="center"
+            ).pack(fill="x", padx=20, pady=(18, 18))
 
-            ctk.CTkLabel(
-                card,
-                text=self._get_text("exit_title"),
-                font=("Arial", 12, "bold"),
-                text_color=self.cor_texto_secundario if hasattr(self, "cor_texto_secundario") else self.cor_texto,
-            ).pack(fill="x", padx=20, pady=(0, 18))
+            btn_frame = ctk.CTkFrame(card, fg_color="transparent")
+            btn_frame.pack(pady=(2, 14))
 
-            botoes = ctk.CTkFrame(card, fg_color="transparent")
-            botoes.pack(pady=(0, 16))
+            cor_nao = getattr(self, "cor_secundaria", "#D1D5DB")
+            cor_sim = getattr(self, "cor_primaria", "#2563EB")
+            cor_hover_sim = getattr(self, "cor_hover", "#1D4ED8")
 
-            def _set(v: bool):
-                resposta["ok"] = v
+            def _escurecer(cor, fator=0.92):
+                try:
+                    h = cor.lstrip("#")
+                    if len(h) == 3:
+                        h = "".join([c * 2 for c in h])
+                    r = max(0, min(255, int(int(h[0:2], 16) * fator)))
+                    g = max(0, min(255, int(int(h[2:4], 16) * fator)))
+                    b = max(0, min(255, int(int(h[4:6], 16) * fator)))
+                    return f"#{r:02X}{g:02X}{b:02X}"
+                except Exception:
+                    return cor
+
+            cor_hover_nao = _escurecer(cor_nao, 0.95)
+
+            try:
+                texto_nao = get_contraste_texto(cor_nao)
+            except Exception:
+                texto_nao = self.cor_texto
+
+            try:
+                texto_sim = get_contraste_texto(cor_sim)
+            except Exception:
+                texto_sim = "#FFFFFF"
+
+            def cancelar():
+                resposta["ok"] = False
+                try:
+                    dlg.grab_release()
+                except Exception:
+                    pass
                 dlg.destroy()
 
-            ctk.CTkButton(
-                botoes,
-                text=self._get_text("no"),
-                width=140,
-                fg_color=self._darker(self.cor_secundaria, 0.97),
-                hover_color=self._realcar_cor(self.cor_secundaria, 1.05),
-                text_color=self._contrast_text_for_color(self.cor_secundaria, fallback=self.cor_texto),
-                font=("Arial", 14, "bold"),
-                border_width=1,
-                border_color=self.cor_borda,
-                command=lambda: _set(False),
-            ).pack(side="left", padx=8)
-            ctk.CTkButton(
-                botoes,
-                text=self._get_text("yes"),
-                width=140,
-                fg_color="#dc2626",
-                hover_color="#b91c1c",
-                text_color="#FFFFFF",
-                border_width=1,
-                border_color=self.cor_borda,
-                font=("Arial", 14, "bold"),
-                command=lambda: _set(True),
-            ).pack(side="left", padx=8)
+            def confirmar():
+                resposta["ok"] = True
+                try:
+                    dlg.grab_release()
+                except Exception:
+                    pass
+                dlg.destroy()
 
-            dlg.protocol("WM_DELETE_WINDOW", lambda: _set(False))
-            self.wait_window(dlg)
-            return bool(resposta["ok"])
-        except Exception:
+            btn_nao = ctk.CTkButton(
+                btn_frame,
+                text=self._get_text("no"),
+                command=cancelar,
+                width=138,
+                height=34,
+                fg_color=cor_nao,
+                hover_color=cor_hover_nao,
+                text_color=texto_nao,
+                border_color=self.cor_borda,
+                border_width=1,
+                corner_radius=8
+            )
+            btn_nao.pack(side="left", padx=(0, 8))
+
+            btn_sim = ctk.CTkButton(
+                btn_frame,
+                text=self._get_text("yes"),
+                command=confirmar,
+                width=138,
+                height=34,
+                fg_color=cor_sim,
+                hover_color=cor_hover_sim,
+                text_color=texto_sim,
+                border_color=cor_sim,
+                border_width=1,
+                corner_radius=8
+            )
+            btn_sim.pack(side="left", padx=(8, 0))
+
+            dlg.bind("<Escape>", lambda e: cancelar())
+            dlg.bind("<Return>", lambda e: confirmar())
+            dlg.protocol("WM_DELETE_WINDOW", cancelar)
+
             try:
-                return messagebox.askyesno(titulo, mensagem, parent=self)
+                btn_nao.focus_force()
             except Exception:
-                return messagebox.askyesno(titulo, mensagem)
+                pass
+
+            dlg.wait_window()
+            return resposta["ok"]
+
+        except Exception as e:
+            try:
+                if dlg is not None and dlg.winfo_exists():
+                    dlg.destroy()
+            except Exception:
+                pass
+            print(f"[ERRO] Falha ao abrir diálogo de saída: {e}")
+            return False
 
     def destroy(self):
         if getattr(self, "_closing", False):

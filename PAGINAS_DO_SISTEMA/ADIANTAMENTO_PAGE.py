@@ -536,7 +536,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         self.label_data.grid(row=7, column=1, sticky="w", padx=5, pady=2)
 
         btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        btn_frame.grid(row=3, column=0, sticky="e", pady=(10, 0))
+        btn_frame.grid(row=3, column=0, sticky="w", pady=(10, 0))
 
         self.btn_imprimir = BotaoPadronizado.criar_botao(
             btn_frame,
@@ -549,7 +549,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             text_color=self.C("cor_texto"),
             border_color=self.C("cor_borda")
         )
-        self.btn_imprimir.pack(side="left", padx=5)
+        self.btn_imprimir.pack(side="left", padx=(0, 8))
         self._ui_refs["print_button"] = self.btn_imprimir
 
         self.btn_salvar = BotaoPadronizado.criar_botao(
@@ -563,7 +563,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             text_color=self.C("cor_texto"),
             border_color=self.C("cor_borda")
         )
-        self.btn_salvar.pack(side="left", padx=5)
+        self.btn_salvar.pack(side="left", padx=8)
         self._ui_refs["save_button"] = self.btn_salvar
 
         self.btn_limpar = BotaoPadronizado.criar_botao(
@@ -576,7 +576,7 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             text_color=self.C("cor_texto"),
             border_color=self.C("cor_borda")
         )
-        self.btn_limpar.pack(side="left", padx=5)
+        self.btn_limpar.pack(side="left", padx=(8, 0))
         self._ui_refs["clear_button"] = self.btn_limpar
 
         self._init_prestadores_ui()
