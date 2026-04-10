@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 import csv
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ===================== Acesso ao PostgreSQL =====================
 try:
@@ -487,13 +488,8 @@ class PagamentoModernUI(ctk.CTkFrame):
                 elif isinstance(w, ctk.CTkCheckBox) or isinstance(w, ctk.CTkSwitch):
                     w.configure(text_color=self.cor_texto)
                 elif isinstance(w, ctk.CTkButton):
-                    if w._fg_color == self.cor_adicionar or w._fg_color == self.cor_imprimir:
-                        # Manter cores específicas para botões de ação
-                        pass
-                    else:
-                        w.configure(fg_color=self.cor_primaria,
-                                    hover_color=self.cor_hover,
-                                    text_color=self.cor_texto)
+                    # Mantém estilo dos botões definido pelo BotaoPadronizado.
+                    w.configure(border_color=self.cor_borda)
             except Exception:
                 pass
 
@@ -576,14 +572,11 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.busca_entry.grid(row=0, column=4, padx=4, pady=6)
         self.busca_entry.bind("<Return>", lambda e: self.pesquisar_finalizados())
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             filter_frame,
             text="🔍",
             width=40,
             height=28,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             command=self.pesquisar_finalizados
         ).grid(row=0, column=5, padx=4, pady=6)
 
@@ -672,13 +665,10 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         defeitos_actions = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
         defeitos_actions.grid(row=1, column=0, sticky="ew", pady=(6, 0))
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             defeitos_actions,
             text="Marcar Pago",
             command=self._pagar_defeito,
-            fg_color=self.cor_sucesso,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             height=30,
             width=120
         ).pack(side="left", padx=4)
@@ -1027,25 +1017,19 @@ class PagamentoModernUI(ctk.CTkFrame):
         )
         self.adiantamento_desconto_entry.grid(row=1, column=1, padx=4, sticky="w")
         self.adiantamento_desconto_entry.bind("<Return>", lambda e: self.aplicar_desconto_adiantamento())
-        self.aplicar_desconto_btn = ctk.CTkButton(
+        self.aplicar_desconto_btn = BotaoPadronizado.criar_botao(
             desconto_frame,
             text="Aplicar",
             width=80,
             height=28,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             command=self.aplicar_desconto_adiantamento
         )
         self.aplicar_desconto_btn.grid(row=1, column=2, padx=4)
-        self.descontar_parcela_btn = ctk.CTkButton(
+        self.descontar_parcela_btn = BotaoPadronizado.criar_botao(
             adiant_frame,
             text="Descontar 1 parcela",
             width=160,
             height=28,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             command=self.descontar_parcela_adiantamento
         )
         self.descontar_parcela_btn.grid(row=6, column=0, columnspan=2, padx=8, pady=(2, 6))
@@ -1113,47 +1097,35 @@ class PagamentoModernUI(ctk.CTkFrame):
         actions = ctk.CTkFrame(right_panel, fg_color=self.main_bg)
         self.actions_frame = actions
         actions.grid(row=3, column=0, columnspan=3, sticky="e", pady=(4, 2), padx=2)
-        self.salvar_btn = ctk.CTkButton(
+        self.salvar_btn = BotaoPadronizado.criar_botao(
             actions,
             text="💾 Salvar",
             width=130,
             height=32,
-            fg_color=self.cor_adicionar,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.salvar_pagamento
         )
-        self.exportar_btn = ctk.CTkButton(
+        self.exportar_btn = BotaoPadronizado.criar_botao(
             actions,
             text="📤 Exportar CSV",
             width=130,
             height=32,
-            fg_color=self.cor_imprimir,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.exportar_csv
         )
-        self.recalcular_btn = ctk.CTkButton(
+        self.recalcular_btn = BotaoPadronizado.criar_botao(
             actions,
             text="🔁 Recalcular",
             width=120,
             height=32,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.recalcular
         )
-        self.imprimir_btn = ctk.CTkButton(
+        self.imprimir_btn = BotaoPadronizado.criar_botao(
             actions,
             text="🖨️ Imprimir",
             width=130,
             height=32,
-            fg_color=self.cor_imprimir,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.imprimir_recibo
         )
