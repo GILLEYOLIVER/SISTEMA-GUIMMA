@@ -757,7 +757,7 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             hover_color=btn_confirmar_hover,
             text_color=texto_btn,
             border_width=0,
-        ).pack(side="right")
+        ).pack(side="left")
 
         popup.bind("<Escape>", lambda e: popup.destroy())
 

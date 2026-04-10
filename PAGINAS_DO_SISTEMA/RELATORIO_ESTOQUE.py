@@ -2672,7 +2672,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             width=120,
             text_color=self.cor_texto
         )
-        btn_cancelar.pack(side="right", padx=5)
+        btn_cancelar.pack(side="left", padx=5)
 
         search_entry.focus_set()
 
@@ -4540,9 +4540,9 @@ def _opera_adicionar_tecido(self):
     btn_row = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
     btn_row.pack(fill="x", pady=(8, 0))
     BotaoPadronizado.criar_botao(btn_row, text=self._txt("add_item_confirm"),
-                  command=lambda: self._confirmar_adicao_tecido(dialog, tecido_tree)).pack(side="right", padx=5)
+                  command=lambda: self._confirmar_adicao_tecido(dialog, tecido_tree)).pack(side="left", padx=5)
     BotaoPadronizado.criar_botao(btn_row, text=self._txt("add_item_cancel"),
-                  command=dialog.destroy, fg_color=self.cor_secundaria, text_color=self.cor_texto).pack(side="right", padx=5)
+                  command=dialog.destroy, fg_color=self.cor_secundaria, text_color=self.cor_texto).pack(side="left", padx=5)
 
 def _opera_open_suggestions_window(self):
     win = ctk.CTkToplevel(self)
