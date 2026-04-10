@@ -280,77 +280,6 @@ def padronizar_treeviews_container(widget):
             LOGGER.error(f"Erro ao padronizar Treeviews do container: {e}")
 
 
-def padronizar_botoes_container(widget):
-    """Padroniza todos os botões de um container recursivamente."""
-    try:
-        if isinstance(widget, ctk.CTkButton):
-            padronizar_botao(widget)
-
-        for child in widget.winfo_children():
-            padronizar_botoes_container(child)
-    except Exception as e:
-        if LOGGER:
-            LOGGER.error(f"Erro ao padronizar botões: {e}")
-
-
-def padronizar_botao(widget: ctk.CTkButton):
-    """Aplica padrão único inspirado nos botões de rodapé da NOVA_ORDEM."""
-    try:
-        texto = widget.cget("text")
-        if not texto:
-            return
-
-        texto_norm = _normalizar_texto_botao(texto)
-
-        negativos = ("excluir", "deletar", "remover", "apagar", "inativar", "cancelar")
-        positivos = ("salvar", "adicionar", "buscar", "cadastrar", "importar", "confirmar")
-        destaques = ("exportar", "imprimir", "pdf", "gerar pdf", "comprovante", "visualizar pdf", "editar")
-
-        if any(chave in texto_norm for chave in negativos):
-            estilo = {
-                "fg_color": "#C62828",
-                "hover_color": ajustar_hover("#C62828", 0.76),
-                "text_color": "#FFFFFF",
-                "text_color_hover": "#FFFFFF",
-            }
-        elif any(chave in texto_norm for chave in positivos):
-            estilo = {
-                # referência: botão "Salvar Ordem" (NOVA_ORDEM.py)
-                "fg_color": "#2E7D32",
-                "hover_color": ajustar_hover("#2E7D32", 0.76),
-                "text_color": "#FFFFFF",
-                "text_color_hover": "#FFFFFF",
-            }
-        elif any(chave in texto_norm for chave in destaques):
-            estilo = {
-                # referência: botão "Imprimir Pré-visualização" (NOVA_ORDEM.py)
-                "fg_color": "#4A90E2",
-                "hover_color": ajustar_hover("#4A90E2", 0.76),
-                "text_color": "#FFFFFF",
-                "text_color_hover": "#FFFFFF",
-            }
-        else:
-            estilo = {
-                "fg_color": "#4A90E2",
-                "hover_color": "#357ABD",
-                "text_color": "#FFFFFF",
-                "text_color_hover": "#FFFFFF",
-            }
-
-        widget.configure(
-            fg_color=estilo["fg_color"],
-            hover_color=estilo["hover_color"],
-            text_color=estilo["text_color"],
-            border_width=0,
-            corner_radius=8,
-            height=32,
-            font=("Arial", 12, "bold"),
-        )
-        _aplicar_hover_texto_botao(widget, estilo["text_color"], estilo["text_color_hover"])
-    except Exception:
-        pass
-
-
 def _normalizar_texto_botao(texto: str) -> str:
     """Normaliza texto do botão para comparação."""
     try:
@@ -361,29 +290,6 @@ def _normalizar_texto_botao(texto: str) -> str:
         return re.sub(r"\s+", " ", texto_limpo)
     except Exception:
         return (texto or "").strip().lower()
-
-
-def _aplicar_hover_texto_botao(widget: ctk.CTkButton, normal: str, hover: str):
-    """Configura mudança de cor do texto no hover."""
-    if getattr(widget, "_opera_hover_texto", None):
-        return
-
-    def on_enter(_event=None):
-        try:
-            widget.configure(text_color=hover)
-        except Exception:
-            pass
-
-    def on_leave(_event=None):
-        try:
-            widget.configure(text_color=normal)
-        except Exception:
-            pass
-
-    # add="+" evita sobrescrever handlers internos do CustomTkinter (hover visual)
-    widget.bind("<Enter>", on_enter, add="+")
-    widget.bind("<Leave>", on_leave, add="+")
-    widget._opera_hover_texto = True
 
 
 def remover_bordas_botoes_tema(widget):

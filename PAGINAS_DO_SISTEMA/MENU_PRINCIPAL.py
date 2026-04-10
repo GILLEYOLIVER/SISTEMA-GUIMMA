@@ -54,7 +54,6 @@ from PAGINAS_DO_SISTEMA.TEMAS import (
     aplicar_estilo_treeview,
     get_contraste_texto,
     is_dark_color,
-    padronizar_botoes_container,
     padronizar_treeview,
     remover_bordas_botoes_tema,
 )
@@ -3878,7 +3877,6 @@ class OperaMenuApp(ctk.CTk):
                 frame.app = self
             if hasattr(self, "theme_manager") and self.theme_manager:
                 self.theme_manager.apply_theme_to_widget(frame)
-            padronizar_botoes_container(frame)
             if hasattr(self, "_update_menu_buttons_colors"):
                 self._update_menu_buttons_colors()
             frame._opera_theme_token = theme_token
