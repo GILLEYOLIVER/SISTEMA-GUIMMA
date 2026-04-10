@@ -788,7 +788,10 @@ class BotaoPadronizado:
             texto = ""
 
         config_padrao = {
-            "height": 32, "font": ("Arial", 12), "corner_radius": 8, "border_width": 0
+            "height": 30,
+            "font": ("Segoe UI", 12, "bold"),
+            "corner_radius": 8,
+            "border_width": 1,
         }
 
         app = BotaoPadronizado._get_app(master)
@@ -796,10 +799,10 @@ class BotaoPadronizado:
 
         config_tipo = {
             "padrao": {
-                "fg_color": cores_tema.get("secundaria", "#2C2C2C"),
-                "hover_color": cores_tema.get("hover", "#3A3A3A"),
-                "text_color": cores_tema.get("texto", "#FFFFFF"),
-                "border_color": cores_tema.get("borda", "#333333")
+                "fg_color": cores_tema.get("selecao", cores_tema.get("destaque", "#2563EB")),
+                "hover_color": ajustar_hover(cores_tema.get("selecao", cores_tema.get("destaque", "#2563EB")), 0.76),
+                "text_color": "#FFFFFF",
+                "border_color": cores_tema.get("borda", "#334155"),
             }
         }
 
@@ -807,10 +810,20 @@ class BotaoPadronizado:
             cor_especifica = cores_tema.get(tipo_btn, cor_padrao)
             config_tipo[tipo_btn.replace("botao_", "")] = {
                 "fg_color": cor_especifica,
-                "hover_color": ajustar_hover(cor_especifica),
+                "hover_color": ajustar_hover(cor_especifica, 0.76),
                 "text_color": get_contraste_texto(cor_especifica),
-                "border_color": ajustar_hover(cor_especifica, 0.7)
+                "border_color": ajustar_hover(cor_especifica, 0.7),
             }
+
+        # Se o botão passar fg_color custom, garante hover/text/borda coerentes automaticamente.
+        if "fg_color" in kwargs:
+            fg_custom = kwargs.get("fg_color")
+            if "hover_color" not in kwargs:
+                kwargs["hover_color"] = ajustar_hover(fg_custom, 0.76)
+            if "text_color" not in kwargs:
+                kwargs["text_color"] = get_contraste_texto(fg_custom)
+            if "border_color" not in kwargs:
+                kwargs["border_color"] = ajustar_hover(fg_custom, 0.7)
 
         config_final = {**config_padrao, **config_tipo.get(tipo, config_tipo["padrao"]), **kwargs}
         return ctk.CTkButton(master, text=texto, **config_final)
