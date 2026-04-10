@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 try:
     from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
@@ -171,16 +172,16 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         self.valor_peca_entry = ctk.CTkEntry(btns, width=90)
         self.valor_peca_entry.insert(0, "0.00")
         self.valor_peca_entry.pack(side="left", padx=(0, 12))
-        ctk.CTkButton(btns, text="Atualizar", command=self._recarregar_tudo,
+        BotaoPadronizado.criar_botao(btns, text="Atualizar", command=self._recarregar_tudo,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="Enviar para Prestador", command=self._registrar_envio_externo,
+        BotaoPadronizado.criar_botao(btns, text="Enviar para Prestador", command=self._registrar_envio_externo,
                       fg_color=self.cor_destaque, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="Baixa Interna", command=self._registrar_baixa_interna,
+        BotaoPadronizado.criar_botao(btns, text="Baixa Interna", command=self._registrar_baixa_interna,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="Imprimir Ficha", command=self._imprimir_ficha,
+        BotaoPadronizado.criar_botao(btns, text="Imprimir Ficha", command=self._imprimir_ficha,
                       fg_color=self.cor_alerta, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
@@ -251,10 +252,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
 
         proc_actions = ctk.CTkFrame(main, fg_color="transparent")
         proc_actions.grid(row=3, column=0, sticky="ew", padx=15, pady=(0, 5))
-        ctk.CTkButton(proc_actions, text="Marcar Retorno", command=self._marcar_retorno,
+        BotaoPadronizado.criar_botao(proc_actions, text="Marcar Retorno", command=self._marcar_retorno,
                       fg_color=self.cor_alerta, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        ctk.CTkButton(proc_actions, text="Finalizar", command=self._finalizar_defeito,
+        BotaoPadronizado.criar_botao(proc_actions, text="Finalizar", command=self._finalizar_defeito,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
@@ -618,9 +619,9 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         nav.pack(fill="x", padx=10, pady=5)
 
         lbl_mes = ctk.CTkLabel(nav, text=f"{meses_pt[mes]} {ano}", font=("Arial", 14))
-        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        BotaoPadronizado.criar_botao(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
-        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        BotaoPadronizado.criar_botao(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
@@ -652,7 +653,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = ctk.CTkButton(
+                    btn = BotaoPadronizado.criar_botao(
                         frame_dias,
                         text=str(dia),
                         width=30,
@@ -1303,7 +1304,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         previsao_entry = ctk.CTkEntry(previsao_frame, width=160)
         previsao_entry.insert(0, self._format_date(envio_info.get("previsao_entrega")))
         previsao_entry.pack(side="left")
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             previsao_frame,
             text="📅",
             width=36,
@@ -1422,17 +1423,17 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         botoes.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 14))
         botoes.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes, text="Pré-visualizar", command=_pre_visualizar,
             fg_color=self.cor_alerta, hover_color=self.cor_hover,
             text_color=self.cor_texto
         ).pack(side="left", padx=6)
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes, text="Enviar", command=_confirmar_envio,
             fg_color=self.cor_sucesso, hover_color=self.cor_hover,
             text_color=self.cor_texto
         ).pack(side="left", padx=6)
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes, text="Cancelar", command=janela.destroy,
             fg_color=self.cor_destaque, hover_color=self.cor_hover,
             text_color=self.cor_texto
@@ -1621,13 +1622,13 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
 
         botoes = ctk.CTkFrame(janela, fg_color="transparent")
         botoes.pack(pady=12)
-        ctk.CTkButton(botoes, text="Pré-visualizar", command=_pre_visualizar,
+        BotaoPadronizado.criar_botao(botoes, text="Pré-visualizar", command=_pre_visualizar,
                       fg_color=self.cor_alerta, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=6)
-        ctk.CTkButton(botoes, text="Salvar PDF", command=_salvar_pdf,
+        BotaoPadronizado.criar_botao(botoes, text="Salvar PDF", command=_salvar_pdf,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=6)
-        ctk.CTkButton(botoes, text="Fechar", command=janela.destroy,
+        BotaoPadronizado.criar_botao(botoes, text="Fechar", command=janela.destroy,
                       fg_color=self.cor_destaque, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=6)
 

@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import customtkinter as ctk
 from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ---------- CONFIGURAÇÃO ----------
 # ============================== Utils ==============================
@@ -365,7 +366,7 @@ class RetornoCortes(ctk.CTkFrame):
         self.busca_entry.pack(side="left")
         self.busca_entry.bind("<Return>", lambda e: self.carregar_envios_pendentes())
 
-        self._ui_refs["btn_search"] = ctk.CTkButton(
+        self._ui_refs["btn_search"] = BotaoPadronizado.criar_botao(
             busca, text=self._get_text("search_button"), width=90, height=entry_h,
             command=self.carregar_envios_pendentes,
             fg_color=self.cor_primaria, hover_color=self.cor_hover,
@@ -634,19 +635,19 @@ class RetornoCortes(ctk.CTkFrame):
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         botoes.pack(fill="x", pady=(0, 2))
 
-        ctk.CTkButton(botoes, text="Registrar Entrada", width=160, height=entry_h, command=self.registrar_entrada,
+        BotaoPadronizado.criar_botao(botoes, text="Registrar Entrada", width=160, height=entry_h, command=self.registrar_entrada,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto, font=f_ent).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Pré-visualizar PDF", width=150, height=entry_h, command=self.pre_visualizar_pdf,
+        BotaoPadronizado.criar_botao(botoes, text="Pré-visualizar PDF", width=150, height=entry_h, command=self.pre_visualizar_pdf,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto, font=f_ent).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Exportar PDF", width=120, height=entry_h, command=self.exportar_pdf,
+        BotaoPadronizado.criar_botao(botoes, text="Exportar PDF", width=120, height=entry_h, command=self.exportar_pdf,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto, font=f_ent).pack(side="left", padx=4)
 
-        ctk.CTkButton(botoes, text="Limpar", width=110, height=entry_h, command=self.limpar_campos,
+        BotaoPadronizado.criar_botao(botoes, text="Limpar", width=110, height=entry_h, command=self.limpar_campos,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto, font=f_ent).pack(side="left", padx=4)
 

@@ -2,6 +2,7 @@
 # Relatório de Serviços Externos (Facções) – compatível com MENU_PRINCIPAL
 
 from __future__ import annotations
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 from PAGINAS_DO_SISTEMA import TEMAS
 import csv
 import os
@@ -146,12 +147,12 @@ class RelatorioServicosExternosPage(ctk.CTkFrame):
         acoes = ctk.CTkFrame(filtros, fg_color=self.cor_fundo)
         acoes.pack(side="right", padx=10, pady=10)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             acoes, text="🔍 Buscar", fg_color=self.cor_primaria, hover_color=self.cor_hover,
             text_color=self.cor_texto, command=self._buscar, width=120
         ).pack(side="left", padx=6)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             acoes, text="⬇️ Exportar CSV", fg_color=self.cor_destaque, hover_color=self.cor_hover,
             text_color=self.cor_texto, command=self._exportar_csv, width=140
         ).pack(side="left", padx=6)

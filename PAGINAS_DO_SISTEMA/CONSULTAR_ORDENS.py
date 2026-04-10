@@ -5,6 +5,7 @@ from tkinter import ttk, messagebox, Toplevel, filedialog
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from datetime import datetime
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 # >>> REMOVIDO sqlite3
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -436,13 +437,13 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         self._ui_refs["search_entry"] = self.ordem_busca_entry
         self.ordem_busca_entry.bind("<Return>", lambda e: self.buscar_ordem())
 
-        self._ui_refs["search_button"] = ctk.CTkButton(
+        self._ui_refs["search_button"] = BotaoPadronizado.criar_botao(
             frame_busca, text=self._get_text("search"), width=100, command=self.buscar_ordem,
             fg_color=self.cor_primaria, hover_color=self.cor_hover, text_color=self.cor_texto
         )
         self._ui_refs["search_button"].pack(side="left", padx=5)
 
-        self._ui_refs["print_button"] = ctk.CTkButton(
+        self._ui_refs["print_button"] = BotaoPadronizado.criar_botao(
             frame_busca, text=self._get_text("print_pdf"), width=120,
             command=self.previsualizar_controle,
             fg_color=self.cor_imprimir, hover_color=self.cor_hover, text_color=self.cor_texto
@@ -741,7 +742,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             num, codigo, desc, data = o[1], o[2], o[3], o[4]
             total = o[13] or 0
             texto = f"{str(num):<8}| {str(codigo):<6}| {str(desc):<20.20}| {str(total):>4} | {str(data)}"
-            ctk.CTkButton(
+            BotaoPadronizado.criar_botao(
                 lista_frame,
                 text=texto,
                 anchor="w",
@@ -752,7 +753,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                 command=criar_callback(o)
             ).pack(fill="x", pady=2)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             card,
             text=self._get_text("cancel"),
             fg_color=self.cor_alerta if hasattr(self, "cor_alerta") else "#a83232",
@@ -1095,7 +1096,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         cor_texto = getattr(self, "cor_texto", "#ffffff")
         cor_fechar = getattr(self, "cor_alerta", "#a83232")
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes,
             text=self._get_text("save_pdf"),
             width=120,
@@ -1105,7 +1106,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             text_color=cor_texto,
         ).pack(side="left", padx=10)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes,
             text=self._get_text("print"),
             width=120,
@@ -1115,7 +1116,7 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             text_color=cor_texto,
         ).pack(side="left", padx=10)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes,
             text=self._get_text("close"),
             width=120,

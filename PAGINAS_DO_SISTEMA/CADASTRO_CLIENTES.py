@@ -4,6 +4,7 @@ CADASTRO_CLIENTES.py - Módulo de Clientes
 Interface base para cadastro, consulta e relacionamento de clientes.
 """
 from tkinter import messagebox, ttk
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import customtkinter as ctk
 
@@ -304,13 +305,13 @@ class ClientesPage(ctk.CTkFrame):
         toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
         toolbar.grid_columnconfigure(3, weight=1)
 
-        self._ui_refs["btn_new"] = ctk.CTkButton(toolbar, text=self._get_text("btn_new"), command=self._limpar_formulario)
+        self._ui_refs["btn_new"] = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("btn_new"), command=self._limpar_formulario)
         self._ui_refs["btn_new"].grid(row=0, column=0, padx=(0, 8))
-        self._ui_refs["btn_save"] = ctk.CTkButton(toolbar, text=self._get_text("btn_save"), command=self._salvar_cliente)
+        self._ui_refs["btn_save"] = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("btn_save"), command=self._salvar_cliente)
         self._ui_refs["btn_save"].grid(row=0, column=1, padx=(0, 8))
-        self._ui_refs["btn_inactivate"] = ctk.CTkButton(toolbar, text=self._get_text("btn_inactivate"), command=self._inativar_cliente)
+        self._ui_refs["btn_inactivate"] = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("btn_inactivate"), command=self._inativar_cliente)
         self._ui_refs["btn_inactivate"].grid(row=0, column=2, padx=(0, 8))
-        self._ui_refs["btn_export"] = ctk.CTkButton(toolbar, text=self._get_text("btn_export"), command=self._exportar_cliente)
+        self._ui_refs["btn_export"] = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("btn_export"), command=self._exportar_cliente)
         self._ui_refs["btn_export"].grid(row=0, column=4)
 
     def _build_body(self):
