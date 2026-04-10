@@ -488,13 +488,8 @@ class PagamentoModernUI(ctk.CTkFrame):
                 elif isinstance(w, ctk.CTkCheckBox) or isinstance(w, ctk.CTkSwitch):
                     w.configure(text_color=self.cor_texto)
                 elif isinstance(w, ctk.CTkButton):
-                    if w._fg_color == self.cor_adicionar or w._fg_color == self.cor_imprimir:
-                        # Manter cores específicas para botões de ação
-                        pass
-                    else:
-                        w.configure(fg_color=self.cor_primaria,
-                                    hover_color=self.cor_hover,
-                                    text_color=self.cor_texto)
+                    # Mantém estilo dos botões definido pelo BotaoPadronizado.
+                    w.configure(border_color=self.cor_borda)
             except Exception:
                 pass
 
@@ -582,9 +577,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="🔍",
             width=40,
             height=28,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             command=self.pesquisar_finalizados
         ).grid(row=0, column=5, padx=4, pady=6)
 
@@ -677,9 +669,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             defeitos_actions,
             text="Marcar Pago",
             command=self._pagar_defeito,
-            fg_color=self.cor_sucesso,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             height=30,
             width=120
         ).pack(side="left", padx=4)
@@ -1033,9 +1022,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="Aplicar",
             width=80,
             height=28,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             command=self.aplicar_desconto_adiantamento
         )
         self.aplicar_desconto_btn.grid(row=1, column=2, padx=4)
@@ -1044,9 +1030,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="Descontar 1 parcela",
             width=160,
             height=28,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             command=self.descontar_parcela_adiantamento
         )
         self.descontar_parcela_btn.grid(row=6, column=0, columnspan=2, padx=8, pady=(2, 6))
@@ -1119,9 +1102,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="💾 Salvar",
             width=130,
             height=32,
-            fg_color=self.cor_adicionar,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.salvar_pagamento
         )
@@ -1130,9 +1110,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="📤 Exportar CSV",
             width=130,
             height=32,
-            fg_color=self.cor_imprimir,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.exportar_csv
         )
@@ -1141,9 +1118,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="🔁 Recalcular",
             width=120,
             height=32,
-            fg_color=self.cor_primaria,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.recalcular
         )
@@ -1152,9 +1126,6 @@ class PagamentoModernUI(ctk.CTkFrame):
             text="🖨️ Imprimir",
             width=130,
             height=32,
-            fg_color=self.cor_imprimir,
-            hover_color=self.cor_hover,
-            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.imprimir_recibo
         )
