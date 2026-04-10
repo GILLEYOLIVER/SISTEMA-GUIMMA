@@ -1447,13 +1447,9 @@ class CadastroModelosApp(ctk.CTkFrame):
         rodape.pack(fill="x", pady=5, padx=10)
         btn_remover = BotaoPadronizado.criar_botao(rodape, text=self._get_text("remove_service"),
                                     command=self.remover_outro,
-                                    fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'),
-                                    text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12),
+                                    font=("Arial", 12),
                                     width=140, height=35)
         btn_remover.pack(side="left", padx=5)
-        btn_remover.bind("<Enter>", lambda e: btn_remover.configure(fg_color="#E53935"))
-        btn_remover.bind("<Leave>",
-                         lambda e: btn_remover.configure(fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107')))
 
         # Imagens
         img_frame = ctk.CTkFrame(self.tab_outros, fg_color=getattr(self.sistema, 'cor_fundo', '#FFFFFF'))
@@ -4647,25 +4643,9 @@ class CadastroModelosApp(ctk.CTkFrame):
                         elif isinstance(child, ctk.CTkLabel):
                             child.configure(text_color=cor_texto)
                         elif isinstance(child, ctk.CTkButton):
-                            # Verificar tipo de botão pela cor
-                            text = (child.cget("text") or "").lower()
-                            if any(x in text for x in ["salvar", "registrar", "confirmar"]):
-                                child.configure(fg_color=cor_sucesso,
-                                                hover_color=self._ajustar_hover(cor_sucesso),
-                                                text_color=get_contraste_texto(cor_sucesso))
-                            elif any(x in text for x in ["cancelar", "excluir", "apagar", "remover"]):
-                                child.configure(fg_color=cor_alerta,
-                                                hover_color=self._ajustar_hover(cor_alerta),
-                                                text_color=get_contraste_texto(cor_alerta))
-                            elif any(x in text for x in ["imprimir", "exportar", "pré-visualização", "gerar pdf"]):
-                                child.configure(fg_color=cor_destaque,
-                                                hover_color=self._ajustar_hover(cor_destaque),
-                                                text_color=get_contraste_texto(cor_destaque))
-                            else:
-                                child.configure(fg_color=cor_primaria,
-                                                hover_color=cor_hover,
-                                                text_color=get_contraste_texto(cor_primaria),
-                                                border_color=cor_borda)
+                            # Mantém a identidade visual definida pelo BotaoPadronizado
+                            # e apenas ajusta a borda ao tema ativo.
+                            child.configure(border_color=cor_borda)
                         elif isinstance(child, ctk.CTkEntry):
                             child.configure(fg_color=cor_secundaria,
                                             border_color=cor_borda,
