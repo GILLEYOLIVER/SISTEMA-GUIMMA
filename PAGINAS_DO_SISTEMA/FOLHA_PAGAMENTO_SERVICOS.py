@@ -18,6 +18,7 @@ from datetime import datetime, date, timedelta
 import customtkinter as ctk
 from PAGINAS_DO_SISTEMA.TEMAS import get_contraste_texto, is_dark_color, ajustar_hover
 from tkinter import ttk, messagebox, filedialog
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ---------- Cores/tema ----------
 ACCENT_BLUE = "#2563eb"
@@ -282,7 +283,7 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         self.est_chk = ctk.CTkCheckBox(filt, text="Incluir estornados", variable=self.incluir_estornados, command=self._search)
         self.est_chk.grid(row=0, column=8, padx=(12,4), pady=8)
 
-        self.buscar_btn = ctk.CTkButton(filt, text="🔍 Buscar", width=120, fg_color=self.accent_color,
+        self.buscar_btn = BotaoPadronizado.criar_botao(filt, text="🔍 Buscar", width=120, fg_color=self.accent_color,
                                         hover_color=self.cor_hover, command=self._search)
         self.buscar_btn.grid(row=0, column=9, padx=(8,10), pady=8, sticky="e")
 
@@ -323,9 +324,9 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         # Ações
         actions = ctk.CTkFrame(content, fg_color=self.main_bg)
         actions.grid(row=2, column=0, sticky="e", padx=4, pady=6)
-        ctk.CTkButton(actions, text="📤 Exportar CSV", width=140,
+        BotaoPadronizado.criar_botao(actions, text="📤 Exportar CSV", width=140,
                       fg_color=self.cor_imprimir, hover_color=self.cor_hover, command=self._export_csv).grid(row=0, column=0, padx=6)
-        ctk.CTkButton(actions, text="🖨️ Gerar Folha (HTML)", width=170,
+        BotaoPadronizado.criar_botao(actions, text="🖨️ Gerar Folha (HTML)", width=170,
                       fg_color=self.cor_imprimir, hover_color=self.cor_hover, command=self._generate_html).grid(row=0, column=1, padx=6)
 
     def _kpi(self, parent, col, title, value):

@@ -1,6 +1,7 @@
 # ATENÇAO ESSE CODIGO E O OFICIAL QUE VAI RECEVER A REFERENCIA PARA AJUSTAR A ABA 1
 
 from __future__ import annotations
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # -*- coding: utf-8 -*-
 """
@@ -834,7 +835,7 @@ class UsuariosPage(ctk.CTkFrame):
         button_font = ctk.CTkFont(size=11, weight="bold")  # fonte levemente menor
 
         # Novo Usuário (azul)
-        btn_novo = ctk.CTkButton(
+        btn_novo = BotaoPadronizado.criar_botao(
             buttons_area,
             text="Novo Usuário",
             command=self._novo_usuario,
@@ -848,7 +849,7 @@ class UsuariosPage(ctk.CTkFrame):
         btn_novo.grid(row=0, column=0, padx=2, pady=4, sticky="ew")
 
         # Salvar (verde)
-        btn_salvar = ctk.CTkButton(
+        btn_salvar = BotaoPadronizado.criar_botao(
             buttons_area,
             text="Salvar",
             command=self._salvar_usuario,
@@ -862,7 +863,7 @@ class UsuariosPage(ctk.CTkFrame):
         btn_salvar.grid(row=0, column=1, padx=2, pady=4, sticky="ew")
 
         # Excluir (vermelho)
-        btn_excluir = ctk.CTkButton(
+        btn_excluir = BotaoPadronizado.criar_botao(
             buttons_area,
             text="Excluir",
             command=self._excluir_usuario,
@@ -876,7 +877,7 @@ class UsuariosPage(ctk.CTkFrame):
         btn_excluir.grid(row=0, column=2, padx=2, pady=4, sticky="ew")
 
         # Gerenciar Permissões (azul)
-        btn_permissoes = ctk.CTkButton(
+        btn_permissoes = BotaoPadronizado.criar_botao(
             buttons_area,
             text="Gerenciar Permissões",
             command=self._aplicar_permissoes_para_usuario,
@@ -1204,7 +1205,7 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_ini.pack(side="left")
         self.log_ini.insert(0, datetime.now().strftime("%d/%m/%Y"))
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             date_ini_frame,
             text="📅",
             width=32,
@@ -1234,7 +1235,7 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_fim.pack(side="left")
         self.log_fim.insert(0, datetime.now().strftime("%d/%m/%Y"))
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             date_fim_frame,
             text="📅",
             width=32,
@@ -1267,7 +1268,7 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_usuario.pack(side="left")
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             user_input_frame,
             text="▼",
             width=28,
@@ -1442,7 +1443,7 @@ class UsuariosPage(ctk.CTkFrame):
                     ano += 1
                 render_calendar()
 
-            ctk.CTkButton(
+            BotaoPadronizado.criar_botao(
                 header,
                 text="❮",
                 width=32,
@@ -1453,7 +1454,7 @@ class UsuariosPage(ctk.CTkFrame):
                 text_color="white"
             ).pack(side="left", padx=12, pady=8)
 
-            ctk.CTkButton(
+            BotaoPadronizado.criar_botao(
                 header,
                 text="❯",
                 width=32,
@@ -1503,7 +1504,7 @@ class UsuariosPage(ctk.CTkFrame):
                                 width=36
                             ).grid(row=row_idx, column=col_idx, padx=2, pady=2)
                         else:
-                            ctk.CTkButton(
+                            BotaoPadronizado.criar_botao(
                                 dias_frame,
                                 text=str(day),
                                 width=36,
@@ -3397,7 +3398,7 @@ class UsuariosPage(ctk.CTkFrame):
                 ]
 
                 for texto, periodo, cor in botoes_periodo:
-                    btn = ctk.CTkButton(
+                    btn = BotaoPadronizado.criar_botao(
                         main_frame,
                         text=texto,
                         command=lambda p=periodo: self.definir_periodo(p),
@@ -3412,7 +3413,7 @@ class UsuariosPage(ctk.CTkFrame):
                 ctk.CTkFrame(main_frame, fg_color="#e5e7eb", height=2).pack(fill="x", pady=20)
 
                 # Botão cancelar
-                btn_cancelar = ctk.CTkButton(
+                btn_cancelar = BotaoPadronizado.criar_botao(
                     main_frame,
                     text="❌ Cancelar",
                     command=self.cancelar,
@@ -4209,7 +4210,7 @@ class UsuariosPage(ctk.CTkFrame):
         botoes_frame = ctk.CTkFrame(parent, fg_color="transparent")
         botoes_frame.pack(fill="x", padx=20, pady=10)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes_frame,
             text="🖨️ Imprimir Relatório",
             command=lambda: self._imprimir_relatorio(dados),
@@ -4217,7 +4218,7 @@ class UsuariosPage(ctk.CTkFrame):
             height=40
         ).pack(side="left", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes_frame,
             text="📥 Exportar PDF",
             command=lambda: self._exportar_pdf(dados),
@@ -4225,7 +4226,7 @@ class UsuariosPage(ctk.CTkFrame):
             height=40
         ).pack(side="left", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes_frame,
             text="📊 Exportar Excel",
             command=lambda: self._exportar_excel(dados),
@@ -4233,7 +4234,7 @@ class UsuariosPage(ctk.CTkFrame):
             height=40
         ).pack(side="left", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes_frame,
             text="❌ Fechar",
             command=parent.destroy,
@@ -4703,7 +4704,7 @@ class UsuariosPage(ctk.CTkFrame):
         botoes_frame = ctk.CTkFrame(main_frame, fg_color="white")
         botoes_frame.pack(fill="x", pady=20)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes_frame,
             text="🖨️ Imprimir Agora",
             command=lambda: self._executar_impressao(janela_impressao),
@@ -4712,7 +4713,7 @@ class UsuariosPage(ctk.CTkFrame):
             width=150
         ).pack(side="left", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes_frame,
             text="💾 Salvar como PDF",
             command=lambda: self._salvar_pdf_impressao(dados),
@@ -4721,7 +4722,7 @@ class UsuariosPage(ctk.CTkFrame):
             width=150
         ).pack(side="left", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes_frame,
             text="📋 Copiar para Word",
             command=lambda: self._copiar_para_word(dados),
@@ -4730,7 +4731,7 @@ class UsuariosPage(ctk.CTkFrame):
             width=150
         ).pack(side="left", padx=5)
 
-        ctk.CTkButton(
+        BotaoPadronizado.criar_botao(
             botoes_frame,
             text="❌ Fechar",
             command=janela_impressao.destroy,
@@ -5053,21 +5054,21 @@ class UsuariosPage(ctk.CTkFrame):
             btn_frame = ctk.CTkFrame(word_window)
             btn_frame.pack(fill="x", padx=10, pady=10)
 
-            ctk.CTkButton(
+            BotaoPadronizado.criar_botao(
                 btn_frame,
                 text="📋 Copiar Tudo",
                 command=lambda: self._copiar_texto_area(text_area),
                 fg_color="#3b82f6"
             ).pack(side="left", padx=5)
 
-            ctk.CTkButton(
+            BotaoPadronizado.criar_botao(
                 btn_frame,
                 text="💾 Salvar como .doc",
                 command=lambda: self._salvar_doc(conteudo),
                 fg_color="#10b981"
             ).pack(side="left", padx=5)
 
-            ctk.CTkButton(
+            BotaoPadronizado.criar_botao(
                 btn_frame,
                 text="❌ Fechar",
                 command=word_window.destroy,

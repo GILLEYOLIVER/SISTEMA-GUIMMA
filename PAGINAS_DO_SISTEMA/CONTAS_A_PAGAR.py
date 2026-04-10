@@ -6,6 +6,7 @@ Busca cortes de múltiplas tabelas conforme o status
 from PAGINAS_DO_SISTEMA import TEMAS
 import os
 from datetime import datetime, date, timedelta
+from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import customtkinter as ctk
 import tkinter.ttk as ttk
@@ -171,7 +172,7 @@ class ContasAPagarPage(ctk.CTkFrame):
         e.bind("<Return>", lambda ev: self._search())
         self._ui_refs["chk_period"] = ctk.CTkCheckBox(filt, text=self._get_text("period_only"), variable=self.por_pagamento_periodo, fg_color=self.theme.cor_primaria, text_color=self.theme.cor_texto)
         self._ui_refs["chk_period"].grid(row=0, column=8, padx=8, pady=8)
-        self._ui_refs["btn_search"] = ctk.CTkButton(filt, text=self._get_text("search_button"), width=100, command=self._search, fg_color=self.theme.cor_destaque, text_color="white")
+        self._ui_refs["btn_search"] = BotaoPadronizado.criar_botao(filt, text=self._get_text("search_button"), width=100, command=self._search, fg_color=self.theme.cor_destaque, text_color="white")
         self._ui_refs["btn_search"].grid(row=0, column=11, padx=8, pady=8, sticky="e")
 
         kpis = ctk.CTkFrame(self, fg_color=self.theme.cor_terciaria)
