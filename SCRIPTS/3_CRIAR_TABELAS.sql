@@ -2014,3 +2014,125 @@ BEGIN
     RAISE NOTICE '- Versao: 1.0 registrada em _schema_info';
     RAISE NOTICE '=========================================';
 END $$;
+
+
+-- ======================================================
+-- BLOCO EXTRA - CONTROLE PROFISSIONAL DE ATUALIZAÇÕES
+-- ======================================================
+
+CREATE TABLE IF NOT EXISTS opera.app_releases (
+    id BIGSERIAL PRIMARY KEY,
+    app_name VARCHAR(100) NOT NULL DEFAULT 'OPERA',
+    channel VARCHAR(30) NOT NULL DEFAULT 'stable',
+    version VARCHAR(50) NOT NULL,
+    version_code INTEGER DEFAULT 0,
+    min_supported_version VARCHAR(50),
+    min_schema_version INTEGER DEFAULT 0,
+    requires_schema BOOLEAN NOT NULL DEFAULT FALSE,
+    requires_restart BOOLEAN NOT NULL DEFAULT TRUE,
+    package_url TEXT,
+    package_sha256 VARCHAR(128),
+    manifest_json JSONB,
+    notes TEXT,
+    published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT uq_app_releases UNIQUE (app_name, channel, version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_releases_app_channel ON opera.app_releases(app_name, channel);
+CREATE INDEX IF NOT EXISTS idx_app_releases_version ON opera.app_releases(version);
+CREATE INDEX IF NOT EXISTS idx_app_releases_active ON opera.app_releases(active);
+
+CREATE TABLE IF NOT EXISTS opera.app_backups (
+    id BIGSERIAL PRIMARY KEY,
+    backup_nome VARCHAR(200) NOT NULL,
+    version_origem VARCHAR(50),
+    schema_version_origem INTEGER DEFAULT 0,
+    caminho_arquivos TEXT,
+    caminho_dump_banco TEXT,
+    sha256_arquivos VARCHAR(128),
+    sha256_dump VARCHAR(128),
+    tipo VARCHAR(30) NOT NULL DEFAULT 'PRE_UPDATE',
+    tamanho_bytes BIGINT DEFAULT 0,
+    status VARCHAR(30) NOT NULL DEFAULT 'GERADO',
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    criado_por INTEGER REFERENCES opera.usuarios(id) ON DELETE SET NULL,
+    observacoes TEXT,
+    CONSTRAINT uq_app_backups_nome UNIQUE (backup_nome),
+    CONSTRAINT ck_app_backups_tipo CHECK (tipo IN ('PRE_UPDATE', 'MANUAL', 'ROLLBACK_POINT', 'AUTO')),
+    CONSTRAINT ck_app_backups_status CHECK (status IN ('GERADO', 'VALIDADO', 'USADO_RESTORE', 'CORROMPIDO', 'EXPIRADO'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_backups_criado_em ON opera.app_backups(criado_em DESC);
+CREATE INDEX IF NOT EXISTS idx_app_backups_tipo ON opera.app_backups(tipo);
+
+CREATE TABLE IF NOT EXISTS opera.app_update_history (
+    id BIGSERIAL PRIMARY KEY,
+    release_id BIGINT REFERENCES opera.app_releases(id) ON DELETE SET NULL,
+    origem VARCHAR(30) NOT NULL DEFAULT 'local',
+    origem_detalhe TEXT,
+    version_from VARCHAR(50),
+    version_to VARCHAR(50),
+    schema_version_from INTEGER DEFAULT 0,
+    schema_version_to INTEGER DEFAULT 0,
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDENTE',
+    etapa_atual VARCHAR(100),
+    mensagem TEXT,
+    detalhes_json JSONB,
+    backup_id BIGINT REFERENCES opera.app_backups(id) ON DELETE SET NULL,
+    iniciado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    concluido_em TIMESTAMP,
+    executado_por INTEGER REFERENCES opera.usuarios(id) ON DELETE SET NULL,
+    executado_por_nome VARCHAR(100),
+    host_maquina VARCHAR(150),
+    exige_rollback BOOLEAN NOT NULL DEFAULT FALSE,
+    rollback_executado BOOLEAN NOT NULL DEFAULT FALSE,
+    rollback_sucesso BOOLEAN,
+    CONSTRAINT ck_app_update_history_status CHECK (
+        status IN ('PENDENTE', 'BAIXANDO', 'VALIDANDO', 'APLICANDO', 'MIGRANDO', 'CONCLUIDO', 'FALHOU', 'RESTAURADO')
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_update_history_status ON opera.app_update_history(status);
+CREATE INDEX IF NOT EXISTS idx_app_update_history_iniciado_em ON opera.app_update_history(iniciado_em DESC);
+CREATE INDEX IF NOT EXISTS idx_app_update_history_version_to ON opera.app_update_history(version_to);
+
+CREATE TABLE IF NOT EXISTS opera.schema_migrations (
+    id BIGSERIAL PRIMARY KEY,
+    migration_name VARCHAR(255) NOT NULL,
+    modulo VARCHAR(100) DEFAULT 'global',
+    versao_alvo INTEGER NOT NULL DEFAULT 0,
+    app_version VARCHAR(50),
+    checksum VARCHAR(128),
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDENTE',
+    iniciado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    concluido_em TIMESTAMP,
+    erro TEXT,
+    detalhes_json JSONB,
+    executado_por INTEGER REFERENCES opera.usuarios(id) ON DELETE SET NULL,
+    CONSTRAINT uq_schema_migrations_nome UNIQUE (migration_name),
+    CONSTRAINT ck_schema_migrations_status CHECK (status IN ('PENDENTE', 'EXECUTANDO', 'SUCESSO', 'ERRO', 'IGNORADA'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_schema_migrations_modulo ON opera.schema_migrations(modulo);
+CREATE INDEX IF NOT EXISTS idx_schema_migrations_versao_alvo ON opera.schema_migrations(versao_alvo);
+CREATE INDEX IF NOT EXISTS idx_schema_migrations_status ON opera.schema_migrations(status);
+
+CREATE TABLE IF NOT EXISTS opera.app_update_lock (
+    lock_name VARCHAR(100) PRIMARY KEY,
+    locked BOOLEAN NOT NULL DEFAULT FALSE,
+    locked_by VARCHAR(150),
+    machine_name VARCHAR(150),
+    pid VARCHAR(50),
+    version_target VARCHAR(50),
+    acquired_at TIMESTAMP,
+    expires_at TIMESTAMP,
+    details_json JSONB
+);
+
+INSERT INTO opera.app_update_lock (
+    lock_name, locked, locked_by, machine_name, pid, version_target, acquired_at, expires_at, details_json
+) VALUES (
+    'OPERA_SYSTEM_UPDATE', FALSE, NULL, NULL, NULL, NULL, NULL, NULL, '{}'::jsonb
+)
+ON CONFLICT (lock_name) DO NOTHING;
