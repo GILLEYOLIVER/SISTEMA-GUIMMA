@@ -46,6 +46,9 @@ def _is_valid_config_file(path: Path) -> bool:
         return False
 
 
+from PAGINAS_DO_SISTEMA.OPERA_PATHS import ensure_default_tree, get_app_data_dir
+
+
 def _ensure_db_config_before_app() -> None:
     pages_dir = Path(__file__).resolve().parent
     project_root = pages_dir.parent
@@ -72,8 +75,6 @@ def _ensure_db_config_before_app() -> None:
         raise SystemExit("Configuração inicial não gerou PAGINAS_DO_SISTEMA/config.json.")
 
 
-from PAGINAS_DO_SISTEMA.OPERA_PATHS import ensure_default_tree, get_app_data_dir
-
 os.environ.setdefault("OPERA_DATA_DIR", str(get_app_data_dir()))
 ensure_default_tree()
 if getattr(sys, "_MEIPASS", None):
@@ -81,12 +82,12 @@ if getattr(sys, "_MEIPASS", None):
 
 _ensure_db_config_before_app()
 
-
 import tkinter as tk
 import customtkinter as ctk
 
 from PAGINAS_DO_SISTEMA.SPLASH import SplashScreenModern
 from PAGINAS_DO_SISTEMA.LOGUIN import SistemaLoginModerno
+from PAGINAS_DO_SISTEMA.ui_after_guard import reset_tk_default_root
 
 
 def main():
@@ -174,6 +175,33 @@ def main():
     )
 
     root.mainloop()
+
+    login = holder.get("login")
+    payload = getattr(login, "_login_result", None) if login else None
+
+    try:
+        if root.winfo_exists():
+            root.destroy()
+    except Exception:
+        pass
+
+    if not payload:
+        return
+
+    try:
+        reset_tk_default_root()
+    except Exception:
+        pass
+
+    from PAGINAS_DO_SISTEMA.MENU_PRINCIPAL import OperaMenuApp
+
+    app = OperaMenuApp(
+        usuario_id=int(payload.get("user_id", 0) or 0),
+        usuario_nome=str(payload.get("usuario", "")),
+        usuario_hierarquia=str(payload.get("hierarquia", "Padrão")),
+        tema_preferido=str(payload.get("tema_preferido", "CLÁSSICO CLARO")),
+    )
+    app.mainloop()
 
 
 if __name__ == "__main__":
