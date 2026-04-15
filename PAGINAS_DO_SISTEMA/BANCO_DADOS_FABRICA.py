@@ -82,6 +82,9 @@ class GerenciadorBancoDados:
             "save_script": "💾 Salvar",
             "open_script": "📂 Abrir",
             "export_csv": "📤 Exportar CSV",
+            "copy": "📋 Copiar",
+            "copied_to_clipboard": "Copiado para a área de transferência.",
+            "no_rows_selected": "Nenhuma linha selecionada.",
             "close": "❌ Fechar",
             "advanced_editor_title": "Editor Avançado - Tabela: {table}",
             "delete_table_warning": "⚠️ ATENÇÃO!\n\nEsta ação excluirá PERMANENTEMENTE a tabela '{table}' e TODAS as tabelas dependentes (via CASCADE).\n\nTem certeza que deseja continuar?",
@@ -213,6 +216,9 @@ class GerenciadorBancoDados:
             "save_script": "💾 Save",
             "open_script": "📂 Open",
             "export_csv": "📤 Export CSV",
+            "copy": "📋 Copy",
+            "copied_to_clipboard": "Copied to clipboard.",
+            "no_rows_selected": "No rows selected.",
             "close": "❌ Close",
             "advanced_editor_title": "Advanced Editor - Table: {table}",
             "delete_table_warning": "⚠️ WARNING!\n\nThis action will PERMANENTLY delete table '{table}' and ALL dependent tables (via CASCADE).\n\nAre you sure you want to continue?",
@@ -344,6 +350,9 @@ class GerenciadorBancoDados:
             "save_script": "💾 Guardar",
             "open_script": "📂 Abrir",
             "export_csv": "📤 Exportar CSV",
+            "copy": "📋 Copiar",
+            "copied_to_clipboard": "Copiado al portapapeles.",
+            "no_rows_selected": "Ninguna fila seleccionada.",
             "close": "❌ Cerrar",
             "advanced_editor_title": "Editor Avanzado - Tabla: {table}",
             "delete_table_warning": "⚠️ ¡ATENCIÓN!\n\nEsta acción eliminará PERMANENTEMENTE la tabla '{table}' y TODAS las tablas dependientes (vía CASCADE).\n\n¿Está seguro de que desea continuar?",
@@ -575,6 +584,83 @@ class GerenciadorBancoDados:
                 return
             for col in tree_widget["columns"]:
                 tree_widget.heading(col, text=self._format_column_header(col))
+        except Exception:
+            pass
+
+    def _bind_ctrl_a_treeview(self, tree_widget):
+        try:
+            if not tree_widget:
+                return
+
+            def selecionar_tudo(event=None):
+                try:
+                    itens = tree_widget.get_children()
+                    if not itens:
+                        return "break"
+                    tree_widget.focus_set()
+                    tree_widget.selection_set(itens)
+                    tree_widget.focus(itens[0])
+                    tree_widget.see(itens[0])
+                except Exception:
+                    pass
+                return "break"
+
+            tree_widget.bind("<Control-a>", selecionar_tudo)
+            tree_widget.bind("<Control-A>", selecionar_tudo)
+        except Exception:
+            pass
+
+    def _copiar_linhas_treeview(self, tree_widget, incluir_cabecalho=True, apenas_selecionadas=True):
+        try:
+            if not tree_widget:
+                return False
+
+            itens = tree_widget.selection() if apenas_selecionadas else tree_widget.get_children()
+            if not itens:
+                return False
+
+            colunas = list(tree_widget["columns"])
+            linhas = []
+
+            if incluir_cabecalho and colunas:
+                linhas.append("	".join([str(self._format_column_header(c)) for c in colunas]))
+
+            for iid in itens:
+                valores = tree_widget.item(iid).get("values", [])
+                valores_formatados = []
+                for valor in valores:
+                    texto = "" if valor is None else str(valor)
+                    texto = texto.replace("\r", " ").replace("\n", " ")
+                    valores_formatados.append(texto)
+                linhas.append("	".join(valores_formatados))
+
+            if not linhas:
+                return False
+
+            conteudo = "\n".join(linhas)
+            self.root.clipboard_clear()
+            self.root.clipboard_append(conteudo)
+            self.root.update()
+            return True
+        except Exception:
+            return False
+
+    def _bind_copy_treeview(self, tree_widget):
+        try:
+            if not tree_widget:
+                return
+
+            def copiar_selecao(event=None):
+                ok = self._copiar_linhas_treeview(tree_widget, incluir_cabecalho=True, apenas_selecionadas=True)
+                if not ok:
+                    try:
+                        messagebox.showinfo(self._t("info"), self._t("no_rows_selected"), parent=self.root)
+                    except Exception:
+                        pass
+                return "break"
+
+            tree_widget.bind("<Control-c>", copiar_selecao)
+            tree_widget.bind("<Control-C>", copiar_selecao)
         except Exception:
             pass
 
@@ -828,10 +914,13 @@ class GerenciadorBancoDados:
             # Configurar interface se necessário
             if not self.tree:
                 self.tree = ttk.Treeview(self.tree_frame, selectmode="extended")
+                self._bind_ctrl_a_treeview(self.tree)
+                self._bind_copy_treeview(self.tree)
                 style = ttk.Style()
                 style.configure('Treeview', rowheight=25, font=('Arial', 12))
                 style.configure('Treeview.Heading', font=('Arial', 12, 'bold'))
                 self.tree.pack(fill="both", expand=True)
+                self._bind_ctrl_a_treeview(self.tree)
 
             self.atualizar_lista_tabelas()
 
@@ -1469,12 +1558,19 @@ class GerenciadorBancoDados:
         tree_container.pack(fill="both", expand=True)
         scroll_x = ttk.Scrollbar(tree_container, orient="horizontal")
         scroll_y = ttk.Scrollbar(tree_container, orient="vertical")
-        self.result_tree = ttk.Treeview(tree_container, xscrollcommand=scroll_x.set, yscrollcommand=scroll_y.set)
+        self.result_tree = ttk.Treeview(
+            tree_container,
+            xscrollcommand=scroll_x.set,
+            yscrollcommand=scroll_y.set,
+            selectmode="extended"
+        )
         scroll_x.config(command=self.result_tree.xview)
         scroll_y.config(command=self.result_tree.yview)
         scroll_x.pack(side="bottom", fill="x")
         scroll_y.pack(side="right", fill="y")
         self.result_tree.pack(side="left", fill="both", expand=True)
+        self._bind_ctrl_a_treeview(self.result_tree)
+        self._bind_copy_treeview(self.result_tree)
 
         def executar_sql(*_):
             sql = sql_text.get("1.0", "end").strip()
@@ -1596,6 +1692,13 @@ class GerenciadorBancoDados:
                     f.write(linha + "\n")
             messagebox.showinfo(self._t("export"), self._t("data_exported", arquivo=arquivo))
 
+        def copiar_resultados():
+            ok = self._copiar_linhas_treeview(self.result_tree, incluir_cabecalho=True, apenas_selecionadas=True)
+            if not ok:
+                messagebox.showinfo(self._t("info"), self._t("no_rows_selected"))
+                return
+            status_label.configure(text=self._t("copied_to_clipboard"), text_color="blue")
+
         btn_frame = ctk.CTkFrame(main)
         btn_frame.pack(fill="x", pady=10)
         BotaoPadronizado.criar_botao(btn_frame, text=self._t("run_sql"), command=executar_sql,
@@ -1604,6 +1707,8 @@ class GerenciadorBancoDados:
                       fg_color="#17a2b8", hover_color="#138496").pack(side="left", padx=5)
         BotaoPadronizado.criar_botao(btn_frame, text=self._t("open_script"), command=abrir_script,
                       fg_color="#007bff", hover_color="#0056b3").pack(side="left", padx=5)
+        BotaoPadronizado.criar_botao(btn_frame, text=self._t("copy"), command=copiar_resultados,
+                      fg_color="#17a2b8", hover_color="#138496").pack(side="left", padx=5)
         BotaoPadronizado.criar_botao(btn_frame, text=self._t("export_csv"), command=exportar_csv,
                       fg_color="#ffc107", hover_color="#e0a800", text_color="black").pack(side="left", padx=5)
         BotaoPadronizado.criar_botao(btn_frame, text=self._t("close"), command=dialog.destroy,
@@ -1612,6 +1717,8 @@ class GerenciadorBancoDados:
         dialog.bind("<Control-Return>", executar_sql)
         dialog.bind("<Control-s>", lambda e: salvar_script())
         dialog.bind("<Control-o>", lambda e: abrir_script())
+        dialog.bind("<Control-c>", lambda e: copiar_resultados())
+        dialog.bind("<Control-C>", lambda e: copiar_resultados())
 
         self.logger.info("Console SQL aberto", detalhes={"usuario": "admin", "schema": db.get_schema()})
 
