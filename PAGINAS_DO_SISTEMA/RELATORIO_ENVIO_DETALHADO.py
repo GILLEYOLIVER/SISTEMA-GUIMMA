@@ -165,16 +165,16 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             "Últimos 30 dias": "Últimos 30 dias",
             "Todos os períodos": "Todos os períodos",
             "código / descrição / destino / prestador": "código / descrição / destino / prestador",
-            "🔍 Buscar": "🔍 Buscar",
+            "Buscar": "Buscar",
             "Interna": "Interna",
             "Enviados": "Enviados",
             "Retorno": "Retorno",
             "Finalizados": "Finalizados",
-            "📤 Exportar CSV (Aba atual)": "📤 Exportar CSV (Aba atual)",
-            "🖨️ Relatório HTML": "🖨️ Relatório HTML",
+            "Exportar CSV (Aba atual)": "Exportar CSV (Aba atual)",
+            "Relatório HTML": "Relatório HTML",
             "Imprimir seções:": "Imprimir seções:",
             "Imprimir em paisagem": "Imprimir em paisagem",
-            "🖨️ Imprimir (seções marcadas)": "🖨️ Imprimir (seções marcadas)",
+            "Imprimir (seções marcadas)": "Imprimir (seções marcadas)",
             "Busque primeiro.": "Busque primeiro.",
             "Salvar CSV - {name}": "Salvar CSV - {name}",
             "Arquivo salvo em\n{path}": "Arquivo salvo em\n{path}",
@@ -215,16 +215,16 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             "Últimos 30 dias": "Last 30 days",
             "Todos os períodos": "All periods",
             "código / descrição / destino / prestador": "code / description / destination / provider",
-            "🔍 Buscar": "🔍 Search",
+            "Buscar": "Search",
             "Interna": "Internal",
             "Enviados": "Sent",
             "Retorno": "Return",
             "Finalizados": "Finished",
-            "📤 Exportar CSV (Aba atual)": "📤 Export CSV (Current tab)",
-            "🖨️ Relatório HTML": "🖨️ HTML Report",
+            "Exportar CSV (Aba atual)": "Export CSV (Current tab)",
+            "Relatório HTML": "HTML Report",
             "Imprimir seções:": "Print sections:",
             "Imprimir em paisagem": "Print in landscape",
-            "🖨️ Imprimir (seções marcadas)": "🖨️ Print (selected sections)",
+            "Imprimir (seções marcadas)": "Print (selected sections)",
             "Busque primeiro.": "Run a search first.",
             "Salvar CSV - {name}": "Save CSV - {name}",
             "Arquivo salvo em\n{path}": "File saved at\n{path}",
@@ -265,16 +265,16 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             "Últimos 30 dias": "Últimos 30 días",
             "Todos os períodos": "Todos los períodos",
             "código / descrição / destino / prestador": "código / descripción / destino / proveedor",
-            "🔍 Buscar": "🔍 Buscar",
+            "Buscar": "Buscar",
             "Interna": "Interna",
             "Enviados": "Enviados",
             "Retorno": "Retorno",
             "Finalizados": "Finalizados",
-            "📤 Exportar CSV (Aba atual)": "📤 Exportar CSV (Pestaña actual)",
-            "🖨️ Relatório HTML": "🖨️ Informe HTML",
+            "Exportar CSV (Aba atual)": "Exportar CSV (Pestaña actual)",
+            "Relatório HTML": "Informe HTML",
             "Imprimir seções:": "Imprimir secciones:",
             "Imprimir em paisagem": "Imprimir en horizontal",
-            "🖨️ Imprimir (seções marcadas)": "🖨️ Imprimir (secciones marcadas)",
+            "Imprimir (seções marcadas)": "Imprimir (secciones marcadas)",
             "Busque primeiro.": "Realice una búsqueda primero.",
             "Salvar CSV - {name}": "Guardar CSV - {name}",
             "Arquivo salvo em\n{path}": "Archivo guardado en\n{path}",
@@ -363,17 +363,17 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             ("lbl_ate", "Até:"),
             ("lbl_periodo", "Período:"),
             ("lbl_buscar", "Buscar:"),
-            ("btn_buscar", "🔍 Buscar"),
-            ("btn_export_top", "📤 Exportar CSV (Aba atual)"),
-            ("btn_html_top", "🖨️ Relatório HTML"),
+            ("btn_buscar", "Buscar"),
+            ("btn_export_top", "Exportar CSV (Aba atual)"),
+            ("btn_html_top", "Relatório HTML"),
             ("lbl_print_sections", "Imprimir seções:"),
             ("chk_interna", "Interna"),
             ("chk_env", "Enviados"),
             ("chk_ret", "Retorno"),
             ("chk_fin", "Finalizados"),
             ("chk_landscape", "Imprimir em paisagem"),
-            ("btn_export_bottom", "📤 Exportar CSV (Aba atual)"),
-            ("btn_print_bottom", "🖨️ Imprimir (seções marcadas)"),
+            ("btn_export_bottom", "Exportar CSV (Aba atual)"),
+            ("btn_print_bottom", "Imprimir (seções marcadas)"),
         ]
         for attr, key in widgets:
             widget = getattr(self, attr, None)
@@ -613,7 +613,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         self.ent_busca.grid(row=0, column=7, padx=4, pady=8)
         self.ent_busca.bind("<Return>", lambda e: self._search())
 
-        self.btn_buscar = BotaoPadronizado.criar_botao(filt, text=self._t("🔍 Buscar"), width=120, command=self._search)
+        self.btn_buscar = BotaoPadronizado.criar_botao(filt, text=self._t("Buscar"), tipo="novo", width=130, height=34, command=self._search)
         self.btn_buscar.grid(
             row=0, column=8, padx=8, pady=8, sticky="e"
         )
@@ -636,9 +636,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # Relatório
         box_rel = ctk.CTkFrame(self.tab_rel, fg_color=self.cor_primaria)
         box_rel.grid(row=0, column=0, sticky="nw", padx=10, pady=10)
-        self.btn_export_top = BotaoPadronizado.criar_botao(box_rel, text=self._t("📤 Exportar CSV (Aba atual)"), command=self._export_csv)
+        self.btn_export_top = BotaoPadronizado.criar_botao(box_rel, text=self._t("Exportar CSV (Aba atual)"), tipo="novo", width=210, height=34, command=self._export_csv)
         self.btn_export_top.grid(row=0, column=0, padx=6, pady=6)
-        self.btn_html_top = BotaoPadronizado.criar_botao(box_rel, text=self._t("🖨️ Relatório HTML"), command=self._report_html)
+        self.btn_html_top = BotaoPadronizado.criar_botao(box_rel, text=self._t("Relatório HTML"), tipo="novo", width=180, height=34, command=self._report_html)
         self.btn_html_top.grid(row=0, column=1, padx=6, pady=6)
 
         self._build_report_controls()
@@ -732,9 +732,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # botões
         btns = ctk.CTkFrame(self.tab_rel, fg_color=self.cor_primaria)
         btns.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
-        self.btn_export_bottom = BotaoPadronizado.criar_botao(btns, text=self._t("📤 Exportar CSV (Aba atual)"), command=self._export_csv)
+        self.btn_export_bottom = BotaoPadronizado.criar_botao(btns, text=self._t("Exportar CSV (Aba atual)"), tipo="novo", width=210, height=34, command=self._export_csv)
         self.btn_export_bottom.grid(row=0, column=0, padx=(0, 8))
-        self.btn_print_bottom = BotaoPadronizado.criar_botao(btns, text=self._t("🖨️ Imprimir (seções marcadas)"), command=self._report_html)
+        self.btn_print_bottom = BotaoPadronizado.criar_botao(btns, text=self._t("Imprimir (seções marcadas)"), tipo="novo", width=220, height=34, command=self._report_html)
         self.btn_print_bottom.grid(row=0, column=1, padx=(0, 8))
 
     def _apply_periodo(self):
@@ -1403,8 +1403,8 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # =========================
         sections_html = []
         sections_html.append(
-            f"<div class='k'>{_html.escape(self._t("Período"))}: <b>{_html.escape(str(ini) or '-')}</b> a <b>{_html.escape(str(fim) or '-')}</b>"
-            f" &nbsp;•&nbsp; {_html.escape(self._t("Busca"))}: <b>{_html.escape(str(termo) or '-')}</b></div>"
+            f"<div class='k'>{_html.escape(self._t('Período'))}: <b>{_html.escape(str(ini) or '-')}</b> a <b>{_html.escape(str(fim) or '-')}</b>"
+            f" &nbsp;•&nbsp; {_html.escape(self._t('Busca'))}: <b>{_html.escape(str(termo) or '-')}</b></div>"
         )
 
         for idx, (titulo, data, cols, headers) in enumerate(selected, start=1):
