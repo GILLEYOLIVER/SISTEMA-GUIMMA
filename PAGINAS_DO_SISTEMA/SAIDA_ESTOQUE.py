@@ -1,7 +1,6 @@
 import customtkinter as ctk
 from tkinter import ttk, messagebox
 from datetime import datetime
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 from PAGINAS_DO_SISTEMA.TEMAS import ajustar_hover
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
@@ -368,7 +367,7 @@ class SaidaEstoqueApp(ctk.CTkFrame):
         self.entry_produto.bind("<KeyRelease>", self.filtrar_produtos)
         self._ui_refs["search_entry"] = self.entry_produto
 
-        self._ui_refs["clear_button"] = BotaoPadronizado.criar_botao(self.selecao_frame, text=self._get_text("clear"), width=80, command=self.limpar_pesquisa, fg_color=self.cor_primaria, hover_color=self.cor_hover, text_color=self.cor_texto)
+        self._ui_refs["clear_button"] = ctk.CTkButton(self.selecao_frame, text=self._get_text("clear"), width=80, command=self.limpar_pesquisa, fg_color=self.cor_primaria, hover_color=self.cor_hover, text_color=self.cor_texto)
         self._ui_refs["clear_button"].pack(side="left", padx=5)
 
         self.campos_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
@@ -377,10 +376,10 @@ class SaidaEstoqueApp(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         button_frame.pack(fill="x", padx=10, pady=5)
 
-        self._ui_refs["register_button"] = BotaoPadronizado.criar_botao(button_frame, text=self._get_text("register_output"), command=self.registrar_saida, fg_color=self.cor_sucesso, hover_color=self.cor_hover, text_color=self.cor_texto)
+        self._ui_refs["register_button"] = ctk.CTkButton(button_frame, text=self._get_text("register_output"), command=self.registrar_saida, fg_color=self.cor_sucesso, hover_color=self.cor_hover, text_color=self.cor_texto)
         self._ui_refs["register_button"].pack(side="left", padx=5)
 
-        self._ui_refs["clear_fields_button"] = BotaoPadronizado.criar_botao(button_frame, text=self._get_text("clear_fields"), command=self.limpar_campos, fg_color=self.cor_primaria, hover_color=self.cor_hover, text_color=self.cor_texto)
+        self._ui_refs["clear_fields_button"] = ctk.CTkButton(button_frame, text=self._get_text("clear_fields"), command=self.limpar_campos, fg_color=self.cor_primaria, hover_color=self.cor_hover, text_color=self.cor_texto)
         self._ui_refs["clear_fields_button"].pack(side="left", padx=5)
 
         self.status_label = ctk.CTkLabel(self, text=self._get_text("select_product"), text_color=self.cor_texto)

@@ -1,4 +1,4 @@
-# PAGINAS_DO_SISTEMA/MAIN.py
+ # PAGINAS_DO_SISTEMA/MAIN.py
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
@@ -11,6 +11,11 @@ from pathlib import Path
 
 
 def _add_runtime_paths():
+    """
+    Garante imports funcionando em:
+    - Rodando pelo Python (projeto aberto)
+    - PyInstaller (dist/.app) -> sys._MEIPASS
+    """
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
         p_meipass = meipass
@@ -20,15 +25,15 @@ def _add_runtime_paths():
         if p_meipass not in sys.path:
             sys.path.insert(0, p_meipass)
 
-    here = os.path.dirname(os.path.abspath(__file__))
+    here = os.path.dirname(os.path.abspath(__file__))  # .../src/PAGINAS_DO_SISTEMA
     if here not in sys.path:
         sys.path.insert(0, here)
 
-    src_root = os.path.dirname(here)
+    src_root = os.path.dirname(here)  # .../src
     if src_root not in sys.path:
         sys.path.insert(0, src_root)
 
-    project_root = os.path.dirname(src_root)
+    project_root = os.path.dirname(src_root)  # raiz do projeto
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
@@ -46,10 +51,11 @@ def _is_valid_config_file(path: Path) -> bool:
         return False
 
 
-from PAGINAS_DO_SISTEMA.OPERA_PATHS import ensure_default_tree, get_app_data_dir
-
-
 def _ensure_db_config_before_app() -> None:
+    """
+    Na primeira execução (sem config.json), abre o SETUP_BANCO para configurar
+    e salvar o arquivo, incluindo PAGINAS_DO_SISTEMA/config.json.
+    """
     pages_dir = Path(__file__).resolve().parent
     project_root = pages_dir.parent
     app_cfg = get_app_data_dir() / "config.json"
@@ -74,6 +80,8 @@ def _ensure_db_config_before_app() -> None:
     if not _is_valid_config_file(pages_dir / "config.json"):
         raise SystemExit("Configuração inicial não gerou PAGINAS_DO_SISTEMA/config.json.")
 
+# ✅ Pastas graváveis (resolve "Read-only file system" no .app)
+from PAGINAS_DO_SISTEMA.OPERA_PATHS import ensure_default_tree, get_app_data_dir
 
 os.environ.setdefault("OPERA_DATA_DIR", str(get_app_data_dir()))
 ensure_default_tree()
@@ -82,28 +90,31 @@ if getattr(sys, "_MEIPASS", None):
 
 _ensure_db_config_before_app()
 
-import tkinter as tk
+
+# ==============================================================================
+# APP
+# ==============================================================================
 import customtkinter as ctk
 
 from PAGINAS_DO_SISTEMA.SPLASH import SplashScreenModern
 from PAGINAS_DO_SISTEMA.LOGUIN import SistemaLoginModerno
-from PAGINAS_DO_SISTEMA.ui_after_guard import reset_tk_default_root
 
 
 def main():
+    # Aparência (ajuste se quiser)
     try:
         ctk.set_appearance_mode("Dark")
     except Exception:
         pass
 
-    root = tk.Tk()
+    root = ctk.CTk()
+    # Blindagem anti-flash: mantém a janela principal invisível e fora da tela
+    # até o splash terminar e o login estar pronto.
     root.withdraw()
-
     try:
         root.attributes("-alpha", 0.0)
     except Exception:
         pass
-
     try:
         root.geometry("1x1+30000+30000")
     except Exception:
@@ -112,58 +123,47 @@ def main():
     holder = {"login": None}
 
     def preparar_login_em_background():
+        """Monta a interface de login enquanto o splash ainda está visível."""
         if holder["login"] is not None:
             return
         try:
             holder["login"] = SistemaLoginModerno(root, iniciar_oculto=True)
-            if hasattr(holder["login"], "ao_fechar"):
-                root.protocol("WM_DELETE_WINDOW", holder["login"].ao_fechar)
+            root.protocol("WM_DELETE_WINDOW", holder["login"].ao_fechar)
+            # Evita mostrar a janela raiz (fundo preto) antes do login
+            # terminar de montar toda a interface.
             root.update_idletasks()
+            root.deiconify()
         except Exception as e:
             print(f"[BOOT] Erro ao preparar LOGIN: {e}")
             try:
-                root.after(50, root.destroy)
+                root.destroy()
             except Exception:
-                try:
-                    root.destroy()
-                except Exception:
-                    pass
+                pass
 
     def exibir_login_pronto():
         try:
             if holder["login"] is None:
                 preparar_login_em_background()
-
-            if holder["login"] is None:
-                return
-
-            if hasattr(holder["login"], "exibir_janela"):
-                holder["login"].exibir_janela()
-            else:
-                root.deiconify()
-
+            holder["login"].exibir_janela()
             root.update_idletasks()
-
             try:
                 root.attributes("-alpha", 1.0)
             except Exception:
                 pass
-
             root.deiconify()
             root.lift()
             root.focus_force()
         except Exception as e:
             print(f"[BOOT] Erro ao exibir LOGIN: {e}")
             try:
-                root.after(50, root.destroy)
+                root.destroy()
             except Exception:
-                try:
-                    root.destroy()
-                except Exception:
-                    pass
+                pass
 
+    # inicia a montagem do login enquanto o splash anima
     root.after(120, preparar_login_em_background)
 
+    # Splash -> Login pronto
     SplashScreenModern(
         parent=root,
         usuario_nome="Usuário",
@@ -175,33 +175,6 @@ def main():
     )
 
     root.mainloop()
-
-    login = holder.get("login")
-    payload = getattr(login, "_login_result", None) if login else None
-
-    try:
-        if root.winfo_exists():
-            root.destroy()
-    except Exception:
-        pass
-
-    if not payload:
-        return
-
-    try:
-        reset_tk_default_root()
-    except Exception:
-        pass
-
-    from PAGINAS_DO_SISTEMA.MENU_PRINCIPAL import OperaMenuApp
-
-    app = OperaMenuApp(
-        usuario_id=int(payload.get("user_id", 0) or 0),
-        usuario_nome=str(payload.get("usuario", "")),
-        usuario_hierarquia=str(payload.get("hierarquia", "Padrão")),
-        tema_preferido=str(payload.get("tema_preferido", "CLÁSSICO CLARO")),
-    )
-    app.mainloop()
 
 
 if __name__ == "__main__":

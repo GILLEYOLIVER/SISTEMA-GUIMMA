@@ -20,7 +20,6 @@ from datetime import datetime, timedelta
 from collections import defaultdict, Counter
 from difflib import get_close_matches
 from typing import List, Dict, Tuple, Any, Optional
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
@@ -1579,7 +1578,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         ctk.CTkLabel(header, text="Controle de Estoque", font=self.font_titulo,
                      text_color=_hex_contrast(self.cor_primaria)).pack(side="left", padx=20)
 
-        BotaoPadronizado.criar_botao(header, text="Atualizar Dados", command=self.reload_data, width=120,
+        ctk.CTkButton(header, text="Atualizar Dados", command=self.reload_data, width=120,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="right", padx=20)
 
@@ -1647,7 +1646,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         )
         self.combo_category.grid(row=0, column=1, padx=(0, 8))
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             filtros, text="Aplicar Filtros", command=self.apply_filters,
             fg_color=self.cor_primaria, hover_color=self.cor_hover,
             text_color=self.cor_texto
@@ -1660,15 +1659,15 @@ class AdvancedStockReport(ctk.CTkFrame):
         export_frame = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
         export_frame.grid(row=2, column=0, sticky="ew", pady=(8, 0))
 
-        BotaoPadronizado.criar_botao(export_frame, text="📄 Exportar CSV", fg_color=self.cor_sucesso,
+        ctk.CTkButton(export_frame, text="📄 Exportar CSV", fg_color=self.cor_sucesso,
                       hover_color=self.cor_hover, text_color=self.cor_texto,
                       command=self.export_csv).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(export_frame, text="🖨️ Gerar PDF", fg_color=self.cor_alerta,
+        ctk.CTkButton(export_frame, text="🖨️ Gerar PDF", fg_color=self.cor_alerta,
                       hover_color=self.cor_hover, text_color=self.cor_texto,
                       command=self.export_pdf).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(export_frame, text="📊 Exportar Excel", fg_color=self.cor_destaque,
+        ctk.CTkButton(export_frame, text="📊 Exportar Excel", fg_color=self.cor_destaque,
                       hover_color=self.cor_hover, text_color=self.cor_texto,
                       command=self.export_excel).pack(side="left", padx=5)
 
@@ -1892,7 +1891,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         self.ai_input.grid(row=0, column=0, sticky="ew", padx=(10, 8), pady=8)
         self.ai_input.bind("<Return>", self.process_ai_query)
 
-        self.btn_send = BotaoPadronizado.criar_botao(
+        self.btn_send = ctk.CTkButton(
             input_frame, text="Enviar", command=self.process_ai_query,
             fg_color=self.cor_destaque, hover_color=self.cor_hover,
             text_color=self.cor_texto, width=90
@@ -1908,7 +1907,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             "Sugestões de compra",
             "Itens não movimentados há 30 dias",
         ]):
-            btn = BotaoPadronizado.criar_botao(self.quick_actions, text=text, width=1,
+            btn = ctk.CTkButton(self.quick_actions, text=text, width=1,
                                 fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                                 text_color=self.cor_texto,
                                 command=lambda t=text: self._send_quick(t))
@@ -1916,13 +1915,13 @@ class AdvancedStockReport(ctk.CTkFrame):
 
         self.extra_actions = ctk.CTkFrame(wrapper, fg_color=self.cor_fundo)
         self.extra_actions.grid(row=3, column=0, sticky="ew", pady=(4, 0))
-        BotaoPadronizado.criar_botao(self.extra_actions, text="🔁 Regenerar", command=self._regenerate_last,
+        ctk.CTkButton(self.extra_actions, text="🔁 Regenerar", command=self._regenerate_last,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        BotaoPadronizado.criar_botao(self.extra_actions, text="💾 Exportar conversa", command=self._export_chat,
+        ctk.CTkButton(self.extra_actions, text="💾 Exportar conversa", command=self._export_chat,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        BotaoPadronizado.criar_botao(self.extra_actions, text="💡 Sugestões/Perguntas", command=self._open_suggestions_window,
+        ctk.CTkButton(self.extra_actions, text="💡 Sugestões/Perguntas", command=self._open_suggestions_window,
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
@@ -2439,7 +2438,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         def do_busca():
             self._buscar_tecidos_para_adicao(search_entry, tecido_tree)
 
-        btn_buscar = BotaoPadronizado.criar_botao(search_frame, text="Buscar", width=80, command=do_busca,
+        btn_buscar = ctk.CTkButton(search_frame, text="Buscar", width=80, command=do_busca,
                                    fg_color=self.cor_primaria, hover_color=self.cor_hover,
                                    text_color=self.cor_texto)
         btn_buscar.pack(side="left", padx=5)
@@ -2448,7 +2447,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(main_frame, fg_color=self.cor_fundo)
         btn_frame.pack(fill="x", pady=(10, 20))
 
-        btn_confirmar = BotaoPadronizado.criar_botao(
+        btn_confirmar = ctk.CTkButton(
             btn_frame,
             text="Confirmar Seleção",
             command=lambda: self._confirmar_adicao_tecido(
@@ -2461,7 +2460,7 @@ class AdvancedStockReport(ctk.CTkFrame):
         )
         btn_confirmar.pack(side="left", padx=5)
 
-        btn_cancelar = BotaoPadronizado.criar_botao(
+        btn_cancelar = ctk.CTkButton(
             btn_frame,
             text="Cancelar",
             command=dialog.destroy,
@@ -2470,7 +2469,7 @@ class AdvancedStockReport(ctk.CTkFrame):
             width=120,
             text_color=self.cor_texto
         )
-        btn_cancelar.pack(side="left", padx=5)
+        btn_cancelar.pack(side="right", padx=5)
 
         search_entry.focus_set()
 
@@ -3115,13 +3114,13 @@ class AdvancedStockReport(ctk.CTkFrame):
         pager.grid(row=1, column=1, sticky="ew")
         self._sug_page = 0
         self._sug_page_size = 150
-        BotaoPadronizado.criar_botao(pager, text="◀ Anterior", width=100,
+        ctk.CTkButton(pager, text="◀ Anterior", width=100,
                       command=lambda: self._change_page(-1),
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
         self._sug_page_label = ctk.CTkLabel(pager, text="Página 1/1", text_color=self.cor_texto)
         self._sug_page_label.pack(side="left", padx=8)
-        BotaoPadronizado.criar_botao(pager, text="Próxima ▶", width=100,
+        ctk.CTkButton(pager, text="Próxima ▶", width=100,
                       command=lambda: self._change_page(+1),
                       fg_color=self.cor_secundaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)

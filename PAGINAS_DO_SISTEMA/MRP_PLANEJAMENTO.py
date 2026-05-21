@@ -7,7 +7,6 @@ from datetime import datetime
 import os
 import webbrowser
 from tkinter import messagebox, ttk
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import customtkinter as ctk
 from reportlab.lib.pagesizes import A4
@@ -62,16 +61,16 @@ class MRPPage(ctk.CTkFrame):
         toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
         toolbar.grid_columnconfigure(5, weight=1)
 
-        BotaoPadronizado.criar_botao(toolbar, text="Gerar MRP", command=self._gerar_mrp).grid(row=0, column=0, padx=(0, 8))
-        BotaoPadronizado.criar_botao(toolbar, text="Simular", command=self._simular_mrp).grid(row=0, column=1, padx=(0, 8))
-        BotaoPadronizado.criar_botao(toolbar, text="Aprovar Compra", command=self._aprovar_compra).grid(row=0, column=2, padx=(0, 8))
-        BotaoPadronizado.criar_botao(toolbar, text="Exportar PDF", command=self._exportar_mrp).grid(
+        ctk.CTkButton(toolbar, text="Gerar MRP", command=self._gerar_mrp).grid(row=0, column=0, padx=(0, 8))
+        ctk.CTkButton(toolbar, text="Simular", command=self._simular_mrp).grid(row=0, column=1, padx=(0, 8))
+        ctk.CTkButton(toolbar, text="Aprovar Compra", command=self._aprovar_compra).grid(row=0, column=2, padx=(0, 8))
+        ctk.CTkButton(toolbar, text="Exportar PDF", command=self._exportar_mrp).grid(
             row=0, column=3, padx=(0, 8)
         )
-        BotaoPadronizado.criar_botao(toolbar, text="Imprimir", command=self._imprimir_mrp).grid(
+        ctk.CTkButton(toolbar, text="Imprimir", command=self._imprimir_mrp).grid(
             row=0, column=4, padx=(0, 8)
         )
-        BotaoPadronizado.criar_botao(toolbar, text="Configurações", command=self._abrir_configuracoes).grid(row=0, column=5)
+        ctk.CTkButton(toolbar, text="Configurações", command=self._abrir_configuracoes).grid(row=0, column=5)
 
     def _build_filters(self):
         filters = ctk.CTkFrame(self)
@@ -81,7 +80,7 @@ class MRPPage(ctk.CTkFrame):
         ctk.CTkLabel(filters, text="Período").grid(row=0, column=0, padx=(12, 6), pady=8)
         self.mrp_inicio_entry = ctk.CTkEntry(filters, placeholder_text="De")
         self.mrp_inicio_entry.grid(row=0, column=1, padx=(0, 6), pady=8)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             filters,
             text="📅",
             width=32,
@@ -89,7 +88,7 @@ class MRPPage(ctk.CTkFrame):
         ).grid(row=0, column=2, padx=(0, 6), pady=8)
         self.mrp_fim_entry = ctk.CTkEntry(filters, placeholder_text="Até")
         self.mrp_fim_entry.grid(row=0, column=3, padx=(0, 12), pady=8)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             filters,
             text="📅",
             width=32,
@@ -106,7 +105,7 @@ class MRPPage(ctk.CTkFrame):
         self.filtro_status.grid(
             row=0, column=8, padx=(0, 12), pady=8
         )
-        BotaoPadronizado.criar_botao(filters, text="Filtrar", command=self._carregar_dados_mrp).grid(row=0, column=9, padx=(0, 12), pady=8)
+        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_dados_mrp).grid(row=0, column=9, padx=(0, 12), pady=8)
 
     def _build_results(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
@@ -185,7 +184,7 @@ class MRPPage(ctk.CTkFrame):
         ctk.CTkLabel(info, text="Plano de compra recomendado").grid(
             row=0, column=0, padx=12, pady=8, sticky="w"
         )
-        BotaoPadronizado.criar_botao(info, text="Converter em Pedido", command=self._aprovar_compra).grid(row=0, column=2, padx=12, pady=8)
+        ctk.CTkButton(info, text="Converter em Pedido", command=self._aprovar_compra).grid(row=0, column=2, padx=12, pady=8)
 
         tree_frame = ctk.CTkFrame(parent)
         tree_frame.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))
@@ -776,9 +775,9 @@ class MRPPage(ctk.CTkFrame):
         nav.pack(fill="x", padx=10, pady=5)
 
         lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
-        BotaoPadronizado.criar_botao(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
-        BotaoPadronizado.criar_botao(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
@@ -810,7 +809,7 @@ class MRPPage(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = BotaoPadronizado.criar_botao(
+                    btn = ctk.CTkButton(
                         frame_dias,
                         text=str(dia),
                         width=30,

@@ -8,7 +8,6 @@ import webbrowser
 import shutil
 from datetime import datetime
 from pathlib import Path
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # Silencia o aviso de conflito entre PyFPDF e fpdf2
 import warnings
@@ -1203,12 +1202,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         frente_btn_frame.pack(pady=3)
 
         # Botões MENORES
-        BotaoPadronizado.criar_botao(frente_btn_frame, text=self._get_text("add"), command=lambda: self.adicionar_imagem("frente"),
+        ctk.CTkButton(frente_btn_frame, text=self._get_text("add"), command=lambda: self.adicionar_imagem("frente"),
                       width=90, height=28, font=("Arial", 10),
                       fg_color=cor_primaria, hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'),
                       text_color=get_contraste_texto(cor_primaria)).pack(side="left", padx=3)
 
-        BotaoPadronizado.criar_botao(frente_btn_frame, text=self._get_text("remove"), command=lambda: self.remover_imagem("frente"),
+        ctk.CTkButton(frente_btn_frame, text=self._get_text("remove"), command=lambda: self.remover_imagem("frente"),
                       width=90, height=28, font=("Arial", 10),
                       fg_color=getattr(self.sistema, 'cor_alerta', '#DC3545'),
                       hover_color=self._ajustar_hover(getattr(self.sistema, 'cor_alerta', '#DC3545')),
@@ -1237,12 +1236,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         costas_btn_frame.pack(pady=3)
 
         # Botões MENORES
-        BotaoPadronizado.criar_botao(costas_btn_frame, text=self._get_text("add"), command=lambda: self.adicionar_imagem("costas"),
+        ctk.CTkButton(costas_btn_frame, text=self._get_text("add"), command=lambda: self.adicionar_imagem("costas"),
                       width=90, height=28, font=("Arial", 10),
                       fg_color=cor_primaria, hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'),
                       text_color=get_contraste_texto(cor_primaria)).pack(side="left", padx=3)
 
-        BotaoPadronizado.criar_botao(costas_btn_frame, text=self._get_text("remove"), command=lambda: self.remover_imagem("costas"),
+        ctk.CTkButton(costas_btn_frame, text=self._get_text("remove"), command=lambda: self.remover_imagem("costas"),
                       width=90, height=28, font=("Arial", 10),
                       fg_color=getattr(self.sistema, 'cor_alerta', '#DC3545'),
                       hover_color=self._ajustar_hover(getattr(self.sistema, 'cor_alerta', '#DC3545')),
@@ -1265,7 +1264,7 @@ class CadastroModelosApp(ctk.CTkFrame):
 
         # Botões com cores dinâmicas para atender a temas claros e escuros
         _cor_btn = getattr(self.sistema, 'cor_primaria', '#007BFF')
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             tecidos_btn_frame,
             text=self._get_text("add_fabric"),
             command=self.adicionar_tecido,
@@ -1277,7 +1276,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             height=35,
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             tecidos_btn_frame,
             text=self._get_text("search_fabric"),
             command=self.pesquisar_tecido,
@@ -1315,7 +1314,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         remover_frame = ctk.CTkFrame(self.tab_tecidos, fg_color="transparent")
         remover_frame.pack(fill="x", pady=5, padx=10)
 
-        BotaoPadronizado.criar_botao(remover_frame, text=self._get_text("remove_fabric"), command=self.remover_tecido,
+        ctk.CTkButton(remover_frame, text=self._get_text("remove_fabric"), command=self.remover_tecido,
                       fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'), hover_color="#ff3333",
                       text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12), width=140, height=35).pack(side="left", padx=5)
 
@@ -1329,7 +1328,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         self.tecidos_img_container = ctk.CTkFrame(tecidos_img_frame, fg_color="transparent")
         self.tecidos_img_container.pack(fill="x")
 
-        BotaoPadronizado.criar_botao(tecidos_img_frame, text=self._get_text("add_image"), command=self.adicionar_imagem_tecido,
+        ctk.CTkButton(tecidos_img_frame, text=self._get_text("add_image"), command=self.adicionar_imagem_tecido,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(pady=5)
@@ -1348,12 +1347,12 @@ class CadastroModelosApp(ctk.CTkFrame):
         aviamentos_btn_frame = ctk.CTkFrame(self.tab_aviamentos, fg_color="transparent")
         aviamentos_btn_frame.pack(fill="x", pady=5, padx=10)
 
-        BotaoPadronizado.criar_botao(aviamentos_btn_frame, text=self._get_text("add_trim"), command=self.adicionar_aviamento,
+        ctk.CTkButton(aviamentos_btn_frame, text=self._get_text("add_trim"), command=self.adicionar_aviamento,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12), width=140, height=35).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(aviamentos_btn_frame, text=self._get_text("search_trim"), command=self.pesquisar_aviamento,
+        ctk.CTkButton(aviamentos_btn_frame, text=self._get_text("search_trim"), command=self.pesquisar_aviamento,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12), width=140, height=35).pack(side="left", padx=5)
@@ -1385,7 +1384,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         remover_frame = ctk.CTkFrame(self.tab_aviamentos, fg_color="transparent")
         remover_frame.pack(fill="x", pady=5, padx=10)
 
-        BotaoPadronizado.criar_botao(remover_frame, text=self._get_text("remove_trim"), command=self.remover_aviamento,
+        ctk.CTkButton(remover_frame, text=self._get_text("remove_trim"), command=self.remover_aviamento,
                       fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'), hover_color="#ff3333",
                       text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12), width=140, height=35).pack(side="left", padx=5)
 
@@ -1399,7 +1398,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         self.aviamentos_img_container = ctk.CTkFrame(aviamentos_img_frame, fg_color="transparent")
         self.aviamentos_img_container.pack(fill="x")
 
-        BotaoPadronizado.criar_botao(aviamentos_img_frame, text=self._get_text("add_image"), command=self.adicionar_imagem_aviamento,
+        ctk.CTkButton(aviamentos_img_frame, text=self._get_text("add_image"), command=self.adicionar_imagem_aviamento,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(pady=5)
@@ -1418,7 +1417,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(self.tab_outros, fg_color="transparent")
         btn_frame.pack(fill="x", pady=5, padx=10)
 
-        BotaoPadronizado.criar_botao(btn_frame, text=self._get_text("add_other"),
+        ctk.CTkButton(btn_frame, text=self._get_text("add_other"),
                       command=self.adicionar_outro,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12),
@@ -1445,11 +1444,15 @@ class CadastroModelosApp(ctk.CTkFrame):
         # Remover
         rodape = ctk.CTkFrame(self.tab_outros, fg_color="transparent")
         rodape.pack(fill="x", pady=5, padx=10)
-        btn_remover = BotaoPadronizado.criar_botao(rodape, text=self._get_text("remove_service"),
+        btn_remover = ctk.CTkButton(rodape, text=self._get_text("remove_service"),
                                     command=self.remover_outro,
-                                    font=("Arial", 12),
+                                    fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'),
+                                    text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12),
                                     width=140, height=35)
         btn_remover.pack(side="left", padx=5)
+        btn_remover.bind("<Enter>", lambda e: btn_remover.configure(fg_color="#E53935"))
+        btn_remover.bind("<Leave>",
+                         lambda e: btn_remover.configure(fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107')))
 
         # Imagens
         img_frame = ctk.CTkFrame(self.tab_outros, fg_color=getattr(self.sistema, 'cor_fundo', '#FFFFFF'))
@@ -1461,7 +1464,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         self.outros_img_container = ctk.CTkFrame(img_frame, fg_color="transparent")
         self.outros_img_container.pack(fill="x")
 
-        BotaoPadronizado.criar_botao(img_frame, text=self._get_text("add_image"),
+        ctk.CTkButton(img_frame, text=self._get_text("add_image"),
                       command=self.adicionar_imagem_outro,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")), font=("Arial", 12)).pack(pady=5)
@@ -1483,9 +1486,9 @@ class CadastroModelosApp(ctk.CTkFrame):
         ctk.CTkLabel(pesquisa_frame, text=self._get_text("search_label"), font=("Arial", 12)).pack(side="left", padx=5)
         self.pesquisa_entry = ctk.CTkEntry(pesquisa_frame, font=("Arial", 12), width=200)
         self.pesquisa_entry.pack(side="left", padx=5)
-        BotaoPadronizado.criar_botao(pesquisa_frame, text=self._get_text("search"), command=self.pesquisar_modelos, width=80).pack(side="left",
+        ctk.CTkButton(pesquisa_frame, text=self._get_text("search"), command=self.pesquisar_modelos, width=80).pack(side="left",
                                                                                                        padx=5)
-        BotaoPadronizado.criar_botao(pesquisa_frame, text=self._get_text("clear"), command=self.limpar_pesquisa, width=80).pack(side="left", padx=5)
+        ctk.CTkButton(pesquisa_frame, text=self._get_text("clear"), command=self.limpar_pesquisa, width=80).pack(side="left", padx=5)
 
         # Tabela de resultados
         tabela_frame = ctk.CTkFrame(self.tab_pesquisa, fg_color=getattr(self.sistema, 'cor_fundo', '#FFFFFF'))
@@ -1513,86 +1516,85 @@ class CadastroModelosApp(ctk.CTkFrame):
         acoes_frame = ctk.CTkFrame(self.tab_pesquisa, fg_color="transparent")
         acoes_frame.pack(fill="x", pady=10, padx=10)
 
-        BotaoPadronizado.criar_botao(acoes_frame, text=self._get_text("load_model"), command=self.carregar_modelo_pesquisa,
+        ctk.CTkButton(acoes_frame, text=self._get_text("load_model"), command=self.carregar_modelo_pesquisa,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(side="left", padx=5)
-        BotaoPadronizado.criar_botao(acoes_frame, text=self._get_text("generate_pdf"), command=self.gerar_pdf_pesquisa,
+        ctk.CTkButton(acoes_frame, text=self._get_text("generate_pdf"), command=self.gerar_pdf_pesquisa,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(side="left", padx=5)
-        BotaoPadronizado.criar_botao(acoes_frame, text=self._get_text("print_pdf"), command=self.imprimir_pdf_pesquisa,
+        ctk.CTkButton(acoes_frame, text=self._get_text("print_pdf"), command=self.imprimir_pdf_pesquisa,
                       fg_color=getattr(self.sistema, 'cor_primaria', '#007BFF'),
                       hover_color=getattr(self.sistema, 'cor_hover', '#E9ECEF'), text_color="white",
                       font=("Arial", 12)).pack(side="left", padx=5)
 
     def _create_action_buttons(self, parent):
-        """Cria os botões de ação inferiores alinhados à esquerda."""
-        btn_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        btn_frame.grid(row=99, column=0, columnspan=10, sticky="w", padx=10, pady=10)
+        """Cria os botões de ação na parte inferior - VERSÃO COMPACTA."""
+        btn_frame = ctk.CTkFrame(parent, fg_color="transparent", height=35)  # Altura fixa
+        btn_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=2)  # Menos padding
+        btn_frame.pack_propagate(False)
 
-        for i in range(5):
-            btn_frame.grid_columnconfigure(i, weight=0)
+        # Configurar colunas para alinhar os botões à direita
+        btn_frame.grid_columnconfigure(0, weight=1)
+        btn_frame.grid_columnconfigure(1, weight=0)
+        btn_frame.grid_columnconfigure(2, weight=0)
+        btn_frame.grid_columnconfigure(3, weight=0)
+        btn_frame.grid_columnconfigure(4, weight=0)
 
-        BotaoPadronizado.criar_botao(
+        # Botão Novo Modelo - MAIS COMPACTO
+        # Botão Novo Modelo - MAIS COMPACTO com cores dinâmicas
+        _cor_btn = getattr(self.sistema, 'cor_primaria', '#007BFF')
+        ctk.CTkButton(
             btn_frame,
             text=self._get_text("new"),
             command=self.novo_cadastro,
-            fg_color=getattr(self.sistema, "cor_secundaria", "#6C757D"),
-            hover_color=ajustar_hover(getattr(self.sistema, "cor_secundaria", "#6C757D")),
-            text_color=get_contraste_texto(getattr(self.sistema, "cor_secundaria", "#6C757D")),
-            font=("Arial", 10),
-            width=90,
-            height=28
-        ).grid(row=0, column=0, padx=(0, 4), sticky="w")
+            fg_color=_cor_btn,
+            hover_color=self._ajustar_hover(_cor_btn),
+            text_color=get_contraste_texto(_cor_btn),
+            font=("Arial", 10),  # Fonte menor
+            width=70,  # Largura reduzida
+            height=26  # Altura reduzida
+        ).grid(row=0, column=1, padx=2, sticky="e")
 
-        BotaoPadronizado.criar_botao(
+        # Botão Gerar PDF - MAIS COMPACTO com cores dinâmicas
+        ctk.CTkButton(
             btn_frame,
-            text=self._get_text("print_pdf"),
+            text=self._get_text("pdf"),
             command=self.on_click_imprimir,
-            fg_color=getattr(self.sistema, "cor_primaria", "#007BFF"),
-            hover_color=ajustar_hover(getattr(self.sistema, "cor_primaria", "#007BFF")),
-            text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
+            fg_color=_cor_btn,
+            hover_color=self._ajustar_hover(_cor_btn),
+            text_color=get_contraste_texto(_cor_btn),
             font=("Arial", 10),
-            width=90,
-            height=28
-        ).grid(row=0, column=1, padx=4, sticky="w")
+            width=70,
+            height=26
+        ).grid(row=0, column=2, padx=2, sticky="e")
 
-        BotaoPadronizado.criar_botao(
+        # Botão Exportar - MAIS COMPACTO
+        ctk.CTkButton(
             btn_frame,
             text=self._get_text("export"),
             command=self.exportar_cadastro,
-            fg_color=getattr(self.sistema, "cor_destaque", "#FFC107"),
-            hover_color=ajustar_hover(getattr(self.sistema, "cor_destaque", "#FFC107")),
-            text_color=get_contraste_texto(getattr(self.sistema, "cor_destaque", "#FFC107")),
+            fg_color=getattr(self.sistema, 'cor_destaque', '#FFC107'),
+            hover_color="#ff3333",
+            text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
             font=("Arial", 10),
-            width=90,
-            height=28
-        ).grid(row=0, column=2, padx=4, sticky="w")
+            width=70,
+            height=26
+        ).grid(row=0, column=3, padx=2, sticky="e")
 
-        BotaoPadronizado.criar_botao(
+        # Botão Salvar (no canto inferior direito) - MAIS COMPACTO
+        ctk.CTkButton(
             btn_frame,
             text=self._get_text("save"),
             command=self.salvar_cadastro,
-            fg_color=getattr(self.sistema, "cor_sucesso", "#28A745"),
-            hover_color=ajustar_hover(getattr(self.sistema, "cor_sucesso", "#28A745")),
-            text_color=get_contraste_texto(getattr(self.sistema, "cor_sucesso", "#28A745")),
+            fg_color=getattr(self.sistema, 'cor_sucesso', '#28A745'),
+            hover_color="#2ECC71",
+            text_color=get_contraste_texto(getattr(self.sistema, "cor_primaria", "#007BFF")),
             font=("Arial", 10, "bold"),
-            width=90,
-            height=28
-        ).grid(row=0, column=3, padx=4, sticky="w")
-
-        BotaoPadronizado.criar_botao(
-            btn_frame,
-            text=self._get_text("cancel"),
-            command=self.sair,
-            fg_color=getattr(self.sistema, "cor_alerta", "#DC3545"),
-            hover_color=ajustar_hover(getattr(self.sistema, "cor_alerta", "#DC3545")),
-            text_color=get_contraste_texto(getattr(self.sistema, "cor_alerta", "#DC3545")),
-            font=("Arial", 10),
-            width=90,
-            height=28
-        ).grid(row=0, column=4, padx=(4, 0), sticky="w")
+            width=70,
+            height=26
+        ).grid(row=0, column=4, padx=2, sticky="e")
 
     def _initialize_data(self):
         """Inicializa dados e atualiza tabelas."""
@@ -2023,7 +2025,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                         label.image_ref = img_ctk
                         label.pack()
 
-                    BotaoPadronizado.criar_botao(img_frame, text=self._get_text("remove"),
+                    ctk.CTkButton(img_frame, text=self._get_text("remove"),
                                   command=lambda idx=i: self.remover_imagem_tecido(idx),
                                   width=60, height=25, font=("Arial", 10)).pack(pady=2)
 
@@ -2063,7 +2065,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                         label.image_ref = img_ctk
                         label.pack()
 
-                    BotaoPadronizado.criar_botao(img_frame, text=self._get_text("remove"),
+                    ctk.CTkButton(img_frame, text=self._get_text("remove"),
                                   command=lambda idx=i: self.remover_imagem_aviamento(idx),
                                   width=60, height=25, font=("Arial", 10)).pack(pady=2)
 
@@ -2103,7 +2105,7 @@ class CadastroModelosApp(ctk.CTkFrame):
                         label.image_ref = img_ctk
                         label.pack()
 
-                    BotaoPadronizado.criar_botao(img_frame, text=self._get_text("remove"),
+                    ctk.CTkButton(img_frame, text=self._get_text("remove"),
                                   command=lambda idx=i: self.remover_imagem_outro(idx),
                                   width=60, height=25, font=("Arial", 10)).pack(pady=2)
 
@@ -3148,7 +3150,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.grid(row=len(campos) + 1, column=0, columnspan=2, pady=20)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("calc_total"),
             command=calcular_total,
@@ -3222,7 +3224,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         def cancelar():
             dialog.destroy()
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("save_emoji"),
             command=salvar,
@@ -3234,7 +3236,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             height=35,
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("cancel_emoji"),
             command=cancelar,
@@ -3424,7 +3426,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.grid(row=len(campos) + 1, column=0, columnspan=2, pady=20)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("calc_total"),
             command=calcular_total,
@@ -3496,7 +3498,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         def cancelar():
             dialog.destroy()
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("save_emoji"),
             command=salvar,
@@ -3508,7 +3510,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             height=35,
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("cancel_emoji"),
             command=cancelar,
@@ -3671,7 +3673,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.grid(row=len(campos) + 1, column=0, columnspan=2, pady=20)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("calc_total"),
             command=calcular_total,
@@ -3732,7 +3734,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         def cancelar():
             dlg.destroy()
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("save"),
             command=salvar,
@@ -3744,7 +3746,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             height=35,
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             button_frame,
             text=self._get_text("cancel"),
             command=cancelar,
@@ -4196,7 +4198,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.pack(pady=10)
 
-        btn_adicionar = BotaoPadronizado.criar_botao(
+        btn_adicionar = ctk.CTkButton(
             button_frame,
             text=self._get_text("add_selected"),
             command=on_escolher_e_abrir,
@@ -4209,7 +4211,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         )
         btn_adicionar.pack(side="left", padx=10)
 
-        btn_fechar = BotaoPadronizado.criar_botao(
+        btn_fechar = ctk.CTkButton(
             button_frame,
             text=self._get_text("close"),
             command=jan.destroy,
@@ -4560,7 +4562,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         btn_frame.pack()
 
-        btn_ok = BotaoPadronizado.criar_botao(
+        btn_ok = ctk.CTkButton(
             btn_frame,
             text="OK",
             command=confirmar,
@@ -4571,7 +4573,7 @@ class CadastroModelosApp(ctk.CTkFrame):
         )
         btn_ok.pack(side="left", padx=5)
 
-        btn_cancel = BotaoPadronizado.criar_botao(
+        btn_cancel = ctk.CTkButton(
             btn_frame,
             text=self._get_text("cancel_simple"),
             command=cancelar,
@@ -4644,9 +4646,25 @@ class CadastroModelosApp(ctk.CTkFrame):
                         elif isinstance(child, ctk.CTkLabel):
                             child.configure(text_color=cor_texto)
                         elif isinstance(child, ctk.CTkButton):
-                            # Mantém a identidade visual definida pelo BotaoPadronizado
-                            # e apenas ajusta a borda ao tema ativo.
-                            child.configure(border_color=cor_borda)
+                            # Verificar tipo de botão pela cor
+                            text = (child.cget("text") or "").lower()
+                            if any(x in text for x in ["salvar", "registrar", "confirmar"]):
+                                child.configure(fg_color=cor_sucesso,
+                                                hover_color=self._ajustar_hover(cor_sucesso),
+                                                text_color=get_contraste_texto(cor_sucesso))
+                            elif any(x in text for x in ["cancelar", "excluir", "apagar", "remover"]):
+                                child.configure(fg_color=cor_alerta,
+                                                hover_color=self._ajustar_hover(cor_alerta),
+                                                text_color=get_contraste_texto(cor_alerta))
+                            elif any(x in text for x in ["imprimir", "exportar", "pré-visualização", "gerar pdf"]):
+                                child.configure(fg_color=cor_destaque,
+                                                hover_color=self._ajustar_hover(cor_destaque),
+                                                text_color=get_contraste_texto(cor_destaque))
+                            else:
+                                child.configure(fg_color=cor_primaria,
+                                                hover_color=cor_hover,
+                                                text_color=get_contraste_texto(cor_primaria),
+                                                border_color=cor_borda)
                         elif isinstance(child, ctk.CTkEntry):
                             child.configure(fg_color=cor_secundaria,
                                             border_color=cor_borda,

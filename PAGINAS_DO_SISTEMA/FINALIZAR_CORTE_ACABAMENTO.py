@@ -7,7 +7,6 @@ from tkinter import ttk, messagebox, filedialog
 import customtkinter as ctk
 import tempfile
 import webbrowser
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ---------- LOGO ----------
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
@@ -256,7 +255,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         self.busca_entry.pack(side="left")
         self.busca_entry.bind("<Return>", lambda e: self.carregar_retornos_pendentes())
 
-        self.btn_buscar = BotaoPadronizado.criar_botao(busca, text="Buscar", width=90,
+        self.btn_buscar = ctk.CTkButton(busca, text="Buscar", width=90,
                       command=self.carregar_retornos_pendentes,
                       fg_color=self.cor_primaria,
                       hover_color=self.cor_hover,
@@ -574,7 +573,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         botoes = ctk.CTkFrame(left, fg_color=self.cor_fundo)
         botoes.pack(fill="x", pady=(2, 8))
 
-        self.btn_finalizar = BotaoPadronizado.criar_botao(
+        self.btn_finalizar = ctk.CTkButton(
             botoes,
             text="Finalizar Corte Completo",
             width=180,
@@ -586,7 +585,7 @@ class FinalizacaoCortes(ctk.CTkFrame):
         )
         self.btn_finalizar.pack(side="left", padx=4)
 
-        self.btn_baixa_parcial = BotaoPadronizado.criar_botao(
+        self.btn_baixa_parcial = ctk.CTkButton(
             botoes,
             text="Salvar Baixa Parcial",
             width=150,
@@ -598,13 +597,13 @@ class FinalizacaoCortes(ctk.CTkFrame):
         )
         self.btn_baixa_parcial.pack(side="left", padx=4)
 
-        BotaoPadronizado.criar_botao(botoes, text="Limpar", width=120,
+        ctk.CTkButton(botoes, text="Limpar", width=120,
                       command=self.limpar_campos,
                       fg_color=self.cor_secundaria,
                       hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
-        BotaoPadronizado.criar_botao(botoes, text="Imprimir Relatório", width=160,
+        ctk.CTkButton(botoes, text="Imprimir Relatório", width=160,
                       command=self.abrir_relatorio,
                       fg_color=self.cor_primaria,
                       hover_color=self.cor_hover,
@@ -1230,9 +1229,9 @@ class FinalizacaoCortes(ctk.CTkFrame):
             except Exception as e:
                 messagebox.showerror("Erro", f"Falha ao salvar: {e}")
 
-        BotaoPadronizado.criar_botao(barra, text="Imprimir", width=120, command=_imprimir).pack(side="left", padx=4)
-        BotaoPadronizado.criar_botao(barra, text="Abrir no Navegador", width=160, command=_abrir_nav).pack(side="left", padx=4)
-        BotaoPadronizado.criar_botao(barra, text="Salvar HTML", width=140, command=_salvar_html).pack(side="left", padx=4)
+        ctk.CTkButton(barra, text="Imprimir", width=120, command=_imprimir).pack(side="left", padx=4)
+        ctk.CTkButton(barra, text="Abrir no Navegador", width=160, command=_abrir_nav).pack(side="left", padx=4)
+        ctk.CTkButton(barra, text="Salvar HTML", width=140, command=_salvar_html).pack(side="left", padx=4)
 
     def _coletar_dados_relatorio(self):
         d = {

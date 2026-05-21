@@ -1,7 +1,6 @@
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 try:
     from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
@@ -172,16 +171,16 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         self.valor_peca_entry = ctk.CTkEntry(btns, width=90)
         self.valor_peca_entry.insert(0, "0.00")
         self.valor_peca_entry.pack(side="left", padx=(0, 12))
-        BotaoPadronizado.criar_botao(btns, text="Atualizar", command=self._recarregar_tudo,
+        ctk.CTkButton(btns, text="Atualizar", command=self._recarregar_tudo,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        BotaoPadronizado.criar_botao(btns, text="Enviar para Prestador", command=self._registrar_envio_externo,
+        ctk.CTkButton(btns, text="Enviar para Prestador", command=self._registrar_envio_externo,
                       fg_color=self.cor_destaque, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        BotaoPadronizado.criar_botao(btns, text="Baixa Interna", command=self._registrar_baixa_interna,
+        ctk.CTkButton(btns, text="Baixa Interna", command=self._registrar_baixa_interna,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        BotaoPadronizado.criar_botao(btns, text="Imprimir Ficha", command=self._imprimir_ficha,
+        ctk.CTkButton(btns, text="Imprimir Ficha", command=self._imprimir_ficha,
                       fg_color=self.cor_alerta, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
@@ -252,10 +251,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
 
         proc_actions = ctk.CTkFrame(main, fg_color="transparent")
         proc_actions.grid(row=3, column=0, sticky="ew", padx=15, pady=(0, 5))
-        BotaoPadronizado.criar_botao(proc_actions, text="Marcar Retorno", command=self._marcar_retorno,
+        ctk.CTkButton(proc_actions, text="Marcar Retorno", command=self._marcar_retorno,
                       fg_color=self.cor_alerta, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
-        BotaoPadronizado.criar_botao(proc_actions, text="Finalizar", command=self._finalizar_defeito,
+        ctk.CTkButton(proc_actions, text="Finalizar", command=self._finalizar_defeito,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=4)
 
@@ -619,9 +618,9 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         nav.pack(fill="x", padx=10, pady=5)
 
         lbl_mes = ctk.CTkLabel(nav, text=f"{meses_pt[mes]} {ano}", font=("Arial", 14))
-        BotaoPadronizado.criar_botao(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
-        BotaoPadronizado.criar_botao(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
@@ -653,7 +652,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = BotaoPadronizado.criar_botao(
+                    btn = ctk.CTkButton(
                         frame_dias,
                         text=str(dia),
                         width=30,
@@ -1304,7 +1303,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         previsao_entry = ctk.CTkEntry(previsao_frame, width=160)
         previsao_entry.insert(0, self._format_date(envio_info.get("previsao_entrega")))
         previsao_entry.pack(side="left")
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             previsao_frame,
             text="📅",
             width=36,
@@ -1423,17 +1422,17 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         botoes.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 14))
         botoes.grid_columnconfigure(0, weight=1)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes, text="Pré-visualizar", command=_pre_visualizar,
             fg_color=self.cor_alerta, hover_color=self.cor_hover,
             text_color=self.cor_texto
         ).pack(side="left", padx=6)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes, text="Enviar", command=_confirmar_envio,
             fg_color=self.cor_sucesso, hover_color=self.cor_hover,
             text_color=self.cor_texto
         ).pack(side="left", padx=6)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes, text="Cancelar", command=janela.destroy,
             fg_color=self.cor_destaque, hover_color=self.cor_hover,
             text_color=self.cor_texto
@@ -1622,13 +1621,13 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
 
         botoes = ctk.CTkFrame(janela, fg_color="transparent")
         botoes.pack(pady=12)
-        BotaoPadronizado.criar_botao(botoes, text="Pré-visualizar", command=_pre_visualizar,
+        ctk.CTkButton(botoes, text="Pré-visualizar", command=_pre_visualizar,
                       fg_color=self.cor_alerta, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=6)
-        BotaoPadronizado.criar_botao(botoes, text="Salvar PDF", command=_salvar_pdf,
+        ctk.CTkButton(botoes, text="Salvar PDF", command=_salvar_pdf,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=6)
-        BotaoPadronizado.criar_botao(botoes, text="Fechar", command=janela.destroy,
+        ctk.CTkButton(botoes, text="Fechar", command=janela.destroy,
                       fg_color=self.cor_destaque, hover_color=self.cor_hover,
                       text_color=self.cor_texto).pack(side="left", padx=6)
 
@@ -1651,136 +1650,55 @@ if __name__ == "__main__":
 
 #03/02/2025
 
+# --- Suporte trilíngue individual desta página ---
+RetrabalhoDefeitosPage_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Retrabalho de Defeitos",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Defect Rework",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Retrabajo de Defectos",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
 
-# --- Suporte de idioma consolidado desta página ---
-import tkinter as _tk_i18n
-from tkinter import ttk as _ttk_i18n
 
-
-def _opera_page_lang(instance):
-    idioma = getattr(getattr(instance, "sistema", None), "idioma_atual", None)
-    if not idioma:
-        idioma = getattr(getattr(instance, "host", None), "idioma_atual", None)
-    if not idioma:
-        idioma = getattr(instance, "idioma_atual", None)
-    return idioma or "pt_BR"
-
-
-def _opera_translate_widget_tree(instance, widget, translation_map):
-    try:
-        for opt in ("text", "placeholder_text"):
-            try:
-                current = widget.cget(opt)
-            except Exception:
-                continue
-            if isinstance(current, str) and current in translation_map:
-                try:
-                    widget.configure(**{opt: translation_map[current]})
-                except Exception:
-                    pass
-
+def _apply_retrabalhodefeitospage_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in RetrabalhoDefeitosPage_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
         try:
-            values = widget.cget("values")
-        except Exception:
-            values = None
-        if isinstance(values, (list, tuple)):
-            mapped = [translation_map.get(v, v) if isinstance(v, str) else v for v in values]
-            if list(mapped) != list(values):
-                try:
-                    widget.configure(values=mapped)
-                except Exception:
-                    pass
-
-        if isinstance(widget, _ttk_i18n.Treeview):
-            try:
-                heading = widget.heading("#0")
-                text = heading.get("text", "")
-                if text in translation_map:
-                    widget.heading("#0", text=translation_map[text])
-            except Exception:
-                pass
-            try:
-                for col in widget["columns"]:
-                    heading = widget.heading(col)
-                    text = heading.get("text", "")
-                    if text in translation_map:
-                        widget.heading(col, text=translation_map[text])
-            except Exception:
-                pass
-
-        if isinstance(widget, _tk_i18n.Menu):
-            try:
-                end = widget.index("end")
-            except Exception:
-                end = None
-            if end is not None:
-                for idx in range(end + 1):
-                    try:
-                        label = widget.entrycget(idx, "label")
-                    except Exception:
-                        continue
-                    if isinstance(label, str) and label in translation_map:
-                        try:
-                            widget.entryconfigure(idx, label=translation_map[label])
-                        except Exception:
-                            pass
-
-        for child in widget.winfo_children():
-            _opera_translate_widget_tree(instance, child, translation_map)
-    except Exception:
-        pass
-
-
-def _opera_apply_page_i18n(instance, class_ref, page_title=None):
-    idioma = _opera_page_lang(instance)
-    maps = getattr(class_ref, "_TRANSLATIONS", {}) or {}
-    base = maps.get("pt_BR", {}) if isinstance(maps.get("pt_BR", {}), dict) else {}
-    current = maps.get(idioma, {}) if isinstance(maps.get(idioma, {}), dict) else {}
-    translation_map = dict(base)
-    translation_map.update(current)
-
-    for attr in ("titulo", "title_label", "lbl_titulo", "header_title", "page_title_label"):
-        widget = getattr(instance, attr, None)
-        if widget is not None:
-            try:
-                current_text = widget.cget("text")
-                if isinstance(current_text, str):
-                    widget.configure(text=translation_map.get(current_text, current_text))
-            except Exception:
-                pass
-
-    if page_title:
-        try:
-            instance.PAGE_TITLE = translation_map.get(page_title, page_title)
+            self.titulo.configure(text=RetrabalhoDefeitosPage_TRANSLATIONS[idioma]["title"])
         except Exception:
             pass
 
-    _opera_translate_widget_tree(instance, instance, translation_map)
 
-
-def _opera_set_idioma_factory(class_ref, page_title=None):
-    def set_idioma(self, idioma):
-        self.idioma_atual = idioma
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    def on_language_changed(self, idioma=None):
-        if idioma:
-            self.idioma_atual = idioma
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    def refresh_texts(self):
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    return set_idioma, on_language_changed, refresh_texts
-
-
-
-RetrabalhoDefeitosPage._TRANSLATIONS = {
-    "pt_BR": {'Retrabalho de Defeitos': 'Retrabalho de Defeitos', 'Gerencie envios e baixas internas de peças defeituosas': 'Gerencie envios e baixas internas de peças defeituosas', 'Pendências (defeitos a tratar)': 'Pendências (defeitos a tratar)', 'Defeitos em Processo': 'Defeitos em Processo', 'Enviar para Prestador': 'Enviar para Prestador', 'Baixa Interna': 'Baixa Interna', 'Atualizar': 'Atualizar', 'Imprimir Ficha': 'Imprimir Ficha', 'Pré-visualizar': 'Pré-visualizar', 'Salvar PDF': 'Salvar PDF', 'Marcar Retorno': 'Marcar Retorno', 'Finalizar': 'Finalizar', 'Fechar': 'Fechar', 'Cancelar': 'Cancelar', 'Enviar': 'Enviar', 'Data Envio:': 'Data Envio:', 'Previsão Entrega:': 'Previsão Entrega:', 'Tel. Encarregado:': 'Tel. Encarregado:', 'Tel. Acabamento:': 'Tel. Acabamento:', 'Valor/Peça:': 'Valor/Peça:', 'Aviamentos:': 'Aviamentos:', 'Outros:': 'Outros:', 'Observações:': 'Observações:', 'Escolha a ação para a ficha de defeito:': 'Escolha a ação para a ficha de defeito:', 'Pendente': 'Pendente', 'Em andamento': 'Em andamento', 'Finalizado': 'Finalizado', 'Código': 'Código', 'Descrição': 'Descrição', 'Prestador': 'Prestador', 'Quantidade': 'Quantidade', 'Status': 'Status'},
-    "en_US": {'Retrabalho de Defeitos': 'Defect Rework', 'Gerencie envios e baixas internas de peças defeituosas': 'Manage shipments and internal write-offs of defective pieces', 'Pendências (defeitos a tratar)': 'Pending defects', 'Defeitos em Processo': 'Defects in Progress', 'Enviar para Prestador': 'Send to Provider', 'Baixa Interna': 'Internal Write-off', 'Atualizar': 'Refresh', 'Imprimir Ficha': 'Print Sheet', 'Pré-visualizar': 'Preview', 'Salvar PDF': 'Save PDF', 'Marcar Retorno': 'Mark Return', 'Finalizar': 'Finish', 'Fechar': 'Close', 'Cancelar': 'Cancel', 'Enviar': 'Send', 'Data Envio:': 'Ship Date:', 'Previsão Entrega:': 'Expected Delivery:', 'Tel. Encarregado:': 'Supervisor Phone:', 'Tel. Acabamento:': 'Finishing Phone:', 'Valor/Peça:': 'Value/Piece:', 'Aviamentos:': 'Trims:', 'Outros:': 'Others:', 'Observações:': 'Notes:', 'Escolha a ação para a ficha de defeito:': 'Choose the action for the defect sheet:', 'Pendente': 'Pending', 'Em andamento': 'In progress', 'Finalizado': 'Finished', 'Código': 'Code', 'Descrição': 'Description', 'Prestador': 'Provider', 'Quantidade': 'Quantity', 'Status': 'Status'},
-    "es_ES": {'Retrabalho de Defeitos': 'Retrabajo de Defectos', 'Gerencie envios e baixas internas de peças defeituosas': 'Gestione envíos y bajas internas de piezas defectuosas', 'Pendências (defeitos a tratar)': 'Pendientes (defectos a tratar)', 'Defeitos em Processo': 'Defectos en Proceso', 'Enviar para Prestador': 'Enviar al Prestador', 'Baixa Interna': 'Baja Interna', 'Atualizar': 'Actualizar', 'Imprimir Ficha': 'Imprimir Ficha', 'Pré-visualizar': 'Vista previa', 'Salvar PDF': 'Guardar PDF', 'Marcar Retorno': 'Marcar Retorno', 'Finalizar': 'Finalizar', 'Fechar': 'Cerrar', 'Cancelar': 'Cancelar', 'Enviar': 'Enviar', 'Data Envio:': 'Fecha de Envío:', 'Previsão Entrega:': 'Previsión de Entrega:', 'Tel. Encarregado:': 'Tel. Encargado:', 'Tel. Acabamento:': 'Tel. Acabado:', 'Valor/Peça:': 'Valor/Pieza:', 'Aviamentos:': 'Avíos:', 'Outros:': 'Otros:', 'Observações:': 'Observaciones:', 'Escolha a ação para a ficha de defeito:': 'Elija la acción para la ficha de defecto:', 'Pendente': 'Pendiente', 'Em andamento': 'En progreso', 'Finalizado': 'Finalizado', 'Código': 'Código', 'Descrição': 'Descripción', 'Prestador': 'Prestador', 'Quantidade': 'Cantidad', 'Status': 'Estado'},
-}
-
-RetrabalhoDefeitosPage.TRANSLATIONS = RetrabalhoDefeitosPage._TRANSLATIONS
-RetrabalhoDefeitosPage.PAGE_TITLE = 'Retrabalho de Defeitos'
-RetrabalhoDefeitosPage.set_idioma, RetrabalhoDefeitosPage.on_language_changed, RetrabalhoDefeitosPage.refresh_texts = _opera_set_idioma_factory(RetrabalhoDefeitosPage, 'Retrabalho de Defeitos')
+try:
+    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
+    RetrabalhoDefeitosPage.TRANSLATIONS = RetrabalhoDefeitosPage_TRANSLATIONS
+    if not hasattr(RetrabalhoDefeitosPage, "apply_page_translations"):
+        RetrabalhoDefeitosPage.apply_page_translations = _apply_retrabalhodefeitospage_translations
+    attach_i18n_support(RetrabalhoDefeitosPage, RetrabalhoDefeitosPage_TRANSLATIONS)
+except Exception:
+    pass

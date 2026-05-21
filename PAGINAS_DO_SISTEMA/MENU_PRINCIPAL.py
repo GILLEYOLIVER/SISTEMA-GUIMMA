@@ -11,12 +11,10 @@ import importlib
 import importlib.util
 import inspect
 import functools
-import gc
 import os
 import sys
 import threading
 import time
-import queue
 from datetime import datetime
 
 import tkinter as tk
@@ -26,21 +24,12 @@ from PIL import Image, ImageTk
 import customtkinter as ctk
 
 OPERA_DEBUG = bool(os.environ.get('OPERA_DEBUG', '').strip())
-OPERA_STARTUP_TRACE = str(os.environ.get("OPERA_STARTUP_TRACE", "1")).strip().lower() in {"1", "true", "yes", "on"}
-ACTIVITY_DB_LOG_ENABLED = str(os.environ.get("OPERA_DB_ACTIVITY_LOG", "0")).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _dprint(*args, **kwargs):
     """Print controlado por OPERA_DEBUG para não atrasar o startup."""
     if OPERA_DEBUG:
         print(*args, **kwargs)
-
-
-def _trace_print(*args, **kwargs):
-    """Logs de rastreio de startup (habilitado por padrão para diagnóstico)."""
-    if OPERA_STARTUP_TRACE:
-        ts = datetime.now().strftime("%H:%M:%S")
-        print(f"[TRACE {ts}]", *args, **kwargs)
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -54,7 +43,6 @@ from PAGINAS_DO_SISTEMA.TEMAS import (
     aplicar_estilo_treeview,
     get_contraste_texto,
     is_dark_color,
-    padronizar_botoes_container,
     padronizar_treeview,
     remover_bordas_botoes_tema,
 )
@@ -176,7 +164,7 @@ class ConfigManager:
     @staticmethod
     def load_settings() -> dict:
         """Carrega configurações do arquivo settings.json."""
-        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard", "language": "pt_BR", "preload_last_page": True}
+        default = {"theme": "CLÁSSICO CLARO", "last_page": "Dashboard", "language": "pt_BR"}
         if os.path.exists(SETTINGS_PATH):
             try:
                 with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
@@ -1428,23 +1416,9 @@ class OperaMenuApp(ctk.CTk):
         "Backup": {"pt_BR": "Backup", "en_US": "Backup", "es_ES": "Respaldo"},
     }
 
-    USER_NAME_LABELS = {
-        "administrador local": {"pt_BR": "Administrador Local", "en_US": "Local Administrator", "es_ES": "Administrador Local"},
-    }
-
-    USER_ROLE_LABELS = {
-        "admin": {"pt_BR": "Admin", "en_US": "Administrator", "es_ES": "Administrador"},
-        "administrador": {"pt_BR": "Administrador", "en_US": "Administrator", "es_ES": "Administrador"},
-    }
-
     def __init__(self, usuario_id=None, usuario_nome="Admin", usuario_hierarquia="Administrador", tema_preferido=None):
-        _trace_print("OperaMenuApp.__init__ iniciado")
         reset_tk_default_root()
         super().__init__()
-        try:
-            self.withdraw()
-        except Exception:
-            pass
 
         self._preload_complete = False
         initialize_after_guard(self)
@@ -1455,9 +1429,6 @@ class OperaMenuApp(ctk.CTk):
         self._window_scale_applied = False
         self._startup_responsive_ready = False
         self._last_configure_size = None
-        self._last_resize_seen = None
-        self._last_responsive_signature = None
-        self._menu_layout_signature = None
 
         self.cor_fundo = "#1e1e1e"
         self.cor_primaria = "#2d2d30"
@@ -1501,7 +1472,6 @@ class OperaMenuApp(ctk.CTk):
 
         self._closing = False
         self._page_loading = False
-        self._no_hover = str(os.environ.get("OPERA_NO_HOVER", "")).strip().lower() in {"1", "true", "yes", "on"}
         self.current_theme_name = None
         self.current_page = None
         self.submenu_frames = {}
@@ -1519,47 +1489,28 @@ class OperaMenuApp(ctk.CTk):
         self.permissoes_usuario = {}
 
         self._calculate_initial_scale_and_fonts()
-        _trace_print("Escala inicial calculada")
         self._setup_window()
-        _trace_print("Janela base configurada")
         _dprint("🎨 Iniciando carregamento do tema...")
         self._load_initial_theme()
-        _trace_print("Tema inicial carregado")
         self._load_icons()
-        _trace_print("Ícones carregados")
         self._build_interface()
-        _trace_print("Interface base construída")
         self._load_user_permissions()
-        _trace_print("Permissões do usuário carregadas")
         self._setup_bindings()
         self._setup_activity_logging()
         self._setup_responsive_watcher()
         self._preload_complete = True
 
-        self._db_required_warning_visible = False
-        self._db_available = self._quick_database_available()
-        _trace_print(f"Status do banco no startup: {'OK' if self._db_available else 'INDISPONÍVEL'}")
-
-        self._show_startup_loading()
-        _trace_print("Card de loading exibido")
         self.deiconify()
         self.lift()
         self.focus_force()
         self._apply_initial_layout()
-        self._agendar_after(50, self._ensure_window_visible)
-        self._agendar_after(800, self._ensure_window_visible)
-        _trace_print("Janela exibida ao usuário (deiconify + layout)")
-        if self._db_available:
-            self._agendar_after(10, self._startup_open_initial_page)
-            self._agendar_after(220, lambda: self._apply_theme_to_frame_safely(self._current_frame))
-            self._agendar_after(350, self._enable_startup_responsive_ready)
-            self._agendar_after(1800, self._smart_preload_pages)
-            self._agendar_after(5000, self._ativar_backup_silencioso)
-        else:
-            self._agendar_after(80, self._show_database_setup_required)
+        self._open_dashboard_agora()
+        self._agendar_after(180, lambda: self._apply_theme_to_frame_safely(self._current_frame))
+        self._agendar_after(420, lambda: self._apply_theme_to_frame_safely(self._current_frame))
+        self._agendar_after(1200, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
+        self._agendar_after(5000, self._ativar_backup_silencioso)
         self._update_menu_buttons_colors()
-        _trace_print("Inicialização do menu finalizada")
 
         _dprint(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         _dprint(f"🎨 Tema aplicado: {self.current_theme_name}")
@@ -1606,245 +1557,6 @@ class OperaMenuApp(ctk.CTk):
         self._maximize_window()
         self.update_idletasks()
 
-    def _ensure_window_visible(self):
-        """Força a janela principal a ficar visível no desktop."""
-        try:
-            state = self.state()
-        except Exception:
-            state = "unknown"
-        _trace_print(f"Estado da janela antes do ensure_visible: {state}")
-
-        try:
-            if state in {"withdrawn", "iconic"}:
-                self.deiconify()
-        except Exception as e:
-            _trace_print(f"Falha ao deiconify no ensure_visible: {e}")
-
-        try:
-            self.lift()
-            self.focus_force()
-        except Exception as e:
-            _trace_print(f"Falha ao trazer janela para frente: {e}")
-
-        try:
-            self.attributes("-topmost", True)
-            self.after(250, lambda: self.attributes("-topmost", False))
-        except Exception as e:
-            _trace_print(f"Falha ao alternar topmost: {e}")
-
-        try:
-            _trace_print(
-                f"Janela visível? viewable={self.winfo_viewable()} "
-                f"mapped={self.winfo_ismapped()} geometry={self.winfo_geometry()}"
-            )
-        except Exception:
-            pass
-
-    def _enable_startup_responsive_ready(self):
-        self._startup_responsive_ready = True
-
-    def _quick_database_available(self) -> bool:
-        """Validação rápida para decidir se o menu deve abrir normalmente."""
-        if not MENU_POSTGRES_AVAILABLE:
-            return False
-        try:
-            schema = get_schema()
-            with get_conn() as conn, conn.cursor() as cur:
-                cur.execute("SELECT 1")
-                cur.fetchone()
-                try:
-                    cur.execute(f"SET search_path TO {schema}")
-                except Exception:
-                    pass
-            return True
-        except Exception as e:
-            _dprint(f"⚠️ Banco indisponível no startup: {e}")
-            return False
-
-    def _open_setup_banco_window(self):
-        try:
-            from PAGINAS_DO_SISTEMA.SETUP_BANCO import SetupBancoWindow
-        except Exception:
-            try:
-                from SETUP_BANCO import SetupBancoWindow
-            except Exception as e:
-                messagebox.showerror(
-                    "Configuração do banco",
-                    f"Não foi possível abrir a tela de configuração do banco.\n\n{e}",
-                    parent=self,
-                )
-                return
-        try:
-            win = SetupBancoWindow(self)
-            root = getattr(win, "root", None)
-            if root is not None:
-                try:
-                    root.lift()
-                    root.focus_force()
-                except Exception:
-                    pass
-        except Exception as e:
-            messagebox.showerror(
-                "Configuração do banco",
-                f"Não foi possível abrir a tela de configuração do banco.\n\n{e}",
-                parent=self,
-            )
-
-    def _show_database_setup_required(self):
-        """Exibe aviso central quando o banco não está configurado ou indisponível."""
-        if getattr(self, "_db_required_warning_visible", False):
-            return
-        self._db_required_warning_visible = True
-        try:
-            if not hasattr(self, "content") or not self.content.winfo_exists():
-                return
-            for widget in self.content.winfo_children():
-                try:
-                    widget.destroy()
-                except Exception:
-                    pass
-
-            card = ctk.CTkFrame(
-                self.content,
-                fg_color=self.cor_secundaria,
-                corner_radius=16,
-                border_color=self.cor_borda,
-                border_width=1,
-            )
-            card.place(relx=0.5, rely=0.5, anchor="center")
-
-            ctk.CTkLabel(
-                card,
-                text="Banco de dados não configurado",
-                font=("Arial", 22, "bold"),
-                text_color=self.cor_texto,
-            ).pack(padx=30, pady=(26, 10))
-
-            ctk.CTkLabel(
-                card,
-                text=(
-                    "O sistema não conseguiu se conectar ao banco de dados.\n\n"
-                    "Para continuar, configure a conexão na página de setup do banco."
-                ),
-                font=("Arial", 14),
-                text_color=self.cor_texto,
-                justify="center",
-            ).pack(padx=30, pady=(0, 18))
-
-            btns = ctk.CTkFrame(card, fg_color="transparent")
-            btns.pack(padx=24, pady=(0, 24))
-
-            ctk.CTkButton(
-                btns,
-                text="Abrir setup banco",
-                command=self._open_setup_banco_window,
-                width=190,
-            ).pack(side="left", padx=8)
-
-            ctk.CTkButton(
-                btns,
-                text="Tentar novamente",
-                command=self._retry_database_startup,
-                width=190,
-            ).pack(side="left", padx=8)
-
-            self._startup_loading_card = card
-            self.update_idletasks()
-        except Exception as e:
-            _dprint(f"Erro ao exibir aviso de banco: {e}")
-
-    def _retry_database_startup(self):
-        self._db_required_warning_visible = False
-        self._show_startup_loading()
-        self.update_idletasks()
-        self._db_available = self._quick_database_available()
-        if self._db_available:
-            self._startup_open_initial_page()
-            self._agendar_after(150, lambda: self._apply_theme_to_frame_safely(self._current_frame))
-            self._agendar_after(250, self._enable_startup_responsive_ready)
-            self._agendar_after(800, self._smart_preload_pages)
-            self._agendar_after(1200, self._ativar_backup_silencioso)
-        else:
-            self._show_database_setup_required()
-
-    def _show_startup_loading(self):
-        """Mostra um painel leve enquanto a primeira página ainda está carregando."""
-        try:
-            if not hasattr(self, "content") or not self.content.winfo_exists():
-                return
-            for widget in self.content.winfo_children():
-                try:
-                    widget.destroy()
-                except Exception:
-                    pass
-            card = ctk.CTkFrame(
-                self.content,
-                fg_color=self.cor_secundaria,
-                corner_radius=14,
-                border_color=self.cor_borda,
-                border_width=1,
-            )
-            card.place(relx=0.5, rely=0.5, anchor="center")
-            ctk.CTkLabel(
-                card,
-                text=self._get_text("system_title"),
-                font=("Arial", 18, "bold"),
-                text_color=self.cor_texto,
-            ).pack(padx=24, pady=(20, 8))
-            ctk.CTkLabel(
-                card,
-                text=self._get_text("loading_page"),
-                font=("Arial", 14),
-                text_color=self.cor_texto,
-            ).pack(padx=24, pady=(0, 18))
-            self._startup_loading_card = card
-            self.update_idletasks()
-        except Exception:
-            self._startup_loading_card = None
-
-    def _startup_open_initial_page(self):
-        if getattr(self, "_closing", False):
-            return
-        if not getattr(self, "_db_available", True):
-            self._show_database_setup_required()
-            return
-
-        def _do_open():
-            if getattr(self, "_closing", False):
-                return
-            start_t = time.time()
-            _trace_print("Abrindo página inicial...")
-            try:
-                self._open_dashboard_agora()
-            finally:
-                elapsed = time.time() - start_t
-                _trace_print(f"Rotina de abertura inicial finalizada em {elapsed:.2f}s")
-                try:
-                    if getattr(self, "_startup_loading_card", None) and self._startup_loading_card.winfo_exists():
-                        self._startup_loading_card.destroy()
-                except Exception:
-                    pass
-                self._update_menu_buttons_colors()
-                self._agendar_after(50, self._ensure_window_visible)
-
-        handle = self._agendar_after(30, _do_open)
-        if handle is None:
-            try:
-                self.after_idle(_do_open)
-            except Exception:
-                _do_open()
-
-        def _warn_if_still_loading():
-            if getattr(self, "_closing", False):
-                return
-            if getattr(self, "_page_loading", False):
-                _trace_print("⚠️ Página inicial ainda carregando após 8s. Verifique logs de import/instanciação da página.")
-            card = getattr(self, "_startup_loading_card", None)
-            if card is not None and getattr(card, "winfo_exists", lambda: False)():
-                _trace_print("⚠️ Card de loading ainda visível após 8s.")
-
-        self._agendar_after(8000, _warn_if_still_loading)
-
     def _setup_responsive_watcher(self):
         self.bind("<Configure>", self._on_window_configure, add="+")
 
@@ -1853,15 +1565,8 @@ class OperaMenuApp(ctk.CTk):
             return
         if not getattr(self, "_preload_complete", False):
             return
-        if not getattr(self, "_startup_responsive_ready", False):
-            return
-        width = int(event.width or 0)
-        height = int(event.height or 0)
-        if width <= 1 or height <= 1:
-            return
-        size_key = (width, height)
-        last_size = getattr(self, "_last_resize_seen", None)
-        if last_size and abs(last_size[0] - width) < 8 and abs(last_size[1] - height) < 8:
+        size_key = (int(event.width), int(event.height))
+        if getattr(self, "_last_resize_seen", None) == size_key and self._pending_responsive_job:
             return
         self._last_resize_seen = size_key
         if self._pending_responsive_job:
@@ -1879,7 +1584,7 @@ class OperaMenuApp(ctk.CTk):
             except Exception:
                 pass
 
-        self._pending_responsive_job = self.after(180, _apply_resize)
+        self._pending_responsive_job = self.after(120, _apply_resize)
 
     def _calculate_ui_scale(self, width: int, height: int) -> float:
         if width < 1500 or height < 900:
@@ -1899,10 +1604,12 @@ class OperaMenuApp(ctk.CTk):
             if initial or current_width <= 1 or current_height <= 1:
                 current_width, current_height = screen_width, screen_height
             new_scale = self._calculate_ui_scale(current_width, current_height)
-            layout_signature = (new_scale, current_width < 1500 or current_height < 900)
-            if not initial and getattr(self, "_last_responsive_signature", None) == layout_signature:
+            old_scale = float(getattr(self, "ui_scale", 1.0))
+            mode_changed = initial or abs(old_scale - new_scale) >= 0.01
+            if not mode_changed:
+                if self._active_submenu and self._active_submenu in self.submenu_frames:
+                    self.after_idle(lambda: self._show_submenu(self._active_submenu))
                 return
-            self._last_responsive_signature = layout_signature
             self.ui_scale = new_scale
             self._responsive_mode = "compact" if new_scale < 1.0 else "normal"
             self.SIDEBAR_WIDTH = max(220, int(300 * self.ui_scale))
@@ -1918,30 +1625,18 @@ class OperaMenuApp(ctk.CTk):
                 self.sidebar.configure(width=self.SIDEBAR_WIDTH)
             if hasattr(self, "topbar") and self.topbar.winfo_exists():
                 self.topbar.configure(height=self.TOPBAR_HEIGHT)
-            menu_signature = (self.SIDEBAR_WIDTH, self.ITEM_HEIGHT, self.icon_size_sidebar, self.idioma_atual)
-            if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists() and (
-                initial or getattr(self, "_menu_layout_signature", None) != menu_signature
-            ):
-                self._menu_layout_signature = menu_signature
+            if hasattr(self, "menu_frame") and self.menu_frame.winfo_exists():
                 self._hide_all_submenus()
                 self._load_icons()
                 self._build_menu_content()
             self.update_idletasks()
-            if self._current_frame and getattr(self._current_frame, "winfo_exists", lambda: False)():
-                try:
-                    self._current_frame.place_configure(x=0, y=0, relwidth=1, relheight=1)
-                except Exception:
-                    pass
+            if self._active_submenu and self._active_submenu in self.submenu_frames:
+                self.after_idle(lambda: self._show_submenu(self._active_submenu))
         finally:
             self._responsive_reflow_lock = False
 
     def _show_submenu(self, categoria: str):
         self._cancel_submenu_hide_timer()
-        if categoria not in self.submenu_frames:
-            try:
-                self._create_submenu(categoria)
-            except Exception as e:
-                _dprint(f"⚠️ Erro ao criar submenu '{categoria}': {e}")
         frame = self.submenu_frames.get(categoria)
         btn_frame = self.botoes_menu.get(categoria)
         if not frame or not btn_frame:
@@ -2069,63 +1764,31 @@ class OperaMenuApp(ctk.CTk):
             _dprint(f"⚠️ Erro ao abrir página inicial: {e}")
 
     def _smart_preload_pages(self):
-        """Pré-carrega páginas prováveis em fila, sem bloquear abertura inicial."""
+        """Pré-carrega a última página usada sem bloquear a abertura inicial."""
         if getattr(self, "_closing", False):
             return
-        env_flag = str(os.environ.get("OPERA_PRELOAD_LAST_PAGE", "")).strip().lower()
-        if env_flag:
-            preload_enabled = env_flag in {"1", "true", "yes", "on"}
-        else:
-            preload_enabled = bool((self.settings or {}).get("preload_last_page", True))
-        if not preload_enabled:
-            return
         last_page = (self.settings or {}).get("last_page")
-        preload_candidates = []
-        if last_page:
-            preload_candidates.append(last_page)
-        if "Dashboard" not in preload_candidates:
-            preload_candidates.append("Dashboard")
-
-        max_preload = 2
-        forced = str(os.environ.get("OPERA_PRELOAD_MAX_PAGES", "")).strip()
-        if forced.isdigit():
-            max_preload = max(1, min(4, int(forced)))
-
-        queue_pages = []
-        for page in preload_candidates:
-            if page == self.current_page or page in self._page_cache:
-                continue
-            if not self.user_manager.has_permission(page, "ver"):
-                continue
-            if page not in queue_pages:
-                queue_pages.append(page)
-            if len(queue_pages) >= max_preload:
-                break
-        if not queue_pages:
+        if not last_page or last_page == self.current_page:
+            return
+        if last_page in self._page_cache:
+            return
+        if not self.user_manager.has_permission(last_page, "ver"):
             return
 
-        def _preload_next(pages):
-            if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
-                self._agendar_after(600, lambda: _preload_next(pages))
-                return
-            if not pages:
-                return
-            page = pages.pop(0)
+        def _do_preload():
             try:
-                frame = self._load_page_direct(page)
+                frame = self._load_page_direct(last_page)
                 if frame:
                     try:
                         frame.place_forget()
                     except Exception:
                         pass
-                    self._cache_page(page, frame)
-                    _dprint(f"⚡ Pré-cache da página '{page}' concluído")
+                    self._cache_page(last_page, frame)
+                    _dprint(f"⚡ Pré-cache da página '{last_page}' concluído")
             except Exception as exc:
-                _dprint(f"⚠️ Pré-cache ignorado para '{page}': {exc}")
-            if pages:
-                self._agendar_after(450, lambda: _preload_next(pages))
+                _dprint(f"⚠️ Pré-cache ignorado para '{last_page}': {exc}")
 
-        self._agendar_after(500, lambda: _preload_next(queue_pages))
+        self._agendar_after(250, _do_preload)
 
     def _setup_window(self):
         self.title("OPERA • Sistema de Gestão")
@@ -2164,20 +1827,14 @@ class OperaMenuApp(ctk.CTk):
     def ask_quit(self, event=None):
         if getattr(self, "_closing", False):
             return
-        _trace_print("ask_quit acionado")
         titulo_saida = self._get_text("exit_title")
         mensagem_saida = self._get_text("exit_confirm")
         confirmar = self._show_exit_dialog(titulo_saida, mensagem_saida)
         if confirmar:
-            _trace_print("Saída confirmada pelo usuário")
             self._agendar_after(1, self.destroy)
-        else:
-            _trace_print("Saída cancelada pelo usuário")
 
     def _show_exit_dialog(self, titulo: str, mensagem: str) -> bool:
         resposta = {"ok": False}
-
-        dlg = None
         try:
             dlg = ctk.CTkToplevel(self)
             dlg.title(titulo)
@@ -2185,170 +1842,86 @@ class OperaMenuApp(ctk.CTk):
             dlg.resizable(False, False)
             dlg.grab_set()
             dlg.configure(fg_color=self.cor_fundo)
+            w, h = 460, 230
+            x = self.winfo_rootx() + max(20, (self.winfo_width() - w) // 2)
+            y = self.winfo_rooty() + max(20, (self.winfo_height() - h) // 2)
+            dlg.geometry(f"{w}x{h}+{x}+{y}")
 
-            largura = 470
-            altura = 220
-            x = self.winfo_rootx() + max(20, (self.winfo_width() - largura) // 2)
-            y = self.winfo_rooty() + max(20, (self.winfo_height() - altura) // 2)
-            dlg.geometry(f"{largura}x{altura}+{x}+{y}")
-
-            card = ctk.CTkFrame(
-                dlg,
-                fg_color=self.cor_secundaria,
-                corner_radius=14,
-                border_width=1,
-                border_color=self.cor_borda
-            )
-            card.pack(fill="both", expand=True, padx=12, pady=12)
+            card = ctk.CTkFrame(dlg, fg_color=self.cor_secundaria, corner_radius=12, border_width=1, border_color=self.cor_borda)
+            card.pack(fill="both", expand=True, padx=14, pady=14)
 
             header = ctk.CTkFrame(card, fg_color="transparent")
-            header.pack(fill="x", padx=18, pady=(14, 6))
-
-            logo_renderizada = False
+            header.pack(fill="x", padx=18, pady=(16, 4))
             try:
                 if os.path.exists(ICONE_SISTEMA):
                     img = Image.open(ICONE_SISTEMA).convert("RGBA")
-                    logo = ctk.CTkImage(light_image=img, dark_image=img, size=(22, 22))
+                    logo = ctk.CTkImage(light_image=img, dark_image=img, size=(26, 26))
                     dlg._exit_logo = logo
                     ctk.CTkLabel(header, image=logo, text="").pack(side="left", padx=(0, 8))
-                    logo_renderizada = True
             except Exception:
-                logo_renderizada = False
-
-            if not logo_renderizada:
-                ctk.CTkLabel(
-                    header,
-                    text="◉",
-                    font=("Arial", 15, "bold"),
-                    text_color=self.cor_primaria
-                ).pack(side="left", padx=(0, 8))
+                pass
 
             ctk.CTkLabel(
                 header,
                 text=titulo,
-                font=("Arial", 15, "bold"),
-                text_color=self.cor_texto
+                font=("Arial", 16, "bold"),
+                text_color=self.cor_texto,
             ).pack(side="left")
 
             ctk.CTkLabel(
                 card,
                 text=mensagem,
-                font=("Arial", 16, "bold"),
+                font=("Arial", 18, "bold"),
                 text_color=self.cor_texto,
-                wraplength=390,
-                justify="center"
-            ).pack(fill="x", padx=20, pady=(18, 18))
+                wraplength=400,
+                justify="center",
+            ).pack(fill="x", padx=20, pady=(8, 22))
 
-            btn_frame = ctk.CTkFrame(card, fg_color="transparent")
-            btn_frame.pack(pady=(2, 14))
+            botoes = ctk.CTkFrame(card, fg_color="transparent")
+            botoes.pack(pady=(0, 16))
 
-            cor_nao = getattr(self, "cor_secundaria", "#D1D5DB")
-            cor_sim = getattr(self, "cor_primaria", "#2563EB")
-            cor_hover_sim = getattr(self, "cor_hover", "#1D4ED8")
-
-            def _escurecer(cor, fator=0.92):
-                try:
-                    h = cor.lstrip("#")
-                    if len(h) == 3:
-                        h = "".join([c * 2 for c in h])
-                    r = max(0, min(255, int(int(h[0:2], 16) * fator)))
-                    g = max(0, min(255, int(int(h[2:4], 16) * fator)))
-                    b = max(0, min(255, int(int(h[4:6], 16) * fator)))
-                    return f"#{r:02X}{g:02X}{b:02X}"
-                except Exception:
-                    return cor
-
-            cor_hover_nao = _escurecer(cor_nao, 0.95)
-
-            try:
-                texto_nao = get_contraste_texto(cor_nao)
-            except Exception:
-                texto_nao = self.cor_texto
-
-            try:
-                texto_sim = get_contraste_texto(cor_sim)
-            except Exception:
-                texto_sim = "#FFFFFF"
-
-            def cancelar():
-                resposta["ok"] = False
-                try:
-                    dlg.grab_release()
-                except Exception:
-                    pass
+            def _set(v: bool):
+                resposta["ok"] = v
                 dlg.destroy()
 
-            def confirmar():
-                resposta["ok"] = True
-                try:
-                    dlg.grab_release()
-                except Exception:
-                    pass
-                dlg.destroy()
-
-            btn_nao = ctk.CTkButton(
-                btn_frame,
-                text=self._get_text("no"),
-                command=cancelar,
-                width=138,
-                height=34,
-                fg_color=cor_nao,
-                hover_color=cor_hover_nao,
-                text_color=texto_nao,
-                border_color=self.cor_borda,
-                border_width=1,
-                corner_radius=8
-            )
-            btn_nao.pack(side="left", padx=(0, 8))
-
-            btn_sim = ctk.CTkButton(
-                btn_frame,
+            ctk.CTkButton(
+                botoes,
                 text=self._get_text("yes"),
-                command=confirmar,
-                width=138,
-                height=34,
-                fg_color=cor_sim,
-                hover_color=cor_hover_sim,
-                text_color=texto_sim,
-                border_color=cor_sim,
+                width=140,
+                fg_color=self.cor_primaria,
+                hover_color=self.cor_hover,
+                text_color=self._contrast_text_for_color(self.cor_primaria, fallback="#FFFFFF"),
+                font=("Arial", 14, "bold"),
                 border_width=1,
-                corner_radius=8
-            )
-            btn_sim.pack(side="left", padx=(8, 0))
+                border_color=self.cor_borda,
+                command=lambda: _set(True),
+            ).pack(side="left", padx=8)
+            ctk.CTkButton(
+                botoes,
+                text=self._get_text("no"),
+                width=140,
+                fg_color=self._darker(self.cor_secundaria, 0.97),
+                hover_color=self._realcar_cor(self.cor_secundaria, 1.05),
+                text_color=self._contrast_text_for_color(self.cor_secundaria, fallback=self.cor_texto),
+                border_width=1,
+                border_color=self.cor_borda,
+                font=("Arial", 14, "bold"),
+                command=lambda: _set(False),
+            ).pack(side="left", padx=8)
 
-            dlg.bind("<Escape>", lambda e: cancelar())
-            dlg.bind("<Return>", lambda e: confirmar())
-            dlg.protocol("WM_DELETE_WINDOW", cancelar)
-
+            dlg.protocol("WM_DELETE_WINDOW", lambda: _set(False))
+            self.wait_window(dlg)
+            return bool(resposta["ok"])
+        except Exception:
             try:
-                btn_nao.focus_force()
+                return messagebox.askyesno(titulo, mensagem, parent=self)
             except Exception:
-                pass
-
-            dlg.wait_window()
-            return resposta["ok"]
-
-        except Exception as e:
-            try:
-                if dlg is not None and dlg.winfo_exists():
-                    dlg.destroy()
-            except Exception:
-                pass
-            print(f"[ERRO] Falha ao abrir diálogo de saída: {e}")
-            return False
+                return messagebox.askyesno(titulo, mensagem)
 
     def destroy(self):
         if getattr(self, "_closing", False):
             return
-        _trace_print("destroy() acionado — iniciando encerramento da aplicação")
         self._closing = True
-        try:
-            if hasattr(self, "_activity_db_worker_stop"):
-                self._activity_db_worker_stop.set()
-            if hasattr(self, "_activity_db_queue"):
-                self._activity_db_queue.put_nowait(None)
-        except Exception:
-            pass
         try:
             cancel_all_afters(self)
             cancel_all_after_info(self)
@@ -2389,34 +1962,18 @@ class OperaMenuApp(ctk.CTk):
         self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
         self._activity_logger.set_pagina(self.current_page or "MenuPrincipal")
         self._activity_log_cache = {}
-        self._activity_db_queue = queue.Queue(maxsize=300)
-        self._activity_db_worker_stop = threading.Event()
-        self._activity_db_worker = threading.Thread(
-            target=self._db_log_worker_loop,
-            name="opera-db-log-worker",
-            daemon=True,
-        )
-        self._activity_db_worker.start()
-        self._limpar_logs_antigos_async()
-        bind_all_user_input = str(os.environ.get("OPERA_ACTIVITY_BIND_ALL", "")).strip().lower() in {
-            "1", "true", "yes", "on"
-        }
-        if bind_all_user_input:
-            self.bind_all("<ButtonRelease-1>", self._on_user_click, add="+")
-            self.bind_all("<KeyRelease>", self._on_user_key, add="+")
+        self._limpar_logs_antigos()
+        self.bind_all("<ButtonRelease-1>", self._on_user_click, add="+")
         self.bind_all("<<TreeviewSelect>>", self._on_treeview_select, add="+")
         self.bind_all("<<ComboboxSelected>>", self._on_combobox_select, add="+")
-
-    def _limpar_logs_antigos_async(self):
-        """Evita travar o startup executando limpeza pesada em background."""
-        threading.Thread(target=self._limpar_logs_antigos, name="opera-log-cleanup", daemon=True).start()
+        self.bind_all("<KeyRelease>", self._on_user_key, add="+")
 
     def _limpar_logs_antigos(self):
         try:
             self._activity_logger.limpar_logs_antigos(dias_manter=365)
         except Exception as e:
             _dprint(f"⚠️ Erro ao limpar logs em arquivo: {e}")
-        if not MENU_POSTGRES_AVAILABLE or not ACTIVITY_DB_LOG_ENABLED:
+        if not MENU_POSTGRES_AVAILABLE:
             return
         try:
             schema = get_schema()
@@ -2429,33 +1986,6 @@ class OperaMenuApp(ctk.CTk):
         except Exception as e:
             _dprint(f"⚠️ Erro ao limpar logs no banco: {e}")
 
-    def _db_log_worker_loop(self):
-        while not getattr(self, "_closing", False) and not self._activity_db_worker_stop.is_set():
-            try:
-                item = self._activity_db_queue.get(timeout=0.8)
-            except queue.Empty:
-                continue
-            if item is None:
-                self._activity_db_queue.task_done()
-                break
-            try:
-                registrar_log_db(*item)
-            except Exception as e:
-                _dprint(f"⚠️ Falha ao gravar log no banco em background: {e}")
-            finally:
-                self._activity_db_queue.task_done()
-
-    def _enqueue_db_log(self, usuario: str, pagina: str, acao: str, detalhe: str):
-        if not LOGS_DISPONIVEIS or not MENU_POSTGRES_AVAILABLE:
-            return
-        try:
-            self._activity_db_queue.put_nowait((usuario, pagina, acao, detalhe))
-        except queue.Full:
-            # evita bloquear a interface se o banco estiver lento/indisponível
-            _dprint("⚠️ Fila de logs cheia; evento descartado para manter responsividade.")
-        except Exception as e:
-            _dprint(f"⚠️ Falha ao enfileirar log de atividade: {e}")
-
     def _log_user_activity(self, acao: str, detalhe: str = "", pagina: str | None = None):
         pagina_log = pagina or self.current_page or "MenuPrincipal"
         self._activity_logger.set_usuario(self.usuario_nome, self.usuario_hierarquia)
@@ -2464,11 +1994,7 @@ class OperaMenuApp(ctk.CTk):
         if pagina_log and "Página:" not in detalhe_log:
             detalhe_log = f"Página: {pagina_log} | {detalhe_log}".strip(" |")
         self._activity_logger.log_usuario(acao, {"detalhe": detalhe_log, "pagina": pagina_log})
-        if ACTIVITY_DB_LOG_ENABLED and LOGS_DISPONIVEIS and MENU_POSTGRES_AVAILABLE:
-            try:
-                registrar_log_db(self.usuario_nome, pagina_log, acao, detalhe_log)
-            except Exception as e:
-                _dprint(f"⚠️ Falha ao gravar log de atividade no banco: {e}")
+        registrar_log_db(self.usuario_nome, acao, pagina_log, detalhe_log)
 
     def _should_log_event(self, chave: str, intervalo: float = 0.4) -> bool:
         agora = time.monotonic()
@@ -2600,26 +2126,17 @@ class OperaMenuApp(ctk.CTk):
             return
         self.icons_cache = {}
         self._icon_size_signature = requested_size
-        _dprint("✅ Cache de ícones resetado (lazy loading ativo)")
-
-    def _get_menu_icon(self, categoria: str):
-        icon = self.icons_cache.get(categoria)
-        if icon is not None:
-            return icon
-        filename = self.ICON_MAPPING.get(categoria, "")
-        if not filename:
-            return None
-        try:
-            icon_path = os.path.join(ICONS_DIR, filename)
-            image = self._load_icon_asset(icon_path)
-            if image is None:
-                return None
-            icon = ctk.CTkImage(light_image=image, dark_image=image, size=(24, 24))
-            self.icons_cache[categoria] = icon
-            return icon
-        except Exception as e:
-            _dprint(f"❌ Erro ao carregar ícone {filename}: {e}")
-            return None
+        for categoria, filename in self.ICON_MAPPING.items():
+            try:
+                icon_path = os.path.join(ICONS_DIR, filename)
+                image = self._load_icon_asset(icon_path)
+                if image is not None:
+                    self.icons_cache[categoria] = ctk.CTkImage(
+                        light_image=image, dark_image=image, size=requested_size
+                    )
+            except Exception as e:
+                _dprint(f"❌ Erro ao carregar ícone {filename}: {e}")
+        _dprint(f"✅ {len(self.icons_cache)} ícones carregados")
 
     def _get_submenu_icon(self, categoria: str, item: str):
         cache_key = f"{categoria}_{item}"
@@ -2840,18 +2357,6 @@ class OperaMenuApp(ctk.CTk):
             return self._get_text("topbar_dashboard")
         return self._translate_menu_label(page_name)
 
-    def _translate_user_identity(self, user_name: str, user_role: str) -> tuple[str, str]:
-        idioma = getattr(self, "idioma_atual", "pt_BR")
-        nome_base = (user_name or "").strip()
-        role_base = (user_role or "").strip()
-
-        nome_map = self.USER_NAME_LABELS.get(nome_base.lower(), {})
-        role_map = self.USER_ROLE_LABELS.get(role_base.lower(), {})
-
-        nome_traduzido = nome_map.get(idioma, nome_base) if nome_map else nome_base
-        role_traduzida = role_map.get(idioma, role_base) if role_map else role_base
-        return nome_traduzido, role_traduzida
-
     def _save_language_preference(self):
         try:
             self.settings["language"] = self.idioma_atual
@@ -2873,8 +2378,8 @@ class OperaMenuApp(ctk.CTk):
             if page_name in self._page_cache_order:
                 self._page_cache_order.remove(page_name)
 
-    def _refresh_frame_language(self, frame=None):
-        frame = frame or getattr(self, "_current_frame", None)
+    def _refresh_current_page_language(self):
+        frame = getattr(self, "_current_frame", None)
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
             return
         idioma = getattr(self, "idioma_atual", "pt_BR")
@@ -3015,10 +2520,7 @@ class OperaMenuApp(ctk.CTk):
         try:
             _aplicar_idioma(frame)
         except Exception as e:
-            _dprint(f"⚠️ Erro ao atualizar idioma do frame {getattr(frame, '__class__', type(frame)).__name__}: {e}")
-
-    def _refresh_current_page_language(self):
-        self._refresh_frame_language(getattr(self, "_current_frame", None))
+            _dprint(f"⚠️ Erro ao atualizar idioma da página atual: {e}")
 
     def _change_language(self, selected_value=None):
         novo_idioma = selected_value if selected_value in self.SUPPORTED_LANGUAGES else None
@@ -3055,14 +2557,6 @@ class OperaMenuApp(ctk.CTk):
             self._refresh_language_widgets()
         except Exception as e:
             _dprint(f"⚠️ Erro ao atualizar widgets de idioma: {e}")
-
-        # Atualiza idioma em todos os frames já carregados (cache + página atual),
-        # para que qualquer página aberta após a troca já apareça no idioma novo.
-        try:
-            for frame in list(getattr(self, "_page_cache", {}).values()):
-                self._refresh_frame_language(frame)
-        except Exception as e:
-            _dprint(f"⚠️ Erro ao atualizar idioma dos frames em cache: {e}")
 
         try:
             if pagina_atual and hasattr(self, "title_label") and self.title_label.winfo_exists():
@@ -3382,10 +2876,9 @@ class OperaMenuApp(ctk.CTk):
         if not hasattr(self, 'user_info_label'):
             return
         now = datetime.now().strftime(self._get_text("clock_format"))
-        nome_usuario, hierarquia = self._translate_user_identity(self.usuario_nome, self.usuario_hierarquia)
-        user_text = f"{now} | 👤 {nome_usuario} • {hierarquia}"
+        user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
-            user_text = f"{now} | 👑 {nome_usuario} • {hierarquia}"
+            user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
         try:
             self.user_info_label.configure(text=user_text)
         except Exception as e:
@@ -3395,10 +2888,9 @@ class OperaMenuApp(ctk.CTk):
         if not hasattr(self, 'user_info_label') or not self.winfo_exists():
             return
         now = datetime.now().strftime(self._get_text("clock_format"))
-        nome_usuario, hierarquia = self._translate_user_identity(self.usuario_nome, self.usuario_hierarquia)
-        user_text = f"{now} | 👤 {nome_usuario} • {hierarquia}"
+        user_text = f"{now} | 👤 {self.usuario_nome} • {self.usuario_hierarquia}"
         if hasattr(self, 'user_manager') and self.user_manager._is_admin():
-            user_text = f"{now} | 👑 {nome_usuario} • {hierarquia}"
+            user_text = f"{now} | 👑 {self.usuario_nome} • {self.usuario_hierarquia}"
         try:
             self.user_info_label.configure(text=user_text)
         except Exception as e:
@@ -3491,20 +2983,17 @@ class OperaMenuApp(ctk.CTk):
     def _apply_menu_hover_behavior(self, widget, fg, texto, hover_fg, hover_texto, *, border_width=1,
                                    border_color=None):
         """Aplica no menu o mesmo padrão de hover da página de temas: fundo muda no hover e o texto acompanha."""
-        hover_enabled = not getattr(self, "_no_hover", False)
         try:
             widget.configure(
                 fg_color=fg,
-                hover=hover_enabled,
-                hover_color=hover_fg if hover_enabled else fg,
+                hover=True,
+                hover_color=hover_fg,
                 text_color=texto,
                 border_width=border_width,
                 border_color=border_color if border_color is not None else self.cor_borda,
             )
         except Exception:
             pass
-        if not hover_enabled:
-            return
 
         widget._opera_menu_hover_cfg = {
             "fg": fg,
@@ -3621,7 +3110,7 @@ class OperaMenuApp(ctk.CTk):
         btn_frame.pack(fill="x", padx=(10, 10), pady=max(1, int(2 * self.ui_scale)))
         btn_frame.pack_propagate(False)
 
-        icon = self._get_menu_icon(categoria)
+        icon = self.icons_cache.get(categoria)
         style = self._get_menu_style_tokens()
 
         ativo = (categoria == self._active_submenu)
@@ -3679,7 +3168,7 @@ class OperaMenuApp(ctk.CTk):
 
         btn.pack(fill="both", expand=True, padx=max(2, int(4 * self.ui_scale)))
 
-        if categoria != "Dashboard" and not getattr(self, "_no_hover", False):
+        if categoria != "Dashboard":
             def _menu_mouse_enter(_event=None, cat=categoria):
                 self._cancel_submenu_hide_timer()
                 self._show_submenu(cat)
@@ -3695,6 +3184,7 @@ class OperaMenuApp(ctk.CTk):
                     pass
 
         self.botoes_menu[categoria] = btn_frame
+        self._create_submenu(categoria)
 
     def _create_submenu_item(self, parent, categoria: str, item: str):
         item_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -3733,8 +3223,6 @@ class OperaMenuApp(ctk.CTk):
         btn.pack(fill="x", expand=True, padx=4, pady=2)
 
     def _create_submenu(self, categoria: str):
-        if categoria in self.submenu_frames:
-            return
         itens = self.MENU_ESTRUTURA.get(categoria, [])
         itens_visiveis = [
             item for item in itens
@@ -3906,39 +3394,10 @@ class OperaMenuApp(ctk.CTk):
                     old_frame.destroy()
                 except:
                     pass
-                gc.collect()
-
-    def _inventory_page_buttons(self, frame, page_name: str):
-        """Rastreia botões CTkButton existentes na página (exclui topbar/menu principal)."""
-        try:
-            if not frame or not getattr(frame, "winfo_exists", lambda: False)():
-                return
-            buttons = []
-            stack = [frame]
-            while stack:
-                node = stack.pop()
-                try:
-                    children = node.winfo_children()
-                except Exception:
-                    children = []
-                for child in children:
-                    if isinstance(child, ctk.CTkButton):
-                        try:
-                            txt = child.cget("text") or "<sem texto>"
-                        except Exception:
-                            txt = "<indisponível>"
-                        buttons.append(txt)
-                    stack.append(child)
-            _trace_print(f"[PADRAO_BOTOES] Página '{page_name}': {len(buttons)} botão(ões) rastreados.")
-        except Exception as e:
-            _dprint(f"⚠️ Falha ao rastrear botões da página '{page_name}': {e}")
 
     def _apply_theme_to_frame_safely(self, frame):
         """Reaplica tema no frame informado (incluindo widgets criados com atraso)."""
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
-            return
-        theme_token = (getattr(self, "current_theme_name", None), getattr(self, "idioma_atual", "pt_BR"))
-        if getattr(frame, "_opera_theme_token", None) == theme_token:
             return
         try:
             if hasattr(frame, "host"):
@@ -3949,10 +3408,8 @@ class OperaMenuApp(ctk.CTk):
                 frame.app = self
             if hasattr(self, "theme_manager") and self.theme_manager:
                 self.theme_manager.apply_theme_to_widget(frame)
-            padronizar_botoes_container(frame)
             if hasattr(self, "_update_menu_buttons_colors"):
                 self._update_menu_buttons_colors()
-            frame._opera_theme_token = theme_token
         except Exception as e:
             _dprint(f"⚠️ Erro ao reaplicar tema no frame: {e}")
 
@@ -3967,8 +3424,6 @@ class OperaMenuApp(ctk.CTk):
             self._show_temporary_message(self._get_text("no_permission", page=self._translate_page_name(page_name)))
             return
         self._page_loading = True
-        op_start = time.time()
-        _trace_print(f"open_page('{page_name}') iniciado")
         try:
             if self._current_frame and self._current_frame.winfo_exists():
                 self._current_frame.place_forget()
@@ -3977,13 +3432,12 @@ class OperaMenuApp(ctk.CTk):
                 frame = self._load_page_direct(page_name)
                 self._cache_page(page_name, frame)
             if frame:
-                try:
-                    self._refresh_frame_language(frame)
-                except Exception as _exc:
-                    _dprint(f"⚠️ Erro ao aplicar idioma ao abrir '{page_name}': {_exc}")
                 frame.place(x=0, y=0, relwidth=1, relheight=1)
-                self.update_idletasks()
-                self._notify_current_page_resize()
+                # Ajuste responsivo: informa a página o tamanho real do container
+                try:
+                    self.after(80, self._notify_current_page_resize)
+                except Exception:
+                    pass
                 if page_name == "Nova Ordem" and hasattr(self,
                                                          "_ordem_planejada_prefill") and self._ordem_planejada_prefill:
                     try:
@@ -4001,7 +3455,15 @@ class OperaMenuApp(ctk.CTk):
                 except Exception as _exc:
                     _dprint(f"⚠️ Erro ao atualizar página ao abrir '{page_name}': {_exc}")
                 self._apply_theme_to_frame_safely(frame)
-                self._inventory_page_buttons(frame, page_name)
+                # Reforços para widgets que são criados após o primeiro draw
+                self.after(120,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(320,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(750,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                self.after(1500,
+                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
                 self.current_page = page_name
                 self._current_frame = frame
                 try:
@@ -4009,18 +3471,11 @@ class OperaMenuApp(ctk.CTk):
                     ConfigManager.save_settings(self.settings)
                 except:
                     pass
-                try:
-                    if getattr(self, "_startup_loading_card", None) and self._startup_loading_card.winfo_exists():
-                        self._startup_loading_card.destroy()
-                except Exception:
-                    pass
                 _dprint(f"✅ Página '{page_name}' carregada")
-                _trace_print(f"open_page('{page_name}') concluído em {time.time() - op_start:.2f}s")
         except Exception as e:
             messagebox.showerror(self._get_text("error"),
                                  f"Falha ao abrir {self._translate_page_name(page_name)}:\n{e}", parent=self)
             _dprint(f"❌ Erro: {e}")
-            _trace_print(f"❌ open_page('{page_name}') falhou após {time.time() - op_start:.2f}s: {e}")
         finally:
             self._page_loading = False
 
@@ -4113,8 +3568,6 @@ class OperaMenuApp(ctk.CTk):
             self.open_page("Dashboard")
 
     def _load_page_direct(self, page_name: str, reload_module: bool = False):
-        load_start = time.time()
-        _trace_print(f"_load_page_direct('{page_name}') iniciado")
         route = self.routes.get(page_name)
         if not route:
             raise ValueError(f"Rota não encontrada: {page_name}")
@@ -4179,40 +3632,23 @@ class OperaMenuApp(ctk.CTk):
                 pass
             if callable(attach_i18n_support):
                 try:
-                    cls = frame_obj.__class__
-                    if not getattr(cls, "_opera_i18n_attached", False):
-                        attach_i18n_support(cls)
-                        cls._opera_i18n_attached = True
+                    attach_i18n_support(frame_obj.__class__)
                 except Exception:
                     pass
-
-            def _apply_language_later():
-                try:
-                    idioma_atual = getattr(self, "idioma_atual", "pt_BR")
-                    if hasattr(frame_obj, "set_idioma"):
-                        frame_obj.set_idioma(idioma_atual)
-                    elif hasattr(frame_obj, "on_language_changed"):
-                        frame_obj.on_language_changed(idioma_atual)
-                    elif hasattr(frame_obj, "refresh_texts"):
-                        frame_obj.refresh_texts()
-                except Exception:
-                    pass
-
             try:
-                if hasattr(self, "_agendar_after"):
-                    self._agendar_after(1, _apply_language_later)
-                else:
-                    _apply_language_later()
+                if hasattr(frame_obj, "set_idioma"):
+                    frame_obj.set_idioma(getattr(self, "idioma_atual", "pt_BR"))
+                elif hasattr(frame_obj, "on_language_changed"):
+                    frame_obj.on_language_changed(getattr(self, "idioma_atual", "pt_BR"))
+                elif hasattr(frame_obj, "refresh_texts"):
+                    frame_obj.refresh_texts()
             except Exception:
-                _apply_language_later()
-
+                pass
             return frame_obj
 
         # 1) padrão principal do sistema
         try:
-            frame = _finalize_frame(page_class(master=self.content, sistema=self))
-            _trace_print(f"_load_page_direct('{page_name}') finalizado em {time.time() - load_start:.2f}s")
-            return frame
+            return _finalize_frame(page_class(master=self.content, sistema=self))
         except Exception as e:
             last_error = e
 
@@ -4272,7 +3708,6 @@ class OperaMenuApp(ctk.CTk):
             pass
 
         _dprint(f"❌ Falha ao instanciar '{page_name}': {last_error}")
-        _trace_print(f"❌ _load_page_direct('{page_name}') falhou após {time.time() - load_start:.2f}s: {last_error}")
         return fallback
 
     def reload_current_page(self):
@@ -4281,8 +3716,6 @@ class OperaMenuApp(ctk.CTk):
             self.open_page(self.current_page)
 
     def _ativar_backup_silencioso(self):
-        if not getattr(self, "_db_available", True):
-            return
         if getattr(self, "_backup_launch_scheduled", False):
             self._backup_launch_scheduled = False
         try:
@@ -4378,367 +3811,12 @@ def remover_foco_e_bordas_menu(widget_root):
     limpar(widget_root)
 
 
-def _startup_database_ready_for_main() -> tuple[bool, str]:
-    """Valida rapidamente o acesso ao banco antes de abrir a UI principal."""
-    if not MENU_POSTGRES_AVAILABLE:
-        return False, (
-            "Não foi possível inicializar o acesso ao banco de dados.\n\n"
-            "Use o Configurador de Banco do Sistema Opera para configurar o acesso ao banco."
-        )
-
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1")
-                cur.fetchone()
-        return True, ""
-    except Exception as e:
-        try:
-            detalhe = str(e).strip()
-        except Exception:
-            detalhe = ""
-
-        if detalhe:
-            return False, (
-                "Não foi possível conectar ao banco de dados.\n\n"
-                "Use o Configurador de Banco do Sistema Opera para configurar o acesso ao banco.\n\n"
-                f"Detalhe técnico: {detalhe}"
-            )
-
-        return False, (
-            "Não foi possível conectar ao banco de dados.\n\n"
-            "Use o Configurador de Banco do Sistema Opera para configurar o acesso ao banco."
-        )
-
-
-def _show_database_setup_message_and_exit(message: str):
-    root = None
-    dialog = None
-
-    texts = {
-        "pt_BR": {
-            "window_title": "Banco de dados indisponível",
-            "headline": "Banco de dados indisponível",
-            "subtitle": "Sistema Opera",
-            "body": "O sistema não conseguiu acessar o banco de dados.\n\nUse o Configurador de Banco do Sistema Opera para configurar o acesso ao banco.",
-            "details_prefix": "Detalhes técnicos",
-            "language": "Idioma",
-            "close": "Fechar",
-        },
-        "en_US": {
-            "window_title": "Database unavailable",
-            "headline": "Database unavailable",
-            "subtitle": "Sistema Opera",
-            "body": "The system could not access the database.\n\nUse the Sistema Opera Database Setup to configure database access.",
-            "details_prefix": "Technical details",
-            "language": "Language",
-            "close": "Close",
-        },
-        "es_ES": {
-            "window_title": "Base de datos no disponible",
-            "headline": "Base de datos no disponible",
-            "subtitle": "Sistema Opera",
-            "body": "El sistema no pudo acceder a la base de datos.\n\nUse el Configurador de Base de Datos de Sistema Opera para configurar el acceso.",
-            "details_prefix": "Detalles técnicos",
-            "language": "Idioma",
-            "close": "Cerrar",
-        },
-    }
-    language_map = {
-        "Português": "pt_BR",
-        "English": "en_US",
-        "Español": "es_ES",
-    }
-
-    try:
-        ctk.set_appearance_mode("dark")
-    except Exception:
-        pass
-
-    try:
-        root = ctk.CTk()
-        root.withdraw()
-
-        dialog = ctk.CTkToplevel(root)
-        dialog.resizable(False, False)
-        dialog.transient(root)
-        dialog.grab_set()
-        dialog.configure(fg_color="#0b1220")
-
-        largura = 720
-        altura = 450
-        dialog.update_idletasks()
-        sx = dialog.winfo_screenwidth()
-        sy = dialog.winfo_screenheight()
-        px = max(0, (sx - largura) // 2)
-        py = max(0, (sy - altura) // 2)
-        dialog.geometry(f"{largura}x{altura}+{px}+{py}")
-
-        card = ctk.CTkFrame(
-            dialog,
-            fg_color="#111827",
-            corner_radius=18,
-            border_width=1,
-            border_color="#334155",
-        )
-        card.pack(fill="both", expand=True, padx=18, pady=18)
-
-        header = ctk.CTkFrame(card, fg_color="transparent")
-        header.pack(fill="x", padx=24, pady=(20, 8))
-
-        left_header = ctk.CTkFrame(header, fg_color="transparent")
-        left_header.pack(side="left", fill="x", expand=True)
-
-        try:
-            if os.path.exists(ICONE_SISTEMA):
-                img = Image.open(ICONE_SISTEMA).convert("RGBA")
-                logo = ctk.CTkImage(light_image=img, dark_image=img, size=(46, 46))
-                dialog._db_error_logo = logo
-                ctk.CTkLabel(left_header, image=logo, text="").pack(side="left", padx=(0, 14))
-        except Exception:
-            pass
-
-        titles = ctk.CTkFrame(left_header, fg_color="transparent")
-        titles.pack(side="left", fill="x", expand=True)
-
-        headline_label = ctk.CTkLabel(
-            titles,
-            text="",
-            font=("Arial", 24, "bold"),
-            text_color="#f8fafc",
-        )
-        headline_label.pack(anchor="w")
-
-        subtitle_label = ctk.CTkLabel(
-            titles,
-            text="Sistema Opera",
-            font=("Arial", 13),
-            text_color="#93c5fd",
-        )
-        subtitle_label.pack(anchor="w", pady=(2, 0))
-
-        right_header = ctk.CTkFrame(header, fg_color="transparent")
-        right_header.pack(side="right", anchor="ne", padx=(12, 0))
-
-        language_label = ctk.CTkLabel(
-            right_header,
-            text="",
-            font=("Arial", 12, "bold"),
-            text_color="#cbd5e1",
-        )
-        language_label.pack(anchor="e", pady=(2, 6))
-
-        language_var = tk.StringVar(value="Português")
-        language_combo = ctk.CTkComboBox(
-            right_header,
-            values=["Português", "English", "Español"],
-            variable=language_var,
-            width=150,
-            height=34,
-            state="readonly",
-            corner_radius=9,
-            fg_color="#0f172a",
-            border_color="#334155",
-            button_color="#1e3a8a",
-            button_hover_color="#1d4ed8",
-            dropdown_fg_color="#0f172a",
-            dropdown_hover_color="#1e293b",
-            dropdown_text_color="#e5e7eb",
-            text_color="#f8fafc",
-            font=("Arial", 12, "bold"),
-        )
-        language_combo.pack(anchor="e")
-
-        body_label = ctk.CTkLabel(
-            card,
-            text="",
-            justify="left",
-            anchor="w",
-            wraplength=640,
-            font=("Arial", 16),
-            text_color="#e5e7eb",
-        )
-        body_label.pack(fill="x", padx=24, pady=(8, 12))
-
-        details_title = ctk.CTkLabel(
-            card,
-            text="",
-            justify="left",
-            anchor="w",
-            font=("Arial", 13, "bold"),
-            text_color="#cbd5e1",
-        )
-        details_title.pack(fill="x", padx=24, pady=(0, 6))
-
-        box = ctk.CTkTextbox(
-            card,
-            height=120,
-            fg_color="#0f172a",
-            border_width=1,
-            border_color="#334155",
-            text_color="#cbd5e1",
-            corner_radius=10,
-            font=("Consolas", 12),
-        )
-        box.pack(fill="both", expand=True, padx=24, pady=(0, 14))
-        box.insert("1.0", message.strip())
-        box.configure(state="disabled")
-
-        footer = ctk.CTkFrame(card, fg_color="transparent", height=54)
-        footer.pack(fill="x", padx=24, pady=(0, 20))
-        footer.pack_propagate(False)
-
-        def _close():
-            try:
-                dialog.destroy()
-            except Exception:
-                pass
-            try:
-                root.destroy()
-            except Exception:
-                pass
-
-        close_button = ctk.CTkButton(
-            footer,
-            text="",
-            width=160,
-            height=42,
-            corner_radius=10,
-            fg_color="#2563eb",
-            hover_color="#1d4ed8",
-            font=("Arial", 15, "bold"),
-            command=_close,
-        )
-        close_button.pack(side="right")
-
-        def _apply_language(lang_code: str):
-            lang_data = texts.get(lang_code, texts["pt_BR"])
-            dialog.title(lang_data["window_title"])
-            headline_label.configure(text=lang_data["headline"])
-            subtitle_label.configure(text=lang_data["subtitle"])
-            language_label.configure(text=lang_data["language"])
-            body_label.configure(text=lang_data["body"])
-            details_title.configure(text=lang_data["details_prefix"])
-            close_button.configure(text=lang_data["close"])
-
-        def _change_language(choice: str):
-            _apply_language(language_map.get(choice, "pt_BR"))
-
-        language_combo.configure(command=_change_language)
-        _apply_language("pt_BR")
-
-        dialog.protocol("WM_DELETE_WINDOW", _close)
-        dialog.bind("<Escape>", lambda e: _close())
-        dialog.focus_force()
-        root.wait_window(dialog)
-    except Exception:
-        try:
-            if root is None:
-                root = tk.Tk()
-                root.withdraw()
-            messagebox.showerror("Banco de dados indisponível", message, parent=root)
-        except Exception:
-            try:
-                messagebox.showerror("Banco de dados indisponível", message)
-            except Exception:
-                print(message)
-    finally:
-        try:
-            if dialog is not None and dialog.winfo_exists():
-                dialog.destroy()
-        except Exception:
-            pass
-        try:
-            if root is not None and root.winfo_exists():
-                root.destroy()
-        except Exception:
-            pass
-
-
-def _install_runtime_debug_hooks():
-    """
-    Instala hooks de debug para facilitar diagnóstico em produção/local.
-    Não altera fluxo normal; apenas registra mais contexto quando algo falha.
-    """
-    def _log_callback_exception(exc, val, tb):
-        import traceback
-        _dprint("💥 [TK CALLBACK] Exceção em callback do tkinter/customtkinter")
-        _dprint("   Tipo:", getattr(exc, "__name__", str(exc)))
-        _dprint("   Valor:", val)
-        _dprint("   Traceback:")
-        _dprint("".join(traceback.format_exception(exc, val, tb)))
-
-    def _log_unhandled_exception(exc_type, exc_value, exc_tb):
-        import traceback
-        _dprint("💥 [UNHANDLED] Exceção não tratada no processo principal")
-        _dprint("   Tipo:", getattr(exc_type, "__name__", str(exc_type)))
-        _dprint("   Valor:", exc_value)
-        _dprint("   Traceback:")
-        _dprint("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
-
-    def _log_thread_exception(args):
-        import traceback
-        _dprint(f"💥 [THREAD] Exceção não tratada na thread '{getattr(args, 'thread', None)}'")
-        _dprint("   Tipo:", getattr(args.exc_type, "__name__", str(args.exc_type)))
-        _dprint("   Valor:", args.exc_value)
-        _dprint("   Traceback:")
-        _dprint("".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)))
-
-    sys.excepthook = _log_unhandled_exception
-    if hasattr(threading, "excepthook"):
-        threading.excepthook = _log_thread_exception
-    tk.Tk.report_callback_exception = staticmethod(_log_callback_exception)
-    _dprint("🪝 Hooks de debug de runtime instalados (tk/sys/thread).")
-
-
-def _attach_mainloop_watchdog(app, interval_ms: int = 30000):
-    """
-    Emite heartbeat periódico durante o mainloop para ajudar a identificar travamentos.
-    """
-    start_ts = time.time()
-
-    def _heartbeat():
-        elapsed = int(time.time() - start_ts)
-        try:
-            _dprint(
-                f"💓 [MAINLOOP] ativo há {elapsed}s | "
-                f"foco={app.focus_displayof()} | janela={app.state()}"
-            )
-        except Exception as heartbeat_err:
-            _dprint(f"⚠️ [MAINLOOP] Falha no heartbeat: {heartbeat_err}")
-        try:
-            app.after(interval_ms, _heartbeat)
-        except Exception as schedule_err:
-            _dprint(f"⚠️ [MAINLOOP] Não foi possível reagendar heartbeat: {schedule_err}")
-
-    try:
-        app.after(interval_ms, _heartbeat)
-        _dprint(f"🩺 Watchdog do mainloop ativado (intervalo={interval_ms}ms).")
-    except Exception as e:
-        _dprint(f"⚠️ Não foi possível ativar watchdog do mainloop: {e}")
-
-
 def main():
-    ok, erro_banco = _startup_database_ready_for_main()
-    if not ok:
-        _dprint(f"⛔ Inicialização cancelada por falha no banco: {erro_banco}")
-        _show_database_setup_message_and_exit(erro_banco)
-        return
-
     try:
         _dprint("🚀 Iniciando sistema OPERA...")
-        _install_runtime_debug_hooks()
         app = OperaMenuApp()
-        app.bind("<Map>", lambda _e: _dprint("🪟 [UI] Janela mapeada/exibida."))
-        app.bind("<Unmap>", lambda _e: _dprint("🪟 [UI] Janela minimizada/oculta."))
-        app.bind("<FocusIn>", lambda _e: _dprint("🎯 [UI] Aplicação recebeu foco."))
-        app.bind("<FocusOut>", lambda _e: _dprint("🎯 [UI] Aplicação perdeu foco."))
-        _attach_mainloop_watchdog(app, interval_ms=30000)
         _dprint("✅ Aplicação iniciada, entrando no mainloop...")
         app.mainloop()
-        _dprint("✅ Mainloop encerrado sem exceção.")
-    except KeyboardInterrupt:
-        _dprint("⏹️ Execução interrompida por KeyboardInterrupt (Ctrl+C).")
     except Exception as e:
         _dprint(f"💥 ERRO CRÍTICO: {e}")
         import traceback
@@ -4765,6 +3843,4 @@ for _cls_name, _map in AUTO_PAGE_TRANSLATIONS.items():
     if isinstance(_cls, type):
         if not hasattr(_cls, "TRANSLATIONS") and not hasattr(_cls, "_TRANSLATIONS"):
             _cls.TRANSLATIONS = _map
-        if not getattr(_cls, "_opera_i18n_attached", False):
-            _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))
-            setattr(_cls, "_opera_i18n_attached", True)
+        _attach_i18n_support(_cls, getattr(_cls, "TRANSLATIONS", getattr(_cls, "_TRANSLATIONS", _map)))

@@ -5,7 +5,6 @@ Nova versão focada em programação de OPs a partir dos modelos cadastrados,
 com cálculo de tecidos e aviamentos e comparação com estoque.
 """
 from __future__ import annotations
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 from datetime import date, datetime, timedelta
 import os
@@ -99,7 +98,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         toolbar.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 8))
         toolbar.grid_columnconfigure(5, weight=1)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             toolbar,
             text="Nova Programação",
             command=self._abrir_dialogo_nova_programacao,
@@ -108,7 +107,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             text_color="white",
         ).grid(row=0, column=0, padx=(0, 8), pady=4)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             toolbar,
             text="Atualizar",
             command=self._carregar_dados_planejamento,
@@ -117,7 +116,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             text_color="white",
         ).grid(row=0, column=1, padx=(0, 8), pady=4)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             toolbar,
             text="Reprogramar +1 dia",
             command=self._reprogramar,
@@ -126,7 +125,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             text_color="white",
         ).grid(row=0, column=2, padx=(0, 8), pady=4)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             toolbar,
             text="Exportar PDF",
             command=self._exportar_planejamento,
@@ -135,7 +134,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             text_color="white",
         ).grid(row=0, column=3, padx=(0, 8), pady=4)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             toolbar,
             text="Imprimir",
             command=self._imprimir_planejamento,
@@ -152,10 +151,10 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         ctk.CTkLabel(filters, text="Período", text_color=self.cor_texto).grid(row=0, column=0, padx=(4, 6), pady=6)
         self.plan_inicio_entry = ctk.CTkEntry(filters, placeholder_text="De", width=135)
         self.plan_inicio_entry.grid(row=0, column=1, padx=(0, 4), pady=6)
-        BotaoPadronizado.criar_botao(filters, text="📅", width=32, command=lambda: self._abrir_calendario(self.plan_inicio_entry)).grid(row=0, column=2, padx=(0, 8), pady=6)
+        ctk.CTkButton(filters, text="📅", width=32, command=lambda: self._abrir_calendario(self.plan_inicio_entry)).grid(row=0, column=2, padx=(0, 8), pady=6)
         self.plan_fim_entry = ctk.CTkEntry(filters, placeholder_text="Até", width=135)
         self.plan_fim_entry.grid(row=0, column=3, padx=(0, 4), pady=6)
-        BotaoPadronizado.criar_botao(filters, text="📅", width=32, command=lambda: self._abrir_calendario(self.plan_fim_entry)).grid(row=0, column=4, padx=(0, 10), pady=6)
+        ctk.CTkButton(filters, text="📅", width=32, command=lambda: self._abrir_calendario(self.plan_fim_entry)).grid(row=0, column=4, padx=(0, 10), pady=6)
 
         ctk.CTkLabel(filters, text="Coleção", text_color=self.cor_texto).grid(row=0, column=5, padx=(0, 6), pady=6)
         self.filtro_colecao = ctk.CTkComboBox(filters, values=["Todas"], width=160)
@@ -172,7 +171,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         self.filtro_programacao.set("Mensal")
         self.filtro_programacao.grid(row=0, column=10, padx=(0, 10), pady=6)
 
-        BotaoPadronizado.criar_botao(filters, text="Filtrar", command=self._carregar_dados_planejamento, fg_color=self.cor_primaria, hover_color=self._hover(self.cor_primaria)).grid(row=0, column=12, padx=(0, 6), pady=6)
+        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_dados_planejamento, fg_color=self.cor_primaria, hover_color=self._hover(self.cor_primaria)).grid(row=0, column=12, padx=(0, 6), pady=6)
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
@@ -731,13 +730,13 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         ent_inicio = ctk.CTkEntry(passo1, width=140)
         ent_inicio.grid(row=1, column=1, padx=(0, 6), pady=6, sticky="ew")
         ent_inicio.insert(0, date.today().strftime("%d/%m/%Y"))
-        BotaoPadronizado.criar_botao(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_inicio)).grid(row=1, column=2, padx=(0, 12), pady=6)
+        ctk.CTkButton(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_inicio)).grid(row=1, column=2, padx=(0, 12), pady=6)
 
         ctk.CTkLabel(passo1, text="Período fim").grid(row=1, column=3, padx=(0, 6), pady=6, sticky="w")
         ent_fim = ctk.CTkEntry(passo1, width=140)
         ent_fim.grid(row=1, column=4, padx=(0, 6), pady=6, sticky="ew")
         ent_fim.insert(0, (date.today() + timedelta(days=30)).strftime("%d/%m/%Y"))
-        BotaoPadronizado.criar_botao(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_fim)).grid(row=1, column=5, padx=(0, 12), pady=6)
+        ctk.CTkButton(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_fim)).grid(row=1, column=5, padx=(0, 12), pady=6)
 
         ctk.CTkLabel(passo1, text="Programação").grid(row=1, column=6, padx=(0, 6), pady=6, sticky="w")
         cmb_programacao = ctk.CTkOptionMenu(passo1, values=PROGRAMACOES)
@@ -748,7 +747,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         ent_prazo = ctk.CTkEntry(passo1, width=140)
         ent_prazo.grid(row=2, column=1, padx=(0, 6), pady=(0, 10), sticky="ew")
         ent_prazo.insert(0, date.today().strftime("%d/%m/%Y"))
-        BotaoPadronizado.criar_botao(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_prazo)).grid(row=2, column=2, padx=(0, 12), pady=(0, 10))
+        ctk.CTkButton(passo1, text="📅", width=32, command=lambda: self._abrir_calendario(ent_prazo)).grid(row=2, column=2, padx=(0, 12), pady=(0, 10))
 
         ctk.CTkLabel(passo1, text="Coleção").grid(row=2, column=3, padx=(0, 6), pady=(0, 10), sticky="w")
         valores_colecao = sorted({(m[2] or '').strip() for m in self.modelos_cache if (m[2] or '').strip()}) or [""]
@@ -824,7 +823,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         bottom = ctk.CTkFrame(top)
         bottom.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 12))
         bottom.grid_columnconfigure(0, weight=1)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             bottom,
             text="Calcular materiais",
             command=lambda: recalcular_resumo(),
@@ -832,14 +831,14 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             hover_color=self._hover(self.cor_primaria),
             text_color=self.cor_texto,
         ).pack(side="left", padx=8, pady=8)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             bottom,
             text="Salvar programação",
             command=lambda: salvar_programacao(),
             fg_color=self.cor_sucesso,
             hover_color=self._hover(self.cor_sucesso),
             text_color="white",
-        ).pack(side="left", padx=8, pady=8)
+        ).pack(side="right", padx=8, pady=8)
 
         def modelo_info():
             valor = (cmb_modelo.get() or "").strip()
@@ -2013,7 +2012,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             entry_destino.delete(0, "end")
             popup.destroy()
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             rodape,
             text=self._get_text("clear"),
             width=90,
@@ -2026,7 +2025,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             border_width=0,
         ).pack(side="left")
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             rodape,
             text=self._get_text("today"),
             width=90,
@@ -2039,7 +2038,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             border_width=0,
         ).pack(side="left", padx=6)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             rodape,
             text=self._get_text("confirm"),
             width=110,
@@ -2050,7 +2049,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             hover_color=btn_confirmar_hover,
             text_color=texto_btn,
             border_width=0,
-        ).pack(side="left")
+        ).pack(side="right")
 
         popup.bind("<Escape>", lambda e: popup.destroy())
 

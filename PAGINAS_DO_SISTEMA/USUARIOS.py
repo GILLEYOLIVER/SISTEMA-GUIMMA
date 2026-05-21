@@ -1,7 +1,6 @@
 # ATENÇAO ESSE CODIGO E O OFICIAL QUE VAI RECEVER A REFERENCIA PARA AJUSTAR A ABA 1
 
 from __future__ import annotations
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # -*- coding: utf-8 -*-
 """
@@ -835,7 +834,7 @@ class UsuariosPage(ctk.CTkFrame):
         button_font = ctk.CTkFont(size=11, weight="bold")  # fonte levemente menor
 
         # Novo Usuário (azul)
-        btn_novo = BotaoPadronizado.criar_botao(
+        btn_novo = ctk.CTkButton(
             buttons_area,
             text="Novo Usuário",
             command=self._novo_usuario,
@@ -849,7 +848,7 @@ class UsuariosPage(ctk.CTkFrame):
         btn_novo.grid(row=0, column=0, padx=2, pady=4, sticky="ew")
 
         # Salvar (verde)
-        btn_salvar = BotaoPadronizado.criar_botao(
+        btn_salvar = ctk.CTkButton(
             buttons_area,
             text="Salvar",
             command=self._salvar_usuario,
@@ -863,7 +862,7 @@ class UsuariosPage(ctk.CTkFrame):
         btn_salvar.grid(row=0, column=1, padx=2, pady=4, sticky="ew")
 
         # Excluir (vermelho)
-        btn_excluir = BotaoPadronizado.criar_botao(
+        btn_excluir = ctk.CTkButton(
             buttons_area,
             text="Excluir",
             command=self._excluir_usuario,
@@ -877,7 +876,7 @@ class UsuariosPage(ctk.CTkFrame):
         btn_excluir.grid(row=0, column=2, padx=2, pady=4, sticky="ew")
 
         # Gerenciar Permissões (azul)
-        btn_permissoes = BotaoPadronizado.criar_botao(
+        btn_permissoes = ctk.CTkButton(
             buttons_area,
             text="Gerenciar Permissões",
             command=self._aplicar_permissoes_para_usuario,
@@ -1205,7 +1204,7 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_ini.pack(side="left")
         self.log_ini.insert(0, datetime.now().strftime("%d/%m/%Y"))
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             date_ini_frame,
             text="📅",
             width=32,
@@ -1235,7 +1234,7 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_fim.pack(side="left")
         self.log_fim.insert(0, datetime.now().strftime("%d/%m/%Y"))
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             date_fim_frame,
             text="📅",
             width=32,
@@ -1268,7 +1267,7 @@ class UsuariosPage(ctk.CTkFrame):
         )
         self.log_usuario.pack(side="left")
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             user_input_frame,
             text="▼",
             width=28,
@@ -1443,7 +1442,7 @@ class UsuariosPage(ctk.CTkFrame):
                     ano += 1
                 render_calendar()
 
-            BotaoPadronizado.criar_botao(
+            ctk.CTkButton(
                 header,
                 text="❮",
                 width=32,
@@ -1454,7 +1453,7 @@ class UsuariosPage(ctk.CTkFrame):
                 text_color="white"
             ).pack(side="left", padx=12, pady=8)
 
-            BotaoPadronizado.criar_botao(
+            ctk.CTkButton(
                 header,
                 text="❯",
                 width=32,
@@ -1504,7 +1503,7 @@ class UsuariosPage(ctk.CTkFrame):
                                 width=36
                             ).grid(row=row_idx, column=col_idx, padx=2, pady=2)
                         else:
-                            BotaoPadronizado.criar_botao(
+                            ctk.CTkButton(
                                 dias_frame,
                                 text=str(day),
                                 width=36,
@@ -3398,7 +3397,7 @@ class UsuariosPage(ctk.CTkFrame):
                 ]
 
                 for texto, periodo, cor in botoes_periodo:
-                    btn = BotaoPadronizado.criar_botao(
+                    btn = ctk.CTkButton(
                         main_frame,
                         text=texto,
                         command=lambda p=periodo: self.definir_periodo(p),
@@ -3413,7 +3412,7 @@ class UsuariosPage(ctk.CTkFrame):
                 ctk.CTkFrame(main_frame, fg_color="#e5e7eb", height=2).pack(fill="x", pady=20)
 
                 # Botão cancelar
-                btn_cancelar = BotaoPadronizado.criar_botao(
+                btn_cancelar = ctk.CTkButton(
                     main_frame,
                     text="❌ Cancelar",
                     command=self.cancelar,
@@ -4210,7 +4209,7 @@ class UsuariosPage(ctk.CTkFrame):
         botoes_frame = ctk.CTkFrame(parent, fg_color="transparent")
         botoes_frame.pack(fill="x", padx=20, pady=10)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes_frame,
             text="🖨️ Imprimir Relatório",
             command=lambda: self._imprimir_relatorio(dados),
@@ -4218,7 +4217,7 @@ class UsuariosPage(ctk.CTkFrame):
             height=40
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes_frame,
             text="📥 Exportar PDF",
             command=lambda: self._exportar_pdf(dados),
@@ -4226,7 +4225,7 @@ class UsuariosPage(ctk.CTkFrame):
             height=40
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes_frame,
             text="📊 Exportar Excel",
             command=lambda: self._exportar_excel(dados),
@@ -4234,7 +4233,7 @@ class UsuariosPage(ctk.CTkFrame):
             height=40
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes_frame,
             text="❌ Fechar",
             command=parent.destroy,
@@ -4704,7 +4703,7 @@ class UsuariosPage(ctk.CTkFrame):
         botoes_frame = ctk.CTkFrame(main_frame, fg_color="white")
         botoes_frame.pack(fill="x", pady=20)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes_frame,
             text="🖨️ Imprimir Agora",
             command=lambda: self._executar_impressao(janela_impressao),
@@ -4713,7 +4712,7 @@ class UsuariosPage(ctk.CTkFrame):
             width=150
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes_frame,
             text="💾 Salvar como PDF",
             command=lambda: self._salvar_pdf_impressao(dados),
@@ -4722,7 +4721,7 @@ class UsuariosPage(ctk.CTkFrame):
             width=150
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes_frame,
             text="📋 Copiar para Word",
             command=lambda: self._copiar_para_word(dados),
@@ -4731,7 +4730,7 @@ class UsuariosPage(ctk.CTkFrame):
             width=150
         ).pack(side="left", padx=5)
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             botoes_frame,
             text="❌ Fechar",
             command=janela_impressao.destroy,
@@ -5054,21 +5053,21 @@ class UsuariosPage(ctk.CTkFrame):
             btn_frame = ctk.CTkFrame(word_window)
             btn_frame.pack(fill="x", padx=10, pady=10)
 
-            BotaoPadronizado.criar_botao(
+            ctk.CTkButton(
                 btn_frame,
                 text="📋 Copiar Tudo",
                 command=lambda: self._copiar_texto_area(text_area),
                 fg_color="#3b82f6"
             ).pack(side="left", padx=5)
 
-            BotaoPadronizado.criar_botao(
+            ctk.CTkButton(
                 btn_frame,
                 text="💾 Salvar como .doc",
                 command=lambda: self._salvar_doc(conteudo),
                 fg_color="#10b981"
             ).pack(side="left", padx=5)
 
-            BotaoPadronizado.criar_botao(
+            ctk.CTkButton(
                 btn_frame,
                 text="❌ Fechar",
                 command=word_window.destroy,
@@ -5192,71 +5191,8 @@ UsuariosPage_TRANSLATIONS = {
         "Filtrar": "Filtrar",
         "Limpar": "Limpar",
         "Exportar": "Exportar",
-        "Exportar CSV": "Exportar CSV",
         "Imprimir": "Imprimir",
         "Buscar": "Buscar",
-        "Gestão de Usuários": "Gestão de Usuários",
-        "Gerencie usuários, permissões e acessos ao sistema": "Gerencie usuários, permissões e acessos ao sistema",
-        "USUÁRIOS": "USUÁRIOS",
-        "PERMISSÕES": "PERMISSÕES",
-        "LOGS": "LOGS",
-        "DASHBOARD": "DASHBOARD",
-        "Lista de Usuários": "Lista de Usuários",
-        "Buscar usuários:": "Buscar usuários:",
-        "Gerencie todos os usuários do sistema": "Gerencie todos os usuários do sistema",
-        "Detalhes do Usuário": "Detalhes do Usuário",
-        "Edite ou crie novos usuários": "Edite ou crie novos usuários",
-        "Usuário *": "Usuário *",
-        "E-mail": "E-mail",
-        "Telefone": "Telefone",
-        "Departamento": "Departamento",
-        "Hierarquia *": "Hierarquia *",
-        "Usuário ativo": "Usuário ativo",
-        "Tema Preferido *": "Tema Preferido *",
-        "Senha": "Senha",
-        "Dica de Senha": "Dica de Senha",
-        "Novo Usuário": "Novo Usuário",
-        "Salvar": "Salvar",
-        "Excluir": "Excluir",
-        "Gerenciar Permissões": "Gerenciar Permissões",
-        "Selecionar Usuário": "Selecionar Usuário",
-        "Escolha um usuário para gerenciar permissões": "Escolha um usuário para gerenciar permissões",
-        "Nenhum usuário selecionado": "Nenhum usuário selecionado",
-        "Gerenciar Permissões": "Gerenciar Permissões",
-        "Configure as permissões do usuário selecionado": "Configure as permissões do usuário selecionado",
-        "Marcar Todos": "Marcar Todos",
-        "Desmarcar Todos": "Desmarcar Todos",
-        "Marcar VER": "Marcar VER",
-        "Marcar EDITAR": "Marcar EDITAR",
-        "Marcar IMPRIMIR": "Marcar IMPRIMIR",
-        "Marcar EXCLUIR": "Marcar EXCLUIR",
-        "Marcar ADMIN": "Marcar ADMIN",
-        "Recarregar": "Recarregar",
-        "Estatísticas": "Estatísticas",
-        "Filtrar Logs": "Filtrar Logs",
-        "Filtrar Registros de Atividade": "Filtrar Registros de Atividade",
-        "Ação": "Ação",
-        "Nome do usuário...": "Nome do usuário...",
-        "Digite qualquer termo para buscar...": "Digite qualquer termo para buscar...",
-        "Relatório Completo": "Relatório Completo",
-        "Limpar": "Limpar",
-        "Registros de Atividade": "Registros de Atividade",
-        "Histórico completo de ações no sistema": "Histórico completo de ações no sistema",
-        "Últimas ações no sistema": "Últimas ações no sistema",
-        "Distribuição de Hierarquias": "Distribuição de Hierarquias",
-        "Permissões Mais Usadas": "Permissões Mais Usadas",
-        "Por tipo de usuário": "Por tipo de usuário",
-        "Usuários Ativos": "Usuários Ativos",
-        "Administradores": "Administradores",
-        "Logs Hoje": "Logs Hoje",
-        "Total Usuários": "Total Usuários",
-        "Ativo": "Ativo",
-        "Hierarquia": "Hierarquia",
-        "Página": "Página",
-        "Detalhes": "Detalhes",
-        "Data/Hora": "Data/Hora",
-        "Ordem": "Ordem",
-        "Todos": "Todos",
     },
     "en_US": {
         "title": "Users",
@@ -5264,71 +5200,8 @@ UsuariosPage_TRANSLATIONS = {
         "Filtrar": "Filter",
         "Limpar": "Clear",
         "Exportar": "Export",
-        "Exportar CSV": "Export CSV",
         "Imprimir": "Print",
         "Buscar": "Search",
-        "Gestão de Usuários": "User Management",
-        "Gerencie usuários, permissões e acessos ao sistema": "Manage users, permissions and system access",
-        "USUÁRIOS": "USERS",
-        "PERMISSÕES": "PERMISSIONS",
-        "LOGS": "LOGS",
-        "DASHBOARD": "DASHBOARD",
-        "Lista de Usuários": "User List",
-        "Buscar usuários:": "Search users:",
-        "Gerencie todos os usuários do sistema": "Manage all system users",
-        "Detalhes do Usuário": "User Details",
-        "Edite ou crie novos usuários": "Edit or create new users",
-        "Usuário *": "User *",
-        "E-mail": "E-mail",
-        "Telefone": "Phone",
-        "Departamento": "Department",
-        "Hierarquia *": "Hierarchy *",
-        "Usuário ativo": "Active user",
-        "Tema Preferido *": "Preferred Theme *",
-        "Senha": "Password",
-        "Dica de Senha": "Password Hint",
-        "Novo Usuário": "New User",
-        "Salvar": "Save",
-        "Excluir": "Delete",
-        "Gerenciar Permissões": "Manage Permissions",
-        "Selecionar Usuário": "Select User",
-        "Escolha um usuário para gerenciar permissões": "Choose a user to manage permissions",
-        "Nenhum usuário selecionado": "No user selected",
-        "Gerenciar Permissões": "Manage Permissions",
-        "Configure as permissões do usuário selecionado": "Configure selected user permissions",
-        "Marcar Todos": "Mark All",
-        "Desmarcar Todos": "Unmark All",
-        "Marcar VER": "Mark VIEW",
-        "Marcar EDITAR": "Mark EDIT",
-        "Marcar IMPRIMIR": "Mark PRINT",
-        "Marcar EXCLUIR": "Mark DELETE",
-        "Marcar ADMIN": "Mark ADMIN",
-        "Recarregar": "Reload",
-        "Estatísticas": "Statistics",
-        "Filtrar Logs": "Filter Logs",
-        "Filtrar Registros de Atividade": "Filter Activity Logs",
-        "Ação": "Action",
-        "Nome do usuário...": "User name...",
-        "Digite qualquer termo para buscar...": "Type any term to search...",
-        "Relatório Completo": "Full Report",
-        "Limpar": "Clear",
-        "Registros de Atividade": "Activity Logs",
-        "Histórico completo de ações no sistema": "Full system action history",
-        "Últimas ações no sistema": "Latest system actions",
-        "Distribuição de Hierarquias": "Hierarchy Distribution",
-        "Permissões Mais Usadas": "Most Used Permissions",
-        "Por tipo de usuário": "By user type",
-        "Usuários Ativos": "Active Users",
-        "Administradores": "Administrators",
-        "Logs Hoje": "Logs Today",
-        "Total Usuários": "Total Users",
-        "Ativo": "Active",
-        "Hierarquia": "Hierarchy",
-        "Página": "Page",
-        "Detalhes": "Details",
-        "Data/Hora": "Date/Time",
-        "Ordem": "Order",
-        "Todos": "All",
     },
     "es_ES": {
         "title": "Usuarios",
@@ -5336,71 +5209,8 @@ UsuariosPage_TRANSLATIONS = {
         "Filtrar": "Filtrar",
         "Limpar": "Limpiar",
         "Exportar": "Exportar",
-        "Exportar CSV": "Exportar CSV",
         "Imprimir": "Imprimir",
         "Buscar": "Buscar",
-        "Gestão de Usuários": "Gestión de Usuarios",
-        "Gerencie usuários, permissões e acessos ao sistema": "Gestione usuarios, permisos y accesos al sistema",
-        "USUÁRIOS": "USUARIOS",
-        "PERMISSÕES": "PERMISOS",
-        "LOGS": "REGISTROS",
-        "DASHBOARD": "TABLERO",
-        "Lista de Usuários": "Lista de Usuarios",
-        "Buscar usuários:": "Buscar usuarios:",
-        "Gerencie todos os usuários do sistema": "Gestione todos los usuarios del sistema",
-        "Detalhes do Usuário": "Detalles del Usuario",
-        "Edite ou crie novos usuários": "Edite o cree nuevos usuarios",
-        "Usuário *": "Usuario *",
-        "E-mail": "Correo",
-        "Telefone": "Teléfono",
-        "Departamento": "Departamento",
-        "Hierarquia *": "Jerarquía *",
-        "Usuário ativo": "Usuario activo",
-        "Tema Preferido *": "Tema Preferido *",
-        "Senha": "Contraseña",
-        "Dica de Senha": "Pista de Contraseña",
-        "Novo Usuário": "Nuevo Usuario",
-        "Salvar": "Guardar",
-        "Excluir": "Eliminar",
-        "Gerenciar Permissões": "Gestionar Permisos",
-        "Selecionar Usuário": "Seleccionar Usuario",
-        "Escolha um usuário para gerenciar permissões": "Elija un usuario para gestionar permisos",
-        "Nenhum usuário selecionado": "Ningún usuario seleccionado",
-        "Gerenciar Permissões": "Gestionar Permisos",
-        "Configure as permissões do usuário selecionado": "Configure los permisos del usuario seleccionado",
-        "Marcar Todos": "Marcar Todos",
-        "Desmarcar Todos": "Desmarcar Todos",
-        "Marcar VER": "Marcar VER",
-        "Marcar EDITAR": "Marcar EDITAR",
-        "Marcar IMPRIMIR": "Marcar IMPRIMIR",
-        "Marcar EXCLUIR": "Marcar ELIMINAR",
-        "Marcar ADMIN": "Marcar ADMIN",
-        "Recarregar": "Recargar",
-        "Estatísticas": "Estadísticas",
-        "Filtrar Logs": "Filtrar Registros",
-        "Filtrar Registros de Atividade": "Filtrar Registros de Actividad",
-        "Ação": "Acción",
-        "Nome do usuário...": "Nombre del usuario...",
-        "Digite qualquer termo para buscar...": "Escriba cualquier término para buscar...",
-        "Relatório Completo": "Informe Completo",
-        "Limpar": "Limpiar",
-        "Registros de Atividade": "Registros de Actividad",
-        "Histórico completo de ações no sistema": "Historial completo de acciones en el sistema",
-        "Últimas ações no sistema": "Últimas acciones en el sistema",
-        "Distribuição de Hierarquias": "Distribución de Jerarquías",
-        "Permissões Mais Usadas": "Permisos Más Usados",
-        "Por tipo de usuário": "Por tipo de usuario",
-        "Usuários Ativos": "Usuarios Activos",
-        "Administradores": "Administradores",
-        "Logs Hoje": "Registros Hoy",
-        "Total Usuários": "Total Usuarios",
-        "Ativo": "Activo",
-        "Hierarquia": "Jerarquía",
-        "Página": "Página",
-        "Detalhes": "Detalles",
-        "Data/Hora": "Fecha/Hora",
-        "Ordem": "Orden",
-        "Todos": "Todos",
     },
 }
 

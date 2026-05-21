@@ -16,7 +16,6 @@ from datetime import datetime, date, timedelta
 from typing import Dict, Any, List
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # --- PG access ---
 try:
@@ -173,6 +172,7 @@ class FechamentoMensalPage(ctk.CTkFrame):
     def __init__(self, parent, host=None, *args, **kwargs):
         self._host = host or parent
         self.theme = _Theme(self._host)
+        self._apply_ctk_global_theme()
         super().__init__(parent, fg_color=self.theme.cor_fundo, *args, **kwargs)
         self._init_i18n()
         self._build_ui()
@@ -218,7 +218,7 @@ class FechamentoMensalPage(ctk.CTkFrame):
         self.lbl_busca = ctk.CTkLabel(filt, text="Buscar (modelo/corte/costureira):"); self.lbl_busca.grid(row=0, column=6, padx=(12,4), pady=8, sticky="e")
         self.busca_entry = ctk.CTkEntry(filt, width=260, textvariable=self.busca_var); self.busca_entry.grid(row=0, column=7, padx=4, pady=8)
         self.busca_entry.bind("<Return>", lambda e: self._search())
-        self.btn_buscar = BotaoPadronizado.criar_botao(filt, text="🔍 Buscar", width=120, command=self._search); self.btn_buscar.grid(row=0, column=9, padx=(8,10), pady=8, sticky="e")
+        self.btn_buscar = ctk.CTkButton(filt, text="🔍 Buscar", width=120, command=self._search); self.btn_buscar.grid(row=0, column=9, padx=(8,10), pady=8, sticky="e")
 
         # Abas
         self.tabs = ctk.CTkTabview(self); self.tabs.grid(row=2, column=0, sticky="nsew", padx=8, pady=8)
@@ -258,8 +258,8 @@ class FechamentoMensalPage(ctk.CTkFrame):
 
         # Relatórios
         box_rel = ctk.CTkFrame(self.tab_rel); box_rel.grid(row=0, column=0, sticky="nw", padx=10, pady=10)
-        self.btn_export_csv = BotaoPadronizado.criar_botao(box_rel, text="📤 Exportar CSV (Consolidado)", command=self._export_csv); self.btn_export_csv.grid(row=0, column=0, padx=6, pady=6, sticky="w")
-        self.btn_report_html = BotaoPadronizado.criar_botao(box_rel, text="🖨️ Gerar Relatório HTML", command=self._report_html); self.btn_report_html.grid(row=0, column=1, padx=6, pady=6, sticky="w")
+        self.btn_export_csv = ctk.CTkButton(box_rel, text="📤 Exportar CSV (Consolidado)", command=self._export_csv); self.btn_export_csv.grid(row=0, column=0, padx=6, pady=6, sticky="w")
+        self.btn_report_html = ctk.CTkButton(box_rel, text="🖨️ Gerar Relatório HTML", command=self._report_html); self.btn_report_html.grid(row=0, column=1, padx=6, pady=6, sticky="w")
 
     def _build_kpi(self, parent):
         """
@@ -296,10 +296,11 @@ class FechamentoMensalPage(ctk.CTkFrame):
         self.kpi_adi = make_card(5, self._get_text("kpi_advance"), "R$ 0,00")
 
     def _apply_ctk_global_theme(self):
-        # Mantido apenas por compatibilidade.
-        # Não alterar ctk.set_appearance_mode() dentro da página, pois
-        # isso muda o tema global do sistema inteiro.
-        return
+        try:
+            modo = getattr(self._host, "modo", None) or "dark"
+            ctk.set_appearance_mode("dark" if str(modo).lower().startswith("d") else "light")
+        except Exception:
+            ctk.set_appearance_mode("dark")
 
     def _style_tree(self):
         st = ttk.Style()
@@ -331,8 +332,8 @@ class FechamentoMensalPage(ctk.CTkFrame):
                         c.configure(fg_color=self.theme.cor_secundaria, text_color=self.theme.cor_texto,
                                     button_color=self.theme.cor_destaque, border_color=self.theme.cor_borda)
                     elif isinstance(c, ctk.CTkButton):
-                        # Mantém aparência definida por BotaoPadronizado
-                        c.configure(border_color=self.theme.cor_borda)
+                        txt = (c.cget("text") or "").lower()
+                        c.configure(fg_color=self.theme.cor_destaque, hover_color=self.theme.cor_hover)
                 except Exception: pass
                 walk(c)
         walk(self)

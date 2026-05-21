@@ -3,7 +3,6 @@ import os
 import customtkinter as ctk
 from tkinter import ttk, messagebox, END
 from datetime import datetime
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # Importa o módulo de acesso ao PostgreSQL
 try:
@@ -312,7 +311,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
         title_label.pack(side="left")
         self._ui_refs["title_label"] = title_label
 
-        btn_novo = BotaoPadronizado.criar_botao(
+        btn_novo = ctk.CTkButton(
             top_row,
             text=self._get_text("new"),
             command=self.limpar_campos,
@@ -492,7 +491,7 @@ class CadastroFaccoesView(ctk.CTkFrame):
         self.pesquisar_faccoes()
 
     def _criar_botao(self, parent, texto, comando, cor_fg, estado="normal", width=100, height=32):
-        btn = BotaoPadronizado.criar_botao(parent, text=texto, command=comando, fg_color=cor_fg, hover_color=self.cor_hover,
+        btn = ctk.CTkButton(parent, text=texto, command=comando, fg_color=cor_fg, hover_color=self.cor_hover,
                             text_color=self.cor_texto, border_color=self.cor_borda, state=estado,
                             width=width, height=height)
         btn.pack(side="left", padx=3)

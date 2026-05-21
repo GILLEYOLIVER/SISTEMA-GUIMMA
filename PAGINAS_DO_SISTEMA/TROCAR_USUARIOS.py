@@ -4,7 +4,6 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 
 def abrir_janela_trocar_usuario(self):
@@ -318,7 +317,7 @@ def abrir_janela_trocar_usuario(self):
                 )
                 botoes_frame.pack(fill="x", pady=(8, 5))
 
-                btn_sel = BotaoPadronizado.criar_botao(
+                btn_sel = ctk.CTkButton(
                     botoes_frame,
                     text="✅ Selecionar",
                     command=selecionar_usuario,
@@ -339,7 +338,7 @@ def abrir_janela_trocar_usuario(self):
                     cor_botao_primario,
                 )
 
-                btn_fechar = BotaoPadronizado.criar_botao(
+                btn_fechar = ctk.CTkButton(
                     botoes_frame,
                     text="Fechar",
                     command=lambda: (user_win.grab_release(), user_win.destroy()),
@@ -408,7 +407,7 @@ def abrir_janela_trocar_usuario(self):
         help_inner_frame = ctk.CTkFrame(help_frame, fg_color="transparent")
         help_inner_frame.pack(fill="x")
 
-        btn_listar = BotaoPadronizado.criar_botao(
+        btn_listar = ctk.CTkButton(
             help_inner_frame,
             text="👥 Listar Usuários",
             command=listar_usuarios,
@@ -429,7 +428,7 @@ def abrir_janela_trocar_usuario(self):
             cor_botao_primario,
         )
 
-        btn_dica = BotaoPadronizado.criar_botao(
+        btn_dica = ctk.CTkButton(
             help_inner_frame,
             text="🔍 Dica de Senha",
             command=mostrar_dica_senha,
@@ -612,7 +611,7 @@ def abrir_janela_trocar_usuario(self):
         btn_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
         btn_frame.pack(fill="x", pady=(10, 0))
 
-        btn_entrar = BotaoPadronizado.criar_botao(
+        btn_entrar = ctk.CTkButton(
             btn_frame,
             text="🎯 ENTRAR NO SISTEMA",
             command=fazer_login,
@@ -633,7 +632,7 @@ def abrir_janela_trocar_usuario(self):
             cor_botao_primario,
         )
 
-        btn_cancelar = BotaoPadronizado.criar_botao(
+        btn_cancelar = ctk.CTkButton(
             btn_frame,
             text="❌ CANCELAR",
             command=on_login_close,

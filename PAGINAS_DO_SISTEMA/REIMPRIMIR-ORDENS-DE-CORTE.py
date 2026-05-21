@@ -14,7 +14,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 try:
     import importlib.util as _importlib_util
     from pathlib import Path as _Path
@@ -315,90 +314,44 @@ class OrdensCorteImpressao(ctk.CTkFrame):
     #   Construção da interface
     # ----------------------------------------------------------
     def _build_ui(self):
-        # A linha que deve expandir é a da tabela, não a dos filtros
-        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        # =========================
-        # CABEÇALHO
-        # =========================
-        header = ctk.CTkFrame(
-            self,
-            fg_color=self.cor_fundo,
-            corner_radius=10,
-            border_width=1,
-            border_color=self.cor_borda
-        )
-        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 8))
+        # Cabeçalho
+        header = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
         header.grid_columnconfigure(0, weight=1)
 
-        self.lbl_titulo = ctk.CTkLabel(
+        titulo = ctk.CTkLabel(
             header,
             text="REIMPRIMIR-ORDENS",
-            font=("Arial", 20, "bold"),
+            font=("Arial", 18, "bold"),
             text_color=self.cor_texto,
         )
-        self.lbl_titulo.grid(row=0, column=0, sticky="w", padx=12, pady=12)
+        titulo.grid(row=0, column=0, sticky="w")
 
-        # =========================
-        # ÁREA CENTRAL
-        # =========================
-        corpo = ctk.CTkFrame(self, fg_color="transparent")
-        corpo.grid(row=1, column=0, rowspan=2, sticky="nsew", padx=10, pady=(0, 0))
-        corpo.grid_rowconfigure(1, weight=1)
-        corpo.grid_columnconfigure(0, weight=1)
-
-        # =========================
-        # FILTROS
-        # =========================
-        filtros = ctk.CTkFrame(
-            corpo,
-            fg_color=self.cor_fundo,
-            corner_radius=10,
-            border_width=1,
-            border_color=self.cor_borda
-        )
-        filtros.grid(row=0, column=0, sticky="ew", pady=(0, 8))
-        filtros.grid_columnconfigure(0, weight=0)
-        filtros.grid_columnconfigure(1, weight=0)
-        filtros.grid_columnconfigure(2, weight=0)
-        filtros.grid_columnconfigure(3, weight=1)
-        filtros.grid_columnconfigure(4, weight=0)
-        filtros.grid_columnconfigure(5, weight=0)
-        filtros.grid_columnconfigure(6, weight=0)
+        # Filtros
+        filtros = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        filtros.grid(row=1, column=0, sticky="ew", padx=10)
+        for i in range(5):
+            filtros.grid_columnconfigure(i, weight=0)
+        filtros.grid_columnconfigure(5, weight=1)
 
         ctk.CTkLabel(
-            filtros,
-            text="Código:",
-            text_color=self.cor_texto,
-            font=("Arial", 12, "bold")
-        ).grid(row=0, column=0, padx=(12, 6), pady=12, sticky="w")
-
+            filtros, text="Código:", text_color=self.cor_texto, font=("Arial", 12)
+        ).grid(row=0, column=0, padx=(0, 4), pady=4, sticky="w")
         self.filtro_codigo = ctk.CTkEntry(
-            filtros,
-            width=140,
-            height=32,
-            fg_color="white",
-            text_color="black",
-            border_color=self.cor_borda
+            filtros, width=120, fg_color="white", text_color="black"
         )
-        self.filtro_codigo.grid(row=0, column=1, padx=(0, 12), pady=12, sticky="w")
+        self.filtro_codigo.grid(row=0, column=1, padx=(0, 10), pady=4, sticky="w")
 
         ctk.CTkLabel(
-            filtros,
-            text="Descrição:",
-            text_color=self.cor_texto,
-            font=("Arial", 12, "bold")
-        ).grid(row=0, column=2, padx=(0, 6), pady=12, sticky="w")
-
+            filtros, text="Descrição:", text_color=self.cor_texto, font=("Arial", 12)
+        ).grid(row=0, column=2, padx=(0, 4), pady=4, sticky="w")
         self.filtro_descricao = ctk.CTkEntry(
-            filtros,
-            height=32,
-            fg_color="white",
-            text_color="black",
-            border_color=self.cor_borda
+            filtros, width=260, fg_color="white", text_color="black"
         )
-        self.filtro_descricao.grid(row=0, column=3, padx=(0, 12), pady=12, sticky="ew")
+        self.filtro_descricao.grid(row=0, column=3, padx=(0, 10), pady=4, sticky="w")
 
         self.var_apenas_nao_impressas = tk.BooleanVar(value=False)
         if self.col_impresso:
@@ -412,45 +365,35 @@ class OrdensCorteImpressao(ctk.CTkFrame):
                 text_color=self.cor_texto,
                 command=self.atualizar_lista,
             )
-            self.chk_nao_impressas.grid(row=0, column=4, padx=(0, 12), pady=12, sticky="w")
+            self.chk_nao_impressas.grid(row=0, column=4, padx=(0, 10), pady=4, sticky="w")
         else:
             self.chk_nao_impressas = None
 
-        btn_buscar = BotaoPadronizado.criar_botao(
+        btn_buscar = ctk.CTkButton(
             filtros,
             text="Buscar",
             command=self.atualizar_lista,
             fg_color=self.cor_selecao,
             hover_color=self.cor_hover,
             text_color="white",
-            width=110,
-            height=32,
+            width=90,
         )
-        btn_buscar.grid(row=0, column=5, padx=(0, 8), pady=12, sticky="e")
+        btn_buscar.grid(row=0, column=5, padx=(0, 4), pady=4, sticky="e")
 
-        btn_limpar = BotaoPadronizado.criar_botao(
+        btn_limpar = ctk.CTkButton(
             filtros,
             text="Limpar",
             command=self._limpar_filtros,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
-            width=110,
-            height=32,
+            width=90,
         )
-        btn_limpar.grid(row=0, column=6, padx=(0, 12), pady=12, sticky="e")
+        btn_limpar.grid(row=0, column=6, padx=(4, 0), pady=4, sticky="e")
 
-        # =========================
-        # TABELA
-        # =========================
-        frame_tabela = ctk.CTkFrame(
-            corpo,
-            fg_color=self.cor_fundo,
-            corner_radius=10,
-            border_width=1,
-            border_color=self.cor_borda
-        )
-        frame_tabela.grid(row=1, column=0, sticky="nsew")
+        # Tabela
+        frame_tabela = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        frame_tabela.grid(row=2, column=0, sticky="nsew", padx=10, pady=(5, 5))
         frame_tabela.grid_rowconfigure(0, weight=1)
         frame_tabela.grid_columnconfigure(0, weight=1)
 
@@ -464,16 +407,14 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             "Treeview",
             background="white",
             foreground="black",
-            rowheight=28,
+            rowheight=24,
             fieldbackground="white",
-            borderwidth=0,
         )
         style.configure(
             "Treeview.Heading",
             background=self.cor_primaria,
             foreground=self.cor_texto,
             font=("Arial", 11, "bold"),
-            relief="flat",
         )
         style.map("Treeview", background=[("selected", self.cor_selecao)])
 
@@ -483,61 +424,46 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             show="headings",
             selectmode="browse",
         )
-
         vsb = ttk.Scrollbar(frame_tabela, orient="vertical", command=self.tree.yview)
-        hsb = ttk.Scrollbar(frame_tabela, orient="horizontal", command=self.tree.xview)
-        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        self.tree.configure(yscrollcommand=vsb.set)
 
-        self.tree.grid(row=0, column=0, sticky="nsew", padx=(10, 0), pady=(10, 0))
-        vsb.grid(row=0, column=1, sticky="ns", pady=(10, 0))
-        hsb.grid(row=1, column=0, sticky="ew", padx=(10, 0), pady=(0, 10))
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
 
+        # Headings amigáveis
         for col in self._logical_cols:
             if col == "id":
                 texto = "ID"
-                largura = 70
-                anchor = "center"
+                largura = 60
             elif col == "codigo":
                 texto = "Código"
-                largura = 130
-                anchor = "center"
+                largura = 100
             elif col == "descricao":
                 texto = "Descrição"
-                largura = 420
-                anchor = "w"
+                largura = 260
             elif col == "data_final":
                 texto = "Data Final"
-                largura = 130
-                anchor = "center"
+                largura = 120
             elif col == "quantidade":
                 texto = "Quantidade"
-                largura = 120
-                anchor = "center"
+                largura = 110
             elif col == "impresso":
                 texto = "Impresso?"
-                largura = 100
-                anchor = "center"
+                largura = 90
             else:
                 texto = col
-                largura = 120
-                anchor = "center"
+                largura = 100
 
             self.tree.heading(col, text=texto)
-            self.tree.column(col, width=largura, anchor=anchor)
+            self.tree.column(col, width=largura, anchor="center")
 
         self.tree.bind("<Double-1>", self._on_double_click)
 
-        # =========================
-        # RODAPÉ
-        # =========================
-        rodape = ctk.CTkFrame(
-            self,
-            fg_color=self.cor_fundo,
-            corner_radius=10,
-            border_width=1,
-            border_color=self.cor_borda
-        )
-        rodape.grid(row=3, column=0, sticky="ew", padx=10, pady=(8, 10))
+        # Rodapé / Botões
+        rodape = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        rodape.grid(row=3, column=0, sticky="ew", padx=10, pady=(5, 10))
+        rodape.grid_columnconfigure(0, weight=1)
+        rodape.grid_columnconfigure(3, weight=0)
 
         self.lbl_total = ctk.CTkLabel(
             rodape,
@@ -545,9 +471,9 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             text_color=self.cor_texto,
             font=("Arial", 11),
         )
-        self.lbl_total.pack(side="left", padx=(12, 16), pady=10)
+        self.lbl_total.grid(row=0, column=0, sticky="w")
 
-        btn_imprimir = BotaoPadronizado.criar_botao(
+        btn_imprimir = ctk.CTkButton(
             rodape,
             text="Imprimir ordem selecionada",
             command=self.imprimir_selecionada,
@@ -555,11 +481,10 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             hover_color=self.cor_hover,
             text_color="white",
             width=220,
-            height=34,
         )
-        btn_imprimir.pack(side="left", padx=6, pady=8)
+        btn_imprimir.grid(row=0, column=1, padx=8, pady=4, sticky="e")
 
-        btn_atualizar = BotaoPadronizado.criar_botao(
+        btn_atualizar = ctk.CTkButton(
             rodape,
             text="Atualizar lista",
             command=self.atualizar_lista,
@@ -567,11 +492,10 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
             width=150,
-            height=34,
         )
-        btn_atualizar.pack(side="left", padx=6, pady=8)
+        btn_atualizar.grid(row=0, column=2, padx=8, pady=4, sticky="e")
 
-        btn_fechar = BotaoPadronizado.criar_botao(
+        btn_fechar = ctk.CTkButton(
             rodape,
             text="Fechar",
             command=self._fechar,
@@ -579,9 +503,8 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             hover_color=self.cor_hover,
             text_color="white",
             width=120,
-            height=34,
         )
-        btn_fechar.pack(side="left", padx=6, pady=8)
+        btn_fechar.grid(row=0, column=3, padx=0, pady=4, sticky="e")
 
     # ----------------------------------------------------------
     #   Ações da interface
@@ -793,7 +716,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         )
         lbl_hint.grid(row=0, column=0, sticky="w", padx=2, pady=4)
 
-        btn_gerar = BotaoPadronizado.criar_botao(
+        btn_gerar = ctk.CTkButton(
             rodape,
             text="Gerar PDF (não abre navegador)",
             fg_color=self.cor_imprimir,
@@ -804,7 +727,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         )
         btn_gerar.grid(row=0, column=1, padx=8, pady=4, sticky="e")
 
-        btn_fechar = BotaoPadronizado.criar_botao(
+        btn_fechar = ctk.CTkButton(
             rodape,
             text="Fechar",
             fg_color=self.cor_alerta,
@@ -1154,136 +1077,55 @@ if __name__ == "__main__":
 
 #03/02/2025
 
+# --- Suporte trilíngue individual desta página ---
+OrdensCorteImpressao_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Reimprimir Ordens de Corte",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Reprint Cut Orders",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Reimprimir Órdenes de Corte",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
 
-# --- Suporte de idioma consolidado desta página ---
-import tkinter as _tk_i18n
-from tkinter import ttk as _ttk_i18n
 
-
-def _opera_page_lang(instance):
-    idioma = getattr(getattr(instance, "sistema", None), "idioma_atual", None)
-    if not idioma:
-        idioma = getattr(getattr(instance, "host", None), "idioma_atual", None)
-    if not idioma:
-        idioma = getattr(instance, "idioma_atual", None)
-    return idioma or "pt_BR"
-
-
-def _opera_translate_widget_tree(instance, widget, translation_map):
-    try:
-        for opt in ("text", "placeholder_text"):
-            try:
-                current = widget.cget(opt)
-            except Exception:
-                continue
-            if isinstance(current, str) and current in translation_map:
-                try:
-                    widget.configure(**{opt: translation_map[current]})
-                except Exception:
-                    pass
-
+def _apply_ordenscorteimpressao_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in OrdensCorteImpressao_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
         try:
-            values = widget.cget("values")
-        except Exception:
-            values = None
-        if isinstance(values, (list, tuple)):
-            mapped = [translation_map.get(v, v) if isinstance(v, str) else v for v in values]
-            if list(mapped) != list(values):
-                try:
-                    widget.configure(values=mapped)
-                except Exception:
-                    pass
-
-        if isinstance(widget, _ttk_i18n.Treeview):
-            try:
-                heading = widget.heading("#0")
-                text = heading.get("text", "")
-                if text in translation_map:
-                    widget.heading("#0", text=translation_map[text])
-            except Exception:
-                pass
-            try:
-                for col in widget["columns"]:
-                    heading = widget.heading(col)
-                    text = heading.get("text", "")
-                    if text in translation_map:
-                        widget.heading(col, text=translation_map[text])
-            except Exception:
-                pass
-
-        if isinstance(widget, _tk_i18n.Menu):
-            try:
-                end = widget.index("end")
-            except Exception:
-                end = None
-            if end is not None:
-                for idx in range(end + 1):
-                    try:
-                        label = widget.entrycget(idx, "label")
-                    except Exception:
-                        continue
-                    if isinstance(label, str) and label in translation_map:
-                        try:
-                            widget.entryconfigure(idx, label=translation_map[label])
-                        except Exception:
-                            pass
-
-        for child in widget.winfo_children():
-            _opera_translate_widget_tree(instance, child, translation_map)
-    except Exception:
-        pass
-
-
-def _opera_apply_page_i18n(instance, class_ref, page_title=None):
-    idioma = _opera_page_lang(instance)
-    maps = getattr(class_ref, "_TRANSLATIONS", {}) or {}
-    base = maps.get("pt_BR", {}) if isinstance(maps.get("pt_BR", {}), dict) else {}
-    current = maps.get(idioma, {}) if isinstance(maps.get(idioma, {}), dict) else {}
-    translation_map = dict(base)
-    translation_map.update(current)
-
-    for attr in ("titulo", "title_label", "lbl_titulo", "header_title", "page_title_label"):
-        widget = getattr(instance, attr, None)
-        if widget is not None:
-            try:
-                current_text = widget.cget("text")
-                if isinstance(current_text, str):
-                    widget.configure(text=translation_map.get(current_text, current_text))
-            except Exception:
-                pass
-
-    if page_title:
-        try:
-            instance.PAGE_TITLE = translation_map.get(page_title, page_title)
+            self.titulo.configure(text=OrdensCorteImpressao_TRANSLATIONS[idioma]["title"])
         except Exception:
             pass
 
-    _opera_translate_widget_tree(instance, instance, translation_map)
 
-
-def _opera_set_idioma_factory(class_ref, page_title=None):
-    def set_idioma(self, idioma):
-        self.idioma_atual = idioma
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    def on_language_changed(self, idioma=None):
-        if idioma:
-            self.idioma_atual = idioma
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    def refresh_texts(self):
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    return set_idioma, on_language_changed, refresh_texts
-
-
-
-OrdensCorteImpressao._TRANSLATIONS = {
-    "pt_BR": {'REIMPRIMIR-ORDENS': 'REIMPRIMIR-ORDENS', 'Código:': 'Código:', 'Descrição:': 'Descrição:', 'Buscar': 'Buscar', 'Limpar': 'Limpar', 'Atualizar lista': 'Atualizar lista', 'Somente ordens não impressas': 'Somente ordens não impressas', 'Imprimir ordem selecionada': 'Imprimir ordem selecionada', 'Gerar PDF (não abre navegador)': 'Gerar PDF (não abre navegador)', 'Fechar': 'Fechar', '0 ordens encontradas': '0 ordens encontradas', 'ORDEM DE CORTE – PRÉ-VISUALIZAÇÃO': 'ORDEM DE CORTE – PRÉ-VISUALIZAÇÃO', 'Código': 'Código', 'Descrição': 'Descrição', 'Data': 'Data', 'Quantidade': 'Quantidade', 'Impressa': 'Impressa'},
-    "en_US": {'REIMPRIMIR-ORDENS': 'REPRINT ORDERS', 'Código:': 'Code:', 'Descrição:': 'Description:', 'Buscar': 'Search', 'Limpar': 'Clear', 'Atualizar lista': 'Refresh list', 'Somente ordens não impressas': 'Only non-printed orders', 'Imprimir ordem selecionada': 'Print selected order', 'Gerar PDF (não abre navegador)': 'Generate PDF (does not open browser)', 'Fechar': 'Close', '0 ordens encontradas': '0 orders found', 'ORDEM DE CORTE – PRÉ-VISUALIZAÇÃO': 'CUT ORDER – PREVIEW', 'Código': 'Code', 'Descrição': 'Description', 'Data': 'Date', 'Quantidade': 'Quantity', 'Impressa': 'Printed'},
-    "es_ES": {'REIMPRIMIR-ORDENS': 'REIMPRIMIR ÓRDENES', 'Código:': 'Código:', 'Descrição:': 'Descripción:', 'Buscar': 'Buscar', 'Limpar': 'Limpiar', 'Atualizar lista': 'Actualizar lista', 'Somente ordens não impressas': 'Solo órdenes no impresas', 'Imprimir ordem selecionada': 'Imprimir orden seleccionada', 'Gerar PDF (não abre navegador)': 'Generar PDF (no abre navegador)', 'Fechar': 'Cerrar', '0 ordens encontradas': '0 órdenes encontradas', 'ORDEM DE CORTE – PRÉ-VISUALIZAÇÃO': 'ORDEN DE CORTE – VISTA PREVIA', 'Código': 'Código', 'Descrição': 'Descripción', 'Data': 'Fecha', 'Quantidade': 'Cantidad', 'Impressa': 'Impresa'},
-}
-
-OrdensCorteImpressao.TRANSLATIONS = OrdensCorteImpressao._TRANSLATIONS
-OrdensCorteImpressao.PAGE_TITLE = 'Reimprimir Ordens de Corte'
-OrdensCorteImpressao.set_idioma, OrdensCorteImpressao.on_language_changed, OrdensCorteImpressao.refresh_texts = _opera_set_idioma_factory(OrdensCorteImpressao, 'Reimprimir Ordens de Corte')
+try:
+    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
+    OrdensCorteImpressao.TRANSLATIONS = OrdensCorteImpressao_TRANSLATIONS
+    if not hasattr(OrdensCorteImpressao, "apply_page_translations"):
+        OrdensCorteImpressao.apply_page_translations = _apply_ordenscorteimpressao_translations
+    attach_i18n_support(OrdensCorteImpressao, OrdensCorteImpressao_TRANSLATIONS)
+except Exception:
+    pass

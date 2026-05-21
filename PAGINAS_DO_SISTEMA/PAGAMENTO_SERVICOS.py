@@ -7,7 +7,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 import csv
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ===================== Acesso ao PostgreSQL =====================
 try:
@@ -29,10 +28,7 @@ except Exception as e:
         return False, "Módulo de banco de dados não disponível"
 
 # ===================== Aparência base / tema =====================
-# IMPORTANTE:
-# Não chamar ctk.set_appearance_mode() no import deste módulo.
-# Essa configuração é global no processo e estava alterando o tema
-# do sistema inteiro ao abrir "Pagamento de Serviços".
+ctk.set_appearance_mode("System")
 
 SERVICE_FILTER_OPTIONS = [
     "Todos", "Facção", "Bordado", "Caseador", "Botões",
@@ -303,7 +299,10 @@ class PagamentoModernUI(ctk.CTkFrame):
         # evita múltiplos reencaixes visíveis na abertura
         self._last_fit_signature = None
         self._initial_fit_done = False
-        self._layout_static_applied = True
+        try:
+            self.after(30, self._apply_initial_fit_once)
+        except Exception:
+            pass
 
     # ===================== Tema / estilo =====================
     def obter_cores_por_tema(self):
@@ -488,8 +487,13 @@ class PagamentoModernUI(ctk.CTkFrame):
                 elif isinstance(w, ctk.CTkCheckBox) or isinstance(w, ctk.CTkSwitch):
                     w.configure(text_color=self.cor_texto)
                 elif isinstance(w, ctk.CTkButton):
-                    # Mantém estilo dos botões definido pelo BotaoPadronizado.
-                    w.configure(border_color=self.cor_borda)
+                    if w._fg_color == self.cor_adicionar or w._fg_color == self.cor_imprimir:
+                        # Manter cores específicas para botões de ação
+                        pass
+                    else:
+                        w.configure(fg_color=self.cor_primaria,
+                                    hover_color=self.cor_hover,
+                                    text_color=self.cor_texto)
             except Exception:
                 pass
 
@@ -572,11 +576,14 @@ class PagamentoModernUI(ctk.CTkFrame):
         self.busca_entry.grid(row=0, column=4, padx=4, pady=6)
         self.busca_entry.bind("<Return>", lambda e: self.pesquisar_finalizados())
 
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             filter_frame,
             text="🔍",
             width=40,
             height=28,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
             command=self.pesquisar_finalizados
         ).grid(row=0, column=5, padx=4, pady=6)
 
@@ -665,10 +672,13 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         defeitos_actions = ctk.CTkFrame(tab_defeitos, fg_color="transparent")
         defeitos_actions.grid(row=1, column=0, sticky="ew", pady=(6, 0))
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             defeitos_actions,
             text="Marcar Pago",
             command=self._pagar_defeito,
+            fg_color=self.cor_sucesso,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
             height=30,
             width=120
         ).pack(side="left", padx=4)
@@ -1017,19 +1027,25 @@ class PagamentoModernUI(ctk.CTkFrame):
         )
         self.adiantamento_desconto_entry.grid(row=1, column=1, padx=4, sticky="w")
         self.adiantamento_desconto_entry.bind("<Return>", lambda e: self.aplicar_desconto_adiantamento())
-        self.aplicar_desconto_btn = BotaoPadronizado.criar_botao(
+        self.aplicar_desconto_btn = ctk.CTkButton(
             desconto_frame,
             text="Aplicar",
             width=80,
             height=28,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
             command=self.aplicar_desconto_adiantamento
         )
         self.aplicar_desconto_btn.grid(row=1, column=2, padx=4)
-        self.descontar_parcela_btn = BotaoPadronizado.criar_botao(
+        self.descontar_parcela_btn = ctk.CTkButton(
             adiant_frame,
             text="Descontar 1 parcela",
             width=160,
             height=28,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
             command=self.descontar_parcela_adiantamento
         )
         self.descontar_parcela_btn.grid(row=6, column=0, columnspan=2, padx=8, pady=(2, 6))
@@ -1097,35 +1113,47 @@ class PagamentoModernUI(ctk.CTkFrame):
         actions = ctk.CTkFrame(right_panel, fg_color=self.main_bg)
         self.actions_frame = actions
         actions.grid(row=3, column=0, columnspan=3, sticky="e", pady=(4, 2), padx=2)
-        self.salvar_btn = BotaoPadronizado.criar_botao(
+        self.salvar_btn = ctk.CTkButton(
             actions,
             text="💾 Salvar",
             width=130,
             height=32,
+            fg_color=self.cor_adicionar,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.salvar_pagamento
         )
-        self.exportar_btn = BotaoPadronizado.criar_botao(
+        self.exportar_btn = ctk.CTkButton(
             actions,
             text="📤 Exportar CSV",
             width=130,
             height=32,
+            fg_color=self.cor_imprimir,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.exportar_csv
         )
-        self.recalcular_btn = BotaoPadronizado.criar_botao(
+        self.recalcular_btn = ctk.CTkButton(
             actions,
             text="🔁 Recalcular",
             width=120,
             height=32,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.recalcular
         )
-        self.imprimir_btn = BotaoPadronizado.criar_botao(
+        self.imprimir_btn = ctk.CTkButton(
             actions,
             text="🖨️ Imprimir",
             width=130,
             height=32,
+            fg_color=self.cor_imprimir,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
             font=("Arial", 12),
             command=self.imprimir_recibo
         )
@@ -1212,8 +1240,7 @@ class PagamentoModernUI(ctk.CTkFrame):
             pass
 
     def on_host_resize(self, width: int, height: int, scale: float = 1.0):
-        """Desabilitado para manter a página estática e sem reencaixes visuais."""
-        return
+        """Mantém sempre o mesmo layout de tela grande, apenas encolhendo proporcionalmente."""
         try:
             width = max(760, int(width or self.winfo_width() or 760))
         except Exception:
@@ -1360,8 +1387,6 @@ class PagamentoModernUI(ctk.CTkFrame):
                     frame.grid_configure(padx=compact, pady=compact)
         except Exception:
             pass
-
-        self._layout_static_applied = True
 
     # ===================== Lógica auxiliar =====================
     def _toggle_bonificacao(self):
@@ -3923,17 +3948,9 @@ def _ml_walk(widget):
 def _ml_refresh_texts(self):
     if _ctk_ml is None:
         return
-    text_widgets = tuple(
-        cls for cls in (
-            getattr(_ctk_ml, "CTkLabel", None),
-            getattr(_ctk_ml, "CTkButton", None),
-            getattr(_ctk_ml, "CTkCheckBox", None),
-            getattr(_ctk_ml, "CTkRadioButton", None),
-        ) if cls is not None
-    )
     for w in _ml_walk(self):
         try:
-            if text_widgets and isinstance(w, text_widgets):
+            if hasattr(w, 'cget'):
                 try:
                     txt = w.cget('text')
                 except Exception:
@@ -3945,7 +3962,6 @@ def _ml_refresh_texts(self):
                             w.configure(text=new)
                         except Exception:
                             pass
-            if hasattr(w, 'cget'):
                 try:
                     ph = w.cget('placeholder_text')
                 except Exception:
@@ -4016,7 +4032,17 @@ def _ml_refresh_texts(self):
             except Exception:
                 pass
 
-    # Não forçar update_idletasks aqui para evitar reflows visuais repetidos.
+    # page title class attr
+    try:
+        if hasattr(self.__class__, 'PAGE_TITLE'):
+            self.__class__.PAGE_TITLE = self._ml_translate(self.__class__.PAGE_TITLE)
+    except Exception:
+        pass
+
+    try:
+        self.update_idletasks()
+    except Exception:
+        pass
 
 def _ml_on_language_changed(self, *_args, **_kwargs):
     try:
@@ -4028,56 +4054,15 @@ def _ml_on_language_changed(self, *_args, **_kwargs):
             pass
 
 _TRANSLATIONS = {
- 'pt_BR': {'PAGAMENTO DE SERVIÇOS':'PAGAMENTO DE SERVIÇOS','SERVICE PAYMENT':'PAGAMENTO DE SERVIÇOS','Origem:':'Origem:','Source:':'Origem:','Setor / Serviço:':'Setor / Serviço:','Sector / Service:':'Setor / Serviço:','Finalizações / Entradas':'Finalizações / Entradas','Completions / Entries':'Finalizações / Entradas','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes a Pagar','Cuts to Pay':'Cortes a Pagar','Cortes Pagos':'Cortes Pagos','Paid Cuts':'Cortes Pagos','Tipo de serviço:':'Tipo de serviço:','Service type:':'Tipo de serviço:','Todos':'Todos','All':'Todos','Facção':'Facção','Outsourcing':'Facção','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Caseador','Buttonhole':'Caseador','Botões':'Botões','Buttons':'Botões','Estamparia':'Estamparia','Printing':'Estamparia','Tingimento':'Tingimento','Dyeing':'Tingimento','Outros Trabalhos':'Outros Trabalhos','Other Services':'Outros Trabalhos','Pesquisar':'Pesquisar','Search':'Pesquisar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Serviço','Pay Service':'Pagar Serviço'},
- 'en_US': {'PAGAMENTO DE SERVIÇOS':'SERVICE PAYMENT','SERVICE PAYMENT':'SERVICE PAYMENT','Origem:':'Source:','Source:':'Source:','Setor / Serviço:':'Sector / Service:','Sector / Service:':'Sector / Service:','Finalizações / Entradas':'Completions / Entries','Completions / Entries':'Completions / Entries','Finalizados':'Completed','Completed':'Completed','Cortes a Pagar':'Cuts to Pay','Cuts to Pay':'Cuts to Pay','Cortes Pagos':'Paid Cuts','Paid Cuts':'Paid Cuts','Tipo de serviço:':'Service type:','Service type:':'Service type:','Todos':'All','All':'All','Facção':'Outsourcing','Outsourcing':'Outsourcing','Bordado':'Embroidery','Embroidery':'Embroidery','Caseador':'Buttonhole','Buttonhole':'Buttonhole','Botões':'Buttons','Buttons':'Buttons','Estamparia':'Printing','Printing':'Printing','Tingimento':'Dyeing','Dyeing':'Dyeing','Outros Trabalhos':'Other Services','Other Services':'Other Services','Pesquisar':'Search','Search':'Search','Exportar CSV':'Export CSV','Export CSV':'Export CSV','Pagar Serviço':'Pay Service','Pay Service':'Pay Service'},
- 'es_ES': {'PAGAMENTO DE SERVIÇOS':'PAGO DE SERVICIOS','SERVICE PAYMENT':'PAGO DE SERVICIOS','Origem:':'Origen:','Source:':'Origen:','Setor / Serviço:':'Sector / Servicio:','Sector / Service:':'Sector / Servicio:','Finalizações / Entradas':'Finalizaciones / Entradas','Completions / Entries':'Finalizaciones / Entradas','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes por Pagar','Cuts to Pay':'Cortes por Pagar','Cortes Pagos':'Cortes Pagados','Paid Cuts':'Cortes Pagados','Tipo de serviço:':'Tipo de servicio:','Service type:':'Tipo de servicio:','Todos':'Todos','All':'Todos','Facção':'Facción','Outsourcing':'Facción','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Ojales','Buttonhole':'Ojales','Botões':'Botones','Buttons':'Botones','Estamparia':'Estampado','Printing':'Estampado','Tingimento':'Teñido','Dyeing':'Teñido','Outros Trabalhos':'Otros Servicios','Other Services':'Otros Servicios','Pesquisar':'Buscar','Search':'Buscar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Servicio','Pay Service':'Pagar Servicio'}
+ 'pt_BR': {'PAGAMENTO DE SERVIÇOS':'PAGAMENTO DE SERVIÇOS','SERVICE PAYMENT':'PAGAMENTO DE SERVIÇOS','Origem:':'Origem:','Source:':'Origem:','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes a Pagar','Cuts to Pay':'Cortes a Pagar','Cortes Pagos':'Cortes Pagos','Paid Cuts':'Cortes Pagos','Tipo de serviço:':'Tipo de serviço:','Service type:':'Tipo de serviço:','Todos':'Todos','All':'Todos','Facção':'Facção','Outsourcing':'Facção','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Caseador','Buttonhole':'Caseador','Botões':'Botões','Buttons':'Botões','Estamparia':'Estamparia','Printing':'Estamparia','Tingimento':'Tingimento','Dyeing':'Tingimento','Outros Trabalhos':'Outros Trabalhos','Other Services':'Outros Trabalhos','Pesquisar':'Pesquisar','Search':'Pesquisar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Serviço','Pay Service':'Pagar Serviço'},
+ 'en_US': {'PAGAMENTO DE SERVIÇOS':'SERVICE PAYMENT','SERVICE PAYMENT':'SERVICE PAYMENT','Origem:':'Source:','Source:':'Source:','Finalizados':'Completed','Completed':'Completed','Cortes a Pagar':'Cuts to Pay','Cuts to Pay':'Cuts to Pay','Cortes Pagos':'Paid Cuts','Paid Cuts':'Paid Cuts','Tipo de serviço:':'Service type:','Service type:':'Service type:','Todos':'All','All':'All','Facção':'Outsourcing','Outsourcing':'Outsourcing','Bordado':'Embroidery','Embroidery':'Embroidery','Caseador':'Buttonhole','Buttonhole':'Buttonhole','Botões':'Buttons','Buttons':'Buttons','Estamparia':'Printing','Printing':'Printing','Tingimento':'Dyeing','Dyeing':'Dyeing','Outros Trabalhos':'Other Services','Other Services':'Other Services','Pesquisar':'Search','Search':'Search','Exportar CSV':'Export CSV','Export CSV':'Export CSV','Pagar Serviço':'Pay Service','Pay Service':'Pay Service'},
+ 'es_ES': {'PAGAMENTO DE SERVIÇOS':'PAGO DE SERVICIOS','SERVICE PAYMENT':'PAGO DE SERVICIOS','Origem:':'Origen:','Source:':'Origen:','Finalizados':'Finalizados','Completed':'Finalizados','Cortes a Pagar':'Cortes por Pagar','Cuts to Pay':'Cortes por Pagar','Cortes Pagos':'Cortes Pagados','Paid Cuts':'Cortes Pagados','Tipo de serviço:':'Tipo de servicio:','Service type:':'Tipo de servicio:','Todos':'Todos','All':'Todos','Facção':'Facción','Outsourcing':'Facción','Bordado':'Bordado','Embroidery':'Bordado','Caseador':'Ojales','Buttonhole':'Ojales','Botões':'Botones','Buttons':'Botones','Estamparia':'Estampado','Printing':'Estampado','Tingimento':'Teñido','Dyeing':'Teñido','Outros Trabalhos':'Otros Servicios','Other Services':'Otros Servicios','Pesquisar':'Buscar','Search':'Buscar','Exportar CSV':'Exportar CSV','Export CSV':'Exportar CSV','Pagar Serviço':'Pagar Servicio','Pay Service':'Pagar Servicio'}
 }
-_TRANSLATION_EXTRAS = {
-    'pt_BR': {
-        'Resumo de Pagamento': 'Resumo de Pagamento', 'Payment Summary': 'Resumo de Pagamento',
-        '1. Identificação / Quantidades': '1. Identificação / Quantidades', '1. Identification / Quantities': '1. Identificação / Quantidades',
-        '2. Ajustes Financeiros': '2. Ajustes Financeiros', '2. Financial Adjustments': '2. Ajustes Financeiros',
-        '3. Defeitos & Adiantamento': '3. Defeitos & Adiantamento', '3. Defects & Advance': '3. Defeitos & Adiantamento',
-        '4. Dados Bancários': '4. Dados Bancários', '4. Bank Details': '4. Dados Bancários',
-    },
-    'en_US': {
-        'Resumo de Pagamento': 'Payment Summary', 'Payment Summary': 'Payment Summary',
-        'Serviços': 'Services', 'Defeitos': 'Defects', 'Marcar Pago': 'Mark as Paid',
-        'Base (R$)': 'Base (R$)', 'Desconto (R$)': 'Discount (R$)', 'Total a Pagar': 'Amount to Pay', 'Total a pagar': 'Total to pay',
-        '1. Identificação / Quantidades': '1. Identification / Quantities',
-        '2. Ajustes Financeiros': '2. Financial Adjustments',
-        '3. Defeitos & Adiantamento': '3. Defects & Advance',
-        '4. Dados Bancários': '4. Bank Details',
-        'Serviço:': 'Service:', 'Código:': 'Code:', 'Descrição:': 'Description:', 'Costureira:': 'Seamstress:',
-        'Data Envio:': 'Sent Date:', 'Data Chegada:': 'Arrival Date:', 'Qtd Finalizada:': 'Completed Qty:', 'Valor/Peça:': 'Value/Piece:',
-        'Adiantamento (R$):': 'Advance (R$):', 'Ajuda de Custo (R$):': 'Cost Help (R$):',
-        'Faltantes:': 'Missing:', 'Estragadas:': 'Damaged:', 'Bonificação (R$):': 'Bonus (R$):',
-        'Peças c/ Defeito:': 'Defective Pieces:', 'Valor Defeito (R$):': 'Defect Value (R$):', 'Observações:': 'Notes:',
-        'Adiantamento Registrado': 'Registered Advance', 'Valor:': 'Value:', 'Parcelas:': 'Installments:', 'Saldo:': 'Balance:',
-        'Valor atual:': 'Current value:', 'Valor a descontar:': 'Amount to discount:', 'Aplicar': 'Apply',
-        'Descontar 1 parcela': 'Discount 1 installment',
-        'Titular:': 'Holder:', 'CPF:': 'Tax ID:', 'Conta:': 'Account:', 'Banco:': 'Bank:', 'Agência:': 'Branch:', 'PIX:': 'PIX:',
-        'Salvar': 'Save', 'Recalcular': 'Recalculate', 'Imprimir': 'Print',
-        'Prestador': 'Provider', 'Retorno': 'Return', 'Tam': 'Size', 'Status': 'Status',
-    },
-    'es_ES': {
-        'Resumo de Pagamento': 'Resumen de Pago',
-        'Serviços': 'Servicios', 'Defeitos': 'Defectos', 'Marcar Pago': 'Marcar Pagado',
-        'Base (R$)': 'Base (R$)', 'Desconto (R$)': 'Descuento (R$)', 'Total a Pagar': 'Total a Pagar', 'Total a pagar': 'Total a pagar',
-        '1. Identificação / Quantidades': '1. Identificación / Cantidades',
-        '2. Ajustes Financeiros': '2. Ajustes Financieros',
-        '3. Defeitos & Adiantamento': '3. Defectos y Adelanto',
-        '4. Dados Bancários': '4. Datos Bancarios',
-    }
-}
-for _lang, _extra in _TRANSLATION_EXTRAS.items():
-    _TRANSLATIONS.setdefault(_lang, {}).update(_extra)
 _TREE_HEADINGS = {
-    'tree': {'id':'ID','tipo_servico':'Serviço','codigo':'Código','descricao':'Descrição','costureira':'Costureira','data_envio':'Envio','data_chegada':'Chegada','total_qtd':'Qtd'},
-    'defeitos_tree': {'id':'ID','prestador':'Prestador','codigo':'Código','descricao':'Descrição','tamanho':'Tam','quantidade':'Qtd','data_retorno':'Retorno','status':'Status'}
+    'tree': {'servico':'Serviço','fornecedor':'Fornecedor','quantidade':'Quantidade','valor_unitario':'Valor Unit.','valor_total':'Valor Total','origem':'Origem','status':'Status'}
 }
 _PLACEHOLDERS = {}
-_COMBOS = {'orig_seg':['Cortes a Pagar','Cortes Pagos'], 'filtro_servico_combo': SERVICE_FILTER_OPTIONS, 'servico_combo': SERVICE_OPTIONS}
+_COMBOS = {'orig_seg':['Cortes a Pagar','Cortes Pagos']}
 _TABS = []
 
 PagamentoModernUI._TRANSLATIONS = _TRANSLATIONS

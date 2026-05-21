@@ -7,7 +7,6 @@ import csv
 from datetime import datetime
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 # ---------- PostgreSQL (via BANCO_DE_DADOS_PG) ----------
 try:
@@ -230,7 +229,7 @@ class AdiantamentosPendentesPage(ctk.CTkFrame):
         self.input_ate.grid(row=0, column=7, padx=(0, 12))
         self._ui_refs["to_entry"] = self.input_ate
 
-        self.btn_buscar = BotaoPadronizado.criar_botao(
+        self.btn_buscar = ctk.CTkButton(
             filtros,
             text=self._get_text("search"),
             command=self.buscar,
@@ -273,7 +272,7 @@ class AdiantamentosPendentesPage(ctk.CTkFrame):
         actions = ctk.CTkFrame(self, fg_color="transparent")
         actions.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 16))
 
-        self.btn_export_csv = BotaoPadronizado.criar_botao(
+        self.btn_export_csv = ctk.CTkButton(
             actions,
             text=self._get_text("export_csv"),
             command=self.exportar_csv,
@@ -286,7 +285,7 @@ class AdiantamentosPendentesPage(ctk.CTkFrame):
         self.btn_export_csv.pack(side="left", padx=6)
         self._ui_refs["export_csv_button"] = self.btn_export_csv
 
-        self.btn_export_pdf = BotaoPadronizado.criar_botao(
+        self.btn_export_pdf = ctk.CTkButton(
             actions,
             text=self._get_text("export_pdf"),
             command=self.exportar_pdf,

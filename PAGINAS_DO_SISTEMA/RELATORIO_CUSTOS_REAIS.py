@@ -7,7 +7,6 @@ from datetime import datetime
 import os
 import webbrowser
 from tkinter import messagebox, ttk
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import customtkinter as ctk
 from reportlab.lib.pagesizes import A4
@@ -62,14 +61,14 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
         toolbar.grid_columnconfigure(4, weight=1)
 
-        BotaoPadronizado.criar_botao(toolbar, text="Atualizar", command=self._carregar_dados_custos).grid(row=0, column=0, padx=(0, 8))
-        BotaoPadronizado.criar_botao(toolbar, text="Exportar PDF", command=self._exportar_custos).grid(
+        ctk.CTkButton(toolbar, text="Atualizar", command=self._carregar_dados_custos).grid(row=0, column=0, padx=(0, 8))
+        ctk.CTkButton(toolbar, text="Exportar PDF", command=self._exportar_custos).grid(
             row=0, column=1, padx=(0, 8)
         )
-        BotaoPadronizado.criar_botao(toolbar, text="Imprimir", command=self._imprimir_custos).grid(
+        ctk.CTkButton(toolbar, text="Imprimir", command=self._imprimir_custos).grid(
             row=0, column=2, padx=(0, 8)
         )
-        BotaoPadronizado.criar_botao(toolbar, text="Comparar OPs", command=self._comparar_ops).grid(row=0, column=3)
+        ctk.CTkButton(toolbar, text="Comparar OPs", command=self._comparar_ops).grid(row=0, column=3)
 
     def _build_filters(self):
         filters = ctk.CTkFrame(self)
@@ -79,7 +78,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         ctk.CTkLabel(filters, text="Período").grid(row=0, column=0, padx=(12, 6), pady=8)
         self.custos_inicio_entry = ctk.CTkEntry(filters, placeholder_text="De")
         self.custos_inicio_entry.grid(row=0, column=1, padx=(0, 6), pady=8)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             filters,
             text="📅",
             width=32,
@@ -87,7 +86,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         ).grid(row=0, column=2, padx=(0, 6), pady=8)
         self.custos_fim_entry = ctk.CTkEntry(filters, placeholder_text="Até")
         self.custos_fim_entry.grid(row=0, column=3, padx=(0, 12), pady=8)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             filters,
             text="📅",
             width=32,
@@ -103,7 +102,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         self.filtro_status.grid(
             row=0, column=8, padx=(0, 12), pady=8
         )
-        BotaoPadronizado.criar_botao(filters, text="Filtrar", command=self._carregar_dados_custos).grid(row=0, column=9, padx=(0, 12), pady=8)
+        ctk.CTkButton(filters, text="Filtrar", command=self._carregar_dados_custos).grid(row=0, column=9, padx=(0, 12), pady=8)
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
@@ -511,9 +510,9 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         nav.pack(fill="x", padx=10, pady=5)
 
         lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
-        BotaoPadronizado.criar_botao(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
-        BotaoPadronizado.criar_botao(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
@@ -545,7 +544,7 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = BotaoPadronizado.criar_botao(
+                    btn = ctk.CTkButton(
                         frame_dias,
                         text=str(dia),
                         width=30,
@@ -565,136 +564,55 @@ if __name__ == "__main__":
     page.pack(fill="both", expand=True)
     app.mainloop()
 
+# --- Suporte trilíngue individual desta página ---
+RelatorioCustosReaisPage_TRANSLATIONS = {
+    "pt_BR": {
+        "title": "Custos Reais",
+        "Atualizar": "Atualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+    "en_US": {
+        "title": "Actual Costs",
+        "Atualizar": "Refresh",
+        "Filtrar": "Filter",
+        "Limpar": "Clear",
+        "Exportar": "Export",
+        "Imprimir": "Print",
+        "Buscar": "Search",
+    },
+    "es_ES": {
+        "title": "Costos Reales",
+        "Atualizar": "Actualizar",
+        "Filtrar": "Filtrar",
+        "Limpar": "Limpiar",
+        "Exportar": "Exportar",
+        "Imprimir": "Imprimir",
+        "Buscar": "Buscar",
+    },
+}
 
-# --- Suporte de idioma consolidado desta página ---
-import tkinter as _tk_i18n
-from tkinter import ttk as _ttk_i18n
 
-
-def _opera_page_lang(instance):
-    idioma = getattr(getattr(instance, "sistema", None), "idioma_atual", None)
-    if not idioma:
-        idioma = getattr(getattr(instance, "host", None), "idioma_atual", None)
-    if not idioma:
-        idioma = getattr(instance, "idioma_atual", None)
-    return idioma or "pt_BR"
-
-
-def _opera_translate_widget_tree(instance, widget, translation_map):
-    try:
-        for opt in ("text", "placeholder_text"):
-            try:
-                current = widget.cget(opt)
-            except Exception:
-                continue
-            if isinstance(current, str) and current in translation_map:
-                try:
-                    widget.configure(**{opt: translation_map[current]})
-                except Exception:
-                    pass
-
+def _apply_relatoriocustosreaispage_translations(self):
+    """Aplica tradução individual desta página."""
+    idioma = getattr(getattr(self, "sistema", None), "idioma_atual", getattr(self, "idioma_atual", "pt_BR"))
+    if idioma not in RelatorioCustosReaisPage_TRANSLATIONS:
+        idioma = "pt_BR"
+    if hasattr(self, "titulo"):
         try:
-            values = widget.cget("values")
-        except Exception:
-            values = None
-        if isinstance(values, (list, tuple)):
-            mapped = [translation_map.get(v, v) if isinstance(v, str) else v for v in values]
-            if list(mapped) != list(values):
-                try:
-                    widget.configure(values=mapped)
-                except Exception:
-                    pass
-
-        if isinstance(widget, _ttk_i18n.Treeview):
-            try:
-                heading = widget.heading("#0")
-                text = heading.get("text", "")
-                if text in translation_map:
-                    widget.heading("#0", text=translation_map[text])
-            except Exception:
-                pass
-            try:
-                for col in widget["columns"]:
-                    heading = widget.heading(col)
-                    text = heading.get("text", "")
-                    if text in translation_map:
-                        widget.heading(col, text=translation_map[text])
-            except Exception:
-                pass
-
-        if isinstance(widget, _tk_i18n.Menu):
-            try:
-                end = widget.index("end")
-            except Exception:
-                end = None
-            if end is not None:
-                for idx in range(end + 1):
-                    try:
-                        label = widget.entrycget(idx, "label")
-                    except Exception:
-                        continue
-                    if isinstance(label, str) and label in translation_map:
-                        try:
-                            widget.entryconfigure(idx, label=translation_map[label])
-                        except Exception:
-                            pass
-
-        for child in widget.winfo_children():
-            _opera_translate_widget_tree(instance, child, translation_map)
-    except Exception:
-        pass
-
-
-def _opera_apply_page_i18n(instance, class_ref, page_title=None):
-    idioma = _opera_page_lang(instance)
-    maps = getattr(class_ref, "_TRANSLATIONS", {}) or {}
-    base = maps.get("pt_BR", {}) if isinstance(maps.get("pt_BR", {}), dict) else {}
-    current = maps.get(idioma, {}) if isinstance(maps.get(idioma, {}), dict) else {}
-    translation_map = dict(base)
-    translation_map.update(current)
-
-    for attr in ("titulo", "title_label", "lbl_titulo", "header_title", "page_title_label"):
-        widget = getattr(instance, attr, None)
-        if widget is not None:
-            try:
-                current_text = widget.cget("text")
-                if isinstance(current_text, str):
-                    widget.configure(text=translation_map.get(current_text, current_text))
-            except Exception:
-                pass
-
-    if page_title:
-        try:
-            instance.PAGE_TITLE = translation_map.get(page_title, page_title)
+            self.titulo.configure(text=RelatorioCustosReaisPage_TRANSLATIONS[idioma]["title"])
         except Exception:
             pass
 
-    _opera_translate_widget_tree(instance, instance, translation_map)
 
-
-def _opera_set_idioma_factory(class_ref, page_title=None):
-    def set_idioma(self, idioma):
-        self.idioma_atual = idioma
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    def on_language_changed(self, idioma=None):
-        if idioma:
-            self.idioma_atual = idioma
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    def refresh_texts(self):
-        _opera_apply_page_i18n(self, class_ref, page_title)
-
-    return set_idioma, on_language_changed, refresh_texts
-
-
-
-RelatorioCustosReaisPage._TRANSLATIONS = {
-    "pt_BR": {'Relatório de Custos Reais': 'Relatório de Custos Reais', 'Comparativo de custos planejados e realizados por OP e categoria.': 'Comparativo de custos planejados e realizados por OP e categoria.', 'Atualizar': 'Atualizar', 'Exportar PDF': 'Exportar PDF', 'Imprimir': 'Imprimir', 'Período': 'Período', 'De': 'De', 'Até': 'Até', 'Modelo': 'Modelo', 'Buscar modelo': 'Buscar modelo', 'Status': 'Status', 'Filtrar': 'Filtrar', 'Comparativo por Categoria': 'Comparativo por Categoria', 'Detalhes por OP': 'Detalhes por OP', 'Comparar OPs': 'Comparar OPs', 'Todos': 'Todos', 'Em produção': 'Em produção', 'Finalizado': 'Finalizado', 'Categoria': 'Categoria', 'Planejado': 'Planejado', 'Realizado': 'Realizado', 'Diferença': 'Diferença', 'OP': 'OP'},
-    "en_US": {'Relatório de Custos Reais': 'Actual Costs Report', 'Comparativo de custos planejados e realizados por OP e categoria.': 'Comparison of planned and actual costs by work order and category.', 'Atualizar': 'Refresh', 'Exportar PDF': 'Export PDF', 'Imprimir': 'Print', 'Período': 'Period', 'De': 'From', 'Até': 'To', 'Modelo': 'Model', 'Buscar modelo': 'Search model', 'Status': 'Status', 'Filtrar': 'Filter', 'Comparativo por Categoria': 'Comparison by Category', 'Detalhes por OP': 'Details by Work Order', 'Comparar OPs': 'Compare Work Orders', 'Todos': 'All', 'Em produção': 'In production', 'Finalizado': 'Finished', 'Categoria': 'Category', 'Planejado': 'Planned', 'Realizado': 'Actual', 'Diferença': 'Difference', 'OP': 'WO'},
-    "es_ES": {'Relatório de Custos Reais': 'Reporte de Costos Reales', 'Comparativo de custos planejados e realizados por OP e categoria.': 'Comparativo de costos planificados y reales por OP y categoría.', 'Atualizar': 'Actualizar', 'Exportar PDF': 'Exportar PDF', 'Imprimir': 'Imprimir', 'Período': 'Período', 'De': 'Desde', 'Até': 'Hasta', 'Modelo': 'Modelo', 'Buscar modelo': 'Buscar modelo', 'Status': 'Estado', 'Filtrar': 'Filtrar', 'Comparativo por Categoria': 'Comparativo por Categoría', 'Detalhes por OP': 'Detalles por OP', 'Comparar OPs': 'Comparar OPs', 'Todos': 'Todos', 'Em produção': 'En producción', 'Finalizado': 'Finalizado', 'Categoria': 'Categoría', 'Planejado': 'Planificado', 'Realizado': 'Real', 'Diferença': 'Diferencia', 'OP': 'OP'},
-}
-
-RelatorioCustosReaisPage.TRANSLATIONS = RelatorioCustosReaisPage._TRANSLATIONS
-RelatorioCustosReaisPage.PAGE_TITLE = 'Relatório de Custos Reais'
-RelatorioCustosReaisPage.set_idioma, RelatorioCustosReaisPage.on_language_changed, RelatorioCustosReaisPage.refresh_texts = _opera_set_idioma_factory(RelatorioCustosReaisPage, 'Relatório de Custos Reais')
+try:
+    from PAGINAS_DO_SISTEMA.I18N_PAGE_ADAPTER import attach_i18n_support
+    RelatorioCustosReaisPage.TRANSLATIONS = RelatorioCustosReaisPage_TRANSLATIONS
+    if not hasattr(RelatorioCustosReaisPage, "apply_page_translations"):
+        RelatorioCustosReaisPage.apply_page_translations = _apply_relatoriocustosreaispage_translations
+    attach_i18n_support(RelatorioCustosReaisPage, RelatorioCustosReaisPage_TRANSLATIONS)
+except Exception:
+    pass

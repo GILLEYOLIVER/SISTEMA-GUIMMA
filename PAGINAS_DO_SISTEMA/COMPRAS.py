@@ -7,7 +7,6 @@ from datetime import datetime
 import os
 import webbrowser
 from tkinter import messagebox, ttk
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 
 import customtkinter as ctk
 from reportlab.lib.pagesizes import A4
@@ -139,22 +138,22 @@ class ComprasPage(ctk.CTkFrame):
         toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
         toolbar.grid_columnconfigure(5, weight=1)
 
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("new_order"), command=self._novo_pedido)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("new_order"), command=self._novo_pedido)
         btn.grid(row=0, column=0, padx=(0, 8))
         self._ui_refs["btn_new_order"] = btn
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("save"), command=self._salvar_pedido)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("save"), command=self._salvar_pedido)
         btn.grid(row=0, column=1, padx=(0, 8))
         self._ui_refs["btn_save"] = btn
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("approve"), command=self._aprovar_pedido)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("approve"), command=self._aprovar_pedido)
         btn.grid(row=0, column=2, padx=(0, 8))
         self._ui_refs["btn_approve"] = btn
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("receive"), command=self._marcar_recebido)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("receive"), command=self._marcar_recebido)
         btn.grid(row=0, column=3, padx=(0, 8))
         self._ui_refs["btn_receive"] = btn
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("export_pdf"), command=self._exportar_compras)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("export_pdf"), command=self._exportar_compras)
         btn.grid(row=0, column=4)
         self._ui_refs["btn_export_pdf"] = btn
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("print"), command=self._imprimir_compras)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("print"), command=self._imprimir_compras)
         btn.grid(row=0, column=5)
         self._ui_refs["btn_print"] = btn
 
@@ -183,7 +182,7 @@ class ComprasPage(ctk.CTkFrame):
         self._ui_refs["lbl_period"] = lbl_period
         self.filter_inicio_entry = ctk.CTkEntry(filters, placeholder_text=self._get_text("from"))
         self.filter_inicio_entry.grid(row=0, column=1, padx=(0, 6), pady=8)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             filters,
             text="📅",
             width=32,
@@ -191,7 +190,7 @@ class ComprasPage(ctk.CTkFrame):
         ).grid(row=0, column=2, padx=(0, 6), pady=8)
         self.filter_fim_entry = ctk.CTkEntry(filters, placeholder_text=self._get_text("to"))
         self.filter_fim_entry.grid(row=0, column=3, padx=(0, 12), pady=8)
-        BotaoPadronizado.criar_botao(
+        ctk.CTkButton(
             filters,
             text="📅",
             width=32,
@@ -206,7 +205,7 @@ class ComprasPage(ctk.CTkFrame):
         entry_supplier = ctk.CTkEntry(filters, placeholder_text=self._get_text("supplier_or_item"))
         entry_supplier.grid(row=0, column=7, sticky="ew", padx=(0, 12), pady=8)
         self._ui_refs["entry_supplier_or_item"] = entry_supplier
-        btn_filter = BotaoPadronizado.criar_botao(filters, text=self._get_text("filter"))
+        btn_filter = ctk.CTkButton(filters, text=self._get_text("filter"))
         btn_filter.grid(row=0, column=8, padx=(0, 12), pady=8)
         self._ui_refs["btn_filter"] = btn_filter
 
@@ -228,11 +227,11 @@ class ComprasPage(ctk.CTkFrame):
 
         actions = ctk.CTkFrame(parent, fg_color="transparent")
         actions.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 12))
-        btn = BotaoPadronizado.criar_botao(actions, text=self._get_text("new"), command=self._novo_pedido)
+        btn = ctk.CTkButton(actions, text=self._get_text("new"), command=self._novo_pedido)
         btn.grid(row=0, column=0, padx=(0, 8))
         self._ui_refs["btn_new"] = btn
-        BotaoPadronizado.criar_botao(actions, text=self._get_text("save"), command=self._salvar_pedido).grid(row=0, column=1, padx=(0, 8))
-        btn = BotaoPadronizado.criar_botao(actions, text=self._get_text("cancel"), command=self._novo_pedido)
+        ctk.CTkButton(actions, text=self._get_text("save"), command=self._salvar_pedido).grid(row=0, column=1, padx=(0, 8))
+        btn = ctk.CTkButton(actions, text=self._get_text("cancel"), command=self._novo_pedido)
         btn.grid(row=0, column=2)
         self._ui_refs["btn_cancel"] = btn
 
@@ -284,7 +283,7 @@ class ComprasPage(ctk.CTkFrame):
             "<Double-Button-1>",
             lambda e: self._abrir_calendario(self.recebimento_entries["data_recebimento"]),
         )
-        btn = BotaoPadronizado.criar_botao(info, text=self._get_text("register_receipt"), command=self._salvar_recebimento)
+        btn = ctk.CTkButton(info, text=self._get_text("register_receipt"), command=self._salvar_recebimento)
         btn.grid(row=0, column=6, padx=(12, 12), pady=8, rowspan=2, sticky="ns")
         self._ui_refs["btn_register_receipt"] = btn
 
@@ -324,19 +323,19 @@ class ComprasPage(ctk.CTkFrame):
         toolbar = ctk.CTkFrame(parent)
         toolbar.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 12))
         toolbar.grid_columnconfigure(6, weight=1)
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("new_supplier"), command=self._novo_fornecedor)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("new_supplier"), command=self._novo_fornecedor)
         btn.grid(row=0, column=0, padx=(0, 8))
         self._ui_refs["btn_new_supplier"] = btn
-        BotaoPadronizado.criar_botao(toolbar, text=self._get_text("save"), command=self._salvar_fornecedor).grid(
+        ctk.CTkButton(toolbar, text=self._get_text("save"), command=self._salvar_fornecedor).grid(
             row=0, column=1, padx=(0, 8)
         )
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("deactivate"), command=self._inativar_fornecedor)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("deactivate"), command=self._inativar_fornecedor)
         btn.grid(row=0, column=2, padx=(0, 8))
         self._ui_refs["btn_deactivate"] = btn
         self.search_fornecedor = ctk.CTkEntry(toolbar, placeholder_text=self._get_text("search_supplier"))
         self.search_fornecedor.grid(row=0, column=4, sticky="ew", padx=(12, 12))
         self._ui_refs["search_supplier"] = self.search_fornecedor
-        btn = BotaoPadronizado.criar_botao(toolbar, text=self._get_text("filter"), command=self._carregar_fornecedores)
+        btn = ctk.CTkButton(toolbar, text=self._get_text("filter"), command=self._carregar_fornecedores)
         btn.grid(row=0, column=5)
         self._ui_refs["btn_filter_sup"] = btn
 
@@ -995,9 +994,9 @@ class ComprasPage(ctk.CTkFrame):
         nav.pack(fill="x", padx=10, pady=5)
 
         lbl_mes = ctk.CTkLabel(nav, text=f"{_cal.month_name[mes]} {ano}", font=("Arial", 14))
-        BotaoPadronizado.criar_botao(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
+        ctk.CTkButton(nav, text="<", width=30, command=lambda: mudar_mes(-1)).pack(side="left")
         lbl_mes.pack(side="left", expand=True)
-        BotaoPadronizado.criar_botao(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
+        ctk.CTkButton(nav, text=">", width=30, command=lambda: mudar_mes(1)).pack(side="right")
 
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         frame_dias = ctk.CTkFrame(top)
@@ -1029,7 +1028,7 @@ class ComprasPage(ctk.CTkFrame):
                 for j, dia in enumerate(semana):
                     if dia == 0:
                         continue
-                    btn = BotaoPadronizado.criar_botao(
+                    btn = ctk.CTkButton(
                         frame_dias,
                         text=str(dia),
                         width=30,

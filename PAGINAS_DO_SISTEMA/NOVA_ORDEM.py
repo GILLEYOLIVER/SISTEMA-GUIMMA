@@ -1,5 +1,4 @@
 # DEF.py - Módulo completo de Ordem de Corte
-from PAGINAS_DO_SISTEMA.TEMAS import BotaoPadronizado
 import customtkinter as ctk
 import sys
 from tkinter import messagebox
@@ -322,26 +321,6 @@ class OrdemCorte(ctk.CTkFrame):
         self._op_planejada_data = None
         self.after(100, self.carregar_modelos_combo)
 
-    def _ml_translate(self, text):
-        if text is None or not isinstance(text, str) or not text:
-            return text
-        lang = getattr(getattr(self, "sistema", None), "idioma_atual", "pt_BR") or "pt_BR"
-        mapping = getattr(self.__class__, "_TRANSLATIONS", {})
-        current = mapping.get(lang, mapping.get("pt_BR", {}))
-        if text in current:
-            return current[text]
-        for _, mp in mapping.items():
-            if text in mp:
-                canon = mp[text]
-                return current.get(canon, canon)
-        return text
-
-    def _ml_translate_list(self, values):
-        return [self._ml_translate(v) for v in values]
-
-    def _t(self, text):
-        return self._ml_translate(text)
-
     def _is_dark_color(self, hex_color):
         try:
             hex_color = hex_color.lstrip('#')
@@ -419,7 +398,7 @@ class OrdemCorte(ctk.CTkFrame):
         self.busca_entry.pack(side="left", padx=(6, 6))
         self.busca_entry.bind("<Return>", lambda e: self.buscar_modelo())
 
-        buscar_btn = BotaoPadronizado.criar_botao(
+        buscar_btn = ctk.CTkButton(
             busca,
             text="Buscar",
             height=28,
@@ -502,7 +481,7 @@ class OrdemCorte(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         btn_frame.pack(fill="x", pady=(10, 12), padx=12)
 
-        imprimir_btn = BotaoPadronizado.criar_botao(
+        imprimir_btn = ctk.CTkButton(
             btn_frame,
             text="Imprimir Pré-visualização",
             command=self.previsualizar_impressao,
@@ -511,9 +490,9 @@ class OrdemCorte(ctk.CTkFrame):
             hover_color="#357ABD",
             text_color="#FFFFFF"
         )
-        imprimir_btn.pack(side="left", padx=8)
+        imprimir_btn.pack(side="right", padx=8)
 
-        salvar_btn = BotaoPadronizado.criar_botao(
+        salvar_btn = ctk.CTkButton(
             btn_frame,
             text="Salvar Ordem",
             command=self.salvar_ordem,
@@ -522,7 +501,7 @@ class OrdemCorte(ctk.CTkFrame):
             hover_color="#1B5E20",
             text_color="#FFFFFF"
         )
-        salvar_btn.pack(side="left", padx=8)
+        salvar_btn.pack(side="right", padx=8)
 
     def criar_grade_corte(self):
         grade_frame = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
@@ -559,7 +538,7 @@ class OrdemCorte(ctk.CTkFrame):
         )
         self.combo_grade.pack(side="left", padx=4)
 
-        btn_salvar_pref = BotaoPadronizado.criar_botao(
+        btn_salvar_pref = ctk.CTkButton(
             pref_frame,
             text="Salvar grade como preferência",
             command=self.salvar_preferencia_grade,
@@ -570,7 +549,7 @@ class OrdemCorte(ctk.CTkFrame):
         )
         btn_salvar_pref.pack(side="left", padx=6)
 
-        btn_excluir_pref = BotaoPadronizado.criar_botao(
+        btn_excluir_pref = ctk.CTkButton(
             pref_frame,
             text="Excluir preferência",
             command=self.excluir_preferencia_grade,
