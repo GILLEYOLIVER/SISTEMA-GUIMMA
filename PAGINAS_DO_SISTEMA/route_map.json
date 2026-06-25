@@ -9,7 +9,7 @@
   },
   "Saída de Estoque": {
     "file": "SAIDA_ESTOQUE.py",
-    "class": "SaidaEstoquePage"
+    "class": "SaidaEstoqueApp"
   },
   "Relatórios": {
     "file": "RELATORIO_ESTOQUE.py",
@@ -17,11 +17,11 @@
   },
   "Cadastrar Modelo": {
     "file": "CADASTRAR_MODELO.py",
-    "class": "CadastrarModeloPage"
+    "class": "CadastroModelosApp"
   },
   "Imprimir Ficha Técnica": {
     "file": "IMPRIMIR_FICHAS_TECNICAS.py",
-    "class": "FichaTecnicaApp"
+    "class": "ImprimirFichasTecnicasPage"
   },
   "Nova Ordem": {
     "file": "NOVA_ORDEM.py",
@@ -37,7 +37,11 @@
   },
   "Consultar Ordens": {
     "file": "CONSULTAR_ORDENS.py",
-    "class": "ConsultarOrdensPage"
+    "class": "OrdemCorteFinalizada"
+  },
+  "Busca Profunda Corte": {
+    "file": "BUSCA_PROFUNDA_CORTE.py",
+    "class": "BuscaProfundaCortePage"
   },
   "Compras": {
     "file": "COMPRAS.py",
@@ -49,7 +53,7 @@
   },
   "Pesquisar Serviço": {
     "file": "CONSULTAR_SERVICOS.py",
-    "class": "PesquisaServicosPage"
+    "class": "HistoricoServicosPage"
   },
   "Clientes": {
     "file": "CADASTRO_CLIENTES.py",
@@ -77,7 +81,7 @@
   },
   "Registro Acabamento": {
     "file": "CONTROLE_RETORNO_CORTE.py",
-    "class": "RetornoCorteControlPage"
+    "class": "RetornoCortes"
   },
   "Finalizar Corte / Acabamento": {
     "file": "FINALIZAR_CORTE_ACABAMENTO.py",
@@ -122,6 +126,10 @@
   "Serviços Externos": {
     "file": "RELATORIO_SERVICOS_EXTERNOS.py",
     "class": "RelatorioServicosExternosPage"
+  },
+  "Serviços Pagos": {
+    "file": "RELATORIO_SERVICOS_PAGOS.py",
+    "class": "RelatorioServicosPagosPage"
   },
   "Modelos Produzidos": {
     "file": "RELATORIO_MODELOS_PRODUZIDOS.py",

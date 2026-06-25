@@ -1559,19 +1559,20 @@ BEGIN
     )
     SELECT admin_id, codigo, TRUE, TRUE, TRUE, TRUE, TRUE
     FROM (VALUES
-        ('dashboard'), ('cadastro_modelos'), ('cadastro_de_corte'),
+        ('dashboard'), ('cadastro_modelos'), ('cadastro_de_corte'), ('busca_profunda_corte'),
+        ('relatorio_servicos_pagos'),
         ('controle_envio_cortes'), ('controle_retorno_cortes'), ('finalizar_corte'),
         ('estoque_tecidos'), ('estoque_aviamentos'), ('estoque_insumos'),
         ('sistema_admin'), ('sistema_logs'), ('sistema_backup'), ('sistema_auditoria')
     ) AS paginas(codigo);
 
-    RAISE NOTICE '✅ [USUÁRIO 02] admin configurado com ID: %', admin_id;
-    RAISE NOTICE '✅ [TABELA 06] Tema AZUL_NOTURNO criado para admin';
-    RAISE NOTICE '✅ [TABELA 03] Preferências configuradas para admin';
-    RAISE NOTICE '✅ [TABELA 04] Permissões totais concedidas a admin';
+    RAISE NOTICE '[OK] [USUÁRIO 02] admin configurado com ID: %', admin_id;
+    RAISE NOTICE '[OK] [TABELA 06] Tema AZUL_NOTURNO criado para admin';
+    RAISE NOTICE '[OK] [TABELA 03] Preferências configuradas para admin';
+    RAISE NOTICE '[OK] [TABELA 04] Permissões totais concedidas a admin';
 
 EXCEPTION WHEN OTHERS THEN
-    RAISE NOTICE '❌ ERRO ao configurar admin: %', SQLERRM;
+    RAISE NOTICE '[ERRO] ERRO ao configurar admin: %', SQLERRM;
 END $$;
 
 ----------------------------------------
@@ -1653,16 +1654,16 @@ BEGIN
     WHERE u.usuario = 'admin';
 
     RAISE NOTICE '=======================================================';
-    RAISE NOTICE '🎉 BANCO OPERA CRIADO COM SUCESSO - 60 TABELAS ENUMERADAS!';
+    RAISE NOTICE '[OK] BANCO OPERA CRIADO COM SUCESSO - 60 TABELAS ENUMERADAS!';
     RAISE NOTICE '=======================================================';
-    RAISE NOTICE '📊 ESTATÍSTICAS:';
+    RAISE NOTICE '[INFO] ESTATÍSTICAS:';
     RAISE NOTICE '   • % Tabelas criadas (01 a 47)', total_tabelas;
     RAISE NOTICE '   • % Views configuradas (48 a 50)', total_views;
     RAISE NOTICE '   • % Funções implementadas (01 a 03)', total_funcoes;
     RAISE NOTICE '   • 01 Trigger ativo';
     RAISE NOTICE '   • 15 Índices de performance';
     RAISE NOTICE '=======================================================';
-    RAISE NOTICE '👑 USUÁRIO ADMINISTRADOR CONFIGURADO:';
+    RAISE NOTICE '[INFO] USUÁRIO ADMINISTRADOR CONFIGURADO:';
     RAISE NOTICE '   • [TABELA 02] Nome: %', gil_check.usuario;
     RAISE NOTICE '   • [TABELA 02] ID: %', gil_check.id;
     RAISE NOTICE '   • [TABELA 02] Tema preferido: %', gil_check.tema_preferido;
@@ -1670,13 +1671,13 @@ BEGIN
     RAISE NOTICE '   • [TABELA 06] Tema personalizado: %', gil_check.nome_tema;
     RAISE NOTICE '   • [TABELA 04] Permissões: 13 páginas com acesso total';
     RAISE NOTICE '=======================================================';
-    RAISE NOTICE '🔐 CREDENCIAIS DE ACESSO:';
+    RAISE NOTICE '[INFO] CREDENCIAIS DE ACESSO:';
     RAISE NOTICE '   • Usuário: admin';
     RAISE NOTICE '   • Senha: admin';
     RAISE NOTICE '   • Tema: AZUL_NOTURNO aplicado automaticamente';
     RAISE NOTICE '   • Email: admin@empresa.local';
     RAISE NOTICE '=======================================================';
-    RAISE NOTICE '📁 MÓDULOS IMPLEMENTADOS:';
+    RAISE NOTICE '[INFO] MÓDULOS IMPLEMENTADOS:';
     RAISE NOTICE '   1. Usuários e Permissões (Tabelas 01-06)';
     RAISE NOTICE '   2. Modelos (Tabelas 07-13)';
     RAISE NOTICE '   3. Facções (Tabela 14)';
@@ -1690,7 +1691,7 @@ BEGIN
     RAISE NOTICE '   11. Pricing e Relatórios (Tabelas 46-47)';
     RAISE NOTICE '   12. Views do Sistema (Views 48-50)';
     RAISE NOTICE '=======================================================';
-    RAISE NOTICE '✅ SISTEMA PRONTO PARA PRODUÇÃO!';
+    RAISE NOTICE '[OK] SISTEMA PRONTO PARA PRODUÇÃO!';
     RAISE NOTICE '=======================================================';
 END $$;
 
@@ -1929,16 +1930,237 @@ CREATE TABLE IF NOT EXISTS opera.custos_reais_ops (
 );
 
 ----------------------------------------
+-- 19. MIGRAÇÕES DE COMPATIBILIDADE
+----------------------------------------
+-- CREATE TABLE IF NOT EXISTS não completa tabelas já existentes.
+-- Estes ALTERs completam bancos antigos com as colunas usadas pelas páginas atuais.
+
+-- Estoque: tecidos atuais usam metros/kilos; relatórios antigos ainda leem quantidade/categoria.
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS quantidade NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS categoria VARCHAR(100) DEFAULT 'Tecidos';
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS tipo VARCHAR(100) DEFAULT 'Tecido';
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Normal';
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS estoque_ideal NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS estoque_minimo NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS estoque_critico NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS base_referencia VARCHAR(20) DEFAULT 'metros';
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS observacoes TEXT;
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS localizacao VARCHAR(100);
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS data_entrada DATE DEFAULT CURRENT_DATE;
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE opera.estoque_tecidos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+UPDATE opera.estoque_tecidos
+   SET quantidade = COALESCE(NULLIF(quantidade, 0), metros, 0),
+       categoria = COALESCE(NULLIF(TRIM(categoria), ''), 'Tecidos'),
+       tipo = COALESCE(NULLIF(TRIM(tipo), ''), 'Tecido'),
+       base_referencia = COALESCE(NULLIF(TRIM(base_referencia), ''), 'metros'),
+       status = COALESCE(NULLIF(TRIM(status), ''), 'Normal')
+ WHERE quantidade IS NULL
+    OR categoria IS NULL OR TRIM(categoria) = ''
+    OR tipo IS NULL OR TRIM(tipo) = ''
+    OR base_referencia IS NULL OR TRIM(base_referencia) = ''
+    OR status IS NULL OR TRIM(status) = '';
+
+CREATE OR REPLACE FUNCTION opera.sync_estoque_tecidos_compat()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.quantidade := COALESCE(NEW.metros, 0);
+    NEW.categoria := COALESCE(NULLIF(TRIM(NEW.categoria), ''), 'Tecidos');
+    NEW.tipo := COALESCE(NULLIF(TRIM(NEW.tipo), ''), 'Tecido');
+    NEW.base_referencia := COALESCE(NULLIF(TRIM(NEW.base_referencia), ''), 'metros');
+    NEW.status := COALESCE(NULLIF(TRIM(NEW.status), ''), 'Normal');
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_sync_estoque_tecidos_compat ON opera.estoque_tecidos;
+CREATE TRIGGER tr_sync_estoque_tecidos_compat
+BEFORE INSERT OR UPDATE OF metros, categoria, tipo, base_referencia, status
+ON opera.estoque_tecidos
+FOR EACH ROW
+EXECUTE FUNCTION opera.sync_estoque_tecidos_compat();
+
+-- Estoques por quantidade: completa colunas comuns usadas por Entrada, Saída e Relatórios.
+ALTER TABLE opera.estoque_aviamentos ADD COLUMN IF NOT EXISTS tipo VARCHAR(100) DEFAULT 'Aviamento';
+ALTER TABLE opera.estoque_aviamentos ADD COLUMN IF NOT EXISTS categoria VARCHAR(100) DEFAULT 'Aviamentos';
+ALTER TABLE opera.estoque_aviamentos ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Normal';
+ALTER TABLE opera.estoque_aviamentos ADD COLUMN IF NOT EXISTS estoque_ideal NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_aviamentos ADD COLUMN IF NOT EXISTS estoque_minimo NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_aviamentos ADD COLUMN IF NOT EXISTS estoque_critico NUMERIC(12,3) DEFAULT 0;
+
+ALTER TABLE opera.estoque_insumos ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Normal';
+ALTER TABLE opera.estoque_insumos ADD COLUMN IF NOT EXISTS estoque_ideal NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_insumos ADD COLUMN IF NOT EXISTS estoque_minimo NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_insumos ADD COLUMN IF NOT EXISTS estoque_critico NUMERIC(12,3) DEFAULT 0;
+
+ALTER TABLE opera.estoque_escritorio ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Normal';
+ALTER TABLE opera.estoque_escritorio ADD COLUMN IF NOT EXISTS estoque_ideal NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_escritorio ADD COLUMN IF NOT EXISTS estoque_minimo NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_escritorio ADD COLUMN IF NOT EXISTS estoque_critico NUMERIC(12,3) DEFAULT 0;
+
+ALTER TABLE opera.estoque_limpeza ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Normal';
+ALTER TABLE opera.estoque_limpeza ADD COLUMN IF NOT EXISTS estoque_ideal NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_limpeza ADD COLUMN IF NOT EXISTS estoque_minimo NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_limpeza ADD COLUMN IF NOT EXISTS estoque_critico NUMERIC(12,3) DEFAULT 0;
+
+ALTER TABLE opera.estoque_outros ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Normal';
+ALTER TABLE opera.estoque_outros ADD COLUMN IF NOT EXISTS estoque_ideal NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_outros ADD COLUMN IF NOT EXISTS estoque_minimo NUMERIC(12,3) DEFAULT 0;
+ALTER TABLE opera.estoque_outros ADD COLUMN IF NOT EXISTS estoque_critico NUMERIC(12,3) DEFAULT 0;
+
+UPDATE opera.estoque_aviamentos
+   SET categoria = COALESCE(NULLIF(TRIM(categoria), ''), 'Aviamentos'),
+       tipo = COALESCE(NULLIF(TRIM(tipo), ''), 'Aviamento'),
+       status = COALESCE(NULLIF(TRIM(status), ''), 'Normal');
+UPDATE opera.estoque_insumos
+   SET categoria = COALESCE(NULLIF(TRIM(categoria), ''), 'Insumos'),
+       tipo = COALESCE(NULLIF(TRIM(tipo), ''), 'Insumo'),
+       status = COALESCE(NULLIF(TRIM(status), ''), 'Normal');
+UPDATE opera.estoque_escritorio
+   SET categoria = COALESCE(NULLIF(TRIM(categoria), ''), 'Escritorio'),
+       tipo = COALESCE(NULLIF(TRIM(tipo), ''), 'Escritorio'),
+       status = COALESCE(NULLIF(TRIM(status), ''), 'Normal');
+UPDATE opera.estoque_limpeza
+   SET categoria = COALESCE(NULLIF(TRIM(categoria), ''), 'Limpeza'),
+       tipo = COALESCE(NULLIF(TRIM(tipo), ''), 'Limpeza'),
+       status = COALESCE(NULLIF(TRIM(status), ''), 'Normal');
+UPDATE opera.estoque_outros
+   SET categoria = COALESCE(NULLIF(TRIM(categoria), ''), 'Outros'),
+       tipo = COALESCE(NULLIF(TRIM(tipo), ''), 'Outros'),
+       status = COALESCE(NULLIF(TRIM(status), ''), 'Normal');
+
+-- Rastreamento do corte: completa colunas-chave para busca profunda e fluxo até pagamento.
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS numero_ordem VARCHAR(50);
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS ordem_corte VARCHAR(50);
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS codigo VARCHAR(100);
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS descricao TEXT;
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS descricao_corte TEXT;
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS data DATE;
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS data_envio DATE;
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS total_pecas INTEGER DEFAULT 0;
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE opera.cadastro_de_corte ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+ALTER TABLE opera.controle_envio_cortes ADD COLUMN IF NOT EXISTS corte_id INTEGER;
+ALTER TABLE opera.controle_envio_cortes ADD COLUMN IF NOT EXISTS ordem_corte VARCHAR(50);
+ALTER TABLE opera.controle_envio_cortes ADD COLUMN IF NOT EXISTS codigo_corte VARCHAR(100);
+ALTER TABLE opera.controle_envio_cortes ADD COLUMN IF NOT EXISTS descricao_corte TEXT;
+ALTER TABLE opera.controle_envio_cortes ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Em Conferencia';
+ALTER TABLE opera.controle_envio_cortes ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60);
+
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS corte_id INTEGER;
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS ordem_corte VARCHAR(50);
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS codigo_corte VARCHAR(100);
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS descricao_corte TEXT;
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS tipo_servico TEXT;
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS status_envio VARCHAR(30) DEFAULT 'Enviado';
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS total_pecas INTEGER DEFAULT 0;
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS valor_total_envio NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE opera.envios_cortes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS envio_id INTEGER;
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS data_chegada DATE;
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS total_entregue INTEGER DEFAULT 0;
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS total_defeitos INTEGER DEFAULT 0;
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS total_faltantes INTEGER DEFAULT 0;
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS total_regulares INTEGER DEFAULT 0;
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS valor_total NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS op_planejamento VARCHAR(60);
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE opera.controle_retorno_cortes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS envio_id INTEGER;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS data_chegada DATE;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS total_entregue INTEGER DEFAULT 0;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS total_defeitos INTEGER DEFAULT 0;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS total_faltantes INTEGER DEFAULT 0;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS total_regulares INTEGER DEFAULT 0;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS valor_total NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS pago BOOLEAN DEFAULT FALSE;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS pagamento_id INTEGER;
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS valor_pago NUMERIC(12,2);
+ALTER TABLE opera.entrada_acabamento ADD COLUMN IF NOT EXISTS data_pagamento DATE;
+
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS corte_id INTEGER;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS entrada_id INTEGER;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS envio_id INTEGER;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS retorno_id INTEGER;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS tipo_servico VARCHAR(100);
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS codigo VARCHAR(100);
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS descricao TEXT;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS quantidade_finalizada INTEGER;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS status VARCHAR(50);
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS pago BOOLEAN DEFAULT FALSE;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS pagamento_id INTEGER;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS valor_pago NUMERIC(12,2);
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS data_pagamento DATE;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS valor_total NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE opera.cortes_finalizados ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+CREATE INDEX IF NOT EXISTS idx_estoque_tecidos_categoria ON opera.estoque_tecidos(categoria);
+CREATE INDEX IF NOT EXISTS idx_estoque_tecidos_quantidade ON opera.estoque_tecidos(quantidade);
+CREATE INDEX IF NOT EXISTS idx_cadastro_corte_ordem ON opera.cadastro_de_corte(ordem_corte);
+CREATE INDEX IF NOT EXISTS idx_envios_cortes_codigo ON opera.envios_cortes(codigo_corte);
+CREATE INDEX IF NOT EXISTS idx_controle_envio_cortes_codigo ON opera.controle_envio_cortes(codigo_corte);
+CREATE INDEX IF NOT EXISTS idx_cortes_finalizados_codigo ON opera.cortes_finalizados(codigo);
+
+-- Permissão da página nova para administradores já existentes.
+INSERT INTO opera.usuario_permissoes (
+    usuario_id,
+    codigo,
+    pode_ver,
+    pode_editar,
+    pode_imprimir,
+    pode_excluir,
+    pode_administrar
+)
+SELECT
+    u.id,
+    paginas.codigo,
+    TRUE,
+    TRUE,
+    TRUE,
+    TRUE,
+    TRUE
+FROM opera.usuarios u
+CROSS JOIN (VALUES
+    ('busca_profunda_corte'),
+    ('relatorio_servicos_pagos')
+) AS paginas(codigo)
+WHERE LOWER(COALESCE(u.usuario, '')) = 'admin'
+   OR LOWER(COALESCE(u.hierarquia, '')) IN ('admin', 'administrador')
+ON CONFLICT (usuario_id, codigo) DO UPDATE SET
+    pode_ver = TRUE,
+    pode_editar = TRUE,
+    pode_imprimir = TRUE,
+    pode_excluir = TRUE,
+    pode_administrar = TRUE;
+
+----------------------------------------
 -- 20. PERMISSÕES E FINALIZAÇÃO
 ----------------------------------------
+
 GRANT ALL ON SCHEMA opera TO opera_app;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA opera TO opera_app;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA opera TO opera_app;
 GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA opera TO opera_app;
 
-INSERT INTO opera._schema_info (schema_name, versao, criado_em, atualizado_em)
-VALUES ('opera', '1.0', NOW(), NOW())
-ON CONFLICT (id) DO UPDATE SET atualizado_em = NOW();
+DO $$
+BEGIN
+    UPDATE opera._schema_info
+       SET versao = '1.0',
+           atualizado_em = NOW()
+     WHERE schema_name = 'opera';
+
+    IF NOT FOUND THEN
+        INSERT INTO opera._schema_info (schema_name, versao, criado_em, atualizado_em)
+        VALUES ('opera', '1.0', NOW(), NOW());
+    END IF;
+END $$;
 
 -- MENSAGEM FINAL COMPLETA E CORRIGIDA
 DO $$
@@ -2008,7 +2230,7 @@ BEGIN
     RAISE NOTICE '- Hierarquia: Administrador';
     RAISE NOTICE '- Tema: AZUL_NOTURNO aplicado automaticamente';
     RAISE NOTICE '=========================================';
-    RAISE NOTICE '🔧 CONEXÕES CONFIGURADAS:';
+    RAISE NOTICE '[INFO] CONEXÕES CONFIGURADAS:';
     RAISE NOTICE '- Schema: opera';
     RAISE NOTICE '- Permissoes: opera_app tem acesso total';
     RAISE NOTICE '- Versao: 1.0 registrada em _schema_info';

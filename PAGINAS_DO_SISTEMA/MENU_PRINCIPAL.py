@@ -41,6 +41,7 @@ from PAGINAS_DO_SISTEMA.TEMAS import (
     TemasPage,
     ModuloPaletas,
     aplicar_estilo_treeview,
+    estilo_botao_por_texto,
     get_contraste_texto,
     is_dark_color,
     padronizar_treeview,
@@ -487,20 +488,45 @@ class ThemeManager:
 
         def _apply_to_all_widgets(widget):
             parar_recursao = False
+            if getattr(widget, "_opera_preservar_tema", False):
+                return
             try:
                 if isinstance(widget, ctk.CTkFrame):
                     widget.configure(fg_color=cor_fundo, border_color=cor_borda)
                     parar_recursao = False
                 elif isinstance(widget, ctk.CTkButton):
                     try:
-                        cor_texto_botao = self._contrast_text_for_color(cor_primaria, fallback=cor_texto)
+                        texto_botao = ""
+                        try:
+                            texto_botao = str(widget.cget("text") or "").strip()
+                        except Exception:
+                            texto_botao = ""
+                        if texto_botao:
+                            estilo_botao = estilo_botao_por_texto(widget, texto_botao)
+                            cor_botao = estilo_botao["fg_color"]
+                            cor_hover_botao = estilo_botao["hover_color"]
+                            cor_texto_botao = estilo_botao["text_color"]
+                            cor_texto_desabilitado = estilo_botao["text_color_disabled"]
+                            cor_borda_botao = estilo_botao["border_color"]
+                        else:
+                            cor_botao = cor_primaria
+                            try:
+                                if self._color_distance(cor_botao, cor_fundo) < 36:
+                                    cor_botao = cor_destaque or "#2563EB"
+                            except Exception:
+                                pass
+                            cor_texto_botao = self._contrast_text_for_color(cor_botao, fallback=cor_texto)
+                            cor_hover_botao = cor_botao
+                            cor_texto_desabilitado = self._contrast_text_for_color(cor_secundaria, fallback=cor_texto)
+                            cor_borda_botao = cor_borda
                         widget.configure(
                             border_width=0,
                             bg_color="transparent",
-                            fg_color=cor_primaria,
-                            hover_color=cor_hover,
-                            border_color=cor_borda,
+                            fg_color=cor_botao,
+                            hover_color=cor_hover_botao,
+                            border_color=cor_borda_botao,
                             text_color=cor_texto_botao,
+                            text_color_disabled=cor_texto_desabilitado,
                             font=fonts["button"],
                             corner_radius=getattr(widget, "corner_radius", 8),
                             hover=True,
@@ -1184,7 +1210,7 @@ class OperaMenuApp(ctk.CTk):
         "Dashboard": ["Dashboard"],
         "MODELOS": ["Cadastrar Modelo", "Imprimir Ficha Técnica"],
         "ORDENS DE CORTE": ["Nova Ordem", "Ordens Planejadas", "Ordens de Corte Impressão"],
-        "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens"],
+        "REGISTRO DE CORTE": ["Cadastrar Corte", "Consultar Ordens", "Busca Profunda Corte"],
         "MÃO DE OBRA": ["Controle de Mão de Obra"],
         "COMPRAS": ["Compras"],
         "ESTOQUE": ["Entrada de Estoque", "Saída de Estoque", "Relatórios"],
@@ -1199,6 +1225,7 @@ class OperaMenuApp(ctk.CTk):
         "RELATÓRIOS": [
             "Produção",
             "Serviços Externos",
+            "Serviços Pagos",
             "Modelos Produzidos",
             "Acabamento",
             "Logs e Atividades",
@@ -1212,7 +1239,8 @@ class OperaMenuApp(ctk.CTk):
         "MODELOS": {"Cadastrar Modelo": "ROUPA.png", "Imprimir Ficha Técnica": "IMPRESSORA.png"},
         "ORDENS DE CORTE": {"Nova Ordem": "NOVA_ORDEM.png", "Ordens Planejadas": "RELATORIO.png",
                             "Ordens de Corte Impressão": "IMPRESSORA.png"},
-        "REGISTRO DE CORTE": {"Cadastrar Corte": "CADASTRO_CORTE.png", "Consultar Ordens": "CONSULTAR ORDENS.png"},
+        "REGISTRO DE CORTE": {"Cadastrar Corte": "CADASTRO_CORTE.png", "Consultar Ordens": "CONSULTAR ORDENS.png",
+                              "Busca Profunda Corte": "LUPA.png"},
         "COMPRAS": {"Compras": "DINHEIRO.png"},
         "ESTOQUE": {"Entrada de Estoque": "ESTOQUE.png", "Saída de Estoque": "ESTOQUE.png",
                     "Relatórios": "RELATORIO 2.png"},
@@ -1232,6 +1260,7 @@ class OperaMenuApp(ctk.CTk):
         },
         "RELATÓRIOS": {
             "Produção": "PRODUÇAO.png", "Serviços Externos": "SERVIÇOS EXTERNOS.png",
+            "Serviços Pagos": "DINHEIRO.png",
             "Modelos Produzidos": "MODELOS PRODUZIDOS.png", "Acabamento": "ACABAMENTO.png",
             "Logs e Atividades": "RELATORIO.png"
         },
@@ -1251,6 +1280,7 @@ class OperaMenuApp(ctk.CTk):
         "Ordens de Corte Impressão": "ordem_corte_impressao",
         "Cadastrar Corte": "cadastro_corte",
         "Consultar Ordens": "consultar_ordens",
+        "Busca Profunda Corte": "busca_profunda_corte",
         "Entrada de Estoque": "estoque_entrada",
         "Saída de Estoque": "estoque_saida",
         "Relatórios": "estoque_relatorios",
@@ -1271,6 +1301,7 @@ class OperaMenuApp(ctk.CTk):
         "Adiantamentos Pendentes": "adiantamentos_pendentes",
         "RELATÓRIOS:Produção": "relatorio_Producao",
         "Serviços Externos": "relatorio_servicos_externos",
+        "Serviços Pagos": "relatorio_servicos_pagos",
         "Modelos Produzidos": "relatorio_modelos_produzidos",
         "Acabamento": "relatorio_acabamento",
         "Logs e Atividades": "config_usuarios",
@@ -1370,6 +1401,8 @@ class OperaMenuApp(ctk.CTk):
                                       "es_ES": "Impresión de Órdenes"},
         "Cadastrar Corte": {"pt_BR": "Cadastrar Corte", "en_US": "Register Cut", "es_ES": "Registrar Corte"},
         "Consultar Ordens": {"pt_BR": "Consultar Ordens", "en_US": "Consult Orders", "es_ES": "Consultar Órdenes"},
+        "Busca Profunda Corte": {"pt_BR": "Busca Profunda Corte", "en_US": "Deep Cut Search",
+                                 "es_ES": "Búsqueda Profunda Corte"},
         "Controle de Mão de Obra": {"pt_BR": "Controle de Mão de Obra", "en_US": "Labor Control",
                                     "es_ES": "Control de Mano de Obra"},
         "Compras": {"pt_BR": "Compras", "en_US": "Purchases", "es_ES": "Compras"},
@@ -1404,6 +1437,8 @@ class OperaMenuApp(ctk.CTk):
         "Produção": {"pt_BR": "Produção", "en_US": "Production", "es_ES": "Producción"},
         "Serviços Externos": {"pt_BR": "Serviços Externos", "en_US": "External Services",
                               "es_ES": "Servicios Externos"},
+        "Serviços Pagos": {"pt_BR": "Serviços Pagos", "en_US": "Paid Services",
+                            "es_ES": "Servicios Pagados"},
         "Modelos Produzidos": {"pt_BR": "Modelos Produzidos", "en_US": "Produced Models",
                                "es_ES": "Modelos Producidos"},
         "Logs e Atividades": {"pt_BR": "Logs e Atividades", "en_US": "Logs and Activities",
@@ -1692,6 +1727,21 @@ class OperaMenuApp(ctk.CTk):
         cor = self._resolve_theme_color(color, "#111827")
         return is_dark_color(cor)
 
+    def _color_distance(self, color_a, color_b) -> float:
+        def _rgb(color, fallback):
+            cor = self._resolve_theme_color(color, fallback)
+            try:
+                if cor.startswith("#") and len(cor) == 7:
+                    return tuple(int(cor[i:i + 2], 16) for i in (1, 3, 5))
+                r16, g16, b16 = self.winfo_rgb(cor)
+                return (round(r16 / 257), round(g16 / 257), round(b16 / 257))
+            except Exception:
+                return tuple(int(fallback[i:i + 2], 16) for i in (1, 3, 5))
+
+        rgb_a = _rgb(color_a, "#000000")
+        rgb_b = _rgb(color_b, "#FFFFFF")
+        return sum((a - b) ** 2 for a, b in zip(rgb_a, rgb_b)) ** 0.5
+
     def _contrast_text_for_color(self, color, fallback: str = "#F8FAFC") -> str:
         cor = self._resolve_theme_color(color, "#111827")
         try:
@@ -1886,27 +1936,27 @@ class OperaMenuApp(ctk.CTk):
 
             ctk.CTkButton(
                 botoes,
-                text=self._get_text("yes"),
-                width=140,
-                fg_color=self.cor_primaria,
-                hover_color=self.cor_hover,
-                text_color=self._contrast_text_for_color(self.cor_primaria, fallback="#FFFFFF"),
-                font=("Arial", 14, "bold"),
-                border_width=1,
-                border_color=self.cor_borda,
-                command=lambda: _set(True),
-            ).pack(side="left", padx=8)
-            ctk.CTkButton(
-                botoes,
                 text=self._get_text("no"),
                 width=140,
                 fg_color=self._darker(self.cor_secundaria, 0.97),
                 hover_color=self._realcar_cor(self.cor_secundaria, 1.05),
                 text_color=self._contrast_text_for_color(self.cor_secundaria, fallback=self.cor_texto),
+                font=("Arial", 14, "bold"),
+                border_width=1,
+                border_color=self.cor_borda,
+                command=lambda: _set(False),
+            ).pack(side="left", padx=8)
+            ctk.CTkButton(
+                botoes,
+                text=self._get_text("yes"),
+                width=140,
+                fg_color=self.cor_primaria,
+                hover_color=self.cor_hover,
+                text_color=self._contrast_text_for_color(self.cor_primaria, fallback="#FFFFFF"),
                 border_width=1,
                 border_color=self.cor_borda,
                 font=("Arial", 14, "bold"),
-                command=lambda: _set(False),
+                command=lambda: _set(True),
             ).pack(side="left", padx=8)
 
             dlg.protocol("WM_DELETE_WINDOW", lambda: _set(False))

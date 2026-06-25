@@ -880,3 +880,101 @@ AttributeError: 'EntradaEstoqueApp' object has no attribute '_aplicar_estilo_tag
 2026-03-26 14:26:44 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Atalho
 2026-03-26 18:29:25 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Atalho
 2026-05-21 16:48:24 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Atalho
+2026-06-25 12:10:58 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-06-25 12:10:59 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-06-25 12:11:04 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Serviços Externos: inicialização OK
+2026-06-25 12:11:04 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Modelos Produzidos: inicialização OK
+2026-06-25 12:11:04 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Acabamento: inicialização OK
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Senha carregada do config.json: 4 caracteres
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Configuração - Host: localhost, Porta: 5432, DB: BANCO_OPERA, Senha: Sim
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Tela de backup carregada.
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔧 Configuração: postgres@localhost:5432/BANCO_OPERA
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔍 Verificando conexão na porta 5432...
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ⚠️ Ready_check retornou False na porta 5432
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔄 Tentando conexão direta em localhost:5432...
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ✅ Conexão direta OK na porta 5432 - PostgreSQL 18.2 on x86_64-windows
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Pasta de backups: C:\Users\User\PycharmProjects\SISTEMA-GUIMMA\PAGINAS_DO_SISTEMA\backup_banco
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Backup inicializada (porta=5432, senha=Sim)
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-06-25 12:11:09 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-06-25 12:11:44 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-06-25 12:11:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-06-25 12:11:50 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Serviços Externos: inicialização OK
+2026-06-25 12:11:50 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Modelos Produzidos: inicialização OK
+2026-06-25 12:11:50 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Acabamento: inicialização OK
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Senha carregada do config.json: 4 caracteres
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Configuração - Host: localhost, Porta: 5432, DB: BANCO_OPERA, Senha: Sim
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Tela de backup carregada.
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔧 Configuração: postgres@localhost:5432/BANCO_OPERA
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔍 Verificando conexão na porta 5432...
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ⚠️ Ready_check retornou False na porta 5432
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔄 Tentando conexão direta em localhost:5432...
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ✅ Conexão direta OK na porta 5432 - PostgreSQL 18.2 on x86_64-windows
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Pasta de backups: C:\Users\User\PycharmProjects\SISTEMA-GUIMMA\PAGINAS_DO_SISTEMA\backup_banco
+2026-06-25 12:11:56 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Backup inicializada (porta=5432, senha=Sim)
+2026-06-25 12:11:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-06-25 12:11:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-06-25 12:19:45 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-06-25 12:19:45 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-06-25 12:19:50 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Serviços Externos: inicialização OK
+2026-06-25 12:19:50 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Modelos Produzidos: inicialização OK
+2026-06-25 12:19:50 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Acabamento: inicialização OK
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Senha carregada do config.json: 4 caracteres
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Configuração - Host: localhost, Porta: 5432, DB: BANCO_OPERA, Senha: Sim
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Tela de backup carregada.
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔧 Configuração: postgres@localhost:5432/BANCO_OPERA
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔍 Verificando conexão na porta 5432...
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ⚠️ Ready_check retornou False na porta 5432
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔄 Tentando conexão direta em localhost:5432...
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ✅ Conexão direta OK na porta 5432 - PostgreSQL 18.2 on x86_64-windows
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Pasta de backups: C:\Users\User\PycharmProjects\SISTEMA-GUIMMA\PAGINAS_DO_SISTEMA\backup_banco
+2026-06-25 12:19:55 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Backup inicializada (porta=5432, senha=Sim)
+2026-06-25 12:19:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Conectado com privilégios de SUPER ADMIN
+2026-06-25 12:19:58 | INFO     | OPERA_SYSTEM | [SISTEMA] Lista de tabelas atualizada
+2026-06-25 14:09:36 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-06-25 15:10:42 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-06-25 15:10:46 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:10:48 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:10:50 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:11:04 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:25:01 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-06-25 15:29:53 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-06-25 15:31:32 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Entrada de Estoque: inicialização concluída com sucesso.
+2026-06-25 15:44:51 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:44:52 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:44:57 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:49:55 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:50:09 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:56:11 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 15:56:16 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Clique
+2026-06-25 15:56:21 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:04:54 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:05:15 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:05:46 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:08:38 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:19:05 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:29:01 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:30:59 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:53:40 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 16:53:52 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-06-25 16:54:28 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 17:10:49 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 17:10:53 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado
+2026-06-25 17:11:24 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Serviços Externos: inicialização OK
+2026-06-25 17:11:29 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Modelos Produzidos: inicialização OK
+2026-06-25 17:11:39 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Relatório de Acabamento: inicialização OK
+2026-06-25 17:12:01 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 17:12:02 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 17:12:06 | INFO     | OPERA_SYSTEM | [USUARIO] Ação do usuário: Selecionou item
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Senha carregada do config.json: 4 caracteres
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Configuração - Host: localhost, Porta: 5432, DB: BANCO_OPERA, Senha: Sim
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Tela de backup carregada.
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔧 Configuração: postgres@localhost:5432/BANCO_OPERA
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔍 Verificando conexão na porta 5432...
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ⚠️ Ready_check retornou False na porta 5432
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔄 Tentando conexão direta em localhost:5432...
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] ✅ Conexão direta OK na porta 5432 - PostgreSQL 18.2 on x86_64-windows
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] Pasta de backups: C:\Users\User\PycharmProjects\SISTEMA-GUIMMA\PAGINAS_DO_SISTEMA\backup_banco
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [PAGINA] Backup inicializada (porta=5432, senha=Sim)
+2026-06-25 17:12:16 | INFO     | OPERA_SYSTEM | [SISTEMA] [BACKUP] 🔧 Backup automático sincronizado com o sistema
+2026-06-25 17:13:14 | INFO     | OPERA_SYSTEM | [SISTEMA] Sistema OPERA inicializado

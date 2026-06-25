@@ -2122,6 +2122,7 @@ class UsuariosPage(ctk.CTkFrame):
                     "permissoes": [
                         {"nome": "Cadastrar Corte", "codigo": "cadastro_corte"},
                         {"nome": "Consultar Ordens", "codigo": "consultar_ordens"},
+                        {"nome": "Busca Profunda Corte", "codigo": "busca_profunda_corte"},
                     ],
                 },
                 {
@@ -2181,6 +2182,7 @@ class UsuariosPage(ctk.CTkFrame):
                     "permissoes": [
                         {"nome": "Relatório Produção", "codigo": "relatorio_producao"},
                         {"nome": "Relatório Serviços Externos", "codigo": "relatorio_servicos_externos"},
+                        {"nome": "Relatório Serviços Pagos", "codigo": "relatorio_servicos_pagos"},
                         {"nome": "Relatório Modelos Produzidos", "codigo": "relatorio_modelos_produzidos"},
                         {"nome": "Relatório Acabamento", "codigo": "relatorio_acabamento"},
                     ],
@@ -2331,7 +2333,7 @@ class UsuariosPage(ctk.CTkFrame):
             "fechamento_mensal": "📊", "contas_pagar": "🧾", "adiantamento": "💵",
             "adiantamentos_pendentes": "⏳", "relatorio_producao": "📊",
             "relatorio_servicos_externos": "🌐", "relatorio_modelos_produzidos": "👔",
-            "relatorio_acabamento": "🎯", "trocar_usuario": "🔄", "config_usuarios": "👥",
+            "relatorio_servicos_pagos": "💰", "relatorio_acabamento": "🎯", "trocar_usuario": "🔄", "config_usuarios": "👥",
             "config_temas": "🎨", "banco_dados": "🗄️", "config_backup": "💾"
         }
 
@@ -2555,7 +2557,10 @@ class UsuariosPage(ctk.CTkFrame):
             print(f"[DEMO] SQL: {sql} {params}")
             return None
         with get_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql, params or ())
+            if params is None:
+                cur.execute(sql)
+            else:
+                cur.execute(sql, params)
             return cur.fetchone()
 
     def _fetch_all(self, sql: str, params: tuple = None):
@@ -2564,7 +2569,10 @@ class UsuariosPage(ctk.CTkFrame):
             print(f"[DEMO] SQL: {sql} {params}")
             return []
         with get_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql, params or ())
+            if params is None:
+                cur.execute(sql)
+            else:
+                cur.execute(sql, params)
             return cur.fetchall()
 
     def _ativo_true_pred(self, colname="ativo") -> str:

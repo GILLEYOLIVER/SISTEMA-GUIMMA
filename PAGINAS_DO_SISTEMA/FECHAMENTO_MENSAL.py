@@ -172,7 +172,6 @@ class FechamentoMensalPage(ctk.CTkFrame):
     def __init__(self, parent, host=None, *args, **kwargs):
         self._host = host or parent
         self.theme = _Theme(self._host)
-        self._apply_ctk_global_theme()
         super().__init__(parent, fg_color=self.theme.cor_fundo, *args, **kwargs)
         self._init_i18n()
         self._build_ui()
@@ -239,7 +238,10 @@ class FechamentoMensalPage(ctk.CTkFrame):
         wrap_sum.grid_columnconfigure(0, weight=1); wrap_sum.grid_rowconfigure(0, weight=1)
         cols_sum = ("modelo","descricao","destino","costureira","servico","env","ret","falt","def","valor_pago")
         headers_sum = ["MODELO","DESCRIÇÃO","DESTINO","COSTUREIRA","SERVIÇO","ENVIOS","RETORNOS","FALT.","DEF.","VALOR PAGO"]
-        self.tree_sum = ttk.Treeview(wrap_sum, columns=cols_sum, show="headings", height=16)
+        self.tree_sum = ttk.Treeview(
+            wrap_sum, columns=cols_sum, show="headings", height=16,
+            style="FechamentoMensal.Treeview",
+        )
         widths_sum = [100,240,140,140,120,90,90,90,90,120]
         anchors_sum = ["center","w","w","w","center","center","center","center","center","e"]
         for c,h,w,a in zip(cols_sum, headers_sum, widths_sum, anchors_sum):
@@ -296,21 +298,19 @@ class FechamentoMensalPage(ctk.CTkFrame):
         self.kpi_adi = make_card(5, self._get_text("kpi_advance"), "R$ 0,00")
 
     def _apply_ctk_global_theme(self):
-        try:
-            modo = getattr(self._host, "modo", None) or "dark"
-            ctk.set_appearance_mode("dark" if str(modo).lower().startswith("d") else "light")
-        except Exception:
-            ctk.set_appearance_mode("dark")
+        # Nao altere o tema global a partir desta pagina.
+        # ctk.set_appearance_mode(...) muda o sistema inteiro.
+        return
 
     def _style_tree(self):
         st = ttk.Style()
         try: st.theme_use("clam")
         except Exception: pass
-        st.configure("Treeview",
+        st.configure("FechamentoMensal.Treeview",
                      background=self.theme.cor_terciaria, fieldbackground=self.theme.cor_terciaria,
                      foreground=self.theme.cor_texto, rowheight=24, bordercolor=self.theme.cor_borda, borderwidth=1)
-        st.map("Treeview", background=[("selected", self.theme.cor_destaque)], foreground=[("selected","white")])
-        st.configure("Treeview.Heading", background=self.theme.cor_primaria, foreground="white", relief="flat")
+        st.map("FechamentoMensal.Treeview", background=[("selected", self.theme.cor_destaque)], foreground=[("selected","white")])
+        st.configure("FechamentoMensal.Treeview.Heading", background=self.theme.cor_primaria, foreground="white", relief="flat")
 
     def _apply_theme_widgets(self):
         self._style_tree()
@@ -373,7 +373,10 @@ class FechamentoMensalPage(ctk.CTkFrame):
         else:
             cols, headers, widths, anchors = [], [], [], []
 
-        tree = ttk.Treeview(wrap, columns=cols, show="headings", height=18)
+        tree = ttk.Treeview(
+            wrap, columns=cols, show="headings", height=18,
+            style="FechamentoMensal.Treeview",
+        )
         for c, h, w, a in zip(cols, headers, widths, anchors):
             tree.heading(c, text=h)
             tree.column(c, width=w, anchor=a, stretch=True if c in ("descricao","descricao_corte","obs","tamanho") else False)

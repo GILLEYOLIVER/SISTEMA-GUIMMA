@@ -10,6 +10,7 @@ Tela PROFISSIONAL de Precificação de Produto (CustomTkinter).
 
 from __future__ import annotations
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
+from PAGINAS_DO_SISTEMA.TEMAS import get_contraste_texto
 
 # ------------------------- IMPORTS BÁSICOS -------------------------
 import os, csv, math, datetime, webbrowser, sys
@@ -344,7 +345,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
         ctk.CTkButton(header, text="Recarregar", command=self._on_model_change,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=0, column=4, padx=6)
+                      text_color=get_contraste_texto(self.cor_primaria)).grid(row=0, column=4, padx=6)
 
         ctk.CTkLabel(header, text="Canal", text_color=self.cor_texto).grid(row=0, column=5, padx=(24, 6))
 
@@ -426,7 +427,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         self._card(self.tab_resumo, "Overhead/peça (R$)", self.v["overhead"], 1, 0)
         self._card(self.tab_resumo, "Custo Total (R$)", self.v["custo_total"], 1, 1, big=True)
         self._card(self.tab_resumo, "Preço Sugerido (R$)", self.v["preco_sugerido"], 2, 0, big=True)
-        self._card(self.tab_resumo, "Lucro Unit. (R$)", self.v["lucro_unit"], 2, 1)
+        self._lucro_unit_label = self._card(self.tab_resumo, "Lucro Unit. (R$)", self.v["lucro_unit"], 2, 1)
         self._card(self.tab_resumo, "Markup (x)", self.v["markup"], 3, 0)
         self._card(self.tab_resumo, "Lote Ponto de Equilíbrio", self.v["lote_be"], 3, 1)
 
@@ -454,7 +455,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         r += 1
         ctk.CTkButton(self.tab_custos, text="Calcular", command=self._recalc,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=r, column=0, columnspan=2, sticky="ew", pady=8);
+                      text_color=get_contraste_texto(self.cor_sucesso)).grid(row=r, column=0, columnspan=2, sticky="ew", pady=8);
         r += 1
 
         # --- Impostos & Margem ---
@@ -492,11 +493,11 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
         ctk.CTkButton(self.tab_impostos, text="Salvar perfil como...", command=self._save_profile_as,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=r, column=0, columnspan=2, sticky="ew", pady=8);
+                      text_color=get_contraste_texto(self.cor_primaria)).grid(row=r, column=0, columnspan=2, sticky="ew", pady=8);
         r += 1
         ctk.CTkButton(self.tab_impostos, text="Carregar perfil...", command=self._load_profile_pick,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=r, column=0, columnspan=2, sticky="ew", pady=(0, 8));
+                      text_color=get_contraste_texto(self.cor_primaria)).grid(row=r, column=0, columnspan=2, sticky="ew", pady=(0, 8));
         r += 1
 
         # --- Simulações ---
@@ -518,7 +519,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         self._entry(tgt, "Preço alvo do mercado (R$)", "preco_alvo", 0)
         ctk.CTkButton(tgt, text="Analisar preço alvo", command=self._analisar_preco_alvo,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=0, column=2, padx=6)
+                      text_color=get_contraste_texto(self.cor_primaria)).grid(row=0, column=2, padx=6)
         ctk.CTkLabel(tgt, text="Margem atingida (%)", text_color=self.cor_texto).grid(row=0, column=3, padx=(18, 6))
         self._out_margem_atingida = ctk.CTkLabel(tgt, textvariable=self.v["margem_atingida"],
                                                  font=("Arial", 14, "bold"), text_color=self.cor_texto)
@@ -526,7 +527,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
         ctk.CTkButton(self.tab_simul, text="Exportar simulações CSV", command=self._export_csv,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=2, column=0, sticky="ew", padx=4, pady=(0, 8))
+                      text_color=get_contraste_texto(self.cor_primaria)).grid(row=2, column=0, sticky="ew", padx=4, pady=(0, 8))
 
         # --- BOM ---
         self._bom_table = ctk.CTkTextbox(self.tab_bom, width=700, height=320,
@@ -544,15 +545,15 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
         ctk.CTkButton(rel_frame, text="Gerar & Abrir HTML", command=self._gerar_relatorio,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=1, column=0, padx=6, pady=4, sticky="ew")
+                      text_color=get_contraste_texto(self.cor_primaria)).grid(row=1, column=0, padx=6, pady=4, sticky="ew")
 
         ctk.CTkButton(rel_frame, text="Imprimir (Windows)", command=self._imprimir_windows,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=1, column=1, padx=6, pady=4, sticky="ew")
+                      text_color=get_contraste_texto(self.cor_primaria)).grid(row=1, column=1, padx=6, pady=4, sticky="ew")
 
         ctk.CTkButton(rel_frame, text="Copiar preço sugerido", command=self._copy_price,
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
-                      text_color=self.cor_texto).grid(row=2, column=0, columnspan=2, padx=6, pady=6, sticky="ew")
+                      text_color=get_contraste_texto(self.cor_sucesso)).grid(row=2, column=0, columnspan=2, padx=6, pady=6, sticky="ew")
 
         # watchers
         for key in ["materiais", "costura", "fixos_mes", "capacidade_mes", "variaveis", "frete", "perdas_pct",
@@ -566,7 +567,9 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         frame.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(frame, text=title, text_color=self.cor_texto).grid(row=0, column=0, pady=(8, 2))
         font = ("Arial", 24, "bold") if big else ("Arial", 18, "bold")
-        ctk.CTkLabel(frame, textvariable=var, font=font, text_color=self.cor_texto).grid(row=1, column=0, pady=(0, 8))
+        value_label = ctk.CTkLabel(frame, textvariable=var, font=font, text_color=self.cor_texto)
+        value_label.grid(row=1, column=0, pady=(0, 8))
+        return value_label
 
     def _entry(self, parent, label, key, row, readonly=False):
         ctk.CTkLabel(parent, text=label, text_color=self.cor_texto).grid(row=row, column=0, padx=6, pady=4, sticky="w")
@@ -722,6 +725,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         self.v["lucro_unit"].set(f"{lucro:.2f}")
         self.v["markup"].set(f"{markup:.2f}x")
         self.v["lote_be"].set(f"{lote_be}")
+        self._atualizar_alerta_lucro(lucro)
 
         self._render_simulacoes(custo_total)
 
@@ -732,6 +736,11 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         tb = self._sim_table
         tb.configure(state="normal")
         tb.delete("1.0", "end")
+        try:
+            tb.tag_config("negativo", foreground="#b91c1c")
+            tb.tag_config("positivo", foreground=self.cor_texto)
+        except Exception:
+            pass
         tb.insert("end", f"{'Margem%':>8} {'Preço':>12} {'Lucro':>12} {'Markup':>8}\n")
         tb.insert("end", "-" * 50 + "\n")
         for m in self._margins:
@@ -741,7 +750,8 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
             preco = custo_total / (1.0 - ded) if (1.0 - ded) > 0 else 0.0
             lucro = preco - custo_total
             markup = (preco / custo_total) if custo_total > 0 else 0.0
-            tb.insert("end", f"{m:>8.0f} {preco:>12.2f} {lucro:>12.2f} {markup:>8.2f}\n")
+            tag = "negativo" if lucro <= 0 else "positivo"
+            tb.insert("end", f"{m:>8.0f} {preco:>12.2f} {lucro:>12.2f} {markup:>8.2f}\n", tag)
         tb.configure(state="disabled")
 
     def _analisar_preco_alvo(self):
@@ -755,6 +765,18 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         car = self._as_float(self.v["cartao_pct"].get()) / 100.0
         margem_real = (preco_alvo * (1 - (imp + com + car)) - custo) / preco_alvo
         self.v["margem_atingida"].set(f"{(margem_real * 100):.2f}%")
+        try:
+            self._out_margem_atingida.configure(
+                text_color="#b91c1c" if margem_real <= 0 else self.cor_sucesso
+            )
+        except Exception:
+            pass
+
+    def _atualizar_alerta_lucro(self, lucro: float):
+        try:
+            self._lucro_unit_label.configure(text_color="#b91c1c" if lucro <= 0 else self.cor_sucesso)
+        except Exception:
+            pass
 
     def _export_csv(self):
         try:

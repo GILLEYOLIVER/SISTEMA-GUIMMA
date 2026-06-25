@@ -84,10 +84,42 @@ def get_contraste_texto(cor_fundo: str) -> str:
         if len(hex_color) != 6:
             return "#000000"
         r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-        luminance = (0.299*r + 0.587*g + 0.114*b) / 255
-        return "#000000" if luminance > 0.5 else "#FFFFFF"
+
+        def linear(canal: int) -> float:
+            valor = canal / 255
+            return valor / 12.92 if valor <= 0.03928 else ((valor + 0.055) / 1.055) ** 2.4
+
+        luminancia = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+        contraste_preto = (luminancia + 0.05) / 0.05
+        contraste_branco = 1.05 / (luminancia + 0.05)
+        return "#000000" if contraste_preto >= contraste_branco else "#FFFFFF"
     except Exception:
         return "#000000"
+
+def _cor_hex_visivel(cor) -> str:
+    """Retorna a cor hexadecimal ativa quando o CustomTkinter usa par claro/escuro."""
+    try:
+        if isinstance(cor, (tuple, list)):
+            if not cor:
+                return ""
+            indice = 1 if ctk.get_appearance_mode().lower() == "dark" and len(cor) > 1 else 0
+            preferida = str(cor[indice] or "")
+            if _valida_hex(preferida):
+                return preferida
+            for item in cor:
+                item = str(item or "")
+                if _valida_hex(item):
+                    return item
+            return preferida
+        return str(cor or "")
+    except Exception:
+        return str(cor or "")
+
+def texto_contraste_para_fundo(cor_fundo, fallback: str = "#000000") -> str:
+    cor = _cor_hex_visivel(cor_fundo)
+    if _valida_hex(cor):
+        return get_contraste_texto(cor)
+    return fallback
 
 def is_dark_color(cor_hex: str) -> bool:
     try:
@@ -154,6 +186,161 @@ def _blend(base_hex: str, target_hex: str, t: float) -> str:
         return f"#{max(0,min(255,r)):02x}{max(0,min(255,g)):02x}{max(0,min(255,b)):02x}".upper()
     except Exception:
         return base_hex
+
+def _rgb_from_hex(cor_hex: str):
+    try:
+        cor = (cor_hex or "").lstrip("#")
+        if len(cor) != 6:
+            return None
+        return tuple(int(cor[i:i + 2], 16) for i in (0, 2, 4))
+    except Exception:
+        return None
+
+def _distancia_cores(cor_a: str, cor_b: str) -> float:
+    rgb_a = _rgb_from_hex(cor_a)
+    rgb_b = _rgb_from_hex(cor_b)
+    if not rgb_a or not rgb_b:
+        return 999.0
+    return sum((a - b) ** 2 for a, b in zip(rgb_a, rgb_b)) ** 0.5
+
+def _cor_fundo_widget(widget) -> str:
+    atual = getattr(widget, "master", None)
+    while atual is not None:
+        try:
+            cor = _cor_hex_visivel(atual.cget("fg_color"))
+            if _valida_hex(cor):
+                return cor
+        except Exception:
+            pass
+        try:
+            cor = str(atual.cget("bg") or "")
+            if _valida_hex(cor):
+                return cor
+        except Exception:
+            pass
+        atual = getattr(atual, "master", None)
+
+    try:
+        app = widget.winfo_toplevel()
+        cor = getattr(app, "cor_fundo", "")
+        if _valida_hex(str(cor)):
+            return str(cor)
+    except Exception:
+        pass
+    return "#FFFFFF"
+
+def _cor_acao_visivel(widget) -> str:
+    fundo = _cor_fundo_widget(widget)
+    try:
+        app = widget.winfo_toplevel()
+        for attr in ("cor_primaria", "cor_destaque", "cor_sucesso"):
+            cor = getattr(app, attr, "")
+            if _valida_hex(str(cor)) and _distancia_cores(str(cor), fundo) >= 36:
+                return str(cor)
+    except Exception:
+        pass
+    return "#2563EB"
+
+def _botao_precisa_fundo_visivel(widget, fg_real: str) -> bool:
+    if not _valida_hex(fg_real):
+        return True
+    fundo = _cor_fundo_widget(widget)
+    return _distancia_cores(fg_real, fundo) < 36
+
+BOTAO_KEYWORDS = (
+    ("botao_excluir", ("excluir", "deletar", "remover", "apagar", "inativar", "estornar", "reprovar")),
+    ("botao_cancelar", ("cancelar", "fechar", "sair", "nao", "não")),
+    ("botao_salvar", ("salvar", "gravar")),
+    ("botao_novo", ("novo", "nova", "criar")),
+    ("botao_confirmar", ("confirmar", "ok", "aplicar", "finalizar", "concluir", "aprovar")),
+    ("botao_adiantamento", ("adiantamento", "adiantar")),
+    ("botao_buscar", ("buscar", "pesquisar", "procurar", "localizar", "consultar", "recarregar", "atualizar")),
+    ("botao_filtrar", ("filtrar", "filtro")),
+    ("botao_limpar", ("limpar", "resetar")),
+    ("botao_importar", ("importar",)),
+    ("botao_export_pdf", ("exportar pdf", "gerar pdf", "pdf")),
+    ("botao_export_csv", ("exportar csv", "csv", "excel")),
+    ("botao_exportar", ("exportar",)),
+    ("botao_imprimir", ("imprimir", "impressao", "impressão")),
+    ("botao_comprovante", ("comprovante", "recibo")),
+    ("botao_editar", ("editar", "alterar")),
+    ("botao_visualizar", ("visualizar", "detalhes", "abrir", "ver")),
+    ("botao_voltar", ("voltar", "anterior")),
+    ("botao_avancar", ("avancar", "avançar", "proximo", "próximo")),
+    ("botao_configurar", ("configurar", "configuracoes", "configurações")),
+    ("botao_ajuda", ("ajuda", "suporte")),
+)
+
+def _cor_botao_tema(widget, chave: str) -> str:
+    padrao = CORES_BOTOES_PADRAO.get(chave, CORES_BOTOES_PADRAO["botao_buscar"])
+    try:
+        app = widget.winfo_toplevel()
+        valor = getattr(app, f"cor_{chave}", None)
+        if _valida_hex(str(valor)):
+            return str(valor)
+    except Exception:
+        pass
+    return padrao
+
+def _hover_botao(cor_base: str) -> str:
+    """Hover consistente: sempre uma variação mais escura da cor da ação."""
+    if not _valida_hex(cor_base):
+        return cor_base
+    return ajustar_hover(cor_base, 0.82)
+
+def _luminancia_relativa(cor_hex: str) -> float:
+    rgb = _rgb_from_hex(cor_hex) or (0, 0, 0)
+
+    def linear(canal: int) -> float:
+        valor = canal / 255
+        return valor / 12.92 if valor <= 0.03928 else ((valor + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * linear(rgb[0]) + 0.7152 * linear(rgb[1]) + 0.0722 * linear(rgb[2])
+
+def _contraste_ratio(cor_a: str, cor_b: str) -> float:
+    lum_a = _luminancia_relativa(cor_a)
+    lum_b = _luminancia_relativa(cor_b)
+    maior = max(lum_a, lum_b)
+    menor = min(lum_a, lum_b)
+    return (maior + 0.05) / (menor + 0.05)
+
+def _cor_botao_com_texto_branco(cor_base: str) -> str:
+    """Escurece a cor da ação até texto branco ficar legível e padronizado."""
+    if not _valida_hex(cor_base):
+        return "#2563EB"
+    cor = cor_base
+    for _ in range(8):
+        if _contraste_ratio(cor, "#FFFFFF") >= 4.5:
+            return cor
+        cor = ajustar_hover(cor, 0.86)
+    return cor
+
+def estilo_botao_por_texto(widget, texto: str | None = None) -> dict[str, str]:
+    """Define o estilo semântico padrão para botões comuns do sistema."""
+    texto_norm = _normalizar_texto_botao(texto if texto is not None else widget.cget("text"))
+    chave = "botao_buscar"
+    for chave_candidata, palavras in BOTAO_KEYWORDS:
+        if any(palavra in texto_norm for palavra in palavras):
+            chave = chave_candidata
+            break
+
+    fg = _cor_botao_tema(widget, chave)
+    fundo = _cor_fundo_widget(widget)
+    if _distancia_cores(fg, fundo) < 40:
+        fg = _cor_botao_tema(widget, "botao_buscar")
+    if _distancia_cores(fg, fundo) < 40:
+        fg = "#2563EB"
+
+    fg = _cor_botao_com_texto_branco(fg)
+    hover = _hover_botao(fg)
+    return {
+        "fg_color": fg,
+        "hover_color": hover,
+        "text_color": "#FFFFFF",
+        "text_color_hover": "#FFFFFF",
+        "text_color_disabled": "#9CA3AF" if is_dark_color(fundo) else "#374151",
+        "border_color": ajustar_hover(fg, 0.70),
+    }
 
 def aplicar_estilo_treeview(*, style=None, prefixo="Treeview", cor_fundo="#FFFFFF",
                             cor_linhas="#F5F5F5", cor_cabecalho="#0D6EFD",
@@ -300,6 +487,18 @@ def padronizar_botao(widget: ctk.CTkButton):
         if not texto:
             return
 
+        estilo = estilo_botao_por_texto(widget, texto)
+        widget.configure(
+            fg_color=estilo["fg_color"],
+            hover_color=estilo["hover_color"],
+            text_color=estilo["text_color"],
+            text_color_disabled=estilo["text_color_disabled"],
+            border_color=estilo["border_color"],
+            border_width=0,
+        )
+        _aplicar_hover_texto_botao(widget, estilo["text_color"], estilo["text_color_hover"])
+        return
+
         texto_norm = _normalizar_texto_botao(texto)
 
         negativos = ("excluir", "deletar", "remover", "apagar", "inativar", "cancelar")
@@ -310,29 +509,29 @@ def padronizar_botao(widget: ctk.CTkButton):
             estilo = {
                 "fg_color": "#FA0000",
                 "hover_color": "#7A0101",
-                "text_color": "#000000",
-                "text_color_hover": "#FFFFFF",
+                "text_color": get_contraste_texto("#FA0000"),
+                "text_color_hover": get_contraste_texto("#7A0101"),
             }
         elif any(chave in texto_norm for chave in positivos):
             estilo = {
                 "fg_color": "#1B8305",
                 "hover_color": "#2A671F",
-                "text_color": "#000000",
-                "text_color_hover": "#FFFFFF",
+                "text_color": get_contraste_texto("#1B8305"),
+                "text_color_hover": get_contraste_texto("#2A671F"),
             }
         elif any(chave in texto_norm for chave in destaques):
             estilo = {
                 "fg_color": "#FF5C00",
                 "hover_color": "#6E2800",
-                "text_color": "#000000",
-                "text_color_hover": "#FFFFFF",
+                "text_color": get_contraste_texto("#FF5C00"),
+                "text_color_hover": get_contraste_texto("#6E2800"),
             }
         else:
             estilo = {
                 "fg_color": "#7AB8F5",
                 "hover_color": "#5A9BDF",
-                "text_color": "#000000",
-                "text_color_hover": "#FFFFFF",
+                "text_color": get_contraste_texto("#7AB8F5"),
+                "text_color_hover": get_contraste_texto("#5A9BDF"),
             }
 
         widget.configure(
@@ -360,18 +559,20 @@ def _normalizar_texto_botao(texto: str) -> str:
 
 def _aplicar_hover_texto_botao(widget: ctk.CTkButton, normal: str, hover: str):
     """Configura mudança de cor do texto no hover."""
+    widget._opera_texto_normal = normal
+    widget._opera_texto_hover = hover
     if getattr(widget, "_opera_hover_texto", None):
         return
 
     def on_enter(_event=None):
         try:
-            widget.configure(text_color=hover)
+            widget.configure(text_color=getattr(widget, "_opera_texto_hover", hover))
         except Exception:
             pass
 
     def on_leave(_event=None):
         try:
-            widget.configure(text_color=normal)
+            widget.configure(text_color=getattr(widget, "_opera_texto_normal", normal))
         except Exception:
             pass
 
@@ -382,6 +583,9 @@ def _aplicar_hover_texto_botao(widget: ctk.CTkButton, normal: str, hover: str):
 
 def remover_bordas_botoes_tema(widget):
     """Remove bordas, contornos e outlines de todos os botões."""
+    if getattr(widget, "_opera_preservar_tema", False):
+        return
+
     botoes = (
         ctk.CTkButton,
         ctk.CTkOptionMenu,
@@ -427,14 +631,48 @@ def remover_bordas_botoes_tema(widget):
                 fg = widget.cget("fg_color") if hasattr(widget, "cget") else None
                 hover = widget.cget("hover_color") if hasattr(widget, "cget") else None
                 texto = widget.cget("text_color") if hasattr(widget, "cget") else None
+                texto_final = texto if texto not in (None, "") else None
+                texto_hover = texto_final
+                texto_botao = ""
+                try:
+                    texto_botao = str(widget.cget("text") or "").strip()
+                except Exception:
+                    texto_botao = ""
+
+                if isinstance(widget, ctk.CTkButton) and texto_botao:
+                    estilo = estilo_botao_por_texto(widget, texto_botao)
+                    fg = estilo["fg_color"]
+                    hover = estilo["hover_color"]
+                    texto_final = estilo["text_color"]
+                    texto_hover = estilo["text_color_hover"]
+
+                if isinstance(widget, (ctk.CTkButton, ctk.CTkOptionMenu, ctk.CTkComboBox, ctk.CTkSegmentedButton)):
+                    fg_real = _cor_hex_visivel(fg)
+                    hover_real = _cor_hex_visivel(hover or fg)
+                    if isinstance(widget, ctk.CTkButton) and texto_botao and _botao_precisa_fundo_visivel(widget, fg_real):
+                        fg = _cor_acao_visivel(widget)
+                        hover = ajustar_hover(fg, 0.82)
+                        fg_real = _cor_hex_visivel(fg)
+                        hover_real = _cor_hex_visivel(hover)
+                    if _valida_hex(fg_real):
+                        texto_final = get_contraste_texto(fg_real)
+                        texto_hover = get_contraste_texto(hover_real) if _valida_hex(hover_real) else texto_final
 
                 widget.configure(
                     border_width=0,
                     corner_radius=getattr(widget, "corner_radius", 8),
                     fg_color=fg or "transparent",
                     hover_color=hover or fg or "transparent",
-                    text_color=texto if texto not in (None, "") else None,
+                    text_color=texto_final,
                 )
+                if isinstance(widget, ctk.CTkButton):
+                    try:
+                        fundo_desabilitado = _blend(_cor_hex_visivel(fg), _cor_fundo_widget(widget), 0.45)
+                        widget.configure(text_color_disabled=get_contraste_texto(fundo_desabilitado))
+                    except Exception:
+                        pass
+                if isinstance(widget, ctk.CTkButton) and texto_final:
+                    _aplicar_hover_texto_botao(widget, texto_final, texto_hover or texto_final)
                 try:
                     widget.configure(highlightthickness=0)
                 except Exception:
@@ -787,12 +1025,13 @@ class BotaoPadronizado:
 
         app = BotaoPadronizado._get_app(master)
         cores_tema = BotaoPadronizado._extrair_cores_tema(app)
+        cor_padrao_fundo = cores_tema.get("secundaria", "#2C2C2C")
 
         config_tipo = {
             "padrao": {
-                "fg_color": cores_tema.get("secundaria", "#2C2C2C"),
+                "fg_color": cor_padrao_fundo,
                 "hover_color": cores_tema.get("hover", "#3A3A3A"),
-                "text_color": cores_tema.get("texto", "#FFFFFF"),
+                "text_color": texto_contraste_para_fundo(cor_padrao_fundo, cores_tema.get("texto", "#FFFFFF")),
                 "border_color": cores_tema.get("borda", "#333333")
             }
         }

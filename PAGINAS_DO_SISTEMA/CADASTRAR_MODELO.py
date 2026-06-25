@@ -9,16 +9,6 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-# Silencia o aviso de conflito entre PyFPDF e fpdf2
-import warnings
-
-warnings.filterwarnings(
-    "ignore",
-    message="You have both PyFPDF & fpdf2 installed",
-    category=UserWarning,
-    module="fpdf",
-)
-
 # =================== IMPORTS UI/IMG/PDF ===================
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
@@ -39,7 +29,7 @@ except ImportError:
 try:
     from fpdf import FPDF
 except Exception:
-    raise RuntimeError("O pacote 'fpdf' é obrigatório. Instale com: pip install fpdf")
+    raise RuntimeError("O pacote 'fpdf2' é obrigatório. Instale com: pip install fpdf2")
 
 # =================== DB (PostgreSQL) ===================
 from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db

@@ -169,7 +169,7 @@ def main():
         usuario_nome="Usuário",
         tema_preferido="profissional",
         on_complete=lambda: root.after(0, exibir_login_pronto),
-        duration_ms=6000,
+        duration_ms=3000,
         allow_skip=False,
         block_close=True,
     )

@@ -80,7 +80,7 @@ class SplashScreenModern(ctk.CTkToplevel):
         tema_preferido="profissional",
         on_complete=None,
         steps=None,
-        duration_ms=2800,
+        duration_ms=3000,
         allow_skip=False,   # mantido por compatibilidade, mas FORÇADO OFF
         block_close=True,   # bloqueia fechar no X
     ):
@@ -388,7 +388,7 @@ class SplashScreenModern(ctk.CTkToplevel):
                 pass
             self._update_percent()
 
-    def start_auto_progress(self, duration_ms=2800):
+    def start_auto_progress(self, duration_ms=3000):
         """Progresso automático (com etapas)."""
         if self._finished or self._auto_mode:
             return
@@ -574,7 +574,7 @@ class SplashScreenModern(ctk.CTkToplevel):
 # =============================================================================
 
 def rodar_splash_e_chamar(callback, usuario_nome="Usuário", tema_preferido="profissional",
-                         steps=None, duration_ms=4500):
+                         steps=None, duration_ms=3000):
     """
     Roda o Splash e ao concluir chama 'callback()'.
     Uso típico: BOOTSTRAP chama isso e no callback abre o LOGIN.
@@ -615,7 +615,7 @@ def rodar_splash_e_chamar(callback, usuario_nome="Usuário", tema_preferido="pro
 
 
 def rodar_login_com_splash(usuario_nome="Usuário", tema_preferido="profissional",
-                           steps=None, duration_ms=4500):
+                           steps=None, duration_ms=3000):
     """
     Fluxo: Splash -> Login
     """
@@ -674,7 +674,7 @@ if __name__ == "__main__":
         usuario_nome="",
         tema_preferido="profissional",
         on_complete=lambda: root.after(0, abrir_login),
-        duration_ms=6000,
+        duration_ms=3000,
         allow_skip=False,
         block_close=True,
     )

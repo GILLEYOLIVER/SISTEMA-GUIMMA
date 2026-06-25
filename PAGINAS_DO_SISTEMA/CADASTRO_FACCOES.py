@@ -616,8 +616,14 @@ class CadastroFaccoesView(ctk.CTkFrame):
                 )
                 msg = "Prestador atualizado!"
             else:
-                # Gera próximo código: ignora vazios e converte para int com segurança
-                cur.execute(f"SELECT MAX(NULLIF(codigo,'')::int) FROM {schema}.cadastro_faccoes")
+                # Gera próximo código numérico sem quebrar cadastros alfanuméricos como FAC001.
+                cur.execute(
+                    f"""
+                    SELECT MAX(codigo::int)
+                    FROM {schema}.cadastro_faccoes
+                    WHERE codigo ~ '^[0-9]+$'
+                    """
+                )
                 max_int = cur.fetchone()[0]
                 proximo_codigo = 1 if max_int is None else int(max_int) + 1
                 codigo_final = str(proximo_codigo).zfill(3)
@@ -680,7 +686,9 @@ class CadastroFaccoesView(ctk.CTkFrame):
                 WHERE (%s = '' OR nome ILIKE %s OR codigo ILIKE %s)
                   AND (%s = 'Todos' OR tipo_prestador = %s)
                 ORDER BY
-                    NULLIF(codigo,'')::int DESC NULLS LAST
+                    regexp_replace(codigo, '[0-9]', '', 'g') NULLS LAST,
+                    COALESCE(NULLIF(regexp_replace(codigo, '[^0-9]', '', 'g'), '')::int, 0) DESC,
+                    codigo DESC
             """
             like = f"%{termo}%"
             cursor.execute(query, (termo, like, like, tipo_filtro, tipo_filtro))
