@@ -15,6 +15,7 @@ import os, csv, webbrowser
 from datetime import datetime, date, timedelta
 from typing import Dict, Any, List
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
 from tkinter import ttk, messagebox, filedialog
 
 # --- PG access ---
@@ -202,9 +203,17 @@ class FechamentoMensalPage(ctk.CTkFrame):
 
         self.lbl_de = ctk.CTkLabel(filt, text="De:"); self.lbl_de.grid(row=0, column=0, padx=(10,4), pady=8, sticky="e")
         self.ini_entry = ctk.CTkEntry(filt, width=120, textvariable=self.ini_var, placeholder_text="AAAA-MM-DD"); self.ini_entry.grid(row=0, column=1, padx=4, pady=8)
+        vincular_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(filt, text="📅", width=28, height=26,
+                      command=lambda: abrir_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+                      ).grid(row=0, column=1, padx=(86, 4), pady=8, sticky="e")
 
         self.lbl_ate = ctk.CTkLabel(filt, text="Até:"); self.lbl_ate.grid(row=0, column=2, padx=(12,4), pady=8, sticky="e")
         self.fim_entry = ctk.CTkEntry(filt, width=120, textvariable=self.fim_var, placeholder_text="AAAA-MM-DD"); self.fim_entry.grid(row=0, column=3, padx=4, pady=8)
+        vincular_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(filt, text="📅", width=28, height=26,
+                      command=lambda: abrir_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+                      ).grid(row=0, column=3, padx=(86, 4), pady=8, sticky="e")
 
         self.servico_var = ctk.StringVar(value="Todos")
         self.lbl_servico = ctk.CTkLabel(filt, text="Serviço:"); self.lbl_servico.grid(row=0, column=4, padx=(12,4), pady=8, sticky="e")

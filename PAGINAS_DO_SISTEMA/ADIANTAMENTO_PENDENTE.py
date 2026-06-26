@@ -7,6 +7,7 @@ import csv
 from datetime import datetime
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import vincular_calendario
 
 # ---------- PostgreSQL (via BANCO_DE_DADOS_PG) ----------
 try:
@@ -210,6 +211,7 @@ class AdiantamentosPendentesPage(ctk.CTkFrame):
             placeholder_text=self._get_text("date_placeholder")
         )
         self.input_de.grid(row=0, column=5, padx=(0, 12))
+        vincular_calendario(self, self.input_de, output_format="%Y-%m-%d")
         self._ui_refs["from_entry"] = self.input_de
 
         self.lbl_ate = ctk.CTkLabel(filtros, text=self._get_text("to_date"), text_color=self.C("cor_texto"))
@@ -227,6 +229,7 @@ class AdiantamentosPendentesPage(ctk.CTkFrame):
             placeholder_text=self._get_text("date_placeholder")
         )
         self.input_ate.grid(row=0, column=7, padx=(0, 12))
+        vincular_calendario(self, self.input_ate, output_format="%Y-%m-%d")
         self._ui_refs["to_entry"] = self.input_ate
 
         self.btn_buscar = ctk.CTkButton(

@@ -29,6 +29,7 @@ import platform
 
 # --- UI ---
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario
 
 # ============================================================
 # Integração com PostgreSQL
@@ -1420,6 +1421,7 @@ class UsuariosPage(ctk.CTkFrame):
 
     def _abrir_calendario(self, entry):
         """Abre um calendário simples para escolher a data."""
+        return abrir_calendario(self, entry, output_format="%d/%m/%Y")
         try:
             dialog = ctk.CTkToplevel(self)
             dialog.title("Calendário")

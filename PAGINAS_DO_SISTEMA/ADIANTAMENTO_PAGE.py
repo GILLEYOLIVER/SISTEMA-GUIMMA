@@ -281,14 +281,28 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
         self._ui_refs["title_label"] = self.header
 
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
+        main_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
         main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(1, weight=1)
 
-        search_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        input_fg = self.C("cor_fundo")
+        card_fg = self.C("cor_secundaria")
+        border = self.C("cor_borda")
+        text = self.C("cor_texto")
+        accent = self.C("cor_destaque")
+
+        search_frame = ctk.CTkFrame(
+            main_frame,
+            fg_color=card_fg,
+            border_width=1,
+            border_color=border,
+            corner_radius=8,
+        )
         search_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        search_frame.grid_columnconfigure(5, weight=1)
 
-        self.lbl_tipo_busca = ctk.CTkLabel(search_frame, text=self._get_text("search_type"), text_color=self.C("cor_texto"))
-        self.lbl_tipo_busca.pack(side="left", padx=(0, 6))
+        self.lbl_tipo_busca = ctk.CTkLabel(search_frame, text=self._get_text("search_type"), text_color=text)
+        self.lbl_tipo_busca.grid(row=0, column=0, sticky="w", padx=(14, 6), pady=14)
         self._ui_refs["search_type_label"] = self.lbl_tipo_busca
 
         self.tipo_busca_var = ctk.StringVar(value=self._get_text("search_all"))
@@ -298,19 +312,19 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             values=[self._get_text("search_all")],
             width=140,
             command=lambda _v=None: self._on_tipo_busca_changed(),
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
+            fg_color=input_fg,
+            border_color=border,
             button_color=self.C("cor_primaria"),
             button_hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            dropdown_fg_color=self.C("cor_secundaria"),
+            text_color=text,
+            dropdown_fg_color=card_fg,
             dropdown_hover_color=self.C("cor_hover"),
-            dropdown_text_color=self.C("cor_texto")
+            dropdown_text_color=text
         )
-        self.combo_tipo_busca.pack(side="left", padx=(0, 10))
+        self.combo_tipo_busca.grid(row=0, column=1, sticky="w", padx=(0, 12), pady=14)
 
-        self.lbl_prestador_busca = ctk.CTkLabel(search_frame, text=self._get_text("search_provider"), text_color=self.C("cor_texto"))
-        self.lbl_prestador_busca.pack(side="left", padx=(0, 6))
+        self.lbl_prestador_busca = ctk.CTkLabel(search_frame, text=self._get_text("search_provider"), text_color=text)
+        self.lbl_prestador_busca.grid(row=0, column=2, sticky="w", padx=(0, 6), pady=14)
         self._ui_refs["search_provider_label"] = self.lbl_prestador_busca
 
         self.prestador_busca_var = ctk.StringVar(value="")
@@ -320,30 +334,30 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             values=[""],
             width=220,
             command=lambda _v=None: None,
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
+            fg_color=input_fg,
+            border_color=border,
             button_color=self.C("cor_primaria"),
             button_hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            dropdown_fg_color=self.C("cor_secundaria"),
+            text_color=text,
+            dropdown_fg_color=card_fg,
             dropdown_hover_color=self.C("cor_hover"),
-            dropdown_text_color=self.C("cor_texto")
+            dropdown_text_color=text
         )
-        self.combo_prestador_busca.pack(side="left", padx=(0, 10))
+        self.combo_prestador_busca.grid(row=0, column=3, sticky="w", padx=(0, 12), pady=14)
 
-        self.lbl_busca = ctk.CTkLabel(search_frame, text=self._get_text("search_term"), text_color=self.C("cor_texto"))
-        self.lbl_busca.pack(side="left", padx=(0, 6))
+        self.lbl_busca = ctk.CTkLabel(search_frame, text=self._get_text("search_term"), text_color=text)
+        self.lbl_busca.grid(row=0, column=4, sticky="w", padx=(0, 6), pady=14)
         self._ui_refs["search_term_label"] = self.lbl_busca
 
         self.entry_codigo_modelo = ctk.CTkEntry(
             search_frame,
             width=200,
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
-            text_color=self.C("cor_texto"),
+            fg_color=input_fg,
+            border_color=border,
+            text_color=text,
             placeholder_text=self._get_text("search_placeholder")
         )
-        self.entry_codigo_modelo.pack(side="left", padx=(0, 10))
+        self.entry_codigo_modelo.grid(row=0, column=5, sticky="ew", padx=(0, 12), pady=14)
         self.entry_codigo_modelo.bind("<Return>", lambda e: self.buscar_cortes())
         self._ui_refs["search_entry"] = self.entry_codigo_modelo
 
@@ -351,16 +365,24 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             search_frame,
             text=self._get_text("search_button"),
             command=self.buscar_cortes,
-            width=90,
-            fg_color=self.C("cor_destaque"),
+            width=100,
+            height=30,
+            corner_radius=6,
+            fg_color=accent,
             hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            border_color=self.C("cor_borda")
+            text_color=self._button_text_color(accent),
+            border_color=border
         )
-        self.btn_buscar.pack(side="left")
+        self.btn_buscar.grid(row=0, column=6, sticky="e", padx=(0, 14), pady=14)
         self._ui_refs["search_button"] = self.btn_buscar
 
-        self.tree_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        self.tree_frame = ctk.CTkFrame(
+            main_frame,
+            fg_color=card_fg,
+            border_width=1,
+            border_color=border,
+            corner_radius=8,
+        )
         self.tree_frame.grid(row=1, column=0, sticky="nsew", pady=(0, 10))
         self.tree_frame.grid_rowconfigure(0, weight=1)
         self.tree_frame.grid_columnconfigure(0, weight=1)
@@ -381,33 +403,42 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             self.tree_frame,
             columns=self.tree_columns,
             show="headings",
-            height=6
+            height=8,
+            style=self._apply_tree_style()
         )
-        self.tree_cortes.grid(row=0, column=0, sticky="nsew")
+        self.tree_cortes.grid(row=0, column=0, sticky="nsew", padx=(12, 0), pady=12)
         for col in self.tree_columns:
             info = self.tree_column_meta[col]
             self.tree_cortes.heading(col, text=self._get_text(info["key"]))
             self.tree_cortes.column(col, width=info["width"], anchor=info["anchor"])
 
         scrollbar = ttk.Scrollbar(self.tree_frame, orient="vertical", command=self.tree_cortes.yview)
-        scrollbar.grid(row=0, column=1, sticky="ns")
+        scrollbar.grid(row=0, column=1, sticky="ns", padx=(0, 12), pady=12)
         self.tree_cortes.configure(yscrollcommand=scrollbar.set)
         self.tree_cortes.bind("<Double-1>", self.selecionar_corte)
 
-        adiantamento_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        adiantamento_frame = ctk.CTkFrame(
+            main_frame,
+            fg_color=card_fg,
+            border_width=1,
+            border_color=border,
+            corner_radius=8,
+        )
         adiantamento_frame.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        adiantamento_frame.grid_columnconfigure(1, weight=1)
+        adiantamento_frame.grid_columnconfigure(3, weight=1)
 
         self.lbl_dados_adiantamento = ctk.CTkLabel(
             adiantamento_frame,
             text=self._get_text("advancement_data"),
             font=ctk.CTkFont(weight="bold"),
-            text_color=self.C("cor_texto")
+            text_color=text
         )
-        self.lbl_dados_adiantamento.grid(row=0, column=0, columnspan=4, pady=(0, 10), sticky="w")
+        self.lbl_dados_adiantamento.grid(row=0, column=0, columnspan=4, padx=14, pady=(14, 10), sticky="w")
         self._ui_refs["advancement_title"] = self.lbl_dados_adiantamento
 
-        self.lbl_tipo_form = ctk.CTkLabel(adiantamento_frame, text=self._get_text("provider_type"), text_color=self.C("cor_texto"))
-        self.lbl_tipo_form.grid(row=1, column=0, sticky="e", padx=5, pady=2)
+        self.lbl_tipo_form = ctk.CTkLabel(adiantamento_frame, text=self._get_text("provider_type"), text_color=text)
+        self.lbl_tipo_form.grid(row=1, column=0, sticky="w", padx=(14, 8), pady=(0, 4))
         self._ui_refs["provider_type_label"] = self.lbl_tipo_form
 
         self.tipo_form_var = ctk.StringVar(value=self._get_text("search_all"))
@@ -417,19 +448,19 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             values=[self._get_text("search_all")],
             width=150,
             command=lambda _v=None: self._on_tipo_form_changed(),
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
+            fg_color=input_fg,
+            border_color=border,
             button_color=self.C("cor_primaria"),
             button_hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            dropdown_fg_color=self.C("cor_secundaria"),
+            text_color=text,
+            dropdown_fg_color=card_fg,
             dropdown_hover_color=self.C("cor_hover"),
-            dropdown_text_color=self.C("cor_texto")
+            dropdown_text_color=text
         )
-        self.combo_tipo_form.grid(row=1, column=1, sticky="w", padx=5, pady=2)
+        self.combo_tipo_form.grid(row=1, column=1, sticky="ew", padx=(0, 18), pady=(0, 4))
 
-        self.lbl_prestador_form = ctk.CTkLabel(adiantamento_frame, text=self._get_text("provider_name"), text_color=self.C("cor_texto"))
-        self.lbl_prestador_form.grid(row=1, column=2, sticky="e", padx=5, pady=2)
+        self.lbl_prestador_form = ctk.CTkLabel(adiantamento_frame, text=self._get_text("provider_name"), text_color=text)
+        self.lbl_prestador_form.grid(row=1, column=2, sticky="w", padx=(0, 8), pady=(0, 4))
         self._ui_refs["provider_name_label"] = self.lbl_prestador_form
 
         self.prestador_form_var = ctk.StringVar(value="")
@@ -438,60 +469,60 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             variable=self.prestador_form_var,
             values=[""],
             width=250,
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
+            fg_color=input_fg,
+            border_color=border,
             button_color=self.C("cor_primaria"),
             button_hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            dropdown_fg_color=self.C("cor_secundaria"),
+            text_color=text,
+            dropdown_fg_color=card_fg,
             dropdown_hover_color=self.C("cor_hover"),
-            dropdown_text_color=self.C("cor_texto")
+            dropdown_text_color=text
         )
-        self.combo_prestador_form.grid(row=1, column=3, sticky="w", padx=5, pady=2)
+        self.combo_prestador_form.grid(row=1, column=3, sticky="ew", padx=(0, 14), pady=(0, 4))
 
-        self.lbl_codigo_modelo = ctk.CTkLabel(adiantamento_frame, text=self._get_text("model_code"), text_color=self.C("cor_texto"))
-        self.lbl_codigo_modelo.grid(row=2, column=0, sticky="e", padx=5, pady=2)
+        self.lbl_codigo_modelo = ctk.CTkLabel(adiantamento_frame, text=self._get_text("model_code"), text_color=text)
+        self.lbl_codigo_modelo.grid(row=2, column=0, sticky="w", padx=(14, 8), pady=(8, 4))
         self._ui_refs["model_code_label"] = self.lbl_codigo_modelo
 
         self.entry_codigo_modelo_selecionado = ctk.CTkEntry(
             adiantamento_frame,
             width=150,
             state="disabled",
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
-            text_color=self.C("cor_texto")
+            fg_color=input_fg,
+            border_color=border,
+            text_color=text
         )
-        self.entry_codigo_modelo_selecionado.grid(row=2, column=1, sticky="w", padx=5, pady=2)
+        self.entry_codigo_modelo_selecionado.grid(row=2, column=1, sticky="ew", padx=(0, 18), pady=(8, 4))
 
-        self.lbl_descricao_modelo = ctk.CTkLabel(adiantamento_frame, text=self._get_text("description"), text_color=self.C("cor_texto"))
-        self.lbl_descricao_modelo.grid(row=3, column=0, sticky="e", padx=5, pady=2)
+        self.lbl_descricao_modelo = ctk.CTkLabel(adiantamento_frame, text=self._get_text("description"), text_color=text)
+        self.lbl_descricao_modelo.grid(row=2, column=2, sticky="w", padx=(0, 8), pady=(8, 4))
         self._ui_refs["description_label"] = self.lbl_descricao_modelo
 
         self.entry_descricao_modelo = ctk.CTkEntry(
             adiantamento_frame,
             width=250,
             state="disabled",
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
-            text_color=self.C("cor_texto")
+            fg_color=input_fg,
+            border_color=border,
+            text_color=text
         )
-        self.entry_descricao_modelo.grid(row=3, column=1, columnspan=2, sticky="w", padx=5, pady=2)
+        self.entry_descricao_modelo.grid(row=2, column=3, sticky="ew", padx=(0, 14), pady=(8, 4))
 
-        self.lbl_valor = ctk.CTkLabel(adiantamento_frame, text=self._get_text("amount"), text_color=self.C("cor_texto"))
-        self.lbl_valor.grid(row=4, column=0, sticky="e", padx=5, pady=2)
+        self.lbl_valor = ctk.CTkLabel(adiantamento_frame, text=self._get_text("amount"), text_color=text)
+        self.lbl_valor.grid(row=3, column=0, sticky="w", padx=(14, 8), pady=(8, 4))
         self._ui_refs["amount_label"] = self.lbl_valor
 
         self.entry_valor = ctk.CTkEntry(
             adiantamento_frame,
             width=150,
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
-            text_color=self.C("cor_texto")
+            fg_color=input_fg,
+            border_color=border,
+            text_color=text
         )
-        self.entry_valor.grid(row=4, column=1, sticky="w", padx=5, pady=2)
+        self.entry_valor.grid(row=3, column=1, sticky="ew", padx=(0, 18), pady=(8, 4))
 
-        self.lbl_pagamento = ctk.CTkLabel(adiantamento_frame, text=self._get_text("payment_method"), text_color=self.C("cor_texto"))
-        self.lbl_pagamento.grid(row=5, column=0, sticky="e", padx=5, pady=2)
+        self.lbl_pagamento = ctk.CTkLabel(adiantamento_frame, text=self._get_text("payment_method"), text_color=text)
+        self.lbl_pagamento.grid(row=3, column=2, sticky="w", padx=(0, 8), pady=(8, 4))
         self._ui_refs["payment_method_label"] = self.lbl_pagamento
 
         self.pagamento_var = ctk.StringVar(value=self._get_payment_display("cash"))
@@ -501,54 +532,57 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             values=self._payment_values(),
             width=150,
             command=self.atualizar_visibilidade_parcelas,
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
+            fg_color=input_fg,
+            border_color=border,
             button_color=self.C("cor_primaria"),
             button_hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            dropdown_fg_color=self.C("cor_secundaria"),
+            text_color=text,
+            dropdown_fg_color=card_fg,
             dropdown_hover_color=self.C("cor_hover"),
-            dropdown_text_color=self.C("cor_texto")
+            dropdown_text_color=text
         )
-        self.combo_pagamento.grid(row=5, column=1, sticky="w", padx=5, pady=2)
+        self.combo_pagamento.grid(row=3, column=3, sticky="ew", padx=(0, 14), pady=(8, 4))
 
-        self.label_parcelas = ctk.CTkLabel(adiantamento_frame, text=self._get_text("installments"), text_color=self.C("cor_texto"))
+        self.label_parcelas = ctk.CTkLabel(adiantamento_frame, text=self._get_text("installments"), text_color=text)
         self.entry_parcelas = ctk.CTkEntry(
             adiantamento_frame,
-            width=50,
-            fg_color=self.C("cor_secundaria"),
-            border_color=self.C("cor_borda"),
-            text_color=self.C("cor_texto")
+            width=90,
+            fg_color=input_fg,
+            border_color=border,
+            text_color=text
         )
         self.entry_parcelas.insert(0, "1")
         self._ui_refs["installments_label"] = self.label_parcelas
 
-        self.lbl_data = ctk.CTkLabel(adiantamento_frame, text=self._get_text("date_time"), text_color=self.C("cor_texto"))
-        self.lbl_data.grid(row=7, column=0, sticky="e", padx=5, pady=2)
+        self.lbl_data = ctk.CTkLabel(adiantamento_frame, text=self._get_text("date_time"), text_color=text)
+        self.lbl_data.grid(row=4, column=0, sticky="w", padx=(14, 8), pady=(8, 14))
         self._ui_refs["date_time_label"] = self.lbl_data
 
         self.label_data = ctk.CTkLabel(
             adiantamento_frame,
             text=self._format_datetime_display(datetime.now()),
-            text_color=self.C("cor_texto")
+            text_color=text,
+            anchor="w"
         )
-        self.label_data.grid(row=7, column=1, sticky="w", padx=5, pady=2)
+        self.label_data.grid(row=4, column=1, sticky="ew", padx=(0, 18), pady=(8, 14))
 
-        btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        btn_frame.grid(row=3, column=0, sticky="e", pady=(10, 0))
+        btn_frame = ctk.CTkFrame(adiantamento_frame, fg_color="transparent")
+        btn_frame.grid(row=5, column=0, columnspan=4, sticky="e", padx=14, pady=(2, 14))
 
         self.btn_imprimir = ctk.CTkButton(
             btn_frame,
             text=self._get_text("print_receipt"),
             command=self.imprimir_comprovante,
-            width=150,
+            width=160,
+            height=32,
+            corner_radius=6,
             state="disabled",
             fg_color=self.C("cor_imprimir"),
             hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            border_color=self.C("cor_borda")
+            text_color=self._button_text_color(self.C("cor_imprimir")),
+            border_color=border
         )
-        self.btn_imprimir.pack(side="left", padx=5)
+        self.btn_imprimir.pack(side="left", padx=(0, 8))
         self._ui_refs["print_button"] = self.btn_imprimir
 
         self.btn_salvar = ctk.CTkButton(
@@ -556,26 +590,31 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
             text=self._get_text("register_advancement"),
             command=self.registrar_adiantamento,
             width=180,
+            height=32,
+            corner_radius=6,
             state="disabled",
             fg_color=self.C("cor_adicionar"),
             hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            border_color=self.C("cor_borda")
+            text_color=self._button_text_color(self.C("cor_adicionar")),
+            border_color=border
         )
-        self.btn_salvar.pack(side="left", padx=5)
+        self.btn_salvar.pack(side="left", padx=(0, 8))
         self._ui_refs["save_button"] = self.btn_salvar
 
+        clear_bg = self.C("cor_alerta", "#A16207")
         self.btn_limpar = ctk.CTkButton(
             btn_frame,
             text=self._get_text("clear"),
             command=self.limpar_campos,
-            width=80,
-            fg_color=self.C("cor_secundaria"),
+            width=92,
+            height=32,
+            corner_radius=6,
+            fg_color=clear_bg,
             hover_color=self.C("cor_hover"),
-            text_color=self.C("cor_texto"),
-            border_color=self.C("cor_borda")
+            text_color=self._button_text_color(clear_bg),
+            border_color=border
         )
-        self.btn_limpar.pack(side="left", padx=5)
+        self.btn_limpar.pack(side="left")
         self._ui_refs["clear_button"] = self.btn_limpar
 
         self._init_prestadores_ui()
@@ -740,6 +779,52 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
 
     def _apply_palette(self):
         self.configure(fg_color=self.C("cor_fundo"))
+
+    def _button_text_color(self, bg_color):
+        color = str(bg_color or "").strip()
+        if isinstance(bg_color, (tuple, list)) and bg_color:
+            color = str(bg_color[-1])
+        if color.startswith("#") and len(color) == 7:
+            try:
+                r = int(color[1:3], 16)
+                g = int(color[3:5], 16)
+                b = int(color[5:7], 16)
+                return "#111827" if (r * 0.299 + g * 0.587 + b * 0.114) > 170 else "#FFFFFF"
+            except ValueError:
+                pass
+        return self.C("cor_texto")
+
+    def _apply_tree_style(self):
+        style_name = "Adiantamento.Treeview"
+        style = ttk.Style(self)
+        bg = self.C("cor_fundo")
+        card = self.C("cor_secundaria")
+        text = self.C("cor_texto")
+        border = self.C("cor_borda")
+        selected = self.C("cor_destaque")
+        style.configure(
+            style_name,
+            background=bg,
+            fieldbackground=bg,
+            foreground=text,
+            bordercolor=border,
+            rowheight=30,
+            font=("Segoe UI", 10),
+        )
+        style.configure(
+            f"{style_name}.Heading",
+            background=card,
+            foreground=text,
+            bordercolor=border,
+            relief="flat",
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            style_name,
+            background=[("selected", selected)],
+            foreground=[("selected", self._button_text_color(selected))],
+        )
+        return style_name
 
     def _pg_exec(self, sql: str, params=None) -> int:
         return db.execute(sql, params)
@@ -1207,8 +1292,8 @@ class PagamentoAdiantamentoPage(ctk.CTkFrame):
 
     def atualizar_visibilidade_parcelas(self, event=None):
         if self._get_payment_internal(self.pagamento_var.get()) == "installment":
-            self.label_parcelas.grid(row=6, column=0, sticky="e", padx=5, pady=2)
-            self.entry_parcelas.grid(row=6, column=1, sticky="w", padx=5, pady=2)
+            self.label_parcelas.grid(row=4, column=2, sticky="w", padx=(0, 8), pady=(8, 14))
+            self.entry_parcelas.grid(row=4, column=3, sticky="ew", padx=(0, 14), pady=(8, 14))
         else:
             self.label_parcelas.grid_forget()
             self.entry_parcelas.grid_forget()

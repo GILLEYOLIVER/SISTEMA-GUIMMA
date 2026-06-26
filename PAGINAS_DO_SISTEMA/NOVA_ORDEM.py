@@ -13,6 +13,8 @@ import logging
 import tkinter as tk
 from pathlib import Path
 
+from PAGINAS_DO_SISTEMA.UI_COMBOBOX import habilitar_duplo_clique_combobox
+
 # =============================================================================
 # PATHS (PyInstaller/macOS .app safe)
 # - Em apps empacotados, o bundle é SOMENTE LEITURA. Use uma pasta gravável.
@@ -412,12 +414,13 @@ class OrdemCorte(ctk.CTkFrame):
         self.modelos_combo = ctk.CTkComboBox(
             busca,
             values=[self._ml_translate("Carregando...")],
-            width=360,
+            width=520,
             height=28,
             command=self._on_combo_modelo
         )
         self.modelos_combo.set(self._ml_translate("Selecione um modelo"))
-        self.modelos_combo.pack(side="left", padx=(0, 0), fill="x", expand=True)
+        habilitar_duplo_clique_combobox(self.modelos_combo)
+        self.modelos_combo.pack(side="left", padx=(0, 0))
 
         # ===================== DADOS DO CABEÇALHO (ALINHADOS / 2 LINHAS) =====================
         info = ctk.CTkFrame(self.main_frame, fg_color=self.cor_fundo)
@@ -448,23 +451,24 @@ class OrdemCorte(ctk.CTkFrame):
         linha2.grid_columnconfigure(0, weight=0)
         linha2.grid_columnconfigure(1, weight=0)
         linha2.grid_columnconfigure(2, weight=0)
-        linha2.grid_columnconfigure(3, weight=1)
+        linha2.grid_columnconfigure(3, weight=0)
         linha2.grid_columnconfigure(4, weight=0)
         linha2.grid_columnconfigure(5, weight=0)
+        linha2.grid_columnconfigure(6, weight=0)
 
         ctk.CTkLabel(linha2, text="CORTADOR:", font=("Arial", 11, "bold"), text_color=self.cor_texto).grid(row=0, column=0, sticky="w")
         self.cortador_entry = ctk.CTkEntry(
-            linha2, width=170, height=28,
+            linha2, width=160, height=28,
             fg_color=self.cor_fundo, border_color=self.cor_borda, text_color=self.cor_texto
         )
         self.cortador_entry.grid(row=0, column=1, sticky="w", padx=(6, 14))
 
         ctk.CTkLabel(linha2, text="AUXILIAR:", font=("Arial", 11, "bold"), text_color=self.cor_texto).grid(row=0, column=2, sticky="w")
         self.auxiliar_entry = ctk.CTkEntry(
-            linha2, height=28,
+            linha2, width=160, height=28,
             fg_color=self.cor_fundo, border_color=self.cor_borda, text_color=self.cor_texto
         )
-        self.auxiliar_entry.grid(row=0, column=3, sticky="ew", padx=(6, 14))
+        self.auxiliar_entry.grid(row=0, column=3, sticky="w", padx=(6, 14))
 
         ctk.CTkLabel(linha2, text="FINALIZAÇÃO:", font=("Arial", 11, "bold"), text_color=self.cor_texto).grid(row=0, column=4, sticky="w")
         self.data_final_entry = ctk.CTkEntry(
@@ -536,6 +540,7 @@ class OrdemCorte(ctk.CTkFrame):
             width=220,
             state="readonly"
         )
+        habilitar_duplo_clique_combobox(self.combo_grade)
         self.combo_grade.pack(side="left", padx=4)
 
         btn_salvar_pref = ctk.CTkButton(

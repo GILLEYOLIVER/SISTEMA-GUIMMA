@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
 
 # Banco de dados (opcional)
 try:
@@ -158,14 +159,36 @@ class RelatorioAcabamentoPage(ctk.CTkFrame):
             bloco_data, textvariable=self.ini_var, width=120
         )
         self.ini_entry.grid(row=1, column=0, padx=(0, 8))
+        vincular_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(
+            bloco_data,
+            text="📅",
+            width=32,
+            height=30,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            command=lambda: self._abrir_calendario(self.ini_entry),
+        ).grid(row=1, column=1, padx=(0, 8))
 
         ctk.CTkLabel(
             bloco_data, text="Fim", text_color=self.cor_texto
-        ).grid(row=0, column=1, sticky="w")
+        ).grid(row=0, column=2, sticky="w")
         self.fim_entry = ctk.CTkEntry(
             bloco_data, textvariable=self.fim_var, width=120
         )
-        self.fim_entry.grid(row=1, column=1)
+        self.fim_entry.grid(row=1, column=2)
+        vincular_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(
+            bloco_data,
+            text="📅",
+            width=32,
+            height=30,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            command=lambda: self._abrir_calendario(self.fim_entry),
+        ).grid(row=1, column=3, padx=(8, 0))
 
         # Modelo / Ordem
         bloco_modelo = ctk.CTkFrame(filtros, fg_color=self.cor_fundo)
@@ -296,6 +319,9 @@ class RelatorioAcabamentoPage(ctk.CTkFrame):
             text_color=self.cor_texto,
         )
         self.lbl_total_valor.pack(side="left", padx=(4, 0))
+
+    def _abrir_calendario(self, entry):
+        return abrir_calendario(self, entry, output_format="%Y-%m-%d")
 
     # ---------------------- Busca ----------------------
     def _buscar(self):

@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import customtkinter as ctk
 import calendar as _cal
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario
 
 # Importação do módulo PostgreSQL
 try:
@@ -1510,6 +1511,7 @@ class EnvioCortes(ctk.CTkFrame):
 
     # ----------------------------- Métodos de Ação -----------------------------
     def _abrir_calendario(self, entry):
+        return abrir_calendario(self, entry, output_format="%d/%m/%Y")
         from datetime import datetime
         import calendar as _cal
 

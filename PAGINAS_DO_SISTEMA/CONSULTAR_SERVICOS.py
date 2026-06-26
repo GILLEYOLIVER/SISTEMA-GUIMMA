@@ -12,6 +12,7 @@ import os, csv, webbrowser
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario
 from PAGINAS_DO_SISTEMA import TEMAS
 from tkinter import ttk, messagebox, filedialog
 
@@ -772,6 +773,13 @@ class HistoricoServicosPage(ctk.CTkFrame):
         self.fim_entry.configure(state=state)
 
     def _abrir_calendario(self, entry):
+        def _after_select(_data):
+            if self.todos_registros_var.get():
+                self.todos_registros_var.set(False)
+                self._set_date_entries_state(True)
+            self.periodo_var.set("Personalizado")
+
+        return abrir_calendario(self, entry, output_format="%d/%m/%Y", on_select=_after_select)
         from datetime import datetime
         import calendar as _cal
 

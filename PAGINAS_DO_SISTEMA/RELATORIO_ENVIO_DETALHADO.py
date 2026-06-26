@@ -10,6 +10,7 @@ from datetime import datetime, date, timedelta
 import customtkinter as ctk
 import tkinter.ttk as ttk
 from tkinter import messagebox, filedialog
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
 
 # -------------------- Acesso ao PostgreSQL --------------------
 try:
@@ -142,6 +143,9 @@ def _sizes_sum_expr(cols: list[str], prefix=""):
 
 
 # -------------------- Página --------------------
+REL_ENVIO_TREEVIEW_STYLE = "RelatorioEnvioDetalhado.Treeview"
+
+
 class RelatorioEnvioDetalhado(ctk.CTkFrame):
     PAGE_TITLE = "Relatório Detalhado — Envio de Cortes"
 
@@ -214,14 +218,9 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
     def _apply_theme_to_ui(self):
         """Aplica o tema personalizado na interface"""
         try:
-            # Configurar appearance mode
-            ctk.set_appearance_mode("dark")
-
-            # Aplicar tema ao frame principal
             self.configure(fg_color=self.cor_fundo)
 
-            # Aplicar tema recursivamente
-            self._aplicar_tema_widgets(self)
+            self._aplicar_tema_treeview()
 
         except Exception as e:
             print(f"Erro ao aplicar tema na UI: {e}")
@@ -233,7 +232,6 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                 widget.configure(text_color=self.cor_texto)
             elif isinstance(widget, ctk.CTkButton):
                 widget.configure(
-                    fg_color=self.cor_destaque,
                     hover_color=self.cor_hover,
                     text_color=self.cor_texto,
                     border_color=self.cor_borda
@@ -245,13 +243,10 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
                     text_color=self.cor_texto,
                     placeholder_text_color="#9ca3af"
                 )
-            elif isinstance(widget, ctk.CTkFrame):
-                widget.configure(
-                    fg_color=self.cor_primaria,
-                    border_color=self.cor_borda
-                )
+            elif isinstance(widget, ctk.CTkFrame) and widget is self:
+                widget.configure(fg_color=self.cor_fundo)
             elif isinstance(widget, ttk.Treeview):
-                self._aplicar_tema_treeview(widget)
+                widget.configure(style=REL_ENVIO_TREEVIEW_STYLE)
 
             # Processar filhos
             for child in widget.winfo_children():
@@ -260,32 +255,46 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         except Exception:
             pass
 
-    def _aplicar_tema_treeview(self, tree):
+    def _button_text_color(self, bg_color):
+        color = str(bg_color or "").strip()
+        if isinstance(bg_color, (tuple, list)) and bg_color:
+            color = str(bg_color[-1])
+        if color.startswith("#") and len(color) == 7:
+            try:
+                r = int(color[1:3], 16)
+                g = int(color[3:5], 16)
+                b = int(color[5:7], 16)
+                return "#111827" if (r * 0.299 + g * 0.587 + b * 0.114) > 170 else "#FFFFFF"
+            except ValueError:
+                pass
+        return self.cor_texto
+
+    def _aplicar_tema_treeview(self):
         """Aplica tema ao treeview ttk"""
         try:
-            style = ttk.Style()
-            style.theme_use('default')
+            style = ttk.Style(self)
 
             # Configurar estilo principal
-            style.configure("Treeview",
-                            background=self.cor_secundaria,
+            style.configure(REL_ENVIO_TREEVIEW_STYLE,
+                            background=self.cor_fundo,
                             foreground=self.cor_texto,
-                            fieldbackground=self.cor_secundaria,
-                            borderwidth=1,
-                            rowheight=25)
+                            fieldbackground=self.cor_fundo,
+                            borderwidth=0,
+                            rowheight=28,
+                            font=("Segoe UI", 10))
 
             # Configurar cabeçalhos
-            style.configure("Treeview.Heading",
-                            background=self.cor_primaria,
+            style.configure(f"{REL_ENVIO_TREEVIEW_STYLE}.Heading",
+                            background=self.cor_secundaria,
                             foreground=self.cor_texto,
-                            relief="raised",
+                            relief="flat",
                             borderwidth=1,
-                            font=('Arial', 10, 'bold'))
+                            font=("Segoe UI", 10, "bold"))
 
             # Configurar seleção
-            style.map("Treeview",
+            style.map(REL_ENVIO_TREEVIEW_STYLE,
                       background=[('selected', self.cor_destaque)],
-                      foreground=[('selected', self.cor_texto)])
+                      foreground=[('selected', self._button_text_color(self.cor_destaque))])
 
         except Exception as e:
             print(f"Erro ao aplicar tema treeview: {e}")
@@ -323,31 +332,60 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         self.periodo_var = ctk.StringVar(value="Este mês")
 
         ctk.CTkLabel(filt, text="De:").grid(row=0, column=0, padx=(8, 4), pady=8, sticky="e")
-        ctk.CTkEntry(filt, width=120, textvariable=self.ini_var).grid(row=0, column=1, padx=4, pady=8)
-        ctk.CTkLabel(filt, text="Até:").grid(row=0, column=2, padx=(8, 4), pady=8, sticky="e")
-        ctk.CTkEntry(filt, width=120, textvariable=self.fim_var).grid(row=0, column=3, padx=4, pady=8)
+        self.ini_entry = ctk.CTkEntry(filt, width=120, textvariable=self.ini_var)
+        self.ini_entry.grid(row=0, column=1, padx=4, pady=8)
+        vincular_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(
+            filt,
+            text="📅",
+            width=32,
+            height=28,
+            command=lambda: abrir_calendario(self, self.ini_entry, output_format="%Y-%m-%d"),
+        ).grid(row=0, column=2, padx=(0, 8), pady=8)
+        ctk.CTkLabel(filt, text="Até:").grid(row=0, column=3, padx=(8, 4), pady=8, sticky="e")
+        self.fim_entry = ctk.CTkEntry(filt, width=120, textvariable=self.fim_var)
+        self.fim_entry.grid(row=0, column=4, padx=4, pady=8)
+        vincular_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(
+            filt,
+            text="📅",
+            width=32,
+            height=28,
+            command=lambda: abrir_calendario(self, self.fim_entry, output_format="%Y-%m-%d"),
+        ).grid(row=0, column=5, padx=(0, 8), pady=8)
 
-        ctk.CTkLabel(filt, text="Período:").grid(row=0, column=4, padx=(8, 4), pady=8, sticky="e")
+        ctk.CTkLabel(filt, text="Período:").grid(row=0, column=6, padx=(8, 4), pady=8, sticky="e")
         periodo_menu = ctk.CTkOptionMenu(
             filt,
             values=["Este mês", "Últimos 30 dias", "Todos os períodos"],
             variable=self.periodo_var,
             command=lambda _: self._apply_periodo()
         )
-        periodo_menu.grid(row=0, column=5, padx=4, pady=8)
+        periodo_menu.grid(row=0, column=7, padx=4, pady=8)
 
-        ctk.CTkLabel(filt, text="Buscar:").grid(row=0, column=6, padx=(8, 4), pady=8, sticky="e")
+        ctk.CTkLabel(filt, text="Buscar prestador/codigo:").grid(row=0, column=8, padx=(8, 4), pady=8, sticky="e")
         ent = ctk.CTkEntry(filt, width=280, textvariable=self.busca_var,
-                           placeholder_text="código / descrição / destino / prestador")
-        ent.grid(row=0, column=7, padx=4, pady=8)
+                           placeholder_text="Prestador, codigo, descricao ou destino")
+        ent.grid(row=0, column=9, padx=4, pady=8)
         ent.bind("<Return>", lambda e: self._search())
 
         ctk.CTkButton(filt, text="🔍 Buscar", width=120, command=self._search).grid(
-            row=0, column=8, padx=8, pady=8, sticky="e"
+            row=0, column=10, padx=8, pady=8, sticky="e"
         )
 
         # Abas
-        tabs = ctk.CTkTabview(self)
+        tabs = ctk.CTkTabview(
+            self,
+            fg_color=self.cor_fundo,
+            border_width=1,
+            border_color=self.cor_borda,
+            segmented_button_fg_color=self.cor_secundaria,
+            segmented_button_selected_color=self.cor_destaque,
+            segmented_button_selected_hover_color=self.cor_hover,
+            segmented_button_unselected_color=self.cor_secundaria,
+            segmented_button_unselected_hover_color=self.cor_hover,
+            text_color=self._button_text_color(self.cor_destaque),
+        )
         tabs.grid(row=2, column=0, sticky="nsew", padx=8, pady=8)
         self.tab_interna = tabs.add("Interna")
         self.tab_env = tabs.add("Enviados")
@@ -415,7 +453,7 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         else:
             cols, headers, widths = [], [], []
 
-        tree = ttk.Treeview(wrap, columns=cols, show="headings", height=20)
+        tree = ttk.Treeview(wrap, columns=cols, show="headings", height=20, style=REL_ENVIO_TREEVIEW_STYLE)
         for c, h, w in zip(cols, headers, widths):
             tree.heading(c, text=h)
             tree.column(c, width=w, anchor="center" if c not in ("descricao", "obs") else "w",
@@ -426,8 +464,42 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         tree.configure(yscrollcommand=vs.set, xscrollcommand=hs.set)
         vs.grid(row=0, column=1, sticky="ns")
         hs.grid(row=1, column=0, sticky="ew")
+        empty = ctk.CTkFrame(
+            wrap,
+            fg_color=self.cor_fundo,
+            border_color=self.cor_borda,
+            border_width=1,
+            corner_radius=8,
+        )
+        ctk.CTkLabel(
+            empty,
+            text="Nenhum resultado encontrado para esse filtro.",
+            text_color=self.cor_texto,
+            font=("Arial", 16, "bold"),
+        ).pack(padx=28, pady=(18, 4))
+        ctk.CTkLabel(
+            empty,
+            text="Ajuste o periodo, prestador/codigo ou limpe a busca para ver mais registros.",
+            text_color=self.cor_texto,
+            font=("Arial", 12),
+        ).pack(padx=28, pady=(0, 18))
+        empty.place_forget()
         setattr(self, f"tree_{key}", tree)
         setattr(self, f"cols_{key}", cols)
+        setattr(self, f"empty_{key}", empty)
+
+    def _set_empty_state(self, key, has_rows):
+        empty = getattr(self, f"empty_{key}", None)
+        if not empty:
+            return
+        if has_rows:
+            empty.place_forget()
+        else:
+            empty.place(relx=0.5, rely=0.5, anchor="center")
+            try:
+                empty.lift()
+            except Exception:
+                pass
 
     def _build_report_controls(self):
         """Barra de controles da aba Relatório"""
@@ -517,6 +589,11 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
             if hasattr(self, "tree_fin"):
                 values = [row.get(col, "") for col in self.cols_fin]
                 self.tree_fin.insert("", "end", values=values)
+
+        self._set_empty_state("int", bool(data_int))
+        self._set_empty_state("env", bool(data_env))
+        self._set_empty_state("ret", bool(data_ret))
+        self._set_empty_state("fin", bool(data_fin))
 
     def _search(self):
         """Realiza a pesquisa geral do relatório"""
@@ -1217,7 +1294,6 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
 
 # Teste isolado
 if __name__ == "__main__":
-    ctk.set_appearance_mode("dark")
     root = ctk.CTk()
     root.geometry("1280x720")
     app = RelatorioEnvioDetalhado(root)

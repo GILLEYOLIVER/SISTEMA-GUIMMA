@@ -8,6 +8,7 @@ import os
 from datetime import datetime, date, timedelta
 
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
 import tkinter.ttk as ttk
 from tkinter import messagebox, filedialog
 
@@ -156,10 +157,20 @@ class ContasAPagarPage(ctk.CTkFrame):
 
         self._ui_refs["lbl_from"] = ctk.CTkLabel(filt, text=self._get_text("from"), **lbl)
         self._ui_refs["lbl_from"].grid(row=0, column=0, padx=(8,4), pady=8)
-        ctk.CTkEntry(filt, width=120, textvariable=self.ini_var, **ent).grid(row=0, column=1, padx=4, pady=8)
+        self.ini_entry = ctk.CTkEntry(filt, width=120, textvariable=self.ini_var, **ent)
+        self.ini_entry.grid(row=0, column=1, padx=4, pady=8)
+        vincular_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(filt, text="📅", width=28, height=26,
+                      command=lambda: abrir_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+                      ).grid(row=0, column=1, padx=(86, 4), pady=8, sticky="e")
         self._ui_refs["lbl_to"] = ctk.CTkLabel(filt, text=self._get_text("to"), **lbl)
         self._ui_refs["lbl_to"].grid(row=0, column=2, padx=(8,4), pady=8)
-        ctk.CTkEntry(filt, width=120, textvariable=self.fim_var, **ent).grid(row=0, column=3, padx=4, pady=8)
+        self.fim_entry = ctk.CTkEntry(filt, width=120, textvariable=self.fim_var, **ent)
+        self.fim_entry.grid(row=0, column=3, padx=4, pady=8)
+        vincular_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(filt, text="📅", width=28, height=26,
+                      command=lambda: abrir_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+                      ).grid(row=0, column=3, padx=(86, 4), pady=8, sticky="e")
         self._ui_refs["lbl_status"] = ctk.CTkLabel(filt, text=self._get_text("status"), **lbl)
         self._ui_refs["lbl_status"].grid(row=0, column=4, padx=(8,4), pady=8)
         self._ui_refs["status_cb"] = ctk.CTkComboBox(filt, values=[self._get_text("status_all"), self._get_text("status_sent"), self._get_text("status_progress"), self._get_text("status_pending"), self._get_text("status_finished")], variable=self.status_var, width=140, state="readonly", fg_color=self.theme.cor_terciaria, border_color=self.theme.cor_borda, text_color=self.theme.cor_texto)

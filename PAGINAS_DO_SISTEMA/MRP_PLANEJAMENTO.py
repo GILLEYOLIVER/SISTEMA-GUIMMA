@@ -9,6 +9,7 @@ import webbrowser
 from tkinter import messagebox, ttk
 
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
@@ -733,6 +734,7 @@ class MRPPage(ctk.CTkFrame):
         messagebox.showinfo("MRP", "PDF aberto no navegador. Use Ctrl+P para imprimir.")
 
     def _abrir_calendario(self, entry):
+        return abrir_calendario(self, entry, output_format="%d/%m/%Y")
         from datetime import datetime as _dt
         import calendar as _cal
 
