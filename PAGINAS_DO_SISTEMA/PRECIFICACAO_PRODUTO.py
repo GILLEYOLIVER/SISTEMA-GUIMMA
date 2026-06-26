@@ -310,16 +310,22 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         # Frame principal com tema
         main = ctk.CTkFrame(self, fg_color=self.cor_fundo)
         main.pack(fill="both", expand=True, padx=10, pady=10)
-        main.grid_rowconfigure(99, weight=1)
+        main.grid_rowconfigure(1, weight=1)
         main.grid_columnconfigure(0, weight=1)
 
         # Cabeçalho - COM TEMA
-        header = ctk.CTkFrame(main, fg_color=self.cor_fundo)
+        header = ctk.CTkFrame(
+            main,
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            border_width=1,
+            corner_radius=8,
+        )
         header.grid(row=0, column=0, sticky="ew", padx=8, pady=(8, 4))
-        header.grid_columnconfigure(7, weight=1)
+        header.grid_columnconfigure(3, weight=1)
 
         ctk.CTkLabel(header, text=self.PAGE_TITLE, font=("Arial", 20, "bold"),
-                     text_color=self.cor_texto).grid(row=0, column=0, padx=(0, 12), pady=6, sticky="w")
+                     text_color=self.cor_texto).grid(row=0, column=0, padx=(14, 14), pady=12, sticky="w")
 
         ctk.CTkLabel(header, text="Modelo", text_color=self.cor_texto).grid(row=0, column=1, padx=6)
 
@@ -341,7 +347,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         self.cmb_modelo.grid(row=0, column=2, pady=6)
 
         self.lbl_desc = ctk.CTkLabel(header, text="-", anchor="w", text_color=self.cor_texto)
-        self.lbl_desc.grid(row=0, column=3, padx=12, sticky="w")
+        self.lbl_desc.grid(row=0, column=3, padx=12, sticky="ew")
 
         ctk.CTkButton(header, text="Recarregar", command=self._on_model_change,
                       fg_color=self.cor_primaria, hover_color=self.cor_hover,
@@ -365,14 +371,14 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
             dropdown_hover_color=self.cor_hover
         )
         self.cmb_canal.set("Varejo (Loja)")
-        self.cmb_canal.grid(row=0, column=6, pady=6)
+        self.cmb_canal.grid(row=0, column=6, padx=(0, 14), pady=6)
 
         # Tabs - COM TEMA
-        tabs = ctk.CTkTabview(main, fg_color=self.cor_fundo, segmented_button_fg_color=self.cor_primaria,
+        tabs = ctk.CTkTabview(main, fg_color=self.cor_fundo, segmented_button_fg_color=self.cor_secundaria,
                               segmented_button_selected_color=self.cor_selecao,
                               segmented_button_selected_hover_color=self.cor_hover,
                               text_color=self.cor_texto)
-        tabs.grid(row=1, column=0, sticky="nsew", padx=8, pady=8)
+        tabs.grid(row=1, column=0, sticky="nsew", padx=8, pady=(4, 8))
         self.tab_resumo = tabs.add("Resumo")
         self.tab_custos = tabs.add("Custos")
         self.tab_impostos = tabs.add("Impostos & Margem")
@@ -421,42 +427,64 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
             arred_mode=ctk.StringVar(value="Sem arredondamento"),
         )
 
+        for tab in (self.tab_resumo, self.tab_custos, self.tab_impostos, self.tab_simul, self.tab_bom, self.tab_rel):
+            tab.grid_columnconfigure(0, weight=1)
+            tab.grid_rowconfigure(0, weight=1)
+
         # --- Resumo (cards grandes) ---
-        self._card(self.tab_resumo, "Materiais (R$)", self.v["materiais"], 0, 0, big=True)
-        self._card(self.tab_resumo, "Costura (R$)", self.v["costura"], 0, 1, big=True)
-        self._card(self.tab_resumo, "Overhead/peça (R$)", self.v["overhead"], 1, 0)
-        self._card(self.tab_resumo, "Custo Total (R$)", self.v["custo_total"], 1, 1, big=True)
-        self._card(self.tab_resumo, "Preço Sugerido (R$)", self.v["preco_sugerido"], 2, 0, big=True)
-        self._lucro_unit_label = self._card(self.tab_resumo, "Lucro Unit. (R$)", self.v["lucro_unit"], 2, 1)
-        self._card(self.tab_resumo, "Markup (x)", self.v["markup"], 3, 0)
-        self._card(self.tab_resumo, "Lote Ponto de Equilíbrio", self.v["lote_be"], 3, 1)
+        resumo_panel = self._section(self.tab_resumo, "Resumo da precificação", "Visão rápida dos custos, margem e preço sugerido.")
+        resumo_panel.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
+        for col in range(4):
+            resumo_panel.grid_columnconfigure(col, weight=1, uniform="resumo")
+        resumo_panel.grid_rowconfigure(3, weight=1)
+
+        self._card(resumo_panel, "Materiais (R$)", self.v["materiais"], 1, 0, big=True)
+        self._card(resumo_panel, "Costura (R$)", self.v["costura"], 1, 1, big=True)
+        self._card(resumo_panel, "Overhead/peça (R$)", self.v["overhead"], 1, 2)
+        self._card(resumo_panel, "Custo Total (R$)", self.v["custo_total"], 1, 3, big=True)
+        self._card(resumo_panel, "Preço Sugerido (R$)", self.v["preco_sugerido"], 2, 0, big=True)
+        self._lucro_unit_label = self._card(resumo_panel, "Lucro Unit. (R$)", self.v["lucro_unit"], 2, 1)
+        self._card(resumo_panel, "Markup (x)", self.v["markup"], 2, 2)
+        self._card(resumo_panel, "Lote Ponto de Equilíbrio", self.v["lote_be"], 2, 3)
 
         # --- Custos ---
+        custos_panel = self._section(self.tab_custos, "Parâmetros de custo", "Ajuste os valores usados no cálculo do produto selecionado.")
+        custos_panel.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
+        custos_panel.grid_columnconfigure(0, weight=1)
+        custos_panel.grid_rowconfigure(1, weight=1)
+
+        custos_form = ctk.CTkFrame(custos_panel, fg_color="transparent")
+        custos_form.grid(row=1, column=0, sticky="nw", padx=12, pady=(4, 12))
+        custos_form.grid_columnconfigure(1, minsize=260)
         r = 0
-        self._entry(self.tab_custos, "Materiais / Aviamentos (R$)", "materiais", r);
+        self._entry(custos_form, "Materiais / Aviamentos (R$)", "materiais", r)
         r += 1
-        self._entry(self.tab_custos, "Costura por peça (R$)", "costura", r);
+        self._entry(custos_form, "Costura por peça (R$)", "costura", r)
         r += 1
-        self._entry(self.tab_custos, "Custos fixos/mês (R$)", "fixos_mes", r);
+        self._entry(custos_form, "Custos fixos/mês (R$)", "fixos_mes", r)
         r += 1
-        self._entry(self.tab_custos, "Capacidade/mês (peças)", "capacidade_mes", r);
+        self._entry(custos_form, "Capacidade/mês (peças)", "capacidade_mes", r)
         r += 1
-        self._entry(self.tab_custos, "Overhead por peça (R$)", "overhead", r, readonly=True);
+        self._entry(custos_form, "Overhead por peça (R$)", "overhead", r, readonly=True)
         r += 1
-        self._entry(self.tab_custos, "Custos variáveis unit. (R$)", "variaveis", r);
+        self._entry(custos_form, "Custos variáveis unit. (R$)", "variaveis", r)
         r += 1
-        self._entry(self.tab_custos, "Frete / logística unit. (R$)", "frete", r);
+        self._entry(custos_form, "Frete / logística unit. (R$)", "frete", r)
         r += 1
-        self._entry(self.tab_custos, "Perdas materiais (%)", "perdas_pct", r);
+        self._entry(custos_form, "Perdas materiais (%)", "perdas_pct", r)
         r += 1
-        self._entry(self.tab_custos, "Defeito / retrabalho (%)", "defeito_pct", r);
+        self._entry(custos_form, "Defeito / retrabalho (%)", "defeito_pct", r)
         r += 1
-        self._entry(self.tab_custos, "Lote planejado (peças)", "lote", r);
+        self._entry(custos_form, "Lote planejado (peças)", "lote", r)
         r += 1
-        ctk.CTkButton(self.tab_custos, text="Calcular", command=self._recalc,
-                      fg_color=self.cor_sucesso, hover_color=self.cor_hover,
-                      text_color=get_contraste_texto(self.cor_sucesso)).grid(row=r, column=0, columnspan=2, sticky="ew", pady=8);
-        r += 1
+        ctk.CTkButton(
+            custos_form,
+            text="Calcular",
+            command=self._recalc,
+            fg_color=self.cor_sucesso,
+            hover_color=self.cor_hover,
+            text_color=get_contraste_texto(self.cor_sucesso),
+        ).grid(row=r, column=0, columnspan=2, sticky="ew", pady=(10, 4))
 
         # --- Impostos & Margem ---
         r = 0
@@ -555,20 +583,271 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
                       fg_color=self.cor_sucesso, hover_color=self.cor_hover,
                       text_color=get_contraste_texto(self.cor_sucesso)).grid(row=2, column=0, columnspan=2, padx=6, pady=6, sticky="ew")
 
+        self._reorganizar_abas_precificacao()
+
         # watchers
         for key in ["materiais", "costura", "fixos_mes", "capacidade_mes", "variaveis", "frete", "perdas_pct",
                     "defeito_pct", "impostos_pct", "comissao_pct", "cartao_pct", "margem_pct", "lote"]:
             self.v[key].trace_add("write", lambda *_: self._recalc())
 
     # ---------- helpers de UI
+    def _section(self, parent, title, subtitle=None):
+        frame = ctk.CTkFrame(
+            parent,
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            border_width=1,
+            corner_radius=8,
+        )
+        ctk.CTkLabel(
+            frame,
+            text=title,
+            font=("Arial", 16, "bold"),
+            text_color=self.cor_texto,
+            anchor="w",
+        ).grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 2))
+        if subtitle:
+            ctk.CTkLabel(
+                frame,
+                text=subtitle,
+                text_color=self.cor_texto,
+                anchor="w",
+            ).grid(row=0, column=1, sticky="e", padx=12, pady=(12, 2))
+            frame.grid_columnconfigure(1, weight=1)
+        return frame
+
+    def _clear_tab(self, tab):
+        for child in tab.winfo_children():
+            try:
+                child.grid_forget()
+            except Exception:
+                pass
+            try:
+                child.pack_forget()
+            except Exception:
+                pass
+
+    def _reorganizar_abas_precificacao(self):
+        for tab in (self.tab_impostos, self.tab_simul, self.tab_bom, self.tab_rel):
+            self._clear_tab(tab)
+            tab.grid_columnconfigure(0, weight=1)
+            tab.grid_rowconfigure(0, weight=0)
+            tab.grid_rowconfigure(1, weight=1)
+
+        # Impostos & Margem
+        impostos_panel = self._section(
+            self.tab_impostos,
+            "Impostos e margem",
+            "Percentuais usados para formar o preço sugerido.",
+        )
+        impostos_panel.grid(row=0, column=0, sticky="new", padx=12, pady=12)
+        impostos_form = ctk.CTkFrame(impostos_panel, fg_color="transparent")
+        impostos_form.grid(row=1, column=0, sticky="nw", padx=12, pady=(8, 12))
+        impostos_form.grid_columnconfigure(1, minsize=260)
+
+        r = 0
+        self._entry(impostos_form, "Impostos (%)", "impostos_pct", r)
+        r += 1
+        self._entry(impostos_form, "Comissão (%)", "comissao_pct", r)
+        r += 1
+        self._entry(impostos_form, "Taxa cartão (%)", "cartao_pct", r)
+        r += 1
+        self._entry(impostos_form, "Margem desejada (%)", "margem_pct", r)
+        r += 1
+
+        ctk.CTkLabel(impostos_form, text="Arredondamento", text_color=self.cor_texto).grid(
+            row=r, column=0, padx=6, pady=4, sticky="w"
+        )
+        self.cmb_round = ctk.CTkComboBox(
+            impostos_form,
+            values=self.ROUNDING_MODES,
+            width=260,
+            command=lambda _=None: self._recalc(),
+            fg_color=self.cor_secundaria,
+            border_color=self.cor_borda,
+            button_color=self.cor_primaria,
+            button_hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            dropdown_fg_color=self.cor_secundaria,
+            dropdown_text_color=self.cor_texto,
+            dropdown_hover_color=self.cor_hover,
+        )
+        self.cmb_round.set(self.v["arred_mode"].get())
+        self.cmb_round.grid(row=r, column=1, padx=6, pady=4, sticky="ew")
+        r += 1
+
+        botoes_impostos = ctk.CTkFrame(impostos_form, fg_color="transparent")
+        botoes_impostos.grid(row=r, column=0, columnspan=2, sticky="w", padx=6, pady=(10, 0))
+        ctk.CTkButton(
+            botoes_impostos,
+            text="Salvar perfil como...",
+            width=170,
+            command=self._save_profile_as,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=get_contraste_texto(self.cor_primaria),
+        ).pack(side="left")
+        ctk.CTkButton(
+            botoes_impostos,
+            text="Carregar perfil...",
+            width=170,
+            command=self._load_profile_pick,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=get_contraste_texto(self.cor_primaria),
+        ).pack(side="left", padx=(8, 0))
+
+        # Simulações
+        sim_panel = self._section(
+            self.tab_simul,
+            "Simulações de preço",
+            "Compare preço, lucro e markup por margem.",
+        )
+        sim_panel.grid(row=0, column=0, sticky="new", padx=12, pady=12)
+        sim_panel.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            sim_panel,
+            text="Escada de preços (margem %)",
+            font=("Arial", 13, "bold"),
+            text_color=self.cor_texto,
+        ).grid(row=1, column=0, sticky="w", padx=12, pady=(8, 4))
+        self._sim_table = ctk.CTkTextbox(
+            sim_panel,
+            width=620,
+            height=175,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+        )
+        self._sim_table.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 8))
+
+        alvo_frame = ctk.CTkFrame(sim_panel, fg_color="transparent")
+        alvo_frame.grid(row=3, column=0, sticky="w", padx=12, pady=(0, 8))
+        self._entry(alvo_frame, "Preço alvo do mercado (R$)", "preco_alvo", 0)
+        ctk.CTkButton(
+            alvo_frame,
+            text="Analisar preço alvo",
+            width=150,
+            command=self._analisar_preco_alvo,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=get_contraste_texto(self.cor_primaria),
+        ).grid(row=0, column=2, padx=6)
+        ctk.CTkLabel(alvo_frame, text="Margem atingida (%)", text_color=self.cor_texto).grid(
+            row=0, column=3, padx=(18, 6)
+        )
+        self._out_margem_atingida = ctk.CTkLabel(
+            alvo_frame,
+            textvariable=self.v["margem_atingida"],
+            font=("Arial", 14, "bold"),
+            text_color=self.cor_texto,
+        )
+        self._out_margem_atingida.grid(row=0, column=4, padx=6)
+        ctk.CTkButton(
+            sim_panel,
+            text="Exportar simulações CSV",
+            width=180,
+            command=self._export_csv,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=get_contraste_texto(self.cor_primaria),
+        ).grid(row=4, column=0, sticky="w", padx=12, pady=(0, 12))
+
+        # BOM / Itens
+        bom_panel = self._section(self.tab_bom, "BOM / Itens", "Materiais e aviamentos vinculados ao modelo.")
+        bom_panel.grid(row=0, column=0, sticky="new", padx=12, pady=12)
+        bom_panel.grid_columnconfigure(0, weight=1)
+        self._bom_table = ctk.CTkTextbox(
+            bom_panel,
+            width=760,
+            height=285,
+            fg_color=self.cor_terciaria,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+        )
+        self._bom_table.grid(row=1, column=0, sticky="ew", padx=12, pady=(8, 12))
+
+        # Relatório
+        rel_panel = self._section(self.tab_rel, "Relatório de Pré-Custo", "Gere, imprima ou copie o preço do produto.")
+        rel_panel.grid(row=0, column=0, sticky="new", padx=12, pady=12)
+        rel_actions = ctk.CTkFrame(rel_panel, fg_color="transparent")
+        rel_actions.grid(row=1, column=0, sticky="w", padx=12, pady=(10, 12))
+        ctk.CTkButton(
+            rel_actions,
+            text="Gerar & Abrir HTML",
+            width=150,
+            command=self._gerar_relatorio,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=get_contraste_texto(self.cor_primaria),
+        ).pack(side="left")
+        ctk.CTkButton(
+            rel_actions,
+            text="Imprimir (Windows)",
+            width=150,
+            command=self._imprimir_windows,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=get_contraste_texto(self.cor_primaria),
+        ).pack(side="left", padx=(8, 0))
+        ctk.CTkButton(
+            rel_actions,
+            text="Copiar preço sugerido",
+            width=170,
+            command=self._copy_price,
+            fg_color=self.cor_sucesso,
+            hover_color=self.cor_hover,
+            text_color=get_contraste_texto(self.cor_sucesso),
+        ).pack(side="left", padx=(8, 0))
+
     def _card(self, parent, title, var, row, col, big=False):
-        frame = ctk.CTkFrame(parent, fg_color=self.cor_secundaria)
+        palette = {
+            "materiais": "#0F766E",
+            "costura": "#2563EB",
+            "overhead": "#64748B",
+            "custo total": "#B45309",
+            "preço sugerido": "#1D4ED8",
+            "preco sugerido": "#1D4ED8",
+            "lucro": "#15803D",
+            "markup": "#7C3AED",
+            "lote": "#0E7490",
+        }
+        key = str(title or "").lower()
+        card_color = next((color for token, color in palette.items() if token in key), self.cor_primaria)
+        text_color = get_contraste_texto(card_color)
+        frame = ctk.CTkFrame(
+            parent,
+            fg_color=card_color,
+            border_color=card_color,
+            border_width=0,
+            corner_radius=8,
+        )
+        try:
+            frame._opera_preservar_tema = True
+            frame._opera_keep_custom_color = True
+            frame._opera_card_color = card_color
+        except Exception:
+            pass
         frame.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
         frame.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(frame, text=title, text_color=self.cor_texto).grid(row=0, column=0, pady=(8, 2))
+        title_label = ctk.CTkLabel(frame, text=title, text_color=text_color, anchor="w")
+        try:
+            title_label._opera_preservar_tema = True
+            title_label._opera_keep_custom_color = True
+        except Exception:
+            pass
+        title_label.grid(
+            row=0, column=0, padx=12, pady=(10, 2), sticky="ew"
+        )
         font = ("Arial", 24, "bold") if big else ("Arial", 18, "bold")
-        value_label = ctk.CTkLabel(frame, textvariable=var, font=font, text_color=self.cor_texto)
-        value_label.grid(row=1, column=0, pady=(0, 8))
+        value_label = ctk.CTkLabel(frame, textvariable=var, font=font, text_color=text_color)
+        value_label.grid(row=1, column=0, padx=12, pady=(0, 12), sticky="w")
+        try:
+            value_label._opera_card_text_color = text_color
+            value_label._opera_preservar_tema = True
+            value_label._opera_keep_custom_color = True
+        except Exception:
+            pass
         return value_label
 
     def _entry(self, parent, label, key, row, readonly=False):
@@ -578,7 +857,7 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
                          fg_color=self.cor_terciaria, border_color=self.cor_borda,
                          text_color=self.cor_texto, state=state,
                          placeholder_text_color="#888888")
-        e.grid(row=row, column=1, padx=6, pady=4, sticky="e")
+        e.grid(row=row, column=1, padx=6, pady=4, sticky="ew")
         return e
 
     def _load_model_values(self):
@@ -774,7 +1053,8 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
     def _atualizar_alerta_lucro(self, lucro: float):
         try:
-            self._lucro_unit_label.configure(text_color="#b91c1c" if lucro <= 0 else self.cor_sucesso)
+            card_text = getattr(self._lucro_unit_label, "_opera_card_text_color", get_contraste_texto("#15803D"))
+            self._lucro_unit_label.configure(text_color="#FEE2E2" if lucro <= 0 else card_text)
         except Exception:
             pass
 

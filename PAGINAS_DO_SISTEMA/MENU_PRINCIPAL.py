@@ -54,7 +54,13 @@ from PAGINAS_DO_SISTEMA.ui_after_guard import (
     reset_tk_default_root,
     safe_after_cancel,
 )
+from PAGINAS_DO_SISTEMA.UI_COMBOBOX import (
+    habilitar_duplo_clique_combobox,
+    instalar_duplo_clique_global,
+)
 from PAGINAS_DO_SISTEMA.LOG_SISTEMA import get_logger
+
+instalar_duplo_clique_global()
 
 # ===== IMPORTAÇÕES DO SISTEMA =====
 try:
@@ -488,7 +494,7 @@ class ThemeManager:
 
         def _apply_to_all_widgets(widget):
             parar_recursao = False
-            if getattr(widget, "_opera_preservar_tema", False):
+            if getattr(widget, "_opera_preservar_tema", False) or getattr(widget, "_opera_keep_custom_color", False):
                 return
             try:
                 if isinstance(widget, ctk.CTkFrame):
@@ -551,6 +557,7 @@ class ThemeManager:
                     )
                     parar_recursao = True
                 elif isinstance(widget, ctk.CTkComboBox):
+                    habilitar_duplo_clique_combobox(widget)
                     widget.configure(
                         fg_color=cor_secundaria,
                         border_color=cor_borda,
@@ -791,6 +798,7 @@ class ThemeManager:
                     )
                     parar_recursao = True
                 elif isinstance(widget, ttk.Combobox):
+                    habilitar_duplo_clique_combobox(widget)
                     try:
                         widget.configure(style="Opera.TCombobox")
                     except Exception:
@@ -1228,7 +1236,6 @@ class OperaMenuApp(ctk.CTk):
             "Serviços Pagos",
             "Modelos Produzidos",
             "Acabamento",
-            "Logs e Atividades",
         ],
         "CONFIGURAÇÕES": ["Trocar Usuário", "Usuários", "Temas", "Atualizar Sistema"],
         "BANCO DE DADOS": ["Gerenciar", "Backup"],
@@ -1262,7 +1269,6 @@ class OperaMenuApp(ctk.CTk):
             "Produção": "PRODUÇAO.png", "Serviços Externos": "SERVIÇOS EXTERNOS.png",
             "Serviços Pagos": "DINHEIRO.png",
             "Modelos Produzidos": "MODELOS PRODUZIDOS.png", "Acabamento": "ACABAMENTO.png",
-            "Logs e Atividades": "RELATORIO.png"
         },
         "CONFIGURAÇÕES": {
             "Trocar Usuário": "TROCAR_USUARIO.png", "Usuários": "USUARIOS.png",
@@ -1531,6 +1537,7 @@ class OperaMenuApp(ctk.CTk):
         self._load_initial_theme()
         self._load_icons()
         self._build_interface()
+        self._apply_startup_theme_to_built_interface()
         self._load_user_permissions()
         self._setup_bindings()
         self._setup_activity_logging()
@@ -1542,6 +1549,7 @@ class OperaMenuApp(ctk.CTk):
         self.focus_force()
         self._apply_initial_layout()
         self._open_dashboard_agora()
+        self._apply_startup_theme_to_built_interface()
         self._schedule_theme_refresh_for_frame(self._current_frame)
         self._agendar_after(1200, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
@@ -1764,10 +1772,6 @@ class OperaMenuApp(ctk.CTk):
         tema_escuro = self._is_dark_tk_color(cor_secundaria) or self._is_dark_tk_color(cor_fundo)
         try:
             tema_escuro = tema_escuro or (self._theme_mode_from_name(getattr(self, "current_theme_name", "")) == "dark")
-        except Exception:
-            pass
-        try:
-            tema_escuro = tema_escuro or (ctk.get_appearance_mode().lower() == "dark")
         except Exception:
             pass
 
@@ -2165,6 +2169,28 @@ class OperaMenuApp(ctk.CTk):
             _dprint(f"❌ Erro ao carregar tema: {e}")
             self.current_theme_name = "CLÁSSICO CLARO"
             self.theme_manager.apply_theme("CLÁSSICO CLARO", rebuild_interface=False)
+
+    def _apply_startup_theme_to_built_interface(self):
+        """Reaplica a paleta depois que sidebar, topbar e pagina inicial ja existem."""
+        try:
+            if not hasattr(self, "theme_manager") or not self.theme_manager:
+                return
+            paleta = getattr(self.theme_manager, "current_palette", None)
+            tema_nome = getattr(self, "current_theme_name", None) or "CLÁSSICO CLARO"
+            if not paleta:
+                self.theme_manager.apply_theme(tema_nome, rebuild_interface=False)
+                paleta = getattr(self.theme_manager, "current_palette", None)
+            if not paleta:
+                return
+            self.theme_manager.apply_theme_to_widget(self)
+            if getattr(self, "_current_frame", None):
+                self._apply_theme_to_frame_safely(self._current_frame, force=True)
+            if hasattr(self, "_update_menu_buttons_colors"):
+                self._update_menu_buttons_colors()
+            if hasattr(self, "_sync_theme_switch_with_current_theme"):
+                self.after(20, self._sync_theme_switch_with_current_theme)
+        except Exception as e:
+            _dprint(f"Erro ao sincronizar tema inicial: {e}")
 
     @functools.lru_cache(maxsize=256)
     def _load_icon_asset(self, icon_path: str):
@@ -2852,8 +2878,9 @@ class OperaMenuApp(ctk.CTk):
     def _toggle_theme_mode(self):
         """Switch claro/escuro usando a mesma rotina da página TEMAS (e rebuild ao trocar modo)."""
         try:
-            is_dark = bool(self.theme_switch.get())
-            tema_nome = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
+            is_day = bool(self.theme_switch.get())
+            is_dark = not is_day
+            tema_nome = "CLÁSSICO CLARO" if is_day else "Preto e Ouro"
 
             # Ícone
             if hasattr(self, "icon_theme") and self.icon_theme.winfo_exists():
@@ -2861,7 +2888,7 @@ class OperaMenuApp(ctk.CTk):
 
             # Mantém estado do switch coerente
             try:
-                self.theme_switch.select() if is_dark else self.theme_switch.deselect()
+                self.theme_switch.select() if is_day else self.theme_switch.deselect()
             except Exception:
                 pass
 
@@ -2871,7 +2898,7 @@ class OperaMenuApp(ctk.CTk):
             paleta = paletas.obter_tema(tema_nome) if hasattr(paletas, "obter_tema") else paletas.PADROES.get(tema_nome)
 
             if not paleta:
-                tema_fallback = "Preto e Ouro" if is_dark else "CLÁSSICO CLARO"
+                tema_fallback = "CLÁSSICO CLARO" if is_day else "Preto e Ouro"
                 paleta = paletas.PADROES.get(tema_fallback, {})
 
             # Detecta se está trocando o modo (dark<->light) e força rebuild
@@ -3081,6 +3108,7 @@ class OperaMenuApp(ctk.CTk):
 
     def _hide_submenu(self, categoria: str):
         self._cancel_submenu_hide_timer()
+        self._reset_menu_hover_states()
         frame = self.submenu_frames.get(categoria)
         if frame:
             frame.place_forget()
@@ -3094,7 +3122,7 @@ class OperaMenuApp(ctk.CTk):
         try:
             widget.configure(
                 fg_color=fg,
-                hover=True,
+                hover=False,
                 hover_color=hover_fg,
                 text_color=texto,
                 border_width=border_width,
@@ -3127,11 +3155,9 @@ class OperaMenuApp(ctk.CTk):
 
         def on_leave(_event=None, b=widget):
             cfg = getattr(b, "_opera_menu_hover_cfg", None) or {}
+            self._restore_menu_button_base_state(b)
             try:
-                b.configure(
-                    fg_color=cfg.get("fg"),
-                    text_color=cfg.get("texto"),
-                )
+                b.after_idle(lambda btn=b: self._restore_menu_button_base_state(btn))
             except Exception:
                 pass
 
@@ -3139,6 +3165,43 @@ class OperaMenuApp(ctk.CTk):
             widget.bind("<Enter>", on_enter, add="+")
             widget.bind("<Leave>", on_leave, add="+")
             widget._opera_menu_hover_bound = True
+        except Exception:
+            pass
+
+    def _restore_menu_button_base_state(self, widget):
+        cfg = getattr(widget, "_opera_menu_hover_cfg", None) or {}
+        if not cfg:
+            return
+        try:
+            widget.configure(
+                fg_color=cfg.get("fg"),
+                hover=False,
+                text_color=cfg.get("texto"),
+                border_width=cfg.get("border_width", 1),
+                border_color=cfg.get("border_color", self.cor_borda),
+            )
+        except Exception:
+            pass
+
+    def _reset_menu_hover_states(self):
+        try:
+            for btn_frame in getattr(self, "botoes_menu", {}).values():
+                if not btn_frame.winfo_exists():
+                    continue
+                for child in btn_frame.winfo_children():
+                    if isinstance(child, ctk.CTkButton):
+                        self._restore_menu_button_base_state(child)
+
+            for submenu_frame in getattr(self, "submenu_frames", {}).values():
+                if not submenu_frame.winfo_exists():
+                    continue
+                for inner_frame in submenu_frame.winfo_children():
+                    if isinstance(inner_frame, ctk.CTkFrame):
+                        for btn_container in inner_frame.winfo_children():
+                            if isinstance(btn_container, ctk.CTkFrame):
+                                for btn in btn_container.winfo_children():
+                                    if isinstance(btn, ctk.CTkButton):
+                                        self._restore_menu_button_base_state(btn)
         except Exception:
             pass
 
@@ -3199,6 +3262,7 @@ class OperaMenuApp(ctk.CTk):
 
     def _hide_all_submenus(self):
         self._cancel_submenu_hide_timer()
+        self._reset_menu_hover_states()
         for frame in self.submenu_frames.values():
             try:
                 frame.place_forget()
@@ -3308,7 +3372,7 @@ class OperaMenuApp(ctk.CTk):
             compound="left",
             anchor="w",
             fg_color=style["submenu_bg"],
-            hover=True,
+            hover=False,
             hover_color=style["submenu_hover_bg"],
             text_color=style["submenu_texto"],
             font=("Arial", max(11, int(13 * getattr(self, "ui_scale", 1.0)))),

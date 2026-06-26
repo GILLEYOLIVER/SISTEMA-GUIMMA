@@ -28,7 +28,9 @@ except Exception as e:
         return False, "Módulo de banco de dados não disponível"
 
 # ===================== Aparência base / tema =====================
-ctk.set_appearance_mode("System")
+# Nao altere o modo global do CustomTkinter aqui. Esta tela e carregada dentro
+# do menu principal, e set_appearance_mode() muda o tema do sistema inteiro.
+TREEVIEW_STYLE = "PagamentoServicos.Treeview"
 
 SERVICE_FILTER_OPTIONS = [
     "Todos", "Facção", "Bordado", "Caseador", "Botões",
@@ -286,8 +288,19 @@ class PagamentoModernUI(ctk.CTkFrame):
                 f"Banco de dados não está pronto:\n{msg}\nAlgumas funções podem falhar."
             )
 
+        self._last_fit_signature = None
+        self._initial_fit_done = False
+        self._initial_layout_width, self._initial_layout_height = self._estimate_initial_layout_size(parent)
+
         # monta a interface
         self._build_ui()
+
+        try:
+            base_scale = float(getattr(self._host, "ui_scale", 1.0) or 1.0)
+        except Exception:
+            base_scale = 1.0
+        self.on_host_resize(self._initial_layout_width, self._initial_layout_height, base_scale)
+        self._initial_fit_done = True
 
         # conecta sinal para atualizar tema quando o sistema trocar de tema
         self._conectar_sinal_tema()
@@ -296,20 +309,22 @@ class PagamentoModernUI(ctk.CTkFrame):
         # carrega dados iniciais
         self.pesquisar_finalizados()
 
-        # evita múltiplos reencaixes visíveis na abertura
-        self._last_fit_signature = None
-        self._initial_fit_done = False
+    # ===================== Tema / estilo =====================
+    def _is_dark_mode(self):
         try:
-            self.after(30, self._apply_initial_fit_once)
+            host_bg = getattr(self.sistema, "cor_fundo", None) or getattr(self._host, "cor_fundo", None)
+            if host_bg:
+                return is_dark_color(host_bg)
         except Exception:
             pass
+        try:
+            return ctk.get_appearance_mode() == "Dark"
+        except Exception:
+            return False
 
-    # ===================== Tema / estilo =====================
     def obter_cores_por_tema(self):
         """Define cores de texto dinamicamente baseado no tema atual - MESMO PADRÃO DO CADASTRO_DE_CORTE"""
-        tema_atual = ctk.get_appearance_mode()
-
-        if tema_atual == "Dark":
+        if self._is_dark_mode():
             self.cor_fundo = getattr(self.sistema, "cor_fundo", "#020617")
             self.cor_primaria = getattr(self.sistema, "cor_primaria", "#1f2937")
             self.cor_secundaria = getattr(self.sistema, "cor_secundaria", "#111827")
@@ -346,14 +361,8 @@ class PagamentoModernUI(ctk.CTkFrame):
     def configurar_treeview_theme(self):
         """Configura a Treeview com contraste alto (linhas + cabeçalho), independente do tema."""
         self.style = ttk.Style()
-        try:
-            self.style.theme_use('default')
-        except Exception:
-            pass
 
-        tema_atual = ctk.get_appearance_mode()
-
-        if tema_atual == "Dark":
+        if self._is_dark_mode():
             bg_even = self.cor_fundo
             bg_odd = self.cor_secundaria
             fg = get_contraste_texto(bg_even)
@@ -382,7 +391,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         }
 
         self.style.configure(
-            "Custom.Treeview",
+            TREEVIEW_STYLE,
             background=bg_even,
             foreground=fg,
             fieldbackground=field_bg,
@@ -393,7 +402,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         )
 
         self.style.configure(
-            "Custom.Treeview.Heading",
+            f"{TREEVIEW_STYLE}.Heading",
             background=head_bg,
             foreground=head_fg,
             relief="flat",
@@ -402,7 +411,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         )
 
         self.style.map(
-            'Custom.Treeview',
+            TREEVIEW_STYLE,
             background=[('selected', sel_bg)],
             foreground=[('selected', get_contraste_texto(sel_bg))]
         )
@@ -411,21 +420,6 @@ class PagamentoModernUI(ctk.CTkFrame):
         """Aplica o tema ttk - MESMO ESTILO DO CADASTRO_DE_CORTE"""
         try:
             self.configurar_treeview_theme()
-
-            # Configurar estilo para outros widgets ttk
-            style = ttk.Style()
-            style.configure("Vertical.TScrollbar",
-                            background=self.cor_secundaria,
-                            troughcolor=self.cor_fundo,
-                            bordercolor=self.cor_borda)
-
-            style.configure("TCombobox",
-                            fieldbackground=self.cor_secundaria,
-                            background=self.cor_secundaria,
-                            foreground=self.cor_texto)
-            style.map("TCombobox",
-                      fieldbackground=[("readonly", self.cor_secundaria)],
-                      foreground=[("readonly", self.cor_texto)])
         except Exception:
             pass
 
@@ -511,7 +505,41 @@ class PagamentoModernUI(ctk.CTkFrame):
         ).grid(row=row, column=column, sticky="w", padx=4, pady=1, **kwargs)
 
     # ===================== Construção da UI =====================
+    def _estimate_initial_layout_size(self, parent=None):
+        """Calcula o tamanho real da área da página antes do primeiro desenho."""
+        candidates = []
+        for widget in (
+            getattr(self.sistema, "content", None),
+            getattr(self.sistema, "content_frame", None),
+            getattr(self._host, "content", None),
+            getattr(self._host, "content_frame", None),
+            parent,
+        ):
+            if widget is None:
+                continue
+            try:
+                if widget.winfo_exists():
+                    widget.update_idletasks()
+                    candidates.append((int(widget.winfo_width() or 0), int(widget.winfo_height() or 0)))
+            except Exception:
+                pass
+
+        try:
+            top = parent.winfo_toplevel() if parent is not None else self.winfo_toplevel()
+            top.update_idletasks()
+            top_w = int(top.winfo_width() or top.winfo_screenwidth() or 0)
+            top_h = int(top.winfo_height() or top.winfo_screenheight() or 0)
+            candidates.append((max(760, top_w - 360), max(520, top_h - 90)))
+        except Exception:
+            pass
+
+        for width, height in candidates:
+            if width > 700 and height > 450:
+                return width, height
+        return 1560, 930
+
     def _build_ui(self):
+        initial_width = max(760, int(getattr(self, "_initial_layout_width", 1560) or 1560))
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=2)
         self.grid_rowconfigure(2, weight=1)
@@ -591,8 +619,8 @@ class PagamentoModernUI(ctk.CTkFrame):
         content_frame = ctk.CTkFrame(self, fg_color=self.main_bg, corner_radius=0)
         self.content_frame = content_frame
         content_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=4, pady=(0, 6))
-        content_frame.grid_columnconfigure(0, weight=1)
-        content_frame.grid_columnconfigure(1, weight=2)
+        content_frame.grid_columnconfigure(0, weight=1, minsize=max(300, int(initial_width * 0.34)))
+        content_frame.grid_columnconfigure(1, weight=2, minsize=max(430, int(initial_width * 0.56)))
         content_frame.grid_rowconfigure(0, weight=1)
 
         # painel esquerdo (lista) - MESMO ESTILO DO CADASTRO_DE_CORTE
@@ -622,7 +650,7 @@ class PagamentoModernUI(ctk.CTkFrame):
         tree_container.grid_columnconfigure(0, weight=1)
 
         cols = ("id", "tipo_servico", "codigo", "descricao", "costureira", "data_envio", "data_chegada", "total_qtd")
-        self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=8, style="Custom.Treeview")
+        self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=8, style=TREEVIEW_STYLE)
         headings = ["ID", "Serviço", "Código", "Descrição", "Costureira", "Envio", "Chegada", "Qtd"]
         tree_widths = {
             "id": 50,
@@ -651,7 +679,7 @@ class PagamentoModernUI(ctk.CTkFrame):
 
         defeitos_cols = ("id", "prestador", "codigo", "descricao", "tamanho", "quantidade", "data_retorno", "status")
         self.defeitos_tree = ttk.Treeview(defeitos_container, columns=defeitos_cols, show="headings",
-                                          height=8, style="Custom.Treeview")
+                                          height=8, style=TREEVIEW_STYLE)
         defeitos_headings = ["ID", "Prestador", "Código", "Descrição", "Tam", "Qtd", "Retorno", "Status"]
         defeitos_widths = {
             "id": 50,
@@ -696,9 +724,9 @@ class PagamentoModernUI(ctk.CTkFrame):
         right_panel = ctk.CTkFrame(content_frame, fg_color=self.main_bg, corner_radius=0)
         self.right_panel = right_panel
         right_panel.grid(row=0, column=1, sticky="nsew")
-        right_panel.grid_columnconfigure(0, weight=1)
-        right_panel.grid_columnconfigure(1, weight=1)
-        right_panel.grid_columnconfigure(2, weight=1)
+        right_panel.grid_columnconfigure(0, weight=1, minsize=max(170, int(initial_width * 0.18)))
+        right_panel.grid_columnconfigure(1, weight=1, minsize=max(170, int(initial_width * 0.18)))
+        right_panel.grid_columnconfigure(2, weight=1, minsize=max(170, int(initial_width * 0.18)))
         right_panel.grid_rowconfigure(3, weight=1)
 
         # resumo de pagamento - MESMO ESTILO DO CADASTRO_DE_CORTE
@@ -1317,12 +1345,12 @@ class PagamentoModernUI(ctk.CTkFrame):
             tree_font = max(7, int(10 * local))
             row_height = max(18, int(26 * local))
             self.style.configure(
-                "Custom.Treeview",
+                TREEVIEW_STYLE,
                 rowheight=row_height,
                 font=('Arial', tree_font)
             )
             self.style.configure(
-                "Custom.Treeview.Heading",
+                f"{TREEVIEW_STYLE}.Heading",
                 font=('Arial', max(7, int(10 * local)), 'bold')
             )
         except Exception:

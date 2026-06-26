@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 from PAGINAS_DO_SISTEMA import TEMAS
 import customtkinter as ctk
+import tkinter as tk
 from tkinter import ttk, messagebox, Toplevel, filedialog
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageTk
-from datetime import datetime
+from datetime import date, datetime, timedelta
 # >>> REMOVIDO sqlite3
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.units import cm
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
 
 # ====== ACESSO AO POSTGRES ======
 try:
@@ -34,6 +36,14 @@ def cor_e_clara(cor):
         r, g, b = [int(cor[i:i + 2], 16) for i in (0, 2, 4)]
         return (r * 299 + g * 587 + b * 114) / 1000 > 128
     return False
+
+
+def _first_day_of_month(d: date) -> date:
+    return d.replace(day=1)
+
+
+def _last_day_of_month(d: date) -> date:
+    return (d.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
 
 
 class OrdemCorteFinalizada(ctk.CTkFrame):
@@ -419,6 +429,9 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         self._ui_refs = {}
         self.dados_ordem_atual = None
         self._ultimo_pdf_temp = None  # caminho do último PDF gerado para preview
+        hoje = date.today()
+        self.periodo_inicio_var = tk.StringVar(value=_first_day_of_month(hoje).strftime("%Y-%m-%d"))
+        self.periodo_fim_var = tk.StringVar(value=_last_day_of_month(hoje).strftime("%Y-%m-%d"))
 
         # ------------------------ UI: BUSCA ------------------------
         frame_busca = ctk.CTkFrame(self, fg_color=self.cor_fundo)
@@ -448,6 +461,65 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
             fg_color=self.cor_imprimir, hover_color=self.cor_hover, text_color=self.cor_texto
         )
         self._ui_refs["print_button"].pack(side="left", padx=5)
+
+        frame_periodo = ctk.CTkFrame(self, fg_color=self.cor_fundo)
+        frame_periodo.pack(fill="x", padx=10, pady=(0, 5))
+
+        ctk.CTkLabel(frame_periodo, text="Período:", text_color=self.cor_texto).pack(side="left", padx=(0, 8))
+        ctk.CTkLabel(frame_periodo, text="Início", text_color=self.cor_texto).pack(side="left", padx=(0, 4))
+        self.periodo_inicio_entry = ctk.CTkEntry(
+            frame_periodo,
+            textvariable=self.periodo_inicio_var,
+            width=120,
+            text_color=self.cor_texto,
+            fg_color=self.cor_fundo,
+            border_color=self.cor_borda,
+        )
+        self.periodo_inicio_entry.pack(side="left")
+        vincular_calendario(self, self.periodo_inicio_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(
+            frame_periodo,
+            text="📅",
+            width=32,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            command=lambda: self._abrir_calendario_periodo(self.periodo_inicio_entry),
+        ).pack(side="left", padx=(4, 12))
+
+        ctk.CTkLabel(frame_periodo, text="Fim", text_color=self.cor_texto).pack(side="left", padx=(0, 4))
+        self.periodo_fim_entry = ctk.CTkEntry(
+            frame_periodo,
+            textvariable=self.periodo_fim_var,
+            width=120,
+            text_color=self.cor_texto,
+            fg_color=self.cor_fundo,
+            border_color=self.cor_borda,
+        )
+        self.periodo_fim_entry.pack(side="left")
+        vincular_calendario(self, self.periodo_fim_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(
+            frame_periodo,
+            text="📅",
+            width=32,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            command=lambda: self._abrir_calendario_periodo(self.periodo_fim_entry),
+        ).pack(side="left", padx=(4, 12))
+
+        ctk.CTkButton(
+            frame_periodo,
+            text="Limpar período",
+            width=120,
+            fg_color=self.cor_alerta,
+            hover_color=self.cor_hover,
+            text_color=self.cor_texto,
+            command=self._limpar_periodo_busca,
+        ).pack(side="left", padx=(0, 5))
+
+        self.periodo_inicio_entry.bind("<Return>", lambda _e: self.buscar_ordem(), add="+")
+        self.periodo_fim_entry.bind("<Return>", lambda _e: self.buscar_ordem(), add="+")
 
         # ------------------------ UI: INFO BÁSICAS ------------------------
         frame_info = ctk.CTkFrame(self, fg_color=self.cor_fundo)
@@ -639,14 +711,45 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                   background=[('selected', self.cor_primaria)],
                   foreground=[('selected', self.cor_texto)])
 
+    def _abrir_calendario_periodo(self, entry):
+        return abrir_calendario(self, entry, output_format="%Y-%m-%d")
+
+    def _limpar_periodo_busca(self):
+        self.periodo_inicio_var.set("")
+        self.periodo_fim_var.set("")
+
+    def _parse_data_busca(self, valor):
+        texto = str(valor or "").strip()
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(texto[:10], fmt).date()
+            except Exception:
+                pass
+        return None
+
     # -------------------- Busca & carga (Agora no PostgreSQL) --------------------
     def buscar_ordem(self):
         termo = (self.ordem_busca_entry.get() or "").strip()
-        if not termo:
+        data_inicio = self._parse_data_busca(self.periodo_inicio_var.get())
+        data_fim = self._parse_data_busca(self.periodo_fim_var.get())
+        if not termo and not data_inicio and not data_fim:
             messagebox.showwarning(self._get_text("search_title"), self._get_text("type_code_or_description"))
             return
         try:
             schema = get_schema()
+            where = []
+            params = []
+            if termo:
+                where.append("(codigo ILIKE %s OR descricao ILIKE %s)")
+                params.extend([f"%{termo}%", f"%{termo}%"])
+            if data_inicio:
+                where.append("data >= %s")
+                params.append(data_inicio)
+            if data_fim:
+                where.append("data <= %s")
+                params.append(data_fim)
+            where_sql = " WHERE " + " AND ".join(where) if where else ""
+
             with get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(f"SET LOCAL search_path = {schema};")
@@ -669,11 +772,12 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
                             rendimento,
                             observacoes
                         FROM {schema}.cadastro_de_corte
-                        WHERE codigo ILIKE %s OR descricao ILIKE %s
+                        {where_sql}
                         ORDER BY
+                            data DESC NULLS LAST,
                             COALESCE(NULLIF(numero_ordem,'')::int, 0) DESC,
                             id DESC
-                    """, (f"%{termo}%", f"%{termo}%"))
+                    """, tuple(params))
                     resultados = cur.fetchall()
 
             if not resultados:

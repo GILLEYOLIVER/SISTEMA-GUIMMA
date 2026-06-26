@@ -172,7 +172,7 @@ class DatabaseTemaManager:
                         continue
 
                 settings = {
-                    "theme": tema_nome or "Noite Urbana",
+                    "theme": tema_nome or "CLÁSSICO CLARO",
                     "custom_themes": custom_themes,
                     "excluded_default_themes": [],
                     "usar_tema_personalizado": bool(usar_tema_personalizado),
@@ -213,7 +213,7 @@ class DatabaseTemaManager:
                 temas_personalizados_json = json.dumps(
                     {nome: _sanitize_palette(pal) for nome, pal in custom.items() if isinstance(pal, dict)}
                 )
-                tema_nome = settings.get("theme", "Noite Urbana")
+                tema_nome = settings.get("theme", "CLÁSSICO CLARO")
                 usar_tema_personalizado = bool(settings.get("usar_tema_personalizado", False))
 
                 cursor.execute(
@@ -368,7 +368,7 @@ class DatabaseTemaManager:
 
     def _criar_preferencias_padrao(self, user_id: int) -> Dict:
         settings = {
-            "theme": "Noite Urbana",
+            "theme": "CLÁSSICO CLARO",
             "custom_themes": {},
             "excluded_default_themes": [],
             "usar_tema_personalizado": False,
@@ -382,7 +382,7 @@ class DatabaseTemaManager:
     def _get_fallback_settings(self) -> Dict:
         print("⚠️ Usando fallback settings")
         return {
-            "theme": "Noite Urbana",
+            "theme": "CLÁSSICO CLARO",
             "custom_themes": {},
             "excluded_default_themes": [],
             "aplicar_dashboard": True,

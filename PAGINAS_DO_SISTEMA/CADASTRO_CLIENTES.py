@@ -31,9 +31,61 @@ class ClientesPage(ctk.CTkFrame):
         self.selected_id = None
         self.filter_search = None
         self._ui_refs = {}
+        self._init_theme_tokens()
         self._build()
         self._verificar_conexao()
         self.after(200, self._carregar_clientes)
+
+    def _init_theme_tokens(self):
+        self.page_bg = getattr(self.sistema, "cor_fundo", "#f8fafc")
+        self.card_bg = getattr(self.sistema, "cor_secundaria", "#ffffff")
+        self.input_bg = getattr(self.sistema, "cor_terciaria", "#eef2f7")
+        self.text_color = getattr(self.sistema, "cor_texto", "#0f172a")
+        self.muted_color = getattr(self.sistema, "cor_texto_secundario", "#475569")
+        self.border_color = getattr(self.sistema, "cor_borda", "#cbd5e1")
+        self.primary_color = getattr(self.sistema, "cor_primaria", "#2563eb")
+        self.hover_color = getattr(self.sistema, "cor_hover", "#1d4ed8")
+        self.success_color = getattr(self.sistema, "cor_sucesso", "#047857")
+        self.danger_color = getattr(self.sistema, "cor_erro", "#dc2626")
+        self.export_color = "#6d4fd8"
+
+    def _button_text_color(self, bg):
+        try:
+            value = str(bg or "").lstrip("#")
+            if len(value) != 6:
+                return "#ffffff"
+            r, g, b = (int(value[i:i + 2], 16) for i in (0, 2, 4))
+            lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+            return "#000000" if lum > 0.62 else "#ffffff"
+        except Exception:
+            return "#ffffff"
+
+    def _apply_tree_style(self):
+        style = ttk.Style()
+        tree_style = "Clientes.Treeview"
+        style.configure(
+            tree_style,
+            background="#ffffff",
+            fieldbackground="#ffffff",
+            foreground="#111827",
+            rowheight=28,
+            borderwidth=0,
+            font=("Arial", 10),
+        )
+        style.configure(
+            f"{tree_style}.Heading",
+            background="#eef2f7",
+            foreground="#111827",
+            relief="flat",
+            font=("Arial", 10, "bold"),
+            padding=(8, 6),
+        )
+        style.map(
+            tree_style,
+            background=[("selected", "#bfdbfe")],
+            foreground=[("selected", "#111827")],
+        )
+        return tree_style
 
     # =========================
     # IDIOMA
@@ -252,24 +304,24 @@ class ClientesPage(ctk.CTkFrame):
         self._carregar_clientes()
 
     def _build(self):
-        self.configure(fg_color="transparent")
+        self.configure(fg_color=self.page_bg)
         self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         self._build_header()
         self._build_toolbar()
         self._build_body()
-        self._build_search_footer()
 
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color="transparent")
-        header.grid(row=0, column=0, sticky="ew", padx=24, pady=(20, 10))
+        header.grid(row=0, column=0, sticky="ew", padx=20, pady=(14, 8))
         header.grid_columnconfigure(0, weight=1)
 
         self._ui_refs["title_label"] = ctk.CTkLabel(
             header,
             text=self._get_text("page_title"),
-            font=ctk.CTkFont(size=22, weight="bold"),
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=self.text_color,
         )
         self._ui_refs["title_label"].grid(row=0, column=0, sticky="w")
 
@@ -277,10 +329,17 @@ class ClientesPage(ctk.CTkFrame):
             header,
             text=self._get_text("page_subtitle"),
             font=ctk.CTkFont(size=12),
+            text_color=self.muted_color,
         )
         self._ui_refs["subtitle_label"].grid(row=1, column=0, sticky="w", pady=(4, 0))
 
-        form_header = ctk.CTkFrame(header)
+        form_header = ctk.CTkFrame(
+            header,
+            fg_color=self.card_bg,
+            border_width=1,
+            border_color=self.border_color,
+            corner_radius=8,
+        )
         form_header.grid(row=2, column=0, sticky="ew", pady=(14, 0))
         form_header.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
@@ -300,34 +359,91 @@ class ClientesPage(ctk.CTkFrame):
         self._add_entry(form_header, self._get_text("form_notes"), "observacoes", 3, column=2, columnspan=2, height=70, multiline=True)
 
     def _build_toolbar(self):
-        toolbar = ctk.CTkFrame(self)
-        toolbar.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
+        toolbar = ctk.CTkFrame(self, fg_color="transparent")
+        toolbar.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 10))
         toolbar.grid_columnconfigure(3, weight=1)
 
-        self._ui_refs["btn_new"] = ctk.CTkButton(toolbar, text=self._get_text("btn_new"), command=self._limpar_formulario)
+        self._ui_refs["btn_new"] = ctk.CTkButton(
+            toolbar, text=self._get_text("btn_new"), command=self._limpar_formulario,
+            width=140, height=32, fg_color=self.primary_color, hover_color=self.hover_color,
+            text_color=self._button_text_color(self.primary_color), corner_radius=6,
+        )
         self._ui_refs["btn_new"].grid(row=0, column=0, padx=(0, 8))
-        self._ui_refs["btn_save"] = ctk.CTkButton(toolbar, text=self._get_text("btn_save"), command=self._salvar_cliente)
+        self._ui_refs["btn_save"] = ctk.CTkButton(
+            toolbar, text=self._get_text("btn_save"), command=self._salvar_cliente,
+            width=140, height=32, fg_color=self.success_color,
+            text_color=self._button_text_color(self.success_color), corner_radius=6,
+        )
         self._ui_refs["btn_save"].grid(row=0, column=1, padx=(0, 8))
-        self._ui_refs["btn_inactivate"] = ctk.CTkButton(toolbar, text=self._get_text("btn_inactivate"), command=self._inativar_cliente)
+        self._ui_refs["btn_inactivate"] = ctk.CTkButton(
+            toolbar, text=self._get_text("btn_inactivate"), command=self._inativar_cliente,
+            width=140, height=32, fg_color=self.danger_color,
+            text_color=self._button_text_color(self.danger_color), corner_radius=6,
+        )
         self._ui_refs["btn_inactivate"].grid(row=0, column=2, padx=(0, 8))
-        self._ui_refs["btn_export"] = ctk.CTkButton(toolbar, text=self._get_text("btn_export"), command=self._exportar_cliente)
+        self._ui_refs["btn_export"] = ctk.CTkButton(
+            toolbar, text=self._get_text("btn_export"), command=self._exportar_cliente,
+            width=140, height=32, fg_color=self.export_color,
+            text_color=self._button_text_color(self.export_color), corner_radius=6,
+        )
         self._ui_refs["btn_export"].grid(row=0, column=4)
 
     def _build_body(self):
         body = ctk.CTkFrame(self, fg_color="transparent")
-        body.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 10))
+        body.grid(row=2, column=0, sticky="nsew", padx=20, pady=(0, 16))
         body.grid_columnconfigure(0, weight=1)
         body.grid_rowconfigure(0, weight=1)
 
-        list_frame = ctk.CTkFrame(body)
+        list_frame = ctk.CTkFrame(
+            body,
+            fg_color=self.card_bg,
+            border_width=1,
+            border_color=self.border_color,
+            corner_radius=8,
+        )
         list_frame.grid(row=0, column=0, sticky="nsew")
         list_frame.grid_columnconfigure(0, weight=1)
-        list_frame.grid_rowconfigure(1, weight=1)
+        list_frame.grid_rowconfigure(2, weight=1)
 
-        self._ui_refs["list_title"] = ctk.CTkLabel(list_frame, text=self._get_text("list_title"), font=ctk.CTkFont(size=14, weight="bold"))
-        self._ui_refs["list_title"].grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
+        list_top = ctk.CTkFrame(list_frame, fg_color="transparent")
+        list_top.grid(row=0, column=0, columnspan=2, sticky="ew", padx=14, pady=(12, 8))
+        list_top.grid_columnconfigure(1, weight=1)
 
-        self.tree = ttk.Treeview(list_frame, columns=("id", "nome", "documento", "cidade", "status", "ultima_compra"), show="headings", height=12)
+        self._ui_refs["list_title"] = ctk.CTkLabel(
+            list_top,
+            text=self._get_text("list_title"),
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=self.text_color,
+        )
+        self._ui_refs["list_title"].grid(row=0, column=0, sticky="w")
+
+        search_group = ctk.CTkFrame(list_top, fg_color="transparent")
+        search_group.grid(row=0, column=1, sticky="e")
+        self._ui_refs["search_label"] = ctk.CTkLabel(
+            search_group,
+            text=self._get_text("search_label"),
+            text_color=self.muted_color,
+        )
+        self._ui_refs["search_label"].grid(row=0, column=0, padx=(0, 8))
+        self.filter_search = ctk.CTkEntry(
+            search_group,
+            width=420,
+            placeholder_text=self._get_text("search_placeholder"),
+            fg_color=self.input_bg,
+            border_color=self.border_color,
+            text_color=self.text_color,
+        )
+        self.filter_search.grid(row=0, column=1)
+        self.filter_search.bind("<KeyRelease>", self._filtrar_em_tempo_real)
+
+        tree_style = self._apply_tree_style()
+        self.tree = ttk.Treeview(
+            list_frame,
+            columns=("id", "nome", "documento", "cidade", "status", "ultima_compra"),
+            show="headings",
+            height=12,
+            style=tree_style,
+        )
         self.tree.heading("id", text=self._get_text("col_id"))
         self.tree.heading("nome", text=self._get_text("col_name"))
         self.tree.heading("documento", text=self._get_text("col_document"))
@@ -344,43 +460,62 @@ class ClientesPage(ctk.CTkFrame):
 
         tree_scroll = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=tree_scroll.set)
-        self.tree.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
-        tree_scroll.grid(row=1, column=1, sticky="ns", pady=(0, 16))
+        self.tree.grid(row=2, column=0, sticky="nsew", padx=(14, 0), pady=(0, 10))
+        tree_scroll.grid(row=2, column=1, sticky="ns", pady=(0, 10), padx=(0, 14))
 
-        summary = ctk.CTkFrame(list_frame)
-        summary.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 16))
+        summary = ctk.CTkFrame(list_frame, fg_color=self.input_bg, corner_radius=6)
+        summary.grid(row=3, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 12))
         summary.grid_columnconfigure(0, weight=1)
-        self.summary_label = ctk.CTkLabel(summary, text=self._get_text("summary_empty"), font=ctk.CTkFont(size=12))
-        self.summary_label.grid(row=0, column=0, sticky="w", padx=12, pady=8)
+        self.summary_label = ctk.CTkLabel(
+            summary,
+            text=self._get_text("summary_empty"),
+            font=ctk.CTkFont(size=12),
+            text_color=self.text_color,
+        )
+        self.summary_label.grid(row=0, column=0, sticky="w", padx=12, pady=7)
 
     def _build_search_footer(self):
-        footer = ctk.CTkFrame(self)
-        footer.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 24))
-        footer.grid_columnconfigure(1, weight=1)
-
-        self._ui_refs["search_label"] = ctk.CTkLabel(footer, text=self._get_text("search_label"))
-        self._ui_refs["search_label"].grid(row=0, column=0, padx=(12, 8), pady=10)
-        self.filter_search = ctk.CTkEntry(footer, placeholder_text=self._get_text("search_placeholder"))
-        self.filter_search.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=10)
-        self.filter_search.bind("<KeyRelease>", self._filtrar_em_tempo_real)
+        return
 
     def _add_entry(self, parent, label, key, row, column=0, columnspan=1, height=None, multiline=False, required=False):
         label_text = f"{label} *" if required else label
-        lbl = ctk.CTkLabel(parent, text=label_text)
+        lbl = ctk.CTkLabel(parent, text=label_text, text_color=self.text_color, font=ctk.CTkFont(size=11))
         lbl.grid(row=row * 2, column=column, columnspan=columnspan, sticky="w", padx=12, pady=(10 if row == 0 else 0, 2))
         self._field_labels[key] = lbl
         if multiline:
-            entry = ctk.CTkTextbox(parent, height=height or 80)
+            entry = ctk.CTkTextbox(
+                parent,
+                height=height or 80,
+                fg_color=self.input_bg,
+                border_color=self.border_color,
+                border_width=1,
+                text_color=self.text_color,
+            )
         else:
-            entry = ctk.CTkEntry(parent)
+            entry = ctk.CTkEntry(
+                parent,
+                fg_color=self.input_bg,
+                border_color=self.border_color,
+                text_color=self.text_color,
+                height=28,
+            )
         entry.grid(row=row * 2 + 1, column=column, columnspan=columnspan, sticky="ew", padx=12, pady=(0, 8))
         self.entries[key] = entry
 
     def _add_option(self, parent, label, key, values, row, column=0):
-        lbl = ctk.CTkLabel(parent, text=label)
+        lbl = ctk.CTkLabel(parent, text=label, text_color=self.text_color, font=ctk.CTkFont(size=11))
         lbl.grid(row=row * 2, column=column, sticky="w", padx=12, pady=(10 if row == 0 else 0, 2))
         self._field_labels[key] = lbl
-        option = ctk.CTkOptionMenu(parent, values=values)
+        option = ctk.CTkOptionMenu(
+            parent,
+            values=values,
+            fg_color=self.primary_color,
+            button_color=self.primary_color,
+            button_hover_color=self.hover_color,
+            text_color=self._button_text_color(self.primary_color),
+            height=28,
+            width=140,
+        )
         option.set(values[0])
         option.grid(row=row * 2 + 1, column=column, sticky="w", padx=12, pady=(0, 8))
         self.entries[key] = option

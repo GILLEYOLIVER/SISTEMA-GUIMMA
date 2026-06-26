@@ -8,12 +8,13 @@ Usa o mesmo padrão de banco, temas e estilo da NOVA_ORDEM.py
 from PAGINAS_DO_SISTEMA import TEMAS
 import os
 import logging
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk, messagebox
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
 try:
     import importlib.util as _importlib_util
     from pathlib import Path as _Path
@@ -35,7 +36,6 @@ except Exception:
     except Exception:
         OrdemCorte = None
 import json
-from datetime import date, datetime
 
 
 # ===================== Configuração de logger =====================
@@ -72,6 +72,14 @@ if not PASTA_ORDENS_CORTE:
     BASE_DB_DIR = os.path.join("../src", "BANCO DE DADOS", "ORDENS_CORTE")
     os.makedirs(BASE_DB_DIR, exist_ok=True)
     PASTA_ORDENS_CORTE = BASE_DB_DIR
+
+
+def _first_day_of_month(d: date) -> date:
+    return d.replace(day=1)
+
+
+def _last_day_of_month(d: date) -> date:
+    return (d.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
 
 
 def _exec_all(query: str, params=()):
@@ -224,6 +232,9 @@ class OrdensCorteImpressao(ctk.CTkFrame):
 
         self._logical_cols = []
         self._select_cols = []
+        hoje = date.today()
+        self.filtro_inicio_var = tk.StringVar(value=_first_day_of_month(hoje).strftime("%Y-%m-%d"))
+        self.filtro_fim_var = tk.StringVar(value=_last_day_of_month(hoje).strftime("%Y-%m-%d"))
 
         self._configurar_colunas_banco()
         self._build_ui()
@@ -314,7 +325,8 @@ class OrdensCorteImpressao(ctk.CTkFrame):
     #   Construção da interface
     # ----------------------------------------------------------
     def _build_ui(self):
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         # Cabeçalho
@@ -324,34 +336,87 @@ class OrdensCorteImpressao(ctk.CTkFrame):
 
         titulo = ctk.CTkLabel(
             header,
-            text="REIMPRIMIR-ORDENS",
-            font=("Arial", 18, "bold"),
+            text="Reimprimir Ordens de Corte",
+            font=("Arial", 20, "bold"),
             text_color=self.cor_texto,
         )
         titulo.grid(row=0, column=0, sticky="w")
 
         # Filtros
-        filtros = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        filtros.grid(row=1, column=0, sticky="ew", padx=10)
-        for i in range(5):
+        filtros = ctk.CTkFrame(
+            self,
+            fg_color=self.cor_fundo,
+            border_color=self.cor_borda,
+            border_width=1,
+            corner_radius=8,
+        )
+        filtros.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+        for i in range(12):
             filtros.grid_columnconfigure(i, weight=0)
-        filtros.grid_columnconfigure(5, weight=1)
+        filtros.grid_columnconfigure(10, weight=1)
 
         ctk.CTkLabel(
             filtros, text="Código:", text_color=self.cor_texto, font=("Arial", 12)
-        ).grid(row=0, column=0, padx=(0, 4), pady=4, sticky="w")
+        ).grid(row=0, column=0, padx=(10, 4), pady=10, sticky="w")
         self.filtro_codigo = ctk.CTkEntry(
-            filtros, width=120, fg_color="white", text_color="black"
+            filtros, width=120, fg_color=self.cor_fundo, text_color=self.cor_texto, border_color=self.cor_borda
         )
-        self.filtro_codigo.grid(row=0, column=1, padx=(0, 10), pady=4, sticky="w")
+        self.filtro_codigo.grid(row=0, column=1, padx=(0, 10), pady=10, sticky="w")
 
         ctk.CTkLabel(
             filtros, text="Descrição:", text_color=self.cor_texto, font=("Arial", 12)
-        ).grid(row=0, column=2, padx=(0, 4), pady=4, sticky="w")
+        ).grid(row=0, column=2, padx=(0, 4), pady=10, sticky="w")
         self.filtro_descricao = ctk.CTkEntry(
-            filtros, width=260, fg_color="white", text_color="black"
+            filtros, width=260, fg_color=self.cor_fundo, text_color=self.cor_texto, border_color=self.cor_borda
         )
-        self.filtro_descricao.grid(row=0, column=3, padx=(0, 10), pady=4, sticky="w")
+        self.filtro_descricao.grid(row=0, column=3, padx=(0, 10), pady=10, sticky="w")
+
+        if self.col_data_final:
+            ctk.CTkLabel(
+                filtros, text="Início:", text_color=self.cor_texto, font=("Arial", 12)
+            ).grid(row=0, column=4, padx=(0, 4), pady=10, sticky="w")
+            self.filtro_inicio_entry = ctk.CTkEntry(
+                filtros,
+                textvariable=self.filtro_inicio_var,
+                width=118,
+                fg_color=self.cor_fundo,
+                text_color=self.cor_texto,
+                border_color=self.cor_borda,
+            )
+            self.filtro_inicio_entry.grid(row=0, column=5, padx=(0, 4), pady=10, sticky="w")
+            vincular_calendario(self, self.filtro_inicio_entry, output_format="%Y-%m-%d")
+            ctk.CTkButton(
+                filtros,
+                text="📅",
+                width=32,
+                fg_color=self.cor_primaria,
+                hover_color=self.cor_hover,
+                text_color=self.cor_texto,
+                command=lambda: self._abrir_calendario(self.filtro_inicio_entry),
+            ).grid(row=0, column=6, padx=(0, 8), pady=10, sticky="w")
+
+            ctk.CTkLabel(
+                filtros, text="Fim:", text_color=self.cor_texto, font=("Arial", 12)
+            ).grid(row=0, column=7, padx=(0, 4), pady=10, sticky="w")
+            self.filtro_fim_entry = ctk.CTkEntry(
+                filtros,
+                textvariable=self.filtro_fim_var,
+                width=118,
+                fg_color=self.cor_fundo,
+                text_color=self.cor_texto,
+                border_color=self.cor_borda,
+            )
+            self.filtro_fim_entry.grid(row=0, column=8, padx=(0, 4), pady=10, sticky="w")
+            vincular_calendario(self, self.filtro_fim_entry, output_format="%Y-%m-%d")
+            ctk.CTkButton(
+                filtros,
+                text="📅",
+                width=32,
+                fg_color=self.cor_primaria,
+                hover_color=self.cor_hover,
+                text_color=self.cor_texto,
+                command=lambda: self._abrir_calendario(self.filtro_fim_entry),
+            ).grid(row=0, column=9, padx=(0, 10), pady=10, sticky="w")
 
         self.var_apenas_nao_impressas = tk.BooleanVar(value=False)
         if self.col_impresso:
@@ -365,7 +430,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
                 text_color=self.cor_texto,
                 command=self.atualizar_lista,
             )
-            self.chk_nao_impressas.grid(row=0, column=4, padx=(0, 10), pady=4, sticky="w")
+            self.chk_nao_impressas.grid(row=1, column=0, columnspan=4, padx=(10, 10), pady=(0, 10), sticky="w")
         else:
             self.chk_nao_impressas = None
 
@@ -378,7 +443,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             text_color="white",
             width=90,
         )
-        btn_buscar.grid(row=0, column=5, padx=(0, 4), pady=4, sticky="e")
+        btn_buscar.grid(row=1, column=10, padx=(0, 8), pady=(0, 10), sticky="e")
 
         btn_limpar = ctk.CTkButton(
             filtros,
@@ -389,11 +454,17 @@ class OrdensCorteImpressao(ctk.CTkFrame):
             text_color=self.cor_texto,
             width=90,
         )
-        btn_limpar.grid(row=0, column=6, padx=(4, 0), pady=4, sticky="e")
+        btn_limpar.grid(row=1, column=11, padx=(0, 10), pady=(0, 10), sticky="e")
 
         # Tabela
-        frame_tabela = ctk.CTkFrame(self, fg_color=self.cor_fundo)
-        frame_tabela.grid(row=2, column=0, sticky="nsew", padx=10, pady=(5, 5))
+        frame_tabela = ctk.CTkFrame(
+            self,
+            fg_color=self.cor_fundo,
+            border_color=self.cor_borda,
+            border_width=1,
+            corner_radius=8,
+        )
+        frame_tabela.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 5))
         frame_tabela.grid_rowconfigure(0, weight=1)
         frame_tabela.grid_columnconfigure(0, weight=1)
 
@@ -427,8 +498,8 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         vsb = ttk.Scrollbar(frame_tabela, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=vsb.set)
 
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        vsb.grid(row=0, column=1, sticky="ns")
+        self.tree.grid(row=0, column=0, sticky="nsew", padx=(6, 0), pady=6)
+        vsb.grid(row=0, column=1, sticky="ns", padx=(0, 6), pady=6)
 
         # Headings amigáveis
         for col in self._logical_cols:
@@ -509,9 +580,23 @@ class OrdensCorteImpressao(ctk.CTkFrame):
     # ----------------------------------------------------------
     #   Ações da interface
     # ----------------------------------------------------------
+    def _abrir_calendario(self, entry):
+        return abrir_calendario(self, entry, output_format="%Y-%m-%d")
+
+    def _parse_data_filtro(self, valor):
+        texto = str(valor or "").strip()
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(texto[:10], fmt).date()
+            except Exception:
+                pass
+        return None
+
     def _limpar_filtros(self):
         self.filtro_codigo.delete(0, "end")
         self.filtro_descricao.delete(0, "end")
+        self.filtro_inicio_var.set("")
+        self.filtro_fim_var.set("")
         if self.chk_nao_impressas is not None:
             self.var_apenas_nao_impressas.set(False)
         self.atualizar_lista()
@@ -541,6 +626,8 @@ class OrdensCorteImpressao(ctk.CTkFrame):
 
         codigo_filtro = self.filtro_codigo.get().strip()
         desc_filtro = self.filtro_descricao.get().strip()
+        data_inicio = self._parse_data_filtro(self.filtro_inicio_var.get())
+        data_fim = self._parse_data_filtro(self.filtro_fim_var.get())
         apenas_nao_imp = bool(self.var_apenas_nao_impressas.get()) and bool(self.col_impresso)
 
         sql = "SELECT " + ", ".join(self._select_cols) + " FROM ordem_corte_ficha"
@@ -554,6 +641,14 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         if self.col_descricao and desc_filtro:
             where.append(f"{self.col_descricao} ILIKE %s")
             params.append(f"%{desc_filtro}%")
+
+        if self.col_data_final and data_inicio:
+            where.append(f"{self.col_data_final} >= %s")
+            params.append(data_inicio)
+
+        if self.col_data_final and data_fim:
+            where.append(f"{self.col_data_final} <= %s")
+            params.append(data_fim)
 
         if apenas_nao_imp and self.col_impresso:
             where.append(f"({self.col_impresso} = FALSE OR {self.col_impresso} IS NULL)")

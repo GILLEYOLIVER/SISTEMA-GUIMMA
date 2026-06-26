@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario
 
 try:
     from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import get_conn, get_schema, require_ready
@@ -566,6 +567,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             pass
 
     def _abrir_calendario(self, entry, parent=None):
+        return abrir_calendario(parent or self, entry, output_format="%d/%m/%Y")
         from datetime import datetime
         import calendar as _cal
 

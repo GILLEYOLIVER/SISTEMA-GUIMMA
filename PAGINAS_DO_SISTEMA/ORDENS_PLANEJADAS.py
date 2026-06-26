@@ -5,6 +5,7 @@ from datetime import datetime, date, time
 from tkinter import ttk, messagebox
 import tkinter as tk
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, instalar_auto_fechamento
 
 try:
     from tkcalendar import Calendar
@@ -758,11 +759,27 @@ class OrdensPlanejadasPage(ctk.CTkFrame):
             border_width=0,
         ).pack(side="right")
 
+        instalar_auto_fechamento(popup)
         popup.bind("<Escape>", lambda e: popup.destroy())
 
     # =========================================================
     # Coleções
     # =========================================================
+    def _abrir_calendario(self, entry_destino):
+        pattern = "%m/%d/%Y" if self._get_date_pattern() == "mm/dd/yyyy" else "%d/%m/%Y"
+        try:
+            abrir_calendario(
+                self,
+                entry_destino,
+                output_format=pattern,
+                on_select=lambda _data: self.after(50, self._carregar_ops),
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self._get_calendar_title(),
+                self._get_text("calendar_error").format(erro=exc),
+            )
+
     def _carregar_colecoes(self):
         if not self._db_ready():
             return

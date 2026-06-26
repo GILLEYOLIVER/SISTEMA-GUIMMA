@@ -16,6 +16,7 @@ from __future__ import annotations
 import os, csv, sys, webbrowser
 from datetime import datetime, date, timedelta
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
 from PAGINAS_DO_SISTEMA.TEMAS import get_contraste_texto, is_dark_color, ajustar_hover
 from tkinter import ttk, messagebox, filedialog
 
@@ -25,6 +26,7 @@ CARD_BG = "#111827"
 MAIN_BG = "#0d1117"
 TOP_BAR_BG = "#1f2d44"
 FILTER_BG = "#0b1220"
+FOLHA_TREEVIEW_STYLE = "FolhaPagamento.Treeview"
 
 # ---------- Pastas locais (mantidas) ----------
 DB_DIR = "../BANCO DE DADOS"
@@ -191,23 +193,19 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
     def _apply_ttk_theme(self):
         try:
             style = ttk.Style()
-            try: style.theme_use("clam")
-            except Exception: pass
             bg_card = self.card_bg
             bg_main = self.main_bg
             fg_text = self.text_color or "white"
             accent = self.accent_color
             topbar = self.topbar_bg
 
-            style.configure("Treeview",
+            style.configure(FOLHA_TREEVIEW_STYLE,
                             background=bg_card, fieldbackground=bg_card, foreground=fg_text,
                             bordercolor=bg_main, borderwidth=0, rowheight=24)
-            style.map("Treeview",
+            style.map(FOLHA_TREEVIEW_STYLE,
                       background=[("selected", accent)],
                       foreground=[("selected","white")])
-            style.configure("Treeview.Heading", background=topbar, foreground="white", relief="flat")
-            style.configure("Vertical.TScrollbar", background=bg_card, troughcolor=bg_main, bordercolor=bg_main)
-            style.configure("TCombobox", fieldbackground=bg_card, background=bg_card, foreground=fg_text)
+            style.configure(f"{FOLHA_TREEVIEW_STYLE}.Heading", background=topbar, foreground="white", relief="flat")
         except Exception:
             pass
 
@@ -228,8 +226,6 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
             except Exception: pass
 
     def _sync_theme(self):
-        try: ctk.set_appearance_mode(getattr(self._host, "modo", "Dark"))
-        except Exception: pass
         try: self.configure(fg_color=self.main_bg)
         except Exception: pass
         for w in self._all_children(self):
@@ -264,10 +260,18 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         self.lbl_de = ctk.CTkLabel(filt, text="De:"); self.lbl_de.grid(row=0, column=0, padx=(10,4), pady=8, sticky="e")
         self.ini_entry = ctk.CTkEntry(filt, width=120, textvariable=self.ini_var, placeholder_text="AAAA-MM-DD")
         self.ini_entry.grid(row=0, column=1, padx=4, pady=8)
+        vincular_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(filt, text="📅", width=28, height=26,
+                      command=lambda: abrir_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+                      ).grid(row=0, column=1, padx=(86, 4), pady=8, sticky="e")
 
         self.lbl_ate = ctk.CTkLabel(filt, text="Até:"); self.lbl_ate.grid(row=0, column=2, padx=(12,4), pady=8, sticky="e")
         self.fim_entry = ctk.CTkEntry(filt, width=120, textvariable=self.fim_var, placeholder_text="AAAA-MM-DD")
         self.fim_entry.grid(row=0, column=3, padx=4, pady=8)
+        vincular_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(filt, text="📅", width=28, height=26,
+                      command=lambda: abrir_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+                      ).grid(row=0, column=3, padx=(86, 4), pady=8, sticky="e")
 
         self.lbl_servico = ctk.CTkLabel(filt, text="Serviço:"); self.lbl_servico.grid(row=0, column=4, padx=(12,4), pady=8, sticky="e")
         self.serv_combo = ctk.CTkComboBox(filt, values=self._service_options_i18n(), width=160, variable=self.servico_var)
@@ -310,7 +314,7 @@ class FolhaPagamentoServicosPage(ctk.CTkFrame):
         headers = ["Prestador","CPF","Serviços","Qtd","Base","Descontos","Ajuda/Bonif.","Total Pago","Banco","Agência","Conta","PIX","Lanç."]
         widths = [160,100,140,60,100,100,110,110,120,90,120,140,60]
         anchors = ["w","center","center","center","e","e","e","e","w","center","center","w","center"]
-        self.tree = ttk.Treeview(table_wrap, columns=cols, show="headings", height=18)
+        self.tree = ttk.Treeview(table_wrap, columns=cols, show="headings", height=18, style=FOLHA_TREEVIEW_STYLE)
         for c,h,w,a in zip(cols,headers,widths,anchors):
             self.tree.heading(c, text=h)
             self.tree.column(c, width=w, anchor=a, stretch=True if c in ("prestador","servicos","pix") else False)

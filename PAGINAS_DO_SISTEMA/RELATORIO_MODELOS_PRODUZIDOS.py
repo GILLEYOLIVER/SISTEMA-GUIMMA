@@ -9,6 +9,9 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
+
+REL_MODELOS_TREEVIEW_STYLE = "RelatorioModelosProduzidos.Treeview"
 
 # Banco de dados (opcional)
 try:
@@ -71,8 +74,10 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
         self.cor_texto = getattr(origem, "cor_texto", "#e5e7eb")
         self.cor_borda = getattr(origem, "cor_borda", "#334155")
         self.cor_primaria = getattr(origem, "cor_primaria", "#1F538D")
+        self.cor_secundaria = getattr(origem, "cor_secundaria", self.cor_fundo)
         self.cor_hover = getattr(origem, "cor_hover", "#14375E")
         self.cor_destaque = getattr(origem, "cor_selecao", "#223649")
+        self.cor_sucesso = getattr(origem, "cor_sucesso", "#047857")
 
         # Filtros padrão (mês atual)
         hoje = date.today()
@@ -99,15 +104,25 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             )
 
     # ---------------------- Tema Treeview ----------------------
+    def _button_text_color(self, bg_color):
+        color = str(bg_color or "").strip()
+        if isinstance(bg_color, (tuple, list)) and bg_color:
+            color = str(bg_color[-1])
+        if color.startswith("#") and len(color) == 7:
+            try:
+                r = int(color[1:3], 16)
+                g = int(color[3:5], 16)
+                b = int(color[5:7], 16)
+                return "#111827" if (r * 0.299 + g * 0.587 + b * 0.114) > 170 else "#FFFFFF"
+            except ValueError:
+                pass
+        return self.cor_texto
+
     def _apply_ttk_theme(self):
-        style = ttk.Style()
-        try:
-            style.theme_use("clam")
-        except Exception:
-            pass
+        style = ttk.Style(self)
 
         style.configure(
-            "Treeview",
+            REL_MODELOS_TREEVIEW_STYLE,
             background=self.cor_fundo,
             fieldbackground=self.cor_fundo,
             foreground=self.cor_texto,
@@ -115,12 +130,16 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             rowheight=26,
         )
         style.configure(
-            "Treeview.Heading",
+            f"{REL_MODELOS_TREEVIEW_STYLE}.Heading",
             background=self.cor_destaque,
             foreground=self.cor_texto,
             relief="flat",
         )
-        style.map("Treeview", background=[("selected", self.cor_destaque)])
+        style.map(
+            REL_MODELOS_TREEVIEW_STYLE,
+            background=[("selected", self.cor_destaque)],
+            foreground=[("selected", self._button_text_color(self.cor_destaque))],
+        )
 
     # ---------------------- UI ----------------------
     def _build_ui(self):
@@ -146,6 +165,8 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             corner_radius=10,
         )
         filtros.pack(fill="x", padx=10, pady=(0, 10))
+        input_bg = self.cor_secundaria
+        placeholder = "#6B7280"
 
         # Período
         bloco_data = ctk.CTkFrame(filtros, fg_color=self.cor_fundo)
@@ -155,17 +176,51 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             bloco_data, text="Início", text_color=self.cor_texto
         ).grid(row=0, column=0, sticky="w")
         self.ini_entry = ctk.CTkEntry(
-            bloco_data, textvariable=self.ini_var, width=120
+            bloco_data,
+            textvariable=self.ini_var,
+            width=120,
+            height=30,
+            fg_color=input_bg,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
         )
         self.ini_entry.grid(row=1, column=0, padx=(0, 8))
+        vincular_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(
+            bloco_data,
+            text="📅",
+            width=32,
+            height=30,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self._button_text_color(self.cor_primaria),
+            command=lambda: self._abrir_calendario(self.ini_entry),
+        ).grid(row=1, column=1, padx=(0, 8))
 
         ctk.CTkLabel(
             bloco_data, text="Fim", text_color=self.cor_texto
-        ).grid(row=0, column=1, sticky="w")
+        ).grid(row=0, column=2, sticky="w")
         self.fim_entry = ctk.CTkEntry(
-            bloco_data, textvariable=self.fim_var, width=120
+            bloco_data,
+            textvariable=self.fim_var,
+            width=120,
+            height=30,
+            fg_color=input_bg,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
         )
-        self.fim_entry.grid(row=1, column=1)
+        self.fim_entry.grid(row=1, column=2)
+        vincular_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
+        ctk.CTkButton(
+            bloco_data,
+            text="📅",
+            width=32,
+            height=30,
+            fg_color=self.cor_primaria,
+            hover_color=self.cor_hover,
+            text_color=self._button_text_color(self.cor_primaria),
+            command=lambda: self._abrir_calendario(self.fim_entry),
+        ).grid(row=1, column=3, padx=(8, 0))
 
         # Modelo / Ordem
         bloco_filtro = ctk.CTkFrame(filtros, fg_color=self.cor_fundo)
@@ -178,6 +233,11 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             bloco_filtro,
             textvariable=self.modelo_var,
             width=200,
+            height=30,
+            fg_color=input_bg,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            placeholder_text_color=placeholder,
             placeholder_text="vazio = todos",
         )
         self.modelo_entry.grid(row=1, column=0, padx=(0, 8))
@@ -189,6 +249,11 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             bloco_filtro,
             textvariable=self.ordem_var,
             width=140,
+            height=30,
+            fg_color=input_bg,
+            border_color=self.cor_borda,
+            text_color=self.cor_texto,
+            placeholder_text_color=placeholder,
             placeholder_text="vazio = todas",
         )
         self.ordem_entry.grid(row=1, column=1)
@@ -197,39 +262,55 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
         bloco_chk = ctk.CTkFrame(filtros, fg_color=self.cor_fundo)
         bloco_chk.pack(side="left", padx=10, pady=10)
 
-        ctk.CTkCheckBox(
+        self.chk_incluir_acabamento = ctk.CTkCheckBox(
             bloco_chk,
             text="Incluir peças de acabamento",
             variable=self.incluir_acabamento,
+            command=self._buscar,
+            width=240,
+            height=30,
+            checkbox_width=22,
+            checkbox_height=22,
+            corner_radius=5,
+            border_width=2,
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
             text_color=self.cor_texto,
+            text_color_disabled=self.cor_texto,
             border_color=self.cor_borda,
-        ).pack(anchor="w")
+            checkmark_color=self._button_text_color(self.cor_primaria),
+        )
+        self.chk_incluir_acabamento.pack(anchor="w")
 
         # Ações
         acoes = ctk.CTkFrame(filtros, fg_color=self.cor_fundo)
         acoes.pack(side="right", padx=10, pady=10)
 
-        ctk.CTkButton(
+        self.btn_buscar = ctk.CTkButton(
             acoes,
             text="🔍 Buscar",
             fg_color=self.cor_primaria,
             hover_color=self.cor_hover,
-            text_color=self.cor_texto,
+            text_color=self._button_text_color(self.cor_primaria),
             command=self._buscar,
             width=120,
-        ).pack(side="left", padx=6)
+            height=30,
+            corner_radius=6,
+        )
+        self.btn_buscar.pack(side="left", padx=6)
 
-        ctk.CTkButton(
+        self.btn_exportar_csv = ctk.CTkButton(
             acoes,
             text="⬇️ Exportar CSV",
-            fg_color=self.cor_destaque,
+            fg_color=self.cor_sucesso,
             hover_color=self.cor_hover,
-            text_color=self.cor_texto,
+            text_color=self._button_text_color(self.cor_sucesso),
             command=self._exportar_csv,
             width=140,
-        ).pack(side="left", padx=6)
+            height=30,
+            corner_radius=6,
+        )
+        self.btn_exportar_csv.pack(side="left", padx=6)
 
         # Tabela
         frame_tabela = ctk.CTkFrame(
@@ -246,6 +327,7 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             columns=self.COLUNAS,
             show="headings",
             selectmode="browse",
+            style=REL_MODELOS_TREEVIEW_STYLE,
         )
         self.tree.pack(fill="both", expand=True, padx=6, pady=6)
 
@@ -286,6 +368,9 @@ class RelatorioModelosProduzidosPage(ctk.CTkFrame):
             text_color=self.cor_texto,
         )
         self.lbl_total_valor.pack(side="left", padx=(4, 0))
+
+    def _abrir_calendario(self, entry):
+        return abrir_calendario(self, entry, output_format="%Y-%m-%d")
 
     # ---------------------- Busca ----------------------
     def _buscar(self):

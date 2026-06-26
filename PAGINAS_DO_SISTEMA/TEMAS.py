@@ -9,6 +9,7 @@ import re
 import time
 import importlib
 import os
+import random
 from typing import Dict, Any, Optional, Callable, List, Tuple
 import customtkinter as ctk
 from PIL import Image, ImageTk
@@ -50,6 +51,17 @@ CORES_BOTOES_PADRAO = {
     "botao_voltar": "#6B7280", "botao_avancar": "#10B981", "botao_adiantamento": "#10B981",
     "botao_comprovante": "#8B5CF6", "botao_buscar": "#3B82F6", "botao_export_csv": "#06B6D4",
     "botao_export_pdf": "#F59E0B"
+}
+
+CORES_BOTOES_CLASSICO_CLARO = {
+    "botao_salvar": "#0B7F4F", "botao_excluir": "#C83737", "botao_novo": "#2F6FD6",
+    "botao_imprimir": "#5F5F6A", "botao_pdf": "#9A6500", "botao_editar": "#4B5563",
+    "botao_visualizar": "#4B5563", "botao_confirmar": "#0B7F4F", "botao_cancelar": "#6B7280",
+    "botao_exportar": "#4B5563", "botao_importar": "#4B5563", "botao_configurar": "#6B7280",
+    "botao_ajuda": "#4B5563", "botao_filtrar": "#4B5563", "botao_limpar": "#9A6500",
+    "botao_voltar": "#6B7280", "botao_avancar": "#0B7F4F", "botao_adiantamento": "#0B7F4F",
+    "botao_comprovante": "#5F5F6A", "botao_buscar": "#2F6FD6", "botao_export_csv": "#007C89",
+    "botao_export_pdf": "#9A6500"
 }
 
 CAMPOS_PADRAO = [
@@ -746,7 +758,7 @@ class ModuloPaletas:
                 "primaria": "#F4F4F5", "secundaria": "#D4D4D8", "terciaria": "#A1A1AA",
                 "fundo": "#FFFFFF", "texto": "#111827", "destaque": "#4B5563",
                 "selecao": "#AFAFAF", "sucesso": "#2E7D32", "alerta": "#C62828",
-                "borda": "#9CA3AF", "hover": "#E4E4E7", **CORES_BOTOES_PADRAO
+                "borda": "#9CA3AF", "hover": "#E4E4E7", **CORES_BOTOES_CLASSICO_CLARO
             },
 
             # ==========================================================
@@ -1082,6 +1094,11 @@ class _Chip(ctk.CTkButton):
             master, text=display_text, command=command,
             height=22, corner_radius=8, font=("Arial", 10, "normal"), **kw
         )
+        try:
+            self._opera_preservar_tema = True
+            self._opera_keep_custom_color = True
+        except Exception:
+            pass
 
     def set_active(self, active: bool):
         if self.is_active != active:
@@ -1967,7 +1984,7 @@ class TemasPage(ctk.CTkFrame):
 
         self.left_panel = ctk.CTkFrame(main_layout, fg_color="transparent")
         self.left_panel.pack(side="left", fill="both", expand=True, padx=(0, 5))
-        self.after(10, self._build_left_panel, self.left_panel)
+        self._build_left_panel(self.left_panel)
 
         center_panel = ctk.CTkFrame(main_layout, fg_color=self.app.cor_secundaria,
                                     corner_radius=10, border_width=2, border_color=self.app.cor_borda)
@@ -1980,9 +1997,9 @@ class TemasPage(ctk.CTkFrame):
                                         corner_radius=10, border_width=2, border_color=self.app.cor_borda)
         self.right_panel.pack(side="left", fill="both", padx=(5, 0))
         self.right_panel.configure(width=360)
-        self.after(20, self._build_right_panel, self.right_panel)
+        self._build_right_panel(self.right_panel)
 
-        self.after(50, lambda: self._carregar_tema_no_editor(self.tema_atual))
+        self._carregar_tema_no_editor(self.tema_atual)
 
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color=self.app.cor_secundaria,
@@ -2014,7 +2031,7 @@ class TemasPage(ctk.CTkFrame):
             action_frame,
             text="Novo tema",
             tipo="novo",
-            command=self._reset_editor_com_defaults,
+            command=self._abrir_criador_tema,
             height=36,
             corner_radius=10,
             font=("Arial", 12, "bold"),
@@ -2037,7 +2054,7 @@ class TemasPage(ctk.CTkFrame):
             title_frame,
             text="+ Novo do Atual",
             tipo="novo",
-            command=self._criar_tema_da_base,
+            command=self._abrir_criador_tema,
             width=120,
             height=28,
         ).pack(side="right", padx=(10, 0))
@@ -2292,6 +2309,317 @@ class TemasPage(ctk.CTkFrame):
             height=38,
             font=("Arial", 12, "bold"),
         ).pack(fill="x", pady=3)
+
+    def _hls_para_hex(self, hue: float, light: float, sat: float) -> str:
+        r, g, b = colorsys.hls_to_rgb(hue % 1.0, max(0.0, min(1.0, light)), max(0.0, min(1.0, sat)))
+        return f"#{int(r * 255):02X}{int(g * 255):02X}{int(b * 255):02X}"
+
+    def _gerar_pre_combinacao_tema(self) -> Dict[str, str]:
+        base_atual = self.paletas.obter_tema(self.tema_atual) or self.paletas.PADROES.get("CLÃSSICO CLARO", {})
+        fundo_atual = base_atual.get("fundo", "#FFFFFF")
+        modo_escuro = is_dark_color(fundo_atual)
+        hue = random.random()
+        hue_sec = (hue + 0.08) % 1.0
+        hue_alt = (hue + 0.48) % 1.0
+
+        if modo_escuro:
+            pal = {
+                "primaria": self._hls_para_hex(hue, 0.16, 0.28),
+                "secundaria": self._hls_para_hex(hue, 0.21, 0.24),
+                "terciaria": self._hls_para_hex(hue, 0.31, 0.22),
+                "fundo": self._hls_para_hex(hue, 0.11, 0.18),
+                "texto": "#F8FAFC",
+                "destaque": self._hls_para_hex(hue_sec, 0.55, 0.72),
+                "sucesso": "#22C55E",
+                "alerta": "#F43F5E",
+                "borda": self._hls_para_hex(hue, 0.34, 0.18),
+                "hover": self._hls_para_hex(hue, 0.26, 0.22),
+                "selecao": self._hls_para_hex(hue_sec, 0.50, 0.74),
+            }
+        else:
+            pal = {
+                "primaria": self._hls_para_hex(hue, 0.96, 0.30),
+                "secundaria": self._hls_para_hex(hue, 0.90, 0.24),
+                "terciaria": self._hls_para_hex(hue, 0.80, 0.20),
+                "fundo": "#FFFFFF",
+                "texto": "#111827",
+                "destaque": self._hls_para_hex(hue_sec, 0.46, 0.74),
+                "sucesso": "#15803D",
+                "alerta": "#DC2626",
+                "borda": self._hls_para_hex(hue, 0.74, 0.20),
+                "hover": self._hls_para_hex(hue, 0.86, 0.24),
+                "selecao": self._hls_para_hex(hue_sec, 0.50, 0.70),
+            }
+
+        pal.update({
+            "botao_salvar": pal["sucesso"],
+            "botao_excluir": pal["alerta"],
+            "botao_novo": pal["destaque"],
+            "botao_imprimir": self._hls_para_hex((hue + 0.72) % 1.0, 0.50 if modo_escuro else 0.55, 0.70),
+            "botao_pdf": "#D97706" if not modo_escuro else "#F59E0B",
+            "botao_editar": self._hls_para_hex(hue_alt, 0.45 if not modo_escuro else 0.58, 0.68),
+            "botao_visualizar": pal["destaque"],
+            "botao_confirmar": pal["sucesso"],
+            "botao_cancelar": "#6B7280",
+            "botao_exportar": self._hls_para_hex((hue + 0.72) % 1.0, 0.50 if modo_escuro else 0.55, 0.70),
+            "botao_importar": self._hls_para_hex(hue_alt, 0.45 if not modo_escuro else 0.58, 0.68),
+            "botao_configurar": "#6B7280",
+            "botao_ajuda": pal["destaque"],
+            "botao_filtrar": pal["selecao"],
+            "botao_limpar": "#B45309" if not modo_escuro else "#F59E0B",
+            "botao_voltar": "#6B7280",
+            "botao_avancar": pal["destaque"],
+            "botao_adiantamento": pal["sucesso"],
+            "botao_comprovante": self._hls_para_hex((hue + 0.72) % 1.0, 0.50 if modo_escuro else 0.55, 0.70),
+            "botao_buscar": pal["destaque"],
+            "botao_export_csv": "#0E7490" if not modo_escuro else "#06B6D4",
+            "botao_export_pdf": "#D97706" if not modo_escuro else "#F59E0B",
+        })
+        return {campo: pal.get(campo, "#FFFFFF").upper() for campo in CAMPOS_PADRAO}
+
+    def _abrir_criador_tema(self):
+        try:
+            if hasattr(self, "_creator_window") and self._creator_window and self._creator_window.winfo_exists():
+                self._creator_window.lift()
+                self._creator_window.focus_force()
+                return
+        except Exception:
+            pass
+
+        janela = ctk.CTkToplevel(self)
+        self._creator_window = janela
+        janela.title("Criar Tema Personalizado")
+        janela.geometry("1180x720")
+        janela.minsize(980, 620)
+        try:
+            janela.transient(self.winfo_toplevel())
+            janela.focus_force()
+        except Exception:
+            pass
+
+        vars_criador: Dict[str, tk.StringVar] = {}
+        selected = {"campo": None}
+
+        def paleta_atual() -> Dict[str, str]:
+            return {campo: (var.get() or "#FFFFFF").upper() for campo, var in vars_criador.items()}
+
+        root = ctk.CTkFrame(janela, fg_color=getattr(self.app, "cor_fundo", "#FFFFFF"))
+        root.pack(fill="both", expand=True, padx=12, pady=12)
+
+        header = ctk.CTkFrame(
+            root,
+            fg_color=getattr(self.app, "cor_secundaria", "#F4F4F5"),
+            corner_radius=10,
+            border_width=1,
+            border_color=getattr(self.app, "cor_borda", "#9CA3AF"),
+        )
+        header.pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(
+            header,
+            text="Novo tema personalizado",
+            font=("Arial", 20, "bold"),
+            text_color=getattr(self.app, "cor_texto", "#111827"),
+        ).pack(side="left", padx=12, pady=10)
+        ctk.CTkLabel(
+            header,
+            text="Ajuste as partes do sistema e salve com o nome que quiser.",
+            font=("Arial", 12),
+            text_color=getattr(self.app, "cor_texto", "#111827"),
+        ).pack(side="left", padx=12, pady=10)
+
+        body = ctk.CTkFrame(root, fg_color="transparent")
+        body.pack(fill="both", expand=True)
+        body.grid_columnconfigure(0, weight=2)
+        body.grid_columnconfigure(1, weight=1)
+        body.grid_rowconfigure(0, weight=1)
+
+        campos_panel = ctk.CTkFrame(
+            body,
+            fg_color=getattr(self.app, "cor_secundaria", "#F4F4F5"),
+            corner_radius=10,
+            border_width=1,
+            border_color=getattr(self.app, "cor_borda", "#9CA3AF"),
+        )
+        campos_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        ctk.CTkLabel(
+            campos_panel,
+            text="Partes do sistema",
+            font=("Arial", 15, "bold"),
+            text_color=getattr(self.app, "cor_texto", "#111827"),
+        ).pack(anchor="w", padx=12, pady=(10, 4))
+
+        scroll = ctk.CTkScrollableFrame(campos_panel, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        scroll.grid_columnconfigure(0, weight=1)
+        scroll.grid_columnconfigure(1, weight=1)
+
+        preview_side = ctk.CTkFrame(
+            body,
+            fg_color=getattr(self.app, "cor_secundaria", "#F4F4F5"),
+            corner_radius=10,
+            border_width=1,
+            border_color=getattr(self.app, "cor_borda", "#9CA3AF"),
+        )
+        preview_side.grid(row=0, column=1, sticky="nsew")
+
+        preview = PreviewPanel(preview_side, fg_color="transparent")
+        preview.pack(fill="both", expand=True, padx=10, pady=(10, 6))
+
+        def on_picker_color(color):
+            campo = selected.get("campo")
+            if campo and campo in vars_criador:
+                vars_criador[campo].set(color.upper())
+
+        picker = ColorPickerWidget(
+            preview_side,
+            fg_color=getattr(self.app, "cor_fundo", "#FFFFFF"),
+            corner_radius=8,
+            callback=on_picker_color,
+        )
+        picker.pack(fill="x", padx=10, pady=(0, 10))
+
+        bottom = ctk.CTkFrame(root, fg_color="transparent")
+        bottom.pack(fill="x", pady=(10, 0))
+        ctk.CTkLabel(
+            bottom,
+            text="Nome do tema:",
+            font=("Arial", 12, "bold"),
+            text_color=getattr(self.app, "cor_texto", "#111827"),
+        ).pack(side="left", padx=(0, 8))
+        nome_var = tk.StringVar(value=f"{self.tema_atual} Personalizado")
+        ctk.CTkEntry(bottom, textvariable=nome_var, height=34, width=320).pack(side="left", padx=(0, 8))
+
+        botoes_campos = {}
+
+        def atualizar_preview(*_):
+            preview.update_preview(paleta_atual())
+
+        def selecionar_campo(campo):
+            selected["campo"] = campo
+            valor = vars_criador[campo].get()
+            if _valida_hex(valor):
+                picker.set_color(valor)
+            preview.highlight_element(campo)
+
+        def atualizar_botao(campo, *_):
+            valor = vars_criador[campo].get()
+            if not _valida_hex(valor):
+                return
+            btn = botoes_campos.get(campo)
+            if btn and btn.winfo_exists():
+                btn.configure(fg_color=valor, hover_color=valor, text_color=get_contraste_texto(valor))
+            atualizar_preview()
+
+        def criar_linha(campo, row, col):
+            frame = ctk.CTkFrame(
+                scroll,
+                fg_color=getattr(self.app, "cor_terciaria", "#D4D4D8"),
+                corner_radius=8,
+                border_width=1,
+                border_color=getattr(self.app, "cor_borda", "#9CA3AF"),
+            )
+            frame.grid(row=row, column=col, sticky="ew", padx=5, pady=5)
+            frame.grid_columnconfigure(0, weight=1)
+
+            ctk.CTkLabel(
+                frame,
+                text=LABELS_CAMPOS_PADRAO.get(campo, campo),
+                anchor="w",
+                font=("Arial", 11, "bold"),
+                text_color=getattr(self.app, "cor_texto", "#111827"),
+            ).grid(row=0, column=0, columnspan=2, sticky="ew", padx=8, pady=(6, 2))
+
+            var = tk.StringVar(value="#FFFFFF")
+            vars_criador[campo] = var
+            entry = ctk.CTkEntry(frame, textvariable=var, height=30, font=("Arial", 11))
+            entry.grid(row=1, column=0, sticky="ew", padx=(8, 6), pady=(0, 8))
+
+            btn_cor = ctk.CTkButton(
+                frame,
+                text="",
+                width=34,
+                height=30,
+                corner_radius=7,
+                command=lambda c=campo: selecionar_campo(c),
+            )
+            btn_cor.grid(row=1, column=1, sticky="e", padx=(0, 8), pady=(0, 8))
+            botoes_campos[campo] = btn_cor
+
+            for widget in (frame, entry, btn_cor):
+                widget.bind("<Enter>", lambda e, c=campo: preview.highlight_element(c))
+                widget.bind("<Leave>", lambda e: preview.clear_highlight())
+
+            var.trace_add("write", lambda *args, c=campo: atualizar_botao(c))
+
+        for idx, campo in enumerate(CAMPOS_PADRAO):
+            criar_linha(campo, idx // 2, idx % 2)
+
+        def aplicar_paleta(paleta):
+            for campo in CAMPOS_PADRAO:
+                vars_criador[campo].set(paleta.get(campo, "#FFFFFF").upper())
+            atualizar_preview()
+
+        def gerar_outra():
+            aplicar_paleta(self._gerar_pre_combinacao_tema())
+
+        def salvar_novo_tema():
+            nome = (nome_var.get() or "").strip()
+            if not nome:
+                self._mostrar_aviso("Informe um nome para salvar o tema personalizado.")
+                return
+            if nome in self.paletas.PADROES:
+                self._mostrar_aviso("Esse nome ja existe nos temas padrao. Use outro nome para o tema personalizado.")
+                return
+
+            pal = paleta_atual()
+            for campo, valor in pal.items():
+                if not _valida_hex(valor):
+                    self._mostrar_aviso(f"Cor invalida em {LABELS_CAMPOS_PADRAO.get(campo, campo)}: {valor}")
+                    return
+
+            self.paletas.salvar_tema_personalizado(nome, pal)
+            salvou_banco = self._salvar_tema_personalizado_no_banco(nome, pal)
+            self._refresh_theme_list()
+            self._carregar_tema_no_editor(nome)
+            if hasattr(self, "var_nome"):
+                self.var_nome.set(nome)
+
+            if salvou_banco:
+                self._mostrar_info("Sucesso", f"Tema personalizado '{nome}' salvo.")
+            else:
+                self._mostrar_aviso(f"Tema '{nome}' salvo localmente, mas nao foi possivel salvar no banco.")
+            janela.destroy()
+
+        BotaoPadronizado.criar_botao(
+            bottom,
+            text="Gerar outra combinacao",
+            tipo="filtrar",
+            command=gerar_outra,
+            height=34,
+            width=180,
+            font=("Arial", 12, "bold"),
+        ).pack(side="left", padx=4)
+        BotaoPadronizado.criar_botao(
+            bottom,
+            text="Salvar nos personalizados",
+            tipo="salvar",
+            command=salvar_novo_tema,
+            height=34,
+            width=210,
+            font=("Arial", 12, "bold"),
+        ).pack(side="right", padx=4)
+        BotaoPadronizado.criar_botao(
+            bottom,
+            text="Cancelar",
+            tipo="cancelar",
+            command=janela.destroy,
+            height=34,
+            width=110,
+            font=("Arial", 12, "bold"),
+        ).pack(side="right", padx=4)
+
+        aplicar_paleta(self._gerar_pre_combinacao_tema())
+        selecionar_campo(CAMPOS_PADRAO[0])
 
     def _reset_editor_com_defaults(self):
         base_tema = self.tema_atual if self.tema_atual in self.paletas.PADROES else "CLÁSSICO CLARO"

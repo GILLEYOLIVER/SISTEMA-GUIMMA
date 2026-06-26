@@ -1262,6 +1262,15 @@ class DashboardPage(ctk.CTkFrame):
         except:
             pass
 
+        def fmt_numero_simples(valor):
+            try:
+                numero = float(str(valor).replace(",", "."))
+                if numero.is_integer():
+                    return str(int(numero))
+                return f"{numero:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+            except Exception:
+                return str(valor or "0")
+
         if not self.POSTGRES_DISPONIVEL:
             self.tree_and.insert("", "end", values=("DB indisponível", "-", "-", "-", "0", "0", "0", "-"))
             return
@@ -1302,7 +1311,20 @@ class DashboardPage(ctk.CTkFrame):
                 else:
                     data_fmt = str(data_ref).split(".")[0] if data_ref else ""
 
-                self.tree_and.insert("", "end", values=(codigo, descricao, destino, data_fmt, qtd, dias, horas, origem))
+                self.tree_and.insert(
+                    "",
+                    "end",
+                    values=(
+                        codigo,
+                        descricao,
+                        destino,
+                        data_fmt,
+                        fmt_numero_simples(qtd),
+                        fmt_numero_simples(dias),
+                        fmt_numero_simples(horas),
+                        origem,
+                    ),
+                )
 
             self.after(150, self._ajustar_colunas_conteudo)
         except Exception as e:
@@ -1329,24 +1351,30 @@ class DashboardPage(ctk.CTkFrame):
     def _criar_cards_resumo(self, parent_frame):
         parent_frame.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="cards")
 
-        def mk_card(col, titulo, lbl_attr, cor):
+        def preservar_cor(*widgets):
+            for widget in widgets:
+                widget._opera_preservar_tema = True
+                widget._opera_keep_custom_color = True
+
+        def mk_card(col, titulo, lbl_attr, cor, fundo, borda):
             card = ctk.CTkFrame(
                 parent_frame,
-                fg_color="#FFFFFF",
+                fg_color=fundo,
                 corner_radius=12,
                 border_width=1,
-                border_color="#E2E8F0",
+                border_color=borda,
             )
             card.grid(row=0, column=col, padx=6, sticky="nsew")
 
             header = ctk.CTkFrame(card, fg_color="transparent")
             header.pack(fill="x", padx=12, pady=(8, 0))
-            ctk.CTkLabel(
+            lbl_titulo = ctk.CTkLabel(
                 header,
                 text=titulo,
                 font=("Arial", 11, "bold"),
-                text_color="#64748B",
-            ).pack(anchor="w")
+                text_color="#334155",
+            )
+            lbl_titulo.pack(anchor="w")
 
             lbl = ctk.CTkLabel(card, text="0", font=("Arial", 18, "bold"), text_color=cor)
             lbl.pack(anchor="w", padx=12, pady=(4, 6))
@@ -1354,13 +1382,14 @@ class DashboardPage(ctk.CTkFrame):
             barra = ctk.CTkProgressBar(card, progress_color=cor, height=6)
             barra.set(0.0)
             barra.pack(fill="x", padx=12, pady=(0, 10))
+            preservar_cor(card, header, lbl_titulo, lbl, barra)
             setattr(self, f"{lbl_attr}_bar", barra)
             setattr(self, lbl_attr, lbl)
 
-        mk_card(0, self._title_text("in_progress"), "lbl_card_andamento", self.cor_destaque)
-        mk_card(1, self._title_text("finished_7d"), "lbl_card_finalizadas_7d", self.cor_sucesso)
-        mk_card(2, self._title_text("weekly_production"), "lbl_card_prod_semanal", self.cor_destaque)
-        mk_card(3, self._title_text("monthly_production"), "lbl_card_prod_mensal", self.cor_destaque)
+        mk_card(0, self._title_text("in_progress"), "lbl_card_andamento", "#2563EB", "#EFF6FF", "#BFDBFE")
+        mk_card(1, self._title_text("finished_7d"), "lbl_card_finalizadas_7d", "#15803D", "#ECFDF5", "#BBF7D0")
+        mk_card(2, self._title_text("weekly_production"), "lbl_card_prod_semanal", "#0F766E", "#F0FDFA", "#99F6E4")
+        mk_card(3, self._title_text("monthly_production"), "lbl_card_prod_mensal", "#6D28D9", "#F8F5FF", "#DDD6FE")
 
         self.atualizar_cards_resumo()
 

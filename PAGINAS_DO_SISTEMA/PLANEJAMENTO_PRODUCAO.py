@@ -14,6 +14,7 @@ from tkinter import messagebox, ttk
 import tkinter as tk
 
 import customtkinter as ctk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import instalar_auto_fechamento
 
 try:
     from tkcalendar import Calendar
@@ -2051,6 +2052,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
             border_width=0,
         ).pack(side="right")
 
+        instalar_auto_fechamento(popup)
         popup.bind("<Escape>", lambda e: popup.destroy())
 
 

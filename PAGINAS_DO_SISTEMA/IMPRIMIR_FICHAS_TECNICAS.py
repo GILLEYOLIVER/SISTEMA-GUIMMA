@@ -14,7 +14,7 @@ import os
 import re
 import platform
 import subprocess
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Tuple, Optional
 # JESUS SEJA LOUVADO PARA TODO O SEMPRE AMEM!!!
 try:
@@ -33,6 +33,12 @@ try:
 except Exception:
     # Fallback simples: reutiliza tk como ctk (pode ser None) para não quebrar importação em testes
     ctk = tk  # type: ignore
+
+try:
+    from PAGINAS_DO_SISTEMA.UI_CALENDARIO import abrir_calendario, vincular_calendario
+except Exception:
+    abrir_calendario = None
+    vincular_calendario = None
 
 # Cria substitutos mínimos para messagebox e filedialog caso tkinter não esteja disponível
 if messagebox is None:
@@ -134,6 +140,24 @@ def _exec_row(query: str, params: Tuple = ()):
             conn.close()
         except Exception:
             pass
+
+
+def _first_day_of_month(d: date) -> date:
+    return d.replace(day=1)
+
+
+def _last_day_of_month(d: date) -> date:
+    return (d.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+
+
+def _parse_filter_date(value):
+    text = str(value or "").strip()
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(text[:10], fmt).date()
+        except Exception:
+            pass
+    return None
 
 
 def _to_str(v) -> str:
@@ -566,6 +590,9 @@ class ImprimirFichasTecnicasPage(ctk.CTkFrame):
         super().__init__(master, fg_color=getattr(sistema, 'cor_fundo', '#0F0F0F') if sistema else '#0F0F0F')
         self.sistema = sistema
         self._init_i18n()
+        hoje = date.today()
+        self.data_inicio_var = tk.StringVar(value=_first_day_of_month(hoje).strftime("%Y-%m-%d")) if tk else None
+        self.data_fim_var = tk.StringVar(value=_last_day_of_month(hoje).strftime("%Y-%m-%d")) if tk else None
         self._build_ui()
         self.refresh_texts()
         self._carregar_modelos()
@@ -624,7 +651,187 @@ class ImprimirFichasTecnicasPage(ctk.CTkFrame):
         self.refresh_btn = ctk.CTkButton(actions, text="Atualizar Lista", command=self._carregar_modelos); self.refresh_btn.pack(side="left", padx=(0, 8))
 
     # -------------------- Dados / ações --------------------
+    def _build_ui(self):
+        cor_texto = getattr(self.sistema, 'cor_texto', '#FFFFFF') if self.sistema else '#FFFFFF'
+        cor_prim = getattr(self.sistema, 'cor_primaria', '#1F6FEB') if self.sistema else '#1F6FEB'
+        cor_hover = getattr(self.sistema, 'cor_hover', '#2A2A2A') if self.sistema else '#2A2A2A'
+        cor_borda = getattr(self.sistema, 'cor_borda', '#2F2F2F') if self.sistema else '#2F2F2F'
+        cor_fundo = getattr(self.sistema, 'cor_fundo', '#0F0F0F') if self.sistema else '#0F0F0F'
+        cor_sucesso = getattr(self.sistema, 'cor_sucesso', '#15803D') if self.sistema else '#15803D'
+
+        self.grid_rowconfigure(2, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        header = ctk.CTkFrame(self, fg_color=cor_fundo)
+        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 6))
+        header.grid_columnconfigure(0, weight=1)
+        self.title_label = ctk.CTkLabel(
+            header,
+            text="Imprimir Ficha Técnica",
+            font=("Arial, Helvetica, sans-serif", 22, "bold"),
+            text_color=cor_texto,
+        )
+        self.title_label.grid(row=0, column=0, sticky="w")
+
+        filtros = ctk.CTkFrame(self, fg_color=cor_fundo, border_color=cor_borda, border_width=1, corner_radius=8)
+        filtros.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+        filtros.grid_columnconfigure(1, weight=1)
+
+        self.search_label = ctk.CTkLabel(filtros, text="Pesquisar:", font=("Arial", 13), text_color=cor_texto)
+        self.search_label.grid(row=0, column=0, padx=(10, 6), pady=(10, 4), sticky="w")
+        self.search_entry = ctk.CTkEntry(
+            filtros,
+            placeholder_text="Código, descrição ou coleção...",
+            height=34,
+            fg_color=cor_fundo,
+            text_color=cor_texto,
+            border_color=cor_borda,
+        )
+        self.search_entry.grid(row=0, column=1, columnspan=5, sticky="ew", pady=(10, 4))
+        self.search_entry.bind("<Return>", lambda e: self._pesquisar())
+
+        self.search_btn = ctk.CTkButton(filtros, text="Buscar", command=self._pesquisar, fg_color=cor_prim, hover_color=cor_hover, text_color=cor_texto)
+        self.search_btn.grid(row=0, column=6, padx=(8, 0), pady=(10, 4), sticky="e")
+        self.clear_btn = ctk.CTkButton(filtros, text="Limpar", command=self._limpar_busca)
+        self.clear_btn.grid(row=0, column=7, padx=(8, 10), pady=(10, 4), sticky="e")
+
+        ctk.CTkLabel(filtros, text="Início:", font=("Arial", 13), text_color=cor_texto).grid(row=1, column=0, padx=(10, 6), pady=(4, 10), sticky="w")
+        self.data_inicio_entry = ctk.CTkEntry(filtros, textvariable=self.data_inicio_var, width=120, height=32, fg_color=cor_fundo, text_color=cor_texto, border_color=cor_borda)
+        self.data_inicio_entry.grid(row=1, column=1, pady=(4, 10), sticky="w")
+        if vincular_calendario:
+            vincular_calendario(self, self.data_inicio_entry, output_format="%Y-%m-%d", on_select=lambda _d: self._pesquisar())
+        ctk.CTkButton(filtros, text="📅", width=34, height=32, fg_color=cor_prim, hover_color=cor_hover, text_color=cor_texto, command=lambda: self._abrir_calendario(self.data_inicio_entry)).grid(row=1, column=2, padx=(4, 14), pady=(4, 10), sticky="w")
+
+        ctk.CTkLabel(filtros, text="Fim:", font=("Arial", 13), text_color=cor_texto).grid(row=1, column=3, padx=(0, 6), pady=(4, 10), sticky="w")
+        self.data_fim_entry = ctk.CTkEntry(filtros, textvariable=self.data_fim_var, width=120, height=32, fg_color=cor_fundo, text_color=cor_texto, border_color=cor_borda)
+        self.data_fim_entry.grid(row=1, column=4, pady=(4, 10), sticky="w")
+        if vincular_calendario:
+            vincular_calendario(self, self.data_fim_entry, output_format="%Y-%m-%d", on_select=lambda _d: self._pesquisar())
+        ctk.CTkButton(filtros, text="📅", width=34, height=32, fg_color=cor_prim, hover_color=cor_hover, text_color=cor_texto, command=lambda: self._abrir_calendario(self.data_fim_entry)).grid(row=1, column=5, padx=(4, 14), pady=(4, 10), sticky="w")
+        ctk.CTkButton(filtros, text="Limpar período", width=120, command=self._limpar_periodo).grid(row=1, column=6, padx=(0, 8), pady=(4, 10), sticky="w")
+
+        table_frame = ctk.CTkFrame(self, fg_color=cor_fundo, border_color=cor_borda, border_width=1, corner_radius=8)
+        table_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure("FichaTecnica.Treeview", background=cor_fundo, foreground=cor_texto, fieldbackground=cor_fundo, bordercolor=cor_borda, rowheight=26)
+        style.configure("FichaTecnica.Treeview.Heading", background=cor_borda, foreground=cor_texto, font=("Arial", 11, "bold"))
+        style.map("FichaTecnica.Treeview", background=[("selected", cor_prim)])
+
+        cols = ("Código", "Descrição", "Coleção", "Tamanho Base", "Data")
+        self.tree = ttk.Treeview(table_frame, columns=cols, show="headings", selectmode="browse", height=12, style="FichaTecnica.Treeview")
+        for c in cols:
+            self.tree.heading(c, text=c)
+            self.tree.column(c, width=140 if c != "Descrição" else 320, anchor="w")
+        self.tree.column("Código", width=120)
+        self.tree.column("Data", width=120)
+
+        yscroll = ctk.CTkScrollbar(table_frame, orientation="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=yscroll.set)
+        self.tree.grid(row=0, column=0, sticky="nsew", padx=(6, 0), pady=6)
+        yscroll.grid(row=0, column=1, sticky="ns", padx=(4, 6), pady=6)
+        self.tree.bind("<Double-1>", lambda e: self._imprimir_selecionado())
+
+        actions = ctk.CTkFrame(self, fg_color="transparent")
+        actions.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 12))
+        actions.grid_columnconfigure(0, weight=1)
+        self.total_label = ctk.CTkLabel(actions, text="0 fichas encontradas", text_color=cor_texto, font=("Arial", 12))
+        self.total_label.grid(row=0, column=0, sticky="w")
+        self.print_btn = ctk.CTkButton(actions, text="Imprimir Ficha", command=self._imprimir_selecionado, fg_color=cor_prim, hover_color=cor_hover)
+        self.print_btn.grid(row=0, column=1, padx=(8, 0), sticky="e")
+        self.save_pdf_btn = ctk.CTkButton(actions, text="Salvar PDF...", command=self._salvar_pdf, fg_color=cor_sucesso, hover_color=cor_hover)
+        self.save_pdf_btn.grid(row=0, column=2, padx=(8, 0), sticky="e")
+        self.refresh_btn = ctk.CTkButton(actions, text="Atualizar Lista", command=self._carregar_modelos, fg_color=cor_prim, hover_color=cor_hover)
+        self.refresh_btn.grid(row=0, column=3, padx=(8, 0), sticky="e")
+
+    def refresh_texts(self):
+        try:
+            self.title_label.configure(text="Imprimir Ficha Técnica")
+            self.search_label.configure(text="Pesquisar:")
+            self.search_btn.configure(text="Buscar")
+            self.clear_btn.configure(text="Limpar")
+            self.print_btn.configure(text="Imprimir Ficha")
+            self.save_pdf_btn.configure(text="Salvar PDF...")
+            self.refresh_btn.configure(text="Atualizar Lista")
+            self.search_entry.configure(placeholder_text="Código, descrição ou coleção...")
+        except Exception:
+            pass
+
+    def _abrir_calendario(self, entry):
+        if abrir_calendario:
+            return abrir_calendario(self, entry, output_format="%Y-%m-%d", on_select=lambda _d: self._pesquisar())
+        return None
+
+    def _limpar_periodo(self):
+        if self.data_inicio_var:
+            self.data_inicio_var.set("")
+        if self.data_fim_var:
+            self.data_fim_var.set("")
+        self._pesquisar()
+
+    def _atualizar_total(self):
+        try:
+            total = len(self.tree.get_children())
+            self.total_label.configure(text=f"{total} fichas encontradas")
+        except Exception:
+            pass
+
+    def _popular_modelos(self, termo: str = ""):
+        self.tree.delete(*self.tree.get_children())
+        inicio = _parse_filter_date(self.data_inicio_var.get() if self.data_inicio_var else "")
+        fim = _parse_filter_date(self.data_fim_var.get() if self.data_fim_var else "")
+        where = []
+        params = []
+        if termo:
+            like = f"%{termo}%"
+            where.append("(codigo ILIKE %s OR descricao ILIKE %s OR colecao ILIKE %s)")
+            params.extend([like, like, like])
+        if inicio:
+            where.append("COALESCE(data_criacao::date, CURRENT_DATE) >= %s")
+            params.append(inicio)
+        if fim:
+            where.append("COALESCE(data_criacao::date, CURRENT_DATE) <= %s")
+            params.append(fim)
+
+        where_sql = " WHERE " + " AND ".join(where) if where else ""
+        try:
+            rows = _exec_all(f"""
+                SELECT codigo, descricao, colecao, tamanho_base,
+                       COALESCE(TO_CHAR(COALESCE(data_criacao::timestamp, NOW()), 'YYYY-MM-DD'),'') AS data_criacao
+                  FROM cadastro_modelos_cabecalho
+                 {where_sql}
+                 ORDER BY COALESCE(data_criacao::timestamp, NOW()) DESC, codigo DESC
+                 LIMIT 300
+            """, tuple(params))
+            for r in rows:
+                r = list(r)
+                r[4] = _parse_display_date(r[4])
+                self.tree.insert("", "end", values=r)
+            self._atualizar_total()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao carregar modelos:\n{e}")
+
     def _carregar_modelos(self):
+        self._popular_modelos((self.search_entry.get() or "").strip())
+
+    def _pesquisar_antigo(self):
+        self._popular_modelos((self.search_entry.get() or "").strip())
+
+    def _limpar_busca_antigo(self):
+        self.search_entry.delete(0, tk.END)
+        if self.data_inicio_var:
+            self.data_inicio_var.set("")
+        if self.data_fim_var:
+            self.data_fim_var.set("")
+        self._popular_modelos("")
+
+    def _carregar_modelos_antigo(self):
         """Carrega até 300 modelos para a Treeview, formatando a data para exibição."""
         self.tree.delete(*self.tree.get_children())
         try:
@@ -670,6 +877,17 @@ class ImprimirFichasTecnicasPage(ctk.CTkFrame):
         """Limpa o campo de busca e recarrega a lista."""
         self.search_entry.delete(0, tk.END)
         self._carregar_modelos()
+
+    def _pesquisar(self):
+        self._popular_modelos((self.search_entry.get() or "").strip())
+
+    def _limpar_busca(self):
+        self.search_entry.delete(0, tk.END)
+        if self.data_inicio_var:
+            self.data_inicio_var.set("")
+        if self.data_fim_var:
+            self.data_fim_var.set("")
+        self._popular_modelos("")
 
     def _get_codigo(self) -> Optional[str]:
         """Retorna o código selecionado na Treeview, ou None se nada selecionado."""

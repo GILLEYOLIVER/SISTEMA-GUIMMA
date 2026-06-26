@@ -22,6 +22,7 @@ from typing import Any
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import vincular_calendario
 
 try:
     from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
@@ -329,8 +330,10 @@ class RelatorioServicosPagosPage(ctk.CTkFrame):
 
         self._label(filters, "Inicio", 0, 0)
         self.ini_entry = self._entry(filters, self.ini_var, 1, 0, width=112)
+        vincular_calendario(self, self.ini_entry, output_format="%Y-%m-%d")
         self._label(filters, "Fim", 0, 1)
         self.fim_entry = self._entry(filters, self.fim_var, 1, 1, width=112)
+        vincular_calendario(self, self.fim_entry, output_format="%Y-%m-%d")
         self._label(filters, "Prestador", 0, 2)
         self.prestador_entry = self._entry(filters, self.prestador_var, 1, 2, width=180)
         self._label(filters, "Servico", 0, 3)
