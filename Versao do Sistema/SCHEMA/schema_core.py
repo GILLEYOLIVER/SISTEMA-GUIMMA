@@ -1,4 +1,4 @@
-"""Schema base do sistema OPERA."""
+"""Schema base do sistema Guimma."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SETUP_BANCO.py — Configurador de Banco (Sistema Opera)
+SETUP_BANCO.py — Configurador de Banco (Sistema Guimma)
 
 Funcionalidades:
 - Janela 1200x700 centralizada
@@ -454,7 +454,7 @@ class SetupBancoWindow:
         self._last_test_ok = False
         self.exit_code = 1
 
-        self.root.title("Configuração do Banco de Dados - Sistema Opera")
+        self.root.title("Configuração do Banco de Dados - Sistema Guimma")
         self.root.minsize(1100, 650)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # packaging/macos/build_installer.sh
-# Script para construir instalador macOS do Sistema Opera
+# Script para construir instalador macOS do Sistema Guimma
 
 set -euo pipefail  # Sai no primeiro erro e falha em variáveis não definidas
 
@@ -470,7 +470,7 @@ rm -rf "/Applications/SistemaOpera.app"
 
 rm -rf "/Library/Application Support/SistemaOpera"
 rm -rf "/Library/Logs/SistemaOpera"
-rm -f "/Library/Preferences/com.operafashion.sistemaopera.plist"
+rm -f "/Library/Preferences/com.sistemaguimma.sistemaopera.plist"
 
 for home in /Users/*; do
   user_name=$(basename "$home")
@@ -481,15 +481,15 @@ for home in /Users/*; do
     rm -rf "$home/Library/Application Support/SistemaOpera"
     rm -rf "$home/Library/Caches/SistemaOpera"
     rm -rf "$home/Library/Logs/SistemaOpera"
-    rm -f "$home/Library/Preferences/com.operafashion.sistemaopera.plist"
-    rm -rf "$home/Library/Saved Application State/com.operafashion.sistemaopera.savedState"
+    rm -f "$home/Library/Preferences/com.sistemaguimma.sistemaopera.plist"
+    rm -rf "$home/Library/Saved Application State/com.sistemaguimma.sistemaopera.savedState"
     rm -rf "$home/Applications/SistemaOpera.app"
   fi
 done
 
 rm -f /tmp/sistemaopera_db_setup_result.json /tmp/sistemaopera_db_setup_gui.py 2>/dev/null || true
 
-pkgutil --forget com.operafashion.sistemaopera >/dev/null 2>&1 || true
+pkgutil --forget com.sistemaguimma.sistemaopera >/dev/null 2>&1 || true
 
 SCRIPT_PATH="$0"
 (
@@ -576,7 +576,7 @@ def porta_aberta(host: str, porta: int, timeout: float = 1.2) -> bool:
 
 
 root = tk.Tk()
-root.title("Configuração do Banco - SistemaOpera")
+root.title("Configuração do Banco - Sistema Guimma")
 root.resizable(False, False)
 
 bg = "#0B1320"
@@ -675,7 +675,7 @@ root._bg_img = bg_img
 root._icon_img = icon_img
 root._icon_mark = icon_mark
 tk.Label(text_hdr, text="Configuração do Banco de Dados", font=("Segoe UI", 16, "bold"), fg=fg, bg=panel).pack(anchor="w")
-tk.Label(text_hdr, text="Instalação do SistemaOpera • Configure local/rede, teste conexão e conclua.", font=("Segoe UI", 10), fg=muted, bg=panel).pack(anchor="w", pady=(2, 0))
+tk.Label(text_hdr, text="Instalação do Sistema Guimma • Configure local/rede, teste conexão e conclua.", font=("Segoe UI", 10), fg=muted, bg=panel).pack(anchor="w", pady=(2, 0))
 
 form = tk.Frame(content, bg=panel)
 form.pack(fill="x", padx=12, pady=8)
@@ -919,7 +919,7 @@ POSTINSTALL
     pkgbuild \
       --component "$APP_PATH" \
       --scripts "$PKG_SCRIPTS" \
-      --identifier "com.operafashion.sistemaopera" \
+      --identifier "com.sistemaguimma.sistemaopera" \
       --version "1.0.0" \
       --install-location "/Applications" \
       "$PKG_PATH"
@@ -940,7 +940,7 @@ main() {
     parse_args "$@"
     ensure_macos
 
-    print_header "SISTEMA OPERA - INSTALADOR macOS"
+    print_header "SISTEMA GUIMMA - INSTALADOR macOS"
     log_info "Data: $(date)"
     log_info "Diretório: $(pwd)"
 

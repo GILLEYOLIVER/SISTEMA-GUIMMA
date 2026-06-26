@@ -1049,7 +1049,7 @@ class OrdensCorteImpressao(ctk.CTkFrame):
         # Rodapé simples
         c.line(margem_esq, 60, margem_dir, 60)
         c.setFont("Helvetica", 9)
-        c.drawString(margem_esq, 48, "Sistema OPERA - Ordem de Corte (Impressão)")
+        c.drawString(margem_esq, 48, "Sistema Guimma - Ordem de Corte (Impressão)")
         if self.usuario_nome:
             c.drawRightString(margem_dir, 48, f"Usuário: {self.usuario_nome}")
 

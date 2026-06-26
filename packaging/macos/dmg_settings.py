@@ -47,7 +47,7 @@ def create_dmg():
         os.symlink("/Applications", temp_dir / "Applications")
 
         # Adicionar arquivo de boas-vindas
-        welcome_text = """Bem-vindo ao Sistema Opera Fashion!
+        welcome_text = """Bem-vindo ao Sistema Guimma!
 
 Para instalar:
 1. Arraste o ícone 'SistemaOpera.app' para a pasta 'Applications'

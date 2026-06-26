@@ -1,7 +1,7 @@
-# Roteiro de Vídeo de Apresentação Comercial — Sistema OPERA
+# Roteiro de Vídeo de Apresentação Comercial — Sistema Guimma
 
 ## Objetivo do vídeo
-Apresentar o Sistema OPERA para clientes potenciais, destacando ganhos de produtividade, controle operacional, redução de erros, rastreabilidade e visão financeira em tempo real.
+Apresentar o Sistema Guimma para clientes potenciais, destacando ganhos de produtividade, controle operacional, redução de erros, rastreabilidade e visão financeira em tempo real.
 
 ## Público-alvo
 - Confecções e indústrias de costura/corte/acabamento
@@ -18,7 +18,7 @@ Apresentar o Sistema OPERA para clientes potenciais, destacando ganhos de produt
 **Cena:** logo, visão geral do sistema, telas rápidas do dashboard e produção.
 
 **Narração (vendedor):**
-> “Se a sua empresa ainda perde tempo com planilhas desconectadas, atraso de produção e falta de visibilidade financeira, o Sistema OPERA foi feito para você. Com ele, você integra cadastro, ordens, chão de fábrica, estoque, facções e financeiro em um único fluxo. Resultado: mais controle, menos retrabalho e decisões com dados reais.”
+> “Se a sua empresa ainda perde tempo com planilhas desconectadas, atraso de produção e falta de visibilidade financeira, o Sistema Guimma foi feito para você. Com ele, você integra cadastro, ordens, chão de fábrica, estoque, facções e financeiro em um único fluxo. Resultado: mais controle, menos retrabalho e decisões com dados reais.”
 
 **CTA na tela:**
 - “Controle ponta a ponta”

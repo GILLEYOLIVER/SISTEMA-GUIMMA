@@ -1,7 +1,7 @@
 # Relatório de Teste de Fluxo das Páginas
 
 Data do teste: 25/06/2026  
-Projeto: SISTEMA-GUIMMA / Sistema OPERA  
+Projeto: SISTEMA-GUIMMA / Sistema Guimma
 Banco testado: PostgreSQL local, schema `opera`, base `BANCO_OPERA`
 
 ## 1. Resumo executivo

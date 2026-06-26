@@ -1533,7 +1533,7 @@ if __name__ == "__main__":
     ctk.set_default_color_theme("dark-blue")
 
     app = ctk.CTk()
-    app.title("Histórico de Serviços - Sistema Opera")
+    app.title("Histórico de Serviços - Sistema Guimma")
     app.geometry("1400x900")
 
     # Simular sistema principal com cores

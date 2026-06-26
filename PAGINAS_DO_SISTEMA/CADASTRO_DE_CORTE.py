@@ -2562,7 +2562,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
         c.setFont("Helvetica", 8)
         c.setFillColor(colors.HexColor("#6c757d"))
         c.drawString(margem, 15 * mm, f"Emitido em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        c.drawRightString(width - margem, 15 * mm, "Sistema Opera Fashion")
+        c.drawRightString(width - margem, 15 * mm, "Sistema Guimma")
 
         c.save()
         buffer.seek(0)

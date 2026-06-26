@@ -60,5 +60,9 @@ app = BUNDLE(
     coll,
     name='SistemaOpera.app',
     icon='icons/ICONE_SISTEMA.icns',
-    bundle_identifier=None,
+    bundle_identifier='com.sistemaguimma.app',
+    info_plist={
+        'CFBundleDisplayName': 'Sistema Guimma',
+        'CFBundleName': 'Sistema Guimma',
+    },
 )

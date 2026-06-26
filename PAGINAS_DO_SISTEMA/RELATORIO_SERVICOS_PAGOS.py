@@ -1118,7 +1118,7 @@ class RelatorioServicosPagosPage(ctk.CTkFrame):
         </div>
       </div>
       <div class="doc-info">
-        <strong>SISTEMA OPERA</strong><br>
+        <strong>SISTEMA GUIMMA</strong><br>
         Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}<br>
         Documento para conferencia de pagamentos
       </div>
@@ -1133,7 +1133,7 @@ class RelatorioServicosPagosPage(ctk.CTkFrame):
     {''.join(rows_html)}
     <footer>
       <span>Relatorio detalhado de servicos pagos</span>
-      <span>Sistema OPERA</span>
+      <span>Sistema Guimma</span>
     </footer>
   </main>
   <script>window.onload = function() {{ setTimeout(function() {{ window.print(); }}, 350); }};</script>

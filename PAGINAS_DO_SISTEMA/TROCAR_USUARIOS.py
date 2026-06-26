@@ -13,7 +13,7 @@ def abrir_janela_trocar_usuario(self):
         # JANELA MODAL DE LOGIN
         # =========================
         login_window = ctk.CTkToplevel(self)
-        login_window.title("OPERA - Trocar Usuário")
+        login_window.title("Sistema Guimma - Trocar Usuário")
         login_window.transient(self)
 
         # Dimensões fixas

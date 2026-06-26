@@ -815,37 +815,38 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         try:
             conn = _connect()
             self._ensure_profile_table(conn)
-            conn.execute("""
-                INSERT INTO pricing_profiles (nome, impostos, comissao, cartao, margem, perdas, defeito, fixos, capacidade, variaveis, frete, arredondamento, canal)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT(nome) DO UPDATE SET
-                    impostos=excluded.impostos,
-                    comissao=excluded.comissao,
-                    cartao=excluded.cartao,
-                    margem=excluded.margem,
-                    perdas=excluded.perdas,
-                    defeito=excluded.defeito,
-                    fixos=excluded.fixos,
-                    capacidade=excluded.capacidade,
-                    variaveis=excluded.variaveis,
-                    frete=excluded.frete,
-                    arredondamento=excluded.arredondamento,
-                    canal=excluded.canal
-            """, (
-                nome,
-                self._as_float(self.v["impostos_pct"].get()),
-                self._as_float(self.v["comissao_pct"].get()),
-                self._as_float(self.v["cartao_pct"].get()),
-                self._as_float(self.v["margem_pct"].get()),
-                self._as_float(self.v["perdas_pct"].get()),
-                self._as_float(self.v["defeito_pct"].get()),
-                self._as_float(self.v["fixos_mes"].get()),
-                self._as_float(self.v["capacidade_mes"].get()),
-                self._as_float(self.v["variaveis"].get()),
-                self._as_float(self.v["frete"].get()),
-                self.cmb_round.get(),
-                self.cmb_canal.get(),
-            ))
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("""
+                    INSERT INTO pricing_profiles (nome, impostos, comissao, cartao, margem, perdas, defeito, fixos, capacidade, variaveis, frete, arredondamento, canal)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT(nome) DO UPDATE SET
+                        impostos=excluded.impostos,
+                        comissao=excluded.comissao,
+                        cartao=excluded.cartao,
+                        margem=excluded.margem,
+                        perdas=excluded.perdas,
+                        defeito=excluded.defeito,
+                        fixos=excluded.fixos,
+                        capacidade=excluded.capacidade,
+                        variaveis=excluded.variaveis,
+                        frete=excluded.frete,
+                        arredondamento=excluded.arredondamento,
+                        canal=excluded.canal
+                """, (
+                    nome,
+                    self._as_float(self.v["impostos_pct"].get()),
+                    self._as_float(self.v["comissao_pct"].get()),
+                    self._as_float(self.v["cartao_pct"].get()),
+                    self._as_float(self.v["margem_pct"].get()),
+                    self._as_float(self.v["perdas_pct"].get()),
+                    self._as_float(self.v["defeito_pct"].get()),
+                    self._as_float(self.v["fixos_mes"].get()),
+                    self._as_float(self.v["capacidade_mes"].get()),
+                    self._as_float(self.v["variaveis"].get()),
+                    self._as_float(self.v["frete"].get()),
+                    self.cmb_round.get(),
+                    self.cmb_canal.get(),
+                ))
             conn.commit()
             messagebox.showinfo("Perfil", f"Perfil '{nome}' salvo/atualizado.")
         except Exception as e:
@@ -860,8 +861,9 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
         try:
             conn = _connect()
             self._ensure_profile_table(conn)
-            cur = conn.execute("SELECT nome FROM pricing_profiles ORDER BY nome")
-            nomes = [r["nome"] for r in cur.fetchall()]
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("SELECT nome FROM pricing_profiles ORDER BY nome")
+                nomes = [r["nome"] for r in cur.fetchall()]
         except Exception as e:
             messagebox.showerror("Perfil", f"Erro: {e}")
             try:
@@ -887,11 +889,12 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
             return
 
         try:
-            cur = conn.execute("""
-                SELECT impostos, comissao, cartao, margem, perdas, defeito, fixos, capacidade, variaveis, frete, arredondamento, canal
-                  FROM pricing_profiles WHERE nome=%s
-            """, (nome,))
-            row = cur.fetchone()
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT impostos, comissao, cartao, margem, perdas, defeito, fixos, capacidade, variaveis, frete, arredondamento, canal
+                      FROM pricing_profiles WHERE nome=%s
+                """, (nome,))
+                row = cur.fetchone()
             if not row:
                 messagebox.showinfo("Perfil", "Perfil não encontrado.")
                 return

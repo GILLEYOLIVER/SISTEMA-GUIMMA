@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MENU_PRINCIPAL.py - Sistema OPERA Refatorado
+MENU_PRINCIPAL.py - Sistema Guimma Refatorado
 Menu principal com sistema de temas, permissões e cache otimizado.
 VERSÃO SEM HOVER - BOTÕES ESTÁTICOS
 """
@@ -216,7 +216,7 @@ class ConfigManager:
 
 # ===== GERENCIADOR DE TEMAS =====
 class ThemeManager:
-    """Gerencia e aplica temas no sistema OPERA."""
+    """Gerencia e aplica temas no sistema Guimma."""
 
     def __init__(self, app):
         self.app = app
@@ -1181,7 +1181,7 @@ class UserManager:
 
 # ===== APLICAÇÃO PRINCIPAL =====
 class OperaMenuApp(ctk.CTk):
-    """Aplicação principal do sistema OPERA."""
+    """Aplicação principal do sistema Guimma."""
 
     SIDEBAR_WIDTH = 300
     ITEM_HEIGHT = 40
@@ -1321,7 +1321,7 @@ class OperaMenuApp(ctk.CTk):
 
     UI_TEXTS = {
         "pt_BR": {
-            "system_title": "SISTEMA OPERA",
+            "system_title": "Sistema Guimma",
             "main_menu": "Menu Principal",
             "topbar_dashboard": "Dashboard",
             "language": "Idioma",
@@ -1339,7 +1339,7 @@ class OperaMenuApp(ctk.CTk):
             "clock_format": "%d/%m/%Y %H:%M:%S",
         },
         "en_US": {
-            "system_title": "OPERA SYSTEM",
+            "system_title": "Sistema Guimma",
             "main_menu": "Main Menu",
             "topbar_dashboard": "Dashboard",
             "language": "Language",
@@ -1357,7 +1357,7 @@ class OperaMenuApp(ctk.CTk):
             "clock_format": "%m/%d/%Y %I:%M:%S %p",
         },
         "es_ES": {
-            "system_title": "SISTEMA OPERA",
+            "system_title": "Sistema Guimma",
             "main_menu": "Menú Principal",
             "topbar_dashboard": "Panel",
             "language": "Idioma",
@@ -1520,6 +1520,8 @@ class OperaMenuApp(ctk.CTk):
         self._page_cache_order = []
         self._page_cache_size = self._resolve_page_cache_size()
         self._current_frame = None
+        self._pending_settings_save_job = None
+        self._pending_theme_refresh_jobs = []
         self._backup_launch_scheduled = False
         self.permissoes_usuario = {}
 
@@ -1540,11 +1542,10 @@ class OperaMenuApp(ctk.CTk):
         self.focus_force()
         self._apply_initial_layout()
         self._open_dashboard_agora()
-        self._agendar_after(180, lambda: self._apply_theme_to_frame_safely(self._current_frame))
-        self._agendar_after(420, lambda: self._apply_theme_to_frame_safely(self._current_frame))
+        self._schedule_theme_refresh_for_frame(self._current_frame)
         self._agendar_after(1200, self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
-        self._agendar_after(5000, self._ativar_backup_silencioso)
+        self._agendar_after(self._backup_start_delay_ms(), self._ativar_backup_silencioso)
         self._update_menu_buttons_colors()
 
         _dprint(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
@@ -1841,7 +1842,7 @@ class OperaMenuApp(ctk.CTk):
         self._agendar_after(250, _do_preload)
 
     def _setup_window(self):
-        self.title("OPERA • Sistema de Gestão")
+        self.title("Sistema Guimma • Sistema de Gestão")
         try:
             if os.path.exists(ICONE_SISTEMA):
                 icon_image = Image.open(ICONE_SISTEMA)
@@ -1971,8 +1972,13 @@ class OperaMenuApp(ctk.CTk):
     def destroy(self):
         if getattr(self, "_closing", False):
             return
+        try:
+            self._flush_settings_save()
+        except Exception:
+            pass
         self._closing = True
         try:
+            self._cancel_pending_theme_refreshes()
             cancel_all_afters(self)
             cancel_all_after_info(self)
         except Exception:
@@ -2413,6 +2419,58 @@ class OperaMenuApp(ctk.CTk):
             ConfigManager.save_settings(self.settings)
         except Exception as e:
             _dprint(f"⚠️ Não foi possível salvar idioma: {e}")
+
+    def _schedule_settings_save(self, delay_ms: int = 900):
+        if getattr(self, "_closing", False):
+            self._flush_settings_save()
+            return
+        try:
+            safe_after_cancel(self, getattr(self, "_pending_settings_save_job", None))
+            self._pending_settings_save_job = self._agendar_after(delay_ms, self._flush_settings_save)
+        except Exception:
+            self._flush_settings_save()
+
+    def _flush_settings_save(self):
+        try:
+            pending_job = getattr(self, "_pending_settings_save_job", None)
+            if pending_job:
+                safe_after_cancel(self, pending_job)
+            self._pending_settings_save_job = None
+            ConfigManager.save_settings(self.settings)
+        except Exception:
+            pass
+
+    def _current_theme_cache_key(self):
+        return str(getattr(self, "current_theme_name", "") or "")
+
+    def _cancel_pending_theme_refreshes(self):
+        for job in list(getattr(self, "_pending_theme_refresh_jobs", []) or []):
+            safe_after_cancel(self, job)
+        self._pending_theme_refresh_jobs = []
+
+    def _schedule_theme_refresh_for_frame(self, frame):
+        if not frame or getattr(self, "_closing", False):
+            return
+        self._cancel_pending_theme_refreshes()
+
+        def _refresh_if_current(delay_label, f=frame):
+            try:
+                if f is getattr(self, "_current_frame", None):
+                    self._apply_theme_to_frame_safely(f, force=True)
+            finally:
+                _dprint(f"[Tema] Reforço pós-abertura concluído ({delay_label}ms).")
+
+        for delay_ms in (280, 900):
+            job = self._agendar_after(delay_ms, functools.partial(_refresh_if_current, delay_ms))
+            if job:
+                self._pending_theme_refresh_jobs.append(job)
+
+    def _backup_start_delay_ms(self):
+        try:
+            delay = int(float(os.environ.get("OPERA_BACKUP_START_DELAY_MS", "60000") or "60000"))
+        except Exception:
+            delay = 60000
+        return max(15000, min(delay, 300000))
 
     def _clear_page_cache_except_current(self):
         current = getattr(self, "_current_frame", None)
@@ -3445,11 +3503,14 @@ class OperaMenuApp(ctk.CTk):
                 except:
                     pass
 
-    def _apply_theme_to_frame_safely(self, frame):
+    def _apply_theme_to_frame_safely(self, frame, *, force: bool = False):
         """Reaplica tema no frame informado (incluindo widgets criados com atraso)."""
         if not frame or not getattr(frame, "winfo_exists", lambda: False)():
             return
         try:
+            theme_key = self._current_theme_cache_key()
+            if not force and getattr(frame, "_opera_theme_cache_key", None) == theme_key:
+                return
             if hasattr(frame, "host"):
                 frame.host = self
             if hasattr(frame, "sistema"):
@@ -3458,6 +3519,10 @@ class OperaMenuApp(ctk.CTk):
                 frame.app = self
             if hasattr(self, "theme_manager") and self.theme_manager:
                 self.theme_manager.apply_theme_to_widget(frame)
+            try:
+                frame._opera_theme_cache_key = theme_key
+            except Exception:
+                pass
             if hasattr(self, "_update_menu_buttons_colors"):
                 self._update_menu_buttons_colors()
         except Exception as e:
@@ -3478,6 +3543,7 @@ class OperaMenuApp(ctk.CTk):
             if self._current_frame and self._current_frame.winfo_exists():
                 self._current_frame.place_forget()
             frame = self._get_cached_page(page_name)
+            frame_was_cached = frame is not None
             if frame is None:
                 frame = self._load_page_direct(page_name)
                 self._cache_page(page_name, frame)
@@ -3499,26 +3565,25 @@ class OperaMenuApp(ctk.CTk):
 
                 if hasattr(self, "title_label"):
                     self.title_label.configure(text=self._translate_page_name(page_name))
+                if page_name == "Logs e Atividades" and hasattr(frame, "abrir_aba_logs"):
+                    try:
+                        self._agendar_after(20, frame.abrir_aba_logs)
+                    except Exception:
+                        pass
                 try:
                     if hasattr(frame, "on_page_open"):
                         frame.on_page_open()
                 except Exception as _exc:
                     _dprint(f"⚠️ Erro ao atualizar página ao abrir '{page_name}': {_exc}")
                 self._apply_theme_to_frame_safely(frame)
-                # Reforços para widgets que são criados após o primeiro draw
-                self.after(120,
-                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
-                self.after(320,
-                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
-                self.after(750,
-                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
-                self.after(1500,
-                           lambda f=frame: self._apply_theme_to_frame_safely(f) if f is self._current_frame else None)
+                # Páginas novas podem criar widgets após o primeiro draw; páginas em cache já estão prontas.
+                if not frame_was_cached:
+                    self._schedule_theme_refresh_for_frame(frame)
                 self.current_page = page_name
                 self._current_frame = frame
                 try:
                     self.settings["last_page"] = page_name
-                    ConfigManager.save_settings(self.settings)
+                    self._schedule_settings_save()
                 except:
                     pass
                 _dprint(f"✅ Página '{page_name}' carregada")
@@ -3768,10 +3833,14 @@ class OperaMenuApp(ctk.CTk):
     def _ativar_backup_silencioso(self):
         if getattr(self, "_backup_launch_scheduled", False):
             self._backup_launch_scheduled = False
+        if getattr(self, "_page_loading", False):
+            self._backup_launch_scheduled = True
+            self._agendar_after(15000, self._ativar_backup_silencioso)
+            return
         try:
             if not self.winfo_exists():
                 self._backup_launch_scheduled = True
-                self.after(5000, self._ativar_backup_silencioso)
+                self._agendar_after(15000, self._ativar_backup_silencioso)
                 return
         except:
             pass
@@ -3863,7 +3932,7 @@ def remover_foco_e_bordas_menu(widget_root):
 
 def main():
     try:
-        _dprint("🚀 Iniciando sistema OPERA...")
+        _dprint("🚀 Iniciando sistema Guimma...")
         app = OperaMenuApp()
         _dprint("✅ Aplicação iniciada, entrando no mainloop...")
         app.mainloop()

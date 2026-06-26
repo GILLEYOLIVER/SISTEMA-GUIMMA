@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-INSTALADOR OPERA FASHION - Interface (WIN/MAC) - HÍBRIDO (Local + LAN + Host manual)
+INSTALADOR SISTEMA GUIMMA - Interface (WIN/MAC) - HÍBRIDO (Local + LAN + Host manual)
 
 ✅ O que este arquivo entrega:
 - Campo Host/IP + Porta + Usuário + Senha
@@ -95,7 +95,7 @@ class SuccessDialog(QDialog):
     def __init__(self, parent, theme: dict, summary: dict, database: str, user: str = "", password: str = ""):
         super().__init__(parent)
         self._t = theme or {}
-        self.setWindowTitle("✅ OPERA FASHION - Instalação Concluída")
+        self.setWindowTitle("✅ SISTEMA GUIMMA - Instalação Concluída")
         self.setModal(True)
         self.setMinimumWidth(700)
         self.setMinimumHeight(580)
@@ -197,7 +197,7 @@ class SuccessDialog(QDialog):
         icon.setStyleSheet("font-size: 32px;")
         title_layout.addWidget(icon)
 
-        title = QLabel("SISTEMA OPERA CRIADO COM SUCESSO!")
+        title = QLabel("SISTEMA GUIMMA CRIADO COM SUCESSO!")
         title.setObjectName("MainTitle")
         title_layout.addWidget(title)
         title_layout.addStretch()
@@ -736,7 +736,7 @@ class InstallerApp(QMainWindow):
         self._last_database: str = ""
         self._last_script: str = ""
 
-        self.setWindowTitle("🚀 INSTALADOR OPERA FASHION - Banco PostgreSQL")
+        self.setWindowTitle("🚀 INSTALADOR SISTEMA GUIMMA - Banco PostgreSQL")
         self.setMinimumSize(1180, 760)
         self.resize(1380, 860)
 
@@ -803,7 +803,7 @@ class InstallerApp(QMainWindow):
         dlg = SuccessDialog(
             self,
             theme=theme,
-            title="SISTEMA OPERA CRIADO COM SUCESSO!",
+            title="SISTEMA GUIMMA CRIADO COM SUCESSO!",
             subtitle="Banco de dados configurado e pronto para uso",
             pills=pills,
         )
@@ -838,7 +838,7 @@ class InstallerApp(QMainWindow):
         topbar.addWidget(self.theme_toggle, 0, Qt.AlignRight)
         hl.addLayout(topbar)
 
-        title = QLabel("🚀 INSTALADOR OPERA FASHION")
+        title = QLabel("🚀 INSTALADOR SISTEMA GUIMMA")
         title.setObjectName("HeaderTitle")
         title.setAlignment(Qt.AlignCenter)
         title.setFont(QFont("Arial", 18, QFont.Bold))
@@ -1365,7 +1365,7 @@ class InstallerApp(QMainWindow):
                     print(f"❌ Erro: classe SuccessDialog não encontrada - {e}")
                     # Fallback: mostrar QMessageBox simples
                     msg = f"""
-    ✅ SISTEMA OPERA CRIADO COM SUCESSO!
+    ✅ SISTEMA GUIMMA CRIADO COM SUCESSO!
 
     Banco: {db_name}
     Usuário: {user}
@@ -2204,10 +2204,10 @@ class InstallerApp(QMainWindow):
         if table_matches:
             tables = max(tables, sum(int(m) for m in table_matches))
 
-        # Garantir que pelo menos temos as tabelas principais do sistema OPERA
+        # Garantir que pelo menos temos as tabelas principais do sistema Guimma
         # Se o script 3 foi executado, deve ter pelo menos 57 tabelas
         if "3_CRIAR_TABELAS" in s and tables < 57:
-            # Tabelas conhecidas do sistema OPERA
+            # Tabelas conhecidas do sistema Guimma
             known_tables = [
                 '_schema_info', 'usuarios', 'usuario_preferencias', 'usuario_permissoes',
                 'usuario_logs', 'usuario_temas_personalizados', 'cadastro_modelos_cabecalho',

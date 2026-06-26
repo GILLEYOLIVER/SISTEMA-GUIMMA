@@ -1,7 +1,7 @@
 # packaging/build.py
 # !/usr/bin/env python3
 """\
-Script principal de build para Sistema Opera.
+Script principal de build para Sistema Guimma.
 Suporta Windows e macOS.
 
 Atenção (Windows): usamos --onedir para gerar a pasta _internal (python312.dll),
@@ -393,13 +393,13 @@ def build_macos() -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build do Sistema Opera")
+    parser = argparse.ArgumentParser(description="Build do Sistema Guimma")
     parser.add_argument("--platform", choices=["windows", "macos", "all"], default="windows", help="Plataforma de build")
     parser.add_argument("--skip-deps", action="store_true", help="Pular verificação de dependências")
 
     args = parser.parse_args()
 
-    print_header("SISTEMA OPERA - BUILD SYSTEM")
+    print_header("SISTEMA GUIMMA - BUILD SYSTEM")
     print(f"📋 Plataforma: {args.platform}")
     print(f"📋 Python: {sys.version}")
     print(f"📋 Diretório: {os.getcwd()}")

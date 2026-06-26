@@ -1964,7 +1964,7 @@ class EnvioCortes(ctk.CTkFrame):
                 "meta": {
                     "logo_path": globals().get("LOGO_PATH", ""),
                     "gerado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "empresa_nome": "OPERA / EMPRESA",
+                    "empresa_nome": "Sistema Guimma",
                 },
             }
 
@@ -2003,7 +2003,7 @@ class EnvioCortes(ctk.CTkFrame):
         titulo = "CONTROLE DE MÃO DE OBRA — Envio de Cortes"
         gerado_em = _t(meta.get("gerado_em")) or datetime.now().strftime("%d/%m/%Y %H:%M")
         logo_path = _find_logo_path(meta.get("logo_path"))
-        empresa_nome = (_t(meta.get("empresa_nome")) or "OPERA / EMPRESA").strip()
+        empresa_nome = (_t(meta.get("empresa_nome")) or "Sistema Guimma").strip()
 
         # ----------------------------
         # Documento (margens ok, mas espaçamentos compactos)
@@ -2016,7 +2016,7 @@ class EnvioCortes(ctk.CTkFrame):
             topMargin=14 * mm,
             bottomMargin=14 * mm,
             title=titulo,
-            author="Ópera Fashion",
+            author="Sistema Guimma",
         )
 
         styles = getSampleStyleSheet()
@@ -2078,7 +2078,7 @@ class EnvioCortes(ctk.CTkFrame):
             canvas.saveState()
             canvas.setFont("Helvetica", 7)
             canvas.setFillColor(colors.HexColor("#666666"))
-            canvas.drawString(16 * mm, 9 * mm, "SISTEMA OPERA — Impressão")
+            canvas.drawString(16 * mm, 9 * mm, "SISTEMA GUIMMA — Impressão")
             canvas.drawRightString(210 * mm - 16 * mm, 9 * mm, f"Página {canvas.getPageNumber()}")
             canvas.restoreState()
 
@@ -2141,10 +2141,10 @@ class EnvioCortes(ctk.CTkFrame):
                 header_right.append(img)
             except Exception:
                 header_right.append(
-                    Paragraph("ÓPERA FASHION", ParagraphStyle("LogoTxt", parent=style_title, alignment=TA_RIGHT)))
+                    Paragraph("SISTEMA GUIMMA", ParagraphStyle("LogoTxt", parent=style_title, alignment=TA_RIGHT)))
         else:
             header_right.append(
-                Paragraph("ÓPERA FASHION", ParagraphStyle("LogoTxt", parent=style_title, alignment=TA_RIGHT)))
+                Paragraph("SISTEMA GUIMMA", ParagraphStyle("LogoTxt", parent=style_title, alignment=TA_RIGHT)))
 
         header_tbl = Table([[header_left, header_right]], colWidths=[doc.width * 0.70, doc.width * 0.30])
         header_tbl.setStyle(TableStyle([
@@ -2306,7 +2306,7 @@ class EnvioCortes(ctk.CTkFrame):
         story.append(assin_tbl)
 
         story.append(Spacer(1, 2 * mm))
-        story.append(Paragraph("Documento gerado automaticamente pelo Sistema Ópera.", style_small))
+        story.append(Paragraph("Documento gerado automaticamente pelo Sistema Guimma.", style_small))
 
         # ----------------------------
         # Build

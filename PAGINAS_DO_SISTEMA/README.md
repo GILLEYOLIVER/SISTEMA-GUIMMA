@@ -1,7 +1,7 @@
-# 📘 SISTEMA OPERA  
+# 📘 SISTEMA GUIMMA
 **ERP Profissional para Moda, Produção, Corte, Facções e Gestão Integrada**
 
-O **SISTEMA OPERA** é um ERP moderno desenvolvido em **Python + CustomTkinter + PostgreSQL**, projetado para gestão completa de empresas do setor de **confecção, moda, corte, produção, facções, estoque e financeiro**.
+O **SISTEMA GUIMMA** é um ERP moderno desenvolvido em **Python + CustomTkinter + PostgreSQL**, projetado para gestão completa de empresas do setor de **confecção, moda, corte, produção, facções, estoque e financeiro**.
 
 Ele possui **interface moderna**, **sistema avançado de temas**, **permissões por usuário**, **pré-carregamento inteligente**, módulos integrados e arquitetura otimizada para **alto desempenho em Windows e macOS**.
 
@@ -35,7 +35,7 @@ Ele possui **interface moderna**, **sistema avançado de temas**, **permissões 
 
 ## 🧵 Sobre o Sistema
 
-O **SISTEMA OPERA** foi criado para atender empresas do setor têxtil e confecção, oferecendo controle total sobre:
+O **SISTEMA GUIMMA** foi criado para atender empresas do setor têxtil e confecção, oferecendo controle total sobre:
 
 - Corte e produção  
 - Modelos e grades  
@@ -222,7 +222,7 @@ Algumas das tabelas centrais:
 ## 📁 Estrutura do Projeto
 
 ```text
-SISTEMA OPERA/
+SISTEMA GUIMMA/
 │── MENU_PRINCIPAL.py
 │── LOGUIN.py
 │── SPLASH.py

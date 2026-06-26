@@ -1,8 +1,8 @@
-# DOCUMENTAÇÃO FUNCIONAL — SISTEMA OPERA
+# DOCUMENTAÇÃO FUNCIONAL — SISTEMA GUIMMA
 
-## 1) O que é o Sistema OPERA
+## 1) O que é o Sistema Guimma
 
-O **Sistema OPERA** é uma plataforma desktop para gestão completa do ciclo de produção têxtil/facção, cobrindo:
+O **Sistema Guimma** é uma plataforma desktop para gestão completa do ciclo de produção têxtil/facção, cobrindo:
 - cadastro técnico de modelos;
 - planejamento e geração de ordens;
 - corte, envio externo, retorno e acabamento;
@@ -122,7 +122,7 @@ O sistema serve para:
 
 ## 6) Resultado prático para a empresa
 
-Com o Sistema OPERA, a empresa passa a ter:
+Com o Sistema Guimma, a empresa passa a ter:
 - processo produtivo mais previsível;
 - visão de gargalos por etapa;
 - melhor controle de estoque e custo;

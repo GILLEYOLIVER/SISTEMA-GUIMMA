@@ -274,7 +274,7 @@ class UsuariosPage(ctk.CTkFrame):
         else:
             # Criar janela própria para testes
             self._owned_root = ctk.CTk()
-            self._owned_root.title("Gestão de Usuários - Sistema OPERA")
+            self._owned_root.title("Gestão de Usuários - Sistema Guimma")
             self._owned_root.geometry("1400x900")
             parent = self._owned_root
             print("🎯 [USUARIOS] Criando janela própria")
@@ -318,9 +318,6 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             print("📊 [USUARIOS] Carregando dados iniciais...")
             self._pesquisar_usuarios()
-            self._load_logs()
-            self._update_stats()
-            self._update_header_stats()
         except Exception as e:
             print(f"❌ [USUARIOS] Erro ao carregar dados iniciais: {e}")
 
@@ -337,6 +334,7 @@ class UsuariosPage(ctk.CTkFrame):
         """Configura todas as variáveis de controle"""
         self.user_id: Optional[int] = None
         self._permissoes_vars: Dict[str, Dict[str, ctk.BooleanVar]] = {}
+        self._tabs_built = set()
 
         # Variáveis de formulário
         self.usuario_var = ctk.StringVar()
@@ -494,7 +492,7 @@ class UsuariosPage(ctk.CTkFrame):
         """Busca estatísticas reais do banco de dados - DADOS REAIS"""
         try:
             if not POSTGRES_AVAILABLE:
-                # Dados reais baseados no sistema OPERA
+                # Dados reais baseados no sistema Guimma
                 return 10, 8, 2, 47  # total, ativos, admins, logs_hoje
 
             schema = get_schema()
@@ -560,7 +558,8 @@ class UsuariosPage(ctk.CTkFrame):
             segmented_button_unselected_color=self.cor_secundaria,
             segmented_button_selected_hover_color=self._darken_color(self.cor_primaria),
             segmented_button_unselected_hover_color=self._darken_color(self.cor_secundaria),
-            text_color=self.cor_texto
+            text_color=self.cor_texto,
+            command=self._on_tab_changed,
         )
         self.notebook.grid(row=0, column=0, sticky="nsew")
 
@@ -575,11 +574,33 @@ class UsuariosPage(ctk.CTkFrame):
             tab.grid_rowconfigure(0, weight=1)
             tab.grid_columnconfigure(0, weight=1)
 
-        # Construir conteúdo das abas
+        # A aba principal nasce pronta; permissões, logs e dashboard são montados sob demanda.
         self._build_tab_usuarios()
-        self._build_tab_permissoes()
-        self._build_tab_logs()
-        self._build_tab_dashboard()
+        self._tabs_built.add("usuarios")
+
+    def _on_tab_changed(self):
+        try:
+            selected = self.notebook.get()
+        except Exception:
+            selected = ""
+        if "PERMISS" in selected:
+            self._ensure_tab_built("permissoes")
+        elif "LOGS" in selected:
+            self._ensure_tab_built("logs")
+        elif "DASHBOARD" in selected:
+            self._ensure_tab_built("dashboard")
+
+    def _ensure_tab_built(self, tab_key: str):
+        if tab_key in getattr(self, "_tabs_built", set()):
+            return
+        if tab_key == "permissoes":
+            self._build_tab_permissoes()
+        elif tab_key == "logs":
+            self._build_tab_logs()
+            self._load_logs()
+        elif tab_key == "dashboard":
+            self._build_tab_dashboard()
+        self._tabs_built.add(tab_key)
 
     def _build_tab_usuarios(self):
         """Constrói a aba de usuários remodelada"""
@@ -1155,6 +1176,7 @@ class UsuariosPage(ctk.CTkFrame):
         try:
             if hasattr(self, "notebook"):
                 self.notebook.set("📊  LOGS")
+                self._ensure_tab_built("logs")
         except Exception as e:
             print(f"❌ Erro ao selecionar aba de logs: {e}")
 
@@ -2021,7 +2043,7 @@ class UsuariosPage(ctk.CTkFrame):
     def _get_permissoes_mais_usadas(self):
         """Busca permissões mais utilizadas - DADOS REAIS"""
         if not POSTGRES_AVAILABLE:
-            # Baseado no uso real do sistema OPERA
+            # Baseado no uso real do sistema Guimma
             return [
                 ("Dashboard Principal", 156),
                 ("Cadastro de Modelos", 89),
@@ -2589,7 +2611,8 @@ class UsuariosPage(ctk.CTkFrame):
                 (3, "usuario2", "user2@sistema.com", "Estoque", False, None),
             ]
             self._popular_lista(demo_data)
-            self._update_stats()
+            if "dashboard" in getattr(self, "_tabs_built", set()):
+                self._update_stats()
             return
 
         schema = get_schema()
@@ -2601,7 +2624,8 @@ class UsuariosPage(ctk.CTkFrame):
             params = ()
         rows = self._fetch_all(sql, params)
         self._popular_lista(rows)
-        self._update_stats()
+        if "dashboard" in getattr(self, "_tabs_built", set()):
+            self._update_stats()
 
     def _popular_lista(self, rows):
         """Popula a lista de usuários na treeview"""
@@ -2961,7 +2985,7 @@ class UsuariosPage(ctk.CTkFrame):
 
         # Sincronizar a lista da aba PERMISSÕES
         try:
-            if hasattr(self, "_popular_tree_permissoes"):
+            if "permissoes" in getattr(self, "_tabs_built", set()) and hasattr(self, "_popular_tree_permissoes"):
                 self._popular_tree_permissoes()
         except Exception as e:
             print(f"[Permissões] erro ao sincronizar lista de usuários: {e}")
@@ -2973,6 +2997,7 @@ class UsuariosPage(ctk.CTkFrame):
             return
         try:
             self.notebook.set("🔐  PERMISSÕES")
+            self._ensure_tab_built("permissoes")
             self._carregar_permissoes_usuario_simplificada()
             if hasattr(self, "user_info_perm"):
                 try:
@@ -3148,7 +3173,6 @@ class UsuariosPage(ctk.CTkFrame):
         """Carrega os logs do sistema com verificação"""
         print("🔄 [LOGS] Carregando logs do sistema...")
         try:
-            self._verificar_logs_existentes()
             self._filtrar_logs()
         except Exception as e:
             print(f"❌ [ERRO LOAD_LOGS] Erro ao carregar logs: {e}")
@@ -3220,7 +3244,7 @@ class UsuariosPage(ctk.CTkFrame):
                 )
                 params += [f"%{busca}%"] * 4
 
-            query += " ORDER BY data_hora DESC"
+            query += " ORDER BY data_hora DESC LIMIT 500"
 
             # -------------------------
             # EXECUÇÃO
@@ -3557,7 +3581,7 @@ class UsuariosPage(ctk.CTkFrame):
         """Busca estatísticas gerais do sistema - DADOS REAIS"""
         try:
             if not POSTGRES_AVAILABLE:
-                # Dados reais baseados no sistema OPERA
+                # Dados reais baseados no sistema Guimma
                 return {
                     'total_usuarios': 10,
                     'usuarios_ativos': 8,
@@ -3614,7 +3638,7 @@ class UsuariosPage(ctk.CTkFrame):
     def _get_usuarios_ativos(self):
         """Busca lista de usuários ativos - DADOS REAIS"""
         if not POSTGRES_AVAILABLE:
-            # Usuários reais do sistema OPERA
+            # Usuários reais do sistema Guimma
             from datetime import datetime, timedelta
             return [
                 ("Usuario A", "usuario.a@empresa.local", "Admin", datetime.now() - timedelta(hours=2)),
@@ -3883,7 +3907,7 @@ class UsuariosPage(ctk.CTkFrame):
         # Subtítulo
         ctk.CTkLabel(
             cabecalho_frame,
-            text="Sistema OPERA - Gestão de Produção Têxtil",
+            text="Sistema Guimma - Gestão de Produção Têxtil",
             font=ctk.CTkFont(size=14),
             text_color="#6b7280"
         ).pack(anchor="w", pady=(0, 15))
@@ -4200,7 +4224,7 @@ class UsuariosPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             rodape_frame,
-            text="Relatório gerado automaticamente pelo Sistema OPERA",
+            text="Relatório gerado automaticamente pelo Sistema Guimma",
             font=ctk.CTkFont(size=10),
             text_color="#9ca3af"
         ).pack(anchor="center")
@@ -4300,7 +4324,7 @@ class UsuariosPage(ctk.CTkFrame):
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Relatório de Atividades - Sistema OPERA</title>
+        <title>Relatório de Atividades - Sistema Guimma</title>
         <style>
             body {{
                 font-family: 'Arial', sans-serif;
@@ -4632,7 +4656,7 @@ class UsuariosPage(ctk.CTkFrame):
         # Rodapé
         html += f"""
         <div class="footer">
-            <p>Relatório gerado automaticamente pelo Sistema OPERA</p>
+            <p>Relatório gerado automaticamente pelo Sistema Guimma</p>
             <p>Sistema de Gestão de Produção Têxtil - Versão 3.0 | {data_geracao}</p>
         </div>
 
@@ -5007,7 +5031,7 @@ class UsuariosPage(ctk.CTkFrame):
 
             # Simular criação do PDF
             with open(filepath, 'w', encoding='utf-8') as f:
-                f.write("RELATÓRIO DE ATIVIDADES - SISTEMA OPERA\n")
+                f.write("RELATÓRIO DE ATIVIDADES - SISTEMA GUIMMA\n")
                 f.write("=" * 50 + "\n\n")
                 f.write(f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n")
                 f.write(f"Período: {self._get_texto_periodo(dados.get('periodo', 7))}\n\n")
@@ -5089,7 +5113,7 @@ class UsuariosPage(ctk.CTkFrame):
         """Gera conteúdo formatado para Word"""
         conteudo = f"""
     RELATÓRIO DE ATIVIDADES DO SISTEMA
-    Sistema OPERA - Gestão de Produção Têxtil
+    Sistema Guimma - Gestão de Produção Têxtil
 
     Data de geração: {datetime.now().strftime('%d/%m/%Y %H:%M')}
     Período: {self._get_texto_periodo(dados.get('periodo', 7))}
