@@ -29,7 +29,7 @@ function Get-PythonArch([string]$PyCmd) {
 
 
 Write-Host ("=" * 60) -ForegroundColor Cyan
-Write-Host "  SISTEMA OPERA - CONSTRUTOR DE INSTALADOR" -ForegroundColor Cyan
+Write-Host "  SISTEMA GUIMMA - CONSTRUTOR DE INSTALADOR" -ForegroundColor Cyan
 Write-Host ("=" * 60) -ForegroundColor Cyan
 
 $pythonArch = Get-PythonArch $Python

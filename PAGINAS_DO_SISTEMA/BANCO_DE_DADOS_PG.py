@@ -1131,7 +1131,7 @@ def audit_corte_finalize(func):
     )(func)
 
 
-print("✅ Sistema de Auditoria OPERA carregado com sucesso!")
+print("✅ Sistema de Auditoria Sistema Guimma carregado com sucesso!")
 
 
 # ==============================================================================

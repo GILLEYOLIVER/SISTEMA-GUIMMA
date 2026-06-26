@@ -2746,13 +2746,13 @@ if __name__ == '__main__':
 
     ctk.CTkLabel(
         status_frame,
-        text="🔧 Modo Demonstração - Sistema de Temas Opera (Execução Isolada)",
+        text="🔧 Modo Demonstração - Temas do Sistema Guimma (Execução Isolada)",
         font=("Arial", 10),
         text_color="#888888"
     ).pack(side="left")
 
     print("\n" + "=" * 60)
-    print("🎭 SISTEMA DE TEMAS OPERA - MODO DEMONSTRAÇÃO ISOLADO")
+    print("🎭 TEMAS DO SISTEMA GUIMMA - MODO DEMONSTRAÇÃO ISOLADO")
     print("=" * 60)
     print("📋 Executando como aplicação independente para testes.")
     print("🎮 Interface completa carregada com sucesso!")

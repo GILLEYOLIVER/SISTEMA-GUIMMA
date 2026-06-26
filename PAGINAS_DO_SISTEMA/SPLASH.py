@@ -111,7 +111,7 @@ class SplashScreenModern(ctk.CTkToplevel):
         self._aplicar_tema(self.tema_preferido)
 
         # janela
-        self.title("SISTEMA ÓPERA")
+        self.title("Sistema Guimma")
         self.configure(fg_color=self.accent_secondary)
         self.overrideredirect(True)
 
@@ -268,7 +268,7 @@ class SplashScreenModern(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             header,
-            text="ÓPERA FASHION",
+            text="Sistema Guimma",
             font=self._font("Montserrat", 44, "bold"),
             text_color=self.text_primary,
         ).pack()

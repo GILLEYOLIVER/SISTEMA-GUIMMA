@@ -210,7 +210,7 @@ except ImportError:
 class SistemaLoginModerno:
     def __init__(self, root: tk.Tk, iniciar_oculto: bool = False):
         self.root = root
-        self.root.title("OPERA FASHION - Login")
+        self.root.title("Sistema Guimma - Login")
         self.iniciar_oculto = bool(iniciar_oculto)
 
         # Treeview: cabeçalho global (cinza + hover)
@@ -251,7 +251,7 @@ class SistemaLoginModerno:
                     self.root,
                     "Configuração necessária",
                     "O configurador de banco foi aberto.\n"
-                    "Conclua a configuração e abra o SistemaOpera novamente.",
+                    "Conclua a configuração e abra o Sistema Guimma novamente.",
                 )
             else:
                 _mostrar_erro_centralizado(
@@ -1060,7 +1060,7 @@ class SistemaLoginModerno:
 # ============================================================
 # Inicialização
 # ============================================================
-    _I18N_MAP = {'en_US': {'OPERA FASHION - Login': 'OPERA FASHION - Login', 'ACESSO AO SISTEMA': 'SYSTEM ACCESS', 'Usuário': 'User', 'Senha': 'Password', 'Mostrar senha': 'Show password', 'ENTRAR': 'LOGIN', 'Usuários no sistema:': 'Users in the system:', 'Selecionar': 'Select', 'Fechar': 'Close', 'Usuários cadastrados': 'Registered users', 'Caps Lock ativo': 'Caps Lock is on', 'Atenção': 'Attention', 'Preencha usuário e senha.': 'Enter username and password.', 'Falha no login': 'Login failed', 'Usuário não encontrado.': 'User not found.', 'Acesso negado': 'Access denied', 'Usuário inativo.': 'Inactive user.', 'Senha incorreta.': 'Incorrect password.', 'Erro': 'Error', 'Falha ao iniciar o sistema:\n{erro}': 'Failed to start the system:\n{erro}', 'Banco não preparado': 'Database not ready', 'Configuração necessária': 'Configuration required'}, 'es_ES': {'OPERA FASHION - Login': 'OPERA FASHION - Inicio de sesión', 'ACESSO AO SISTEMA': 'ACCESO AL SISTEMA', 'Usuário': 'Usuario', 'Senha': 'Contraseña', 'Mostrar senha': 'Mostrar contraseña', 'ENTRAR': 'INGRESAR', 'Usuários no sistema:': 'Usuarios en el sistema:', 'Selecionar': 'Seleccionar', 'Fechar': 'Cerrar', 'Usuários cadastrados': 'Usuarios registrados', 'Caps Lock ativo': 'Bloq Mayús activo', 'Atenção': 'Atención', 'Preencha usuário e senha.': 'Ingrese usuario y contraseña.', 'Falha no login': 'Error de inicio de sesión', 'Usuário não encontrado.': 'Usuario no encontrado.', 'Acesso negado': 'Acceso denegado', 'Usuário inativo.': 'Usuario inactivo.', 'Senha incorreta.': 'Contraseña incorrecta.', 'Erro': 'Error', 'Banco não preparado': 'Base de datos no preparada', 'Configuração necessária': 'Configuración necesaria'}}
+    _I18N_MAP = {'en_US': {'Sistema Guimma - Login': 'Sistema Guimma - Login', 'ACESSO AO SISTEMA': 'SYSTEM ACCESS', 'Usuário': 'User', 'Senha': 'Password', 'Mostrar senha': 'Show password', 'ENTRAR': 'LOGIN', 'Usuários no sistema:': 'Users in the system:', 'Selecionar': 'Select', 'Fechar': 'Close', 'Usuários cadastrados': 'Registered users', 'Caps Lock ativo': 'Caps Lock is on', 'Atenção': 'Attention', 'Preencha usuário e senha.': 'Enter username and password.', 'Falha no login': 'Login failed', 'Usuário não encontrado.': 'User not found.', 'Acesso negado': 'Access denied', 'Usuário inativo.': 'Inactive user.', 'Senha incorreta.': 'Incorrect password.', 'Erro': 'Error', 'Falha ao iniciar o sistema:\n{erro}': 'Failed to start the system:\n{erro}', 'Banco não preparado': 'Database not ready', 'Configuração necessária': 'Configuration required'}, 'es_ES': {'Sistema Guimma - Login': 'Sistema Guimma - Inicio de sesión', 'ACESSO AO SISTEMA': 'ACCESO AL SISTEMA', 'Usuário': 'Usuario', 'Senha': 'Contraseña', 'Mostrar contraseña': 'Mostrar contraseña', 'Mostrar senha': 'Mostrar contraseña', 'ENTRAR': 'INGRESAR', 'Usuários no sistema:': 'Usuarios en el sistema:', 'Selecionar': 'Seleccionar', 'Fechar': 'Cerrar', 'Usuários cadastrados': 'Usuarios registrados', 'Caps Lock ativo': 'Bloq Mayús activo', 'Atenção': 'Atención', 'Preencha usuário e senha.': 'Ingrese usuario y contraseña.', 'Falha no login': 'Error de inicio de sesión', 'Usuário não encontrado.': 'Usuario no encontrado.', 'Acesso negado': 'Acceso denegado', 'Usuário inativo.': 'Usuario inactivo.', 'Senha incorreta.': 'Contraseña incorrecta.', 'Erro': 'Error', 'Banco não preparado': 'Base de datos no preparada', 'Configuração necesaria': 'Configuración necesaria', 'Configuração necessária': 'Configuración necesaria'}}
 
     def _get_idioma_atual(self):
         try:

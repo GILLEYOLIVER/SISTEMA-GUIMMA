@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS opera._schema_info (
 ----------------------------------------
 -- 4. TABELAS DE USUÁRIOS E PERMISSÕES
 ----------------------------------------
--- [TABELA 02] usuarios - Registro dos usuários do sistema OPERA
+-- [TABELA 02] usuarios - Registro dos usuários do sistema Guimma
 CREATE TABLE IF NOT EXISTS opera.usuarios (
     id SERIAL PRIMARY KEY,
     usuario VARCHAR(100) NOT NULL UNIQUE,
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS opera.usuario_preferencias (
     atualizado_em TIMESTAMP DEFAULT NOW()
 );
 
--- [TABELA 04] usuario_permissoes - Permissões de acesso às funções do sistema OPERA
+-- [TABELA 04] usuario_permissoes - Permissões de acesso às funções do sistema Guimma
 CREATE TABLE IF NOT EXISTS opera.usuario_permissoes (
     usuario_id INTEGER NOT NULL REFERENCES opera.usuarios(id) ON DELETE CASCADE,
     codigo VARCHAR(100) NOT NULL,
@@ -1739,7 +1739,7 @@ BEGIN
     RAISE NOTICE '9. Servicos e Historico (3 tabelas)';
     RAISE NOTICE '10. Pricing e Relatorios (2 tabelas)';
     RAISE NOTICE '=========================================';
-    RAISE NOTICE 'O sistema OPERA esta pronto para uso!';
+    RAISE NOTICE 'O sistema Guimma esta pronto para uso!';
     RAISE NOTICE 'Usuario administrador ja pode fazer login com:';
     RAISE NOTICE '- Usuario: admin';
     RAISE NOTICE '- Senha: admin';

@@ -6,6 +6,8 @@ installer_root/
 # Python cache
 __pycache__/
 *.py[cod]
+.venv/
+venv/
 
 # Installer binaries
 *.dmg

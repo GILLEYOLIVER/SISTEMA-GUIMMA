@@ -38,7 +38,7 @@ bash packaging/macos/build_db_config.sh
 
 __________________________________________________________
 
-No Windows conpilar o sistema opera oficial
+No Windows conpilar o sistema Guimma oficial
 
 powershell -ExecutionPolicy Bypass -File packaging/windows/build_unified_package.ps1 -Python python -Version 1.0.0 -Architecture x64
 ___________________________________________________________

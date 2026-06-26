@@ -952,7 +952,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         titulo = "CONTROLE DE MÃO DE OBRA — Retrabalho de Defeitos"
         gerado_em = _t(meta.get("gerado_em")) or datetime.now().strftime("%d/%m/%Y %H:%M")
         logo_path = _find_logo_path(meta.get("logo_path"))
-        empresa_nome = (_t(meta.get("empresa_nome")) or "OPERA / EMPRESA").strip()
+        empresa_nome = (_t(meta.get("empresa_nome")) or "Sistema Guimma").strip()
 
         doc = SimpleDocTemplate(
             caminho_pdf,
@@ -962,7 +962,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             topMargin=14 * mm,
             bottomMargin=14 * mm,
             title=titulo,
-            author="Ópera Fashion",
+            author="Sistema Guimma",
         )
 
         styles = getSampleStyleSheet()
@@ -1023,7 +1023,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             canvas.saveState()
             canvas.setFont("Helvetica", 7)
             canvas.setFillColor(colors.HexColor("#666666"))
-            canvas.drawString(16 * mm, 9 * mm, "SISTEMA OPERA — Impressão")
+            canvas.drawString(16 * mm, 9 * mm, "SISTEMA GUIMMA — Impressão")
             canvas.drawRightString(210 * mm - 16 * mm, 9 * mm, f"Página {canvas.getPageNumber()}")
             canvas.restoreState()
 
@@ -1081,10 +1081,10 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 header_right.append(img)
             except Exception:
                 header_right.append(
-                    Paragraph("ÓPERA FASHION", ParagraphStyle("LogoTxtDefeito", parent=style_title, alignment=TA_RIGHT)))
+                    Paragraph("SISTEMA GUIMMA", ParagraphStyle("LogoTxtDefeito", parent=style_title, alignment=TA_RIGHT)))
         else:
             header_right.append(
-                Paragraph("ÓPERA FASHION", ParagraphStyle("LogoTxtDefeito", parent=style_title, alignment=TA_RIGHT)))
+                Paragraph("SISTEMA GUIMMA", ParagraphStyle("LogoTxtDefeito", parent=style_title, alignment=TA_RIGHT)))
 
         header_tbl = Table([[header_left, header_right]], colWidths=[doc.width * 0.70, doc.width * 0.30])
         header_tbl.setStyle(TableStyle([
@@ -1227,7 +1227,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
         story.append(assin_tbl)
 
         story.append(Spacer(1, 2 * mm))
-        story.append(Paragraph("Documento gerado automaticamente pelo Sistema Ópera.", style_small))
+        story.append(Paragraph("Documento gerado automaticamente pelo Sistema Guimma.", style_small))
 
         doc.build(story, onFirstPage=build_footer, onLaterPages=build_footer)
 
@@ -1383,7 +1383,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             }
             meta = {
                 "gerado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "empresa_nome": "OPERA / EMPRESA",
+                "empresa_nome": "Sistema Guimma",
                 "logo_path": "LOGO.jpg",
             }
             return self._montar_dados_pdf_defeito(
@@ -1574,7 +1574,7 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
                 extras={
                     "meta": {
                         "gerado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "empresa_nome": "OPERA / EMPRESA",
+                        "empresa_nome": "Sistema Guimma",
                         "logo_path": "LOGO.jpg",
                     }
                 },

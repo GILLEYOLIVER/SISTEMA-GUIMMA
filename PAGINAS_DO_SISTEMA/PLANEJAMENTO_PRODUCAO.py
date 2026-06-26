@@ -1775,7 +1775,7 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
         pdf.line(30, 28, largura - 30, 28)
         pdf.setFillColor(colors.HexColor("#6B7280"))
         pdf.setFont("Helvetica", 8)
-        pdf.drawString(36, 16, "Sistema OPERA • Planejamento de Produção")
+        pdf.drawString(36, 16, "Sistema Guimma • Planejamento de Produção")
         pdf.drawRightString(largura - 36, 16, f"Página {pagina}")
 
     def _abrir_pdf(self, caminho):

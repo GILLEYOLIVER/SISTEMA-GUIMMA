@@ -1,7 +1,7 @@
-; Script Inno Setup para Sistema Opera - SEM VERSAO NA LISTA
-#define AppName "SISTEMA OPERA FASHION"
+; Script Inno Setup para Sistema Guimma - SEM VERSAO NA LISTA
+#define AppName "SISTEMA GUIMMA"
 #define AppVersion "1.0.0"
-#define AppPublisher "Opera Fashion"
+#define AppPublisher "Sistema Guimma"
 #define AppExeName "SistemaOpera.exe"
 #define ConfiguradorName "CONFIGURAR_BANCO.exe"
 

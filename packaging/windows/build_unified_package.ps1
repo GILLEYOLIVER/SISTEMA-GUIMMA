@@ -1,5 +1,5 @@
 # Build unified Windows output folder with:
-# 1) Sistema OPERA installer
+# 1) Sistema Guimma installer
 # 2) CONFIGURAR_POSTGRES.exe (from configurar_postgres.py) using PG_ICON.ico
 
 param(
@@ -35,7 +35,7 @@ $configScript = Join-Path $repoRoot "configurar_postgres.py"
 $pgIcon = Join-Path $repoRoot "PG_ICON.ico"
 
 Write-Host ("=" * 70) -ForegroundColor Cyan
-Write-Host "  OPERA - UNIFIED BUILD (INSTALLER + CONFIGURAR_POSTGRES)" -ForegroundColor Cyan
+Write-Host "  SISTEMA GUIMMA - UNIFIED BUILD (INSTALLER + CONFIGURAR_POSTGRES)" -ForegroundColor Cyan
 Write-Host ("=" * 70) -ForegroundColor Cyan
 
 $pythonArch = Get-PythonArch $Python
@@ -53,7 +53,7 @@ if (-not (Test-Path $pgIcon)) {
 }
 
 if (-not $SkipInstallerBuild) {
-    Write-Host "`n[1/3] Building main OPERA installer..." -ForegroundColor Green
+    Write-Host "`n[1/3] Building main Sistema Guimma installer..." -ForegroundColor Green
     & powershell -ExecutionPolicy Bypass -File "packaging/windows/build_installer.ps1" -Python $Python -Version $Version -Architecture $Architecture
     if ($LASTEXITCODE -ne 0) { throw "Failed building main installer." }
 } else {
@@ -115,7 +115,7 @@ if (Test-Path $windowsInstallerDir) {
 }
 
 if (-not $installerCopied) {
-    Write-Warning "No OPERA installer EXE found to copy."
+    Write-Warning "No Sistema Guimma installer EXE found to copy."
 }
 
 Copy-Item -Force $pgIcon (Join-Path $unifiedDir "PG_ICON.ico")

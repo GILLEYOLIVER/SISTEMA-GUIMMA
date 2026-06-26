@@ -97,7 +97,7 @@ def check_environment(scripts_dir: Path) -> bool:
 
 def main() -> int:
     try:
-        print("🚀 INICIANDO INSTALADOR OPERA FASHION...")
+        print("🚀 INICIANDO INSTALADOR SISTEMA GUIMMA...")
         print(f"📁 Diretório atual: {os.getcwd()}")
         print(f"📦 Modo empacotado: {is_frozen()}")
 
@@ -135,7 +135,7 @@ def main() -> int:
 
         # Inicia UI
         app = QApplication(sys.argv)
-        app.setApplicationName("Instalador Opera Fashion")
+        app.setApplicationName("Instalador Sistema Guimma")
         app.setApplicationVersion("1.0")
         app.setStyle("Fusion")
 

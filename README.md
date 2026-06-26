@@ -1,4 +1,4 @@
-# SISTEMA OPERA
+# SISTEMA GUIMMA
 
 Aplicação desktop para gestão de produção (modelos, corte, estoque, pagamentos, relatórios e administração), com interface em CustomTkinter e persistência em PostgreSQL.
 

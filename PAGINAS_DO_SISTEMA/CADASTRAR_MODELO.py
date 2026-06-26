@@ -560,7 +560,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             self.logger.set_pagina("MenuPrincipal")
         if hasattr(self.logger, "info"):
             self.logger.info(
-                "Sistema OPERA inicializado",
+                "Sistema Guimma inicializado",
                 detalhes={"versao": "1.0", "usuario": getattr(self, "usuario_atual", "desconhecido")},
             )
 
@@ -4438,7 +4438,7 @@ class CadastroModelosApp(ctk.CTkFrame):
             self.logger.set_pagina("MenuPrincipal")
         if hasattr(self.logger, "info"):
             self.logger.info(
-                "Sistema OPERA inicializado",
+                "Sistema Guimma inicializado",
                 detalhes={"versao": "1.0", "usuario": getattr(self, "usuario_atual", "desconhecido")},
             )
 

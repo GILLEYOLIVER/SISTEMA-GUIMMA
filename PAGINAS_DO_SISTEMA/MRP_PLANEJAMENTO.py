@@ -712,7 +712,7 @@ class MRPPage(ctk.CTkFrame):
 
         c.setFillColor(colors.HexColor("#666666"))
         c.setFont("Helvetica", 8)
-        c.drawString(24, 18, "SISTEMA OPERA — Impressão")
+        c.drawString(24, 18, "SISTEMA GUIMMA — Impressão")
         return altura - header_h - 12
 
     def _abrir_pdf(self, caminho):

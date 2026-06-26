@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MÓDULO DE LOG DE ERROS - OPERA FASHION
+MÓDULO DE LOG DE ERROS - Sistema Guimma
 Centraliza o registro de erros, informações e auditoria de todo o sistema
 """
 import os
@@ -15,7 +15,7 @@ from pathlib import Path
 
 class SistemaLogger:
     """
-    Classe principal para gerenciamento de logs do sistema OPERA
+    Classe principal para gerenciamento de logs do sistema Guimma
     """
 
     TRANSLATIONS = {

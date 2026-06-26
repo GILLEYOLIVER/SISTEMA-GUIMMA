@@ -3967,7 +3967,7 @@ class AdvancedStockReport(ctk.CTkFrame):
 # --- Traduções completas aplicadas antes do __main__ ---
 AdvancedStockReport_TRANSLATIONS = {
     "pt_BR": {
-        "window_title": "Relatórios - Sistema Opera",
+        "window_title": "Relatórios - Sistema Guimma",
         "title": "Relatórios",
         "subtitle": "Controle de Estoque",
         "refresh": "Atualizar Dados",
@@ -4031,7 +4031,7 @@ AdvancedStockReport_TRANSLATIONS = {
         "msg_no_message_regen": "Ainda não há mensagem para regenerar.",
     },
     "en_US": {
-        "window_title": "Reports - Opera System",
+        "window_title": "Reports - Sistema Guimma",
         "title": "Reports",
         "subtitle": "Stock Control",
         "refresh": "Refresh Data",
@@ -4095,7 +4095,7 @@ AdvancedStockReport_TRANSLATIONS = {
         "msg_no_message_regen": "There is no message to regenerate yet.",
     },
     "es_ES": {
-        "window_title": "Reportes - Sistema Opera",
+        "window_title": "Reportes - Sistema Guimma",
         "title": "Reportes",
         "subtitle": "Control de Stock",
         "refresh": "Actualizar Datos",
@@ -4625,7 +4625,7 @@ AdvancedStockReport._open_suggestions_window = _opera_open_suggestions_window
 if __name__ == "__main__":
     ctk.set_appearance_mode("Dark")
     root = ctk.CTk()
-    root.title("Relatórios - Sistema Opera")
+    root.title("Relatórios - Sistema Guimma")
     root.geometry("1100x760")
 
     app = AdvancedStockReport(root)
