@@ -10,7 +10,7 @@ https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
 ```
 
 O painel permite consultar, ativar, renovar, bloquear e liberar o computador vinculado a uma licenca.
-A senha administrativa fica no segredo `ADMIN_PASSWORD` do Worker.
+O acesso administrativo do painel usa o email do segredo `ADMIN_EMAIL` e a senha do segredo `ADMIN_PASSWORD`.
 
 O licenciador do Sistema Guimma chama:
 
@@ -107,13 +107,19 @@ pnpm wrangler secret put ADMIN_TOKEN
 
 Digite um token grande, por exemplo uma frase/senha longa. Esse token serve para cadastrar/renovar clientes pela API admin.
 
-7. Criar senha do painel web:
+7. Criar email administrativo do painel web:
+
+```bash
+pnpm wrangler secret put ADMIN_EMAIL
+```
+
+8. Criar senha do painel web:
 
 ```bash
 pnpm wrangler secret put ADMIN_PASSWORD
 ```
 
-8. Publicar:
+9. Publicar:
 
 ```bash
 pnpm wrangler deploy

@@ -389,7 +389,7 @@ class AdminLicenseApp:
         return entry
 
     def _load_icon(self):
-        icon_path = _asset_path("icons", "ICONE_SISTEMA.png")
+        icon_path = _asset_path("icons", "ICONE_LICENCA_ADMIN.png")
         if icon_path is None:
             return None
         try:

@@ -12,6 +12,7 @@ Link do painel:
 
 https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
 
+
 Esse painel funciona em:
 
 - Mac
@@ -34,9 +35,9 @@ Para usar o painel web, voce precisa de:
 1. Internet.
 2. Navegador, como Chrome, Edge, Safari ou Firefox.
 3. Link do painel.
-4. Senha administrativa.
+4. Email administrativo e senha administrativa.
 
-A senha administrativa esta salva no arquivo:
+O email administrativo e a senha administrativa tambem estao informados no passo 3 deste manual e salvos no arquivo:
 
 CREDENCIAIS_PAINEL_WEB.txt
 
@@ -61,7 +62,10 @@ Quem tiver essa senha consegue ativar, renovar, bloquear e liberar licencas.
 
    https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
 
-3. Digite a senha administrativa.
+3. Digite o email administrativo e a senha administrativa:
+
+   Email: mo********@gmail.com
+   Senha: Gil********0*
 
 4. Clique em Entrar.
 
@@ -233,8 +237,7 @@ Para gerenciar licencas em qualquer computador:
 1. Abra:
    https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
 
-2. Digite a senha do arquivo:
-   CREDENCIAIS_PAINEL_WEB.txt
+2. Digite o email administrativo e a senha informados no passo 3 deste manual.
 
 3. Informe o email do cliente.
 

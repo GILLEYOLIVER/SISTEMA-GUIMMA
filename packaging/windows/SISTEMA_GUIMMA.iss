@@ -122,6 +122,7 @@ Source: "{#LicencaSource}"; DestDir: "{app}"; DestName: "{#LicencaName}"; Flags:
 
 ; Icones (copiados direto para {app} para uso no Menu/Atalhos)
 Source: "..\\..\\icons\\ICONE_SISTEMA.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\\..\\icons\\ICONE_LICENCIADOR.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#IconConfigSource}"; DestDir: "{app}"; DestName: "icon_config.ico"; Flags: ignoreversion
 
 #if FileExists("..\\..\\icons\\icon_config.png")
@@ -150,7 +151,7 @@ Name: "{userappdata}\\SistemaGuimma\\config"
 ; Menu Iniciar
 Name: "{group}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\ICONE_SISTEMA.ico"
 Name: "{group}\\Configurar Banco de Dados"; Filename: "{app}\\{#ConfiguradorName}"; IconFilename: "{app}\\icon_config.ico"
-Name: "{group}\\Licenciamento Sistema Guimma"; Filename: "{app}\\{#LicencaName}"; IconFilename: "{app}\\ICONE_SISTEMA.ico"
+Name: "{group}\\Licenciamento Sistema Guimma"; Filename: "{app}\\{#LicencaName}"; IconFilename: "{app}\\ICONE_LICENCIADOR.ico"
 Name: "{group}\\Desinstalar {#AppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\\ICONE_SISTEMA.ico"
 
 ; Area de trabalho

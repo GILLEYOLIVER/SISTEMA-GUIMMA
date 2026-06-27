@@ -405,15 +405,17 @@ async function deactivateLicense(request, env) {
 }
 
 async function adminLogin(request, env) {
-  const expected = String(env.ADMIN_PASSWORD || "").trim();
-  if (!expected) {
-    return json({ ok: false, error: "senha_admin_nao_configurada" }, 500);
+  const expectedEmail = normalizeEmail(env.ADMIN_EMAIL);
+  const expectedPassword = String(env.ADMIN_PASSWORD || "").trim();
+  if (!expectedEmail || !expectedPassword) {
+    return json({ ok: false, error: "acesso_admin_nao_configurado" }, 500);
   }
 
   const body = await readJson(request);
+  const email = normalizeEmail(body?.email);
   const password = String(body?.password || "");
-  if (!safeEqual(password, expected)) {
-    return json({ ok: false, error: "senha_invalida" }, 401);
+  if (!safeEqual(email, expectedEmail) || !safeEqual(password, expectedPassword)) {
+    return json({ ok: false, error: "credenciais_invalidas" }, 401);
   }
 
   const expiresAt = Math.floor(Date.now() / 1000) + SESSION_SECONDS;
@@ -576,8 +578,11 @@ function adminPage() {
       <h1>Sistema Guimma</h1>
       <div class="subtitle">Painel administrativo de licencas</div>
       <div style="height:18px"></div>
-      <label for="password">Senha administrativa</label>
-      <input id="password" type="password" autocomplete="current-password" autofocus>
+      <label for="admin-login-email">Email administrativo</label>
+      <input id="admin-login-email" class="admin-login-field" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore autofocus>
+      <div style="height:12px"></div>
+      <label for="admin-login-passcode">Senha administrativa</label>
+      <input id="admin-login-passcode" class="admin-login-field" type="password" autocomplete="new-password" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore>
       <div class="actions">
         <button id="login-button" class="primary">Entrar</button>
       </div>
@@ -630,6 +635,7 @@ function adminPage() {
       loginView.classList.remove('hidden');
       adminView.classList.add('hidden');
       byId('login-error').textContent = message || '';
+      clearLoginFields();
     }
 
     function showAdmin() {
@@ -644,6 +650,18 @@ function adminPage() {
 
     function setResult(text) {
       result.textContent = text;
+    }
+
+    function clearLoginFields() {
+      const email = byId('admin-login-email');
+      const password = byId('admin-login-passcode');
+      if (!email || !password) return;
+      email.value = '';
+      password.value = '';
+      window.setTimeout(() => {
+        email.value = '';
+        password.value = '';
+      }, 250);
     }
 
     async function api(path, options) {
@@ -724,18 +742,25 @@ function adminPage() {
       try {
         await api('/api/admin/login', {
           method: 'POST',
-          body: JSON.stringify({ password: byId('password').value }),
+          body: JSON.stringify({
+            email: byId('admin-login-email').value,
+            password: byId('admin-login-passcode').value,
+          }),
         });
-        byId('password').value = '';
+        clearLoginFields();
         showAdmin();
       } catch (_error) {
-        showLogin('Senha invalida.');
+        showLogin('Email ou senha invalidos.');
       } finally {
         setBusy(false);
       }
     });
 
-    byId('password').addEventListener('keydown', (event) => {
+    byId('admin-login-email').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') byId('admin-login-passcode').focus();
+    });
+
+    byId('admin-login-passcode').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') byId('login-button').click();
     });
 
