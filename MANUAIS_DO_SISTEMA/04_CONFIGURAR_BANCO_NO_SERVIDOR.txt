@@ -29,34 +29,50 @@ Arquivos relacionados no projeto:
 
 Passo a passo:
 
-1. Instale o PostgreSQL no servidor.
+1. Instale o pacote do Sistema Guimma no computador servidor.
 
-2. Confirme que o servico esta ligado.
+2. Ao final da instalacao, abra ou use a tela:
 
-3. Abra o configurador:
+   Configuracao do Banco - Sistema Guimma
 
-   Configurar Banco de Dados
+3. Se o PostgreSQL ainda nao existir nesse Mac, clique:
 
-4. Escolha modo local/servidor.
+   Instalar PostgreSQL + criar banco
 
-5. Informe:
+4. Na tela Configuracao do PostgreSQL, confirme o modo:
 
-   Host: localhost
+   - Banco Local (esta maquina), para uso em apenas este computador.
+   - Servidor / Rede, para permitir acesso dos computadores clientes.
+
+5. Informe a senha que sera usada no usuario postgres.
+
+6. Confira os scripts preenchidos automaticamente:
+
+   SCRIPTS/1_CRIAR_BANCO.sql
+   SCRIPTS/2_CRIAR_SCHEMA.sql
+   SCRIPTS/3_CRIAR_TABELAS.sql
+
+7. Clique:
+
+   INSTALAR POSTGRESQL + CRIAR BANCO
+
+8. O configurador baixa/instala o PostgreSQL quando necessario, configura o
+   servidor, executa a sequencia 1 -> 2 -> 3 e grava o config.json do sistema.
+
+   Se o banco BANCO_OPERA ja existir, a etapa 1 e pulada automaticamente e o
+   configurador continua nas etapas 2 e 3.
+
+9. Para apenas salvar conexao em uma maquina cliente, use a tela Configuracao
+   do Banco e informe:
+
+   Host: IP do servidor
    Porta: 5432
    Banco: BANCO_OPERA
    Usuario: postgres
    Senha: senha definida no PostgreSQL
    Schema: opera
 
-6. Clique para testar a conexao.
-
-7. Se o banco ainda nao existir, crie o banco usando o script:
-
-   SCRIPTS/1_CRIAR_BANCO.sql
-
-8. Depois rode a criacao/atualizacao das tabelas pelo sistema ou configurador.
-
-9. Confirme que o configurador salvou a conexao.
+10. Clique para testar a conexao e depois salvar.
 
 Arquivos de configuracao esperados:
 

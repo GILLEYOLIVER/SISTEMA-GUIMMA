@@ -52,6 +52,7 @@ APP_INTERNAL_NAME="SistemaGuimma"
 APP_BUNDLE_NAME="Sistema Guimma"
 LICENSE_APP_BUNDLE_NAME="Sistema Guimma Licenca"
 DB_CONFIG_APP_BUNDLE_NAME="CONFIGURAR_BANCO"
+POSTGRES_CONFIG_APP_BUNDLE_NAME="CONFIGURAR_POSTGRES"
 APP_SUPPORT_DIR_NAME="SistemaGuimma"
 
 ensure_macos() {
@@ -460,6 +461,18 @@ build_db_config_app() {
     PYTHON_BIN="$PYTHON_BIN" bash "packaging/macos/build_db_config.sh"
 }
 
+# Construir app separado de configuracao/criacao do PostgreSQL no servidor
+build_postgres_config_app() {
+    print_header "CONSTRUINDO CONFIGURADOR POSTGRESQL"
+
+    if [ ! -f "packaging/macos/build_postgres_config.sh" ]; then
+        log_warning "Script do configurador PostgreSQL não encontrado ou sem permissão de execução"
+        return 0
+    fi
+
+    PYTHON_BIN="$PYTHON_BIN" bash "packaging/macos/build_postgres_config.sh"
+}
+
 # Criar DMG
 create_dmg() {
     print_header "CRIANDO INSTALADOR DMG"
@@ -487,6 +500,9 @@ create_dmg() {
     fi
     if [ -d "dist/SistemaGuimma/${DB_CONFIG_APP_BUNDLE_NAME}.app" ]; then
         cp -R "dist/SistemaGuimma/${DB_CONFIG_APP_BUNDLE_NAME}.app" "$TEMP_DIR/"
+    fi
+    if [ -d "dist/SistemaGuimma/${POSTGRES_CONFIG_APP_BUNDLE_NAME}.app" ]; then
+        cp -R "dist/SistemaGuimma/${POSTGRES_CONFIG_APP_BUNDLE_NAME}.app" "$TEMP_DIR/"
     fi
 
     # Criar link para Applications
@@ -528,6 +544,7 @@ create_pkg() {
     APP_PATH="dist/${APP_BUNDLE_NAME}.app"
     LICENSE_APP_PATH="dist/${LICENSE_APP_BUNDLE_NAME}.app"
     DB_CONFIG_APP_PATH="dist/SistemaGuimma/${DB_CONFIG_APP_BUNDLE_NAME}.app"
+    POSTGRES_CONFIG_APP_PATH="dist/SistemaGuimma/${POSTGRES_CONFIG_APP_BUNDLE_NAME}.app"
     PKG_PATH="dist/${APP_BUNDLE_NAME}.pkg"
     PKG_SCRIPTS="dist/pkg_scripts"
     PKG_ROOT="dist/pkg_root"
@@ -559,6 +576,11 @@ create_pkg() {
     else
         log_warning "Configurador de banco não encontrado: $DB_CONFIG_APP_PATH"
     fi
+    if [ -d "$POSTGRES_CONFIG_APP_PATH" ]; then
+        ditto "$POSTGRES_CONFIG_APP_PATH" "$PKG_ROOT/Applications/${POSTGRES_CONFIG_APP_BUNDLE_NAME}.app"
+    else
+        log_warning "Configurador PostgreSQL não encontrado: $POSTGRES_CONFIG_APP_PATH"
+    fi
 
 cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
 #!/bin/bash
@@ -582,6 +604,8 @@ pkill -f "SistemaGuimma" 2>/dev/null || true
 
 rm -rf "/Applications/Sistema Guimma.app"
 rm -rf "/Applications/Sistema Guimma Licenca.app"
+rm -rf "/Applications/CONFIGURAR_BANCO.app"
+rm -rf "/Applications/CONFIGURAR_POSTGRES.app"
 
 rm -rf "/Library/Application Support/SistemaGuimma"
 rm -rf "/Library/Logs/SistemaGuimma"
@@ -600,6 +624,8 @@ for home in /Users/*; do
     rm -f "$home/Library/LaunchAgents/com.sistemaguimma.licenca.plist"
     rm -rf "$home/Library/Saved Application State/com.sistemaguimma.app.savedState"
     rm -rf "$home/Applications/Sistema Guimma.app"
+    rm -rf "$home/Applications/CONFIGURAR_BANCO.app"
+    rm -rf "$home/Applications/CONFIGURAR_POSTGRES.app"
   fi
 done
 
@@ -636,6 +662,7 @@ TARGET_VOLUME="${3:-/}"
 SYSTEM_APP_PATH="/Applications/Sistema Guimma.app"
 LICENSE_APP_PATH="/Applications/Sistema Guimma Licenca.app"
 DB_CONFIG_APP_PATH="/Applications/CONFIGURAR_BANCO.app"
+POSTGRES_CONFIG_APP_PATH="/Applications/CONFIGURAR_POSTGRES.app"
 
 write_uninstaller "/Applications/Desinstalar Sistema Guimma.command"
 if [[ -n "$USER_HOME" && -d "$USER_HOME" ]]; then
@@ -652,6 +679,7 @@ import json
 import os
 import shutil
 import socket
+import subprocess
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk, messagebox
@@ -701,6 +729,22 @@ def porta_aberta(host: str, porta: int, timeout: float = 1.2) -> bool:
         return False
 
 
+def abrir_configurador_servidor():
+    app = "/Applications/CONFIGURAR_POSTGRES.app"
+    if not os.path.isdir(app):
+        messagebox.showerror(
+            "Configurador PostgreSQL",
+            "Não encontrei /Applications/CONFIGURAR_POSTGRES.app.\nReinstale o pacote completo do Sistema Guimma.",
+            parent=root,
+        )
+        return
+    try:
+        subprocess.Popen(["open", app])
+        status.set("Preparação PostgreSQL aberta. Informe a senha do postgres e execute Instalar PostgreSQL + Criar Banco.")
+    except Exception as exc:
+        messagebox.showerror("Configurador PostgreSQL", f"Não foi possível abrir o configurador.\n\n{exc}", parent=root)
+
+
 def gravar_config_usuario(data: dict) -> None:
     h = str(data.get("host") or "").strip()
     p = int(data.get("port") or 5432)
@@ -727,7 +771,7 @@ def gravar_config_usuario(data: dict) -> None:
         "ports": [p],
         "connect_timeout": 8,
         "auto_detect_ports": True,
-        "fallback_to_postgres": True,
+        "fallback_to_postgres": False,
     }
     destinos = [
         Path.home() / "Library" / "Application Support" / "SistemaGuimma" / "config.json",
@@ -884,7 +928,7 @@ def atualizar_aviso_banco():
         else:
             aviso_banco.set(
                 "Servidor/local: PostgreSQL não encontrado neste Mac. "
-                "Instale o banco no servidor antes de concluir, ou escolha Cliente/rede."
+                "Use Instalar PostgreSQL + criar banco, ou escolha Cliente/rede."
             )
     else:
         aviso_banco.set(
@@ -1053,6 +1097,7 @@ ttk.Style().configure("Guimma.TButton", padding=8)
 
 ttk.Button(btns, text="Detectar porta", command=detectar_porta).pack(side="left")
 ttk.Button(btns, text="Testar conexão", command=testar_conexao).pack(side="left", padx=(10,0))
+ttk.Button(btns, text="Instalar PostgreSQL + criar banco", command=abrir_configurador_servidor).pack(side="left", padx=(10,0))
 ttk.Button(btns, text="Salvar e concluir instalação", command=salvar).pack(side="right")
 
 root.mainloop()
@@ -1120,6 +1165,11 @@ if [[ -d "$SYSTEM_APP_PATH" ]]; then
     chmod -R a+rX "$DB_CONFIG_APP_PATH" 2>/dev/null || true
     touch "$DB_CONFIG_APP_PATH" 2>/dev/null || true
   fi
+  if [[ -d "$POSTGRES_CONFIG_APP_PATH" ]]; then
+    chown -R root:wheel "$POSTGRES_CONFIG_APP_PATH" 2>/dev/null || true
+    chmod -R a+rX "$POSTGRES_CONFIG_APP_PATH" 2>/dev/null || true
+    touch "$POSTGRES_CONFIG_APP_PATH" 2>/dev/null || true
+  fi
   touch /Applications 2>/dev/null || true
   touch "$SYSTEM_APP_PATH" 2>/dev/null || true
   LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
@@ -1130,6 +1180,9 @@ if [[ -d "$SYSTEM_APP_PATH" ]]; then
     fi
     if [[ -d "$DB_CONFIG_APP_PATH" ]]; then
       "$LSREGISTER" -f "$DB_CONFIG_APP_PATH" >/dev/null 2>&1 || true
+    fi
+    if [[ -d "$POSTGRES_CONFIG_APP_PATH" ]]; then
+      "$LSREGISTER" -f "$POSTGRES_CONFIG_APP_PATH" >/dev/null 2>&1 || true
     fi
     "$LSREGISTER" -r -domain local -domain system -domain user >/dev/null 2>&1 || true
   fi
@@ -1206,6 +1259,7 @@ main() {
     build_app
     build_license_app
     build_db_config_app
+    build_postgres_config_app
 
     # DMG: padrão sempre gera; pergunta apenas se --interactive
     if [[ "$INTERACTIVE_MODE" == "yes" && "$CREATE_DMG" == "" ]]; then

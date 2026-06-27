@@ -99,6 +99,20 @@ cp -R "$ROOT_DIR/SCRIPTS" "$MAC_DIR/SCRIPTS"
 if [[ -f "$ROOT_DIR/dist/installers/macos/Sistema Guimma ${VERSION} macOS.dmg" ]]; then
   cp -f "$ROOT_DIR/dist/installers/macos/Sistema Guimma ${VERSION} macOS.dmg" "$MAC_DIR/"
 fi
+if [[ -f "$ROOT_DIR/dist/installers/macos/Sistema Guimma ${VERSION} macOS.pkg" ]]; then
+  cp -f "$ROOT_DIR/dist/installers/macos/Sistema Guimma ${VERSION} macOS.pkg" "$MAC_DIR/"
+fi
+
+for app in \
+  "$ROOT_DIR/dist/Sistema Guimma.app" \
+  "$ROOT_DIR/dist/Sistema Guimma Licenca.app" \
+  "$ROOT_DIR/dist/SistemaGuimma/CONFIGURAR_BANCO.app" \
+  "$ROOT_DIR/dist/SistemaGuimma/CONFIGURAR_POSTGRES.app"
+do
+  if [[ -d "$app" ]]; then
+    cp -R "$app" "$MAC_DIR/"
+  fi
+done
 
 if [[ -f "$ROOT_DIR/PAGINAS_DO_SISTEMA/SETUP_BANCO.py" ]]; then
   cp -f "$ROOT_DIR/PAGINAS_DO_SISTEMA/SETUP_BANCO.py" "$MAC_DIR/CONFIGURAR_BANCO.py"
@@ -149,4 +163,4 @@ if [[ -f "$ZIP_OUT" ]]; then
   echo "ZIP espelha exatamente o conteudo da pasta windows"
 fi
 echo "Windows: SCRIPTS + CONFIGURAR_BANCO.exe + CONFIGURAR_POSTGRES.exe + instalador oficial"
-echo "macos:   SCRIPTS + CONFIGURAR_BANCO.command + CONFIGURAR_POSTGRES.command (+ dmg quando existir)"
+echo "macos:   PKG/DMG + apps compilados + SCRIPTS + comandos auxiliares"
