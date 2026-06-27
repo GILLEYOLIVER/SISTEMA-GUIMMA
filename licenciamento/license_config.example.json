@@ -3,7 +3,7 @@
   "server_url": "https://sistema-guimma-licencas.sistemaguimma.workers.dev",
   "customer_email": "cliente@empresa.com.br",
   "license_key": "",
-  "poll_interval_minutes": 1440,
+  "poll_interval_minutes": 10,
   "request_timeout_seconds": 10,
   "grace_days_when_paid": 3,
   "open_license_app_when_invalid": true

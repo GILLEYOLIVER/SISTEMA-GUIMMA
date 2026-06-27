@@ -15,11 +15,11 @@ from licenciamento.store import clear_license_state, iso_utc, save_license_state
 DEFAULT_SERVER_URL = "https://sistema-guimma-licencas.sistemaguimma.workers.dev"
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "enabled": False,
+    "enabled": True,
     "server_url": DEFAULT_SERVER_URL,
     "customer_email": "",
     "license_key": "",
-    "poll_interval_minutes": 1440,
+    "poll_interval_minutes": 10,
     "request_timeout_seconds": 10,
     "grace_days_when_paid": 3,
     "open_license_app_when_invalid": True,
@@ -33,7 +33,7 @@ def normalize_config(data: dict[str, Any] | None) -> dict[str, Any]:
             config.update(data["license"])
         else:
             config.update(data)
-    config["enabled"] = bool(config.get("enabled"))
+    config["enabled"] = True
     config["server_url"] = str(config.get("server_url") or DEFAULT_SERVER_URL).strip().rstrip("/")
     config["customer_email"] = str(
         config.get("customer_email")
@@ -43,6 +43,7 @@ def normalize_config(data: dict[str, Any] | None) -> dict[str, Any]:
         or ""
     ).strip().lower()
     config["license_key"] = str(config.get("license_key") or "").strip()
+    config["poll_interval_minutes"] = 10
     return config
 
 

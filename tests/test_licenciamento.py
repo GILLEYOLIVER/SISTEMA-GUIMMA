@@ -8,7 +8,9 @@ from datetime import timedelta
 from pathlib import Path
 
 from licenciamento.machine import machine_id
-from licenciamento.paths import STATE_FILE
+from licenciamento.client import DEFAULT_SERVER_URL, normalize_config
+from licenciamento.paths import CONFIG_FILE, STATE_FILE
+from licenciamento.runtime import check_application_access
 from licenciamento.store import clear_license_state, iso_utc, save_license_state, utcnow, validate_state
 
 
@@ -86,6 +88,22 @@ class LicensingTests(unittest.TestCase):
         self.assertEqual(removed, 1)
         self.assertFalse(result.ok)
         self.assertIn("nenhuma", result.message.lower())
+
+    def test_license_is_required_by_default(self) -> None:
+        result = check_application_access(try_online=False)
+
+        self.assertFalse(result.allowed)
+        self.assertIn("licenca", result.title.lower())
+
+    def test_config_always_enforces_license(self) -> None:
+        config = normalize_config({"enabled": False, "server_url": DEFAULT_SERVER_URL})
+
+        self.assertTrue(config["enabled"])
+
+    def test_config_uses_ten_minute_poll_interval(self) -> None:
+        config = normalize_config({"poll_interval_minutes": 1440})
+
+        self.assertEqual(config["poll_interval_minutes"], 10)
 
 
 if __name__ == "__main__":
