@@ -41,19 +41,21 @@ from PAGINAS_DO_SISTEMA import BANCO_DE_DADOS_PG as db
 #   diretório gravável do usuário.
 # =============================================================================
 def _opera_user_data_dir() -> Path:
-    """Retorna diretório gravável do usuário para dados do SistemaOpera."""
+    """Retorna diretório gravável do usuário para dados do Sistema Guimma."""
     try:
         if sys.platform == "darwin":
-            base = Path.home() / "Library" / "Application Support" / "SistemaOpera"
+            base = Path.home() / "Library" / "Application Support" / "SistemaGuimma"
         elif os.name == "nt":
-            base = Path(os.getenv("APPDATA") or (Path.home() / "AppData" / "Roaming")) / "SistemaOpera"
+            appdata = Path(os.getenv("APPDATA") or (Path.home() / "AppData" / "Roaming"))
+            base = appdata / "SistemaGuimma"
         else:
-            base = Path(os.getenv("XDG_DATA_HOME") or (Path.home() / ".local" / "share")) / "sistemaopera"
+            data_home = Path(os.getenv("XDG_DATA_HOME") or (Path.home() / ".local" / "share"))
+            base = data_home / "sistemaguimma"
         base.mkdir(parents=True, exist_ok=True)
         return base
     except Exception:
         # fallback ultra seguro
-        base = Path.home() / "SistemaOpera"
+        base = Path.home() / "SistemaGuimma"
         base.mkdir(parents=True, exist_ok=True)
         return base
 
@@ -4790,7 +4792,7 @@ if __name__ == "__main__":
 
 
     sistema = SistemaMock()
-    sistema.root.title("Sistema de Cadastro de Modelos - OPERA")
+    sistema.root.title("Sistema de Cadastro de Modelos - Sistema Guimma")
     centralizar_janela(sistema.root, 1400, 900)
 
     app = CadastroModelosApp(sistema.root, sistema)

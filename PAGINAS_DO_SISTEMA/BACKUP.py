@@ -269,25 +269,17 @@ class BackupPage(ctk.CTkFrame):
             nome_arquivo = f"auto_opera_{timestamp}.sql"
             caminho_final = os.path.join(pasta, nome_arquivo)
 
-            # ----------------------------------------------------
-            # 🔥 Dados do banco
-            # ----------------------------------------------------
-            from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import CONFIG
-            host = CONFIG["hosts"][0]
-            port = CONFIG["ports"][0]
-            user = CONFIG["defaults"].get("user", "postgres")
-            database = CONFIG["defaults"].get("dbname", "BANCO_OPERA")
+            params, reason = BackupPage._resolver_parametros_backup_static()
+            if not params:
+                if os.environ.get("OPERA_DEBUG", "").strip():
+                    print(f"⏸ [AUTO] Backup ignorado: {reason}")
+                return
 
-            # Senha
-            password = ""
-            config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
-            if os.path.exists(config_path):
-                try:
-                    import json
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        password = json.load(f).get("defaults", {}).get("password", "")
-                except:
-                    pass
+            host = params["host"]
+            port = params["port"]
+            user = params["user"]
+            database = params["database"]
+            password = params["password"]
 
             # ----------------------------------------------------
             # 🔥 Detectar pg_dump
@@ -318,7 +310,24 @@ class BackupPage(ctk.CTkFrame):
             if password:
                 env["PGPASSWORD"] = password
 
-            subprocess.run(cmd, env=env)
+            result = subprocess.run(
+                cmd,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=300,
+            )
+            if result.returncode != 0:
+                try:
+                    if os.path.exists(caminho_final) and os.path.getsize(caminho_final) == 0:
+                        os.remove(caminho_final)
+                except Exception:
+                    pass
+                if os.environ.get("OPERA_DEBUG", "").strip():
+                    msg = (result.stderr or result.stdout or "pg_dump falhou").strip()
+                    print(f"⚠️ [AUTO] Backup ignorado: {msg}")
+                return
 
             print(f"🟢 [AUTO] Backup gerado: {caminho_final}")
 
@@ -342,7 +351,74 @@ class BackupPage(ctk.CTkFrame):
                         pass
 
         except Exception as e:
-            print(f"❌ [AUTO] Erro no backup automático: {e}")
+            if os.environ.get("OPERA_DEBUG", "").strip():
+                print(f"❌ [AUTO] Erro no backup automático: {e}")
+
+    @staticmethod
+    def _normalizar_host_pg_dump(host: str) -> str:
+        host = (host or "localhost").strip()
+        if host in {"localhost", "::1", ".", "*", "0.0.0.0"}:
+            return "127.0.0.1"
+        return host
+
+    @staticmethod
+    def _resolver_parametros_backup_static():
+        try:
+            import psycopg2
+            from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import CONFIG
+        except Exception as exc:
+            return None, f"módulo de banco indisponível: {exc}"
+
+        defaults = CONFIG.get("defaults", {}) or {}
+        database = defaults.get("dbname") or CONFIG.get("dbname") or "BANCO_OPERA"
+        user = defaults.get("user") or CONFIG.get("user") or "postgres"
+        password = os.environ.get("PGPASSWORD") or defaults.get("password") or CONFIG.get("password") or ""
+        timeout = int(CONFIG.get("connect_timeout", 5) or 5)
+
+        raw_hosts = CONFIG.get("hosts") or [CONFIG.get("host") or "localhost"]
+        hosts = []
+        for host in raw_hosts:
+            normalized = BackupPage._normalizar_host_pg_dump(str(host))
+            for candidate in (normalized, str(host)):
+                if candidate and candidate not in hosts:
+                    hosts.append(candidate)
+
+        raw_ports = CONFIG.get("ports") or [CONFIG.get("port") or 5432]
+        ports = []
+        for port in list(raw_ports) + [5433, 5432, 5434, 5435]:
+            try:
+                port_int = int(port)
+            except Exception:
+                continue
+            if port_int not in ports:
+                ports.append(port_int)
+
+        last_error = "nenhuma configuração testada"
+        for host in hosts:
+            for port in ports:
+                try:
+                    conn = psycopg2.connect(
+                        host=host,
+                        port=port,
+                        database=database,
+                        user=user,
+                        password=password,
+                        connect_timeout=timeout,
+                    )
+                    conn.close()
+                    return {
+                        "host": BackupPage._normalizar_host_pg_dump(host),
+                        "port": port,
+                        "user": user,
+                        "database": database,
+                        "password": password,
+                    }, None
+                except Exception as exc:
+                    linhas = str(exc).splitlines()
+                    last_error = linhas[0] if linhas else exc.__class__.__name__
+                    continue
+
+        return None, last_error
 
     def _carregar_senha_diretamente(self):
         """Carrega a senha diretamente do arquivo config.json"""
@@ -1407,9 +1483,8 @@ class BackupPage(ctk.CTkFrame):
         if self.logger:
             self.logger.info(f"[BACKUP] Usando pg_dump: {pg_dump_exe} ({versao})")
 
-        # 🔥 CORREÇÃO ABSOLUTA
-        # Força host = localhost pois pg_dump falha com ".", "*" ou "::1"
-        host_final = "localhost"
+        # Evita que localhost resolva para ::1 no macOS, onde pg_hba/senha pode divergir.
+        host_final = self._normalizar_host_pg_dump(self.host)
 
         # Montar comando do pg_dump
         cmd = [

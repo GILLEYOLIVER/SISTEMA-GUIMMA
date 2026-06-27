@@ -1,0 +1,68 @@
+INSTALAR SISTEMA GUIMMA NO WINDOWS
+
+Objetivo:
+
+Instalar o Sistema Guimma em computadores Windows.
+
+Arquivo esperado do instalador:
+
+Sistema_Guimma_Setup_x64.exe
+
+Para computadores Windows 32 bits, quando necessario:
+
+Sistema_Guimma_Setup_x86.exe
+
+Importante:
+
+O instalador Windows deve ser gerado em um computador Windows, porque depende
+do PyInstaller para Windows e do Inno Setup.
+
+Passo a passo no computador do cliente:
+
+1. Copie o instalador para o computador.
+
+2. Clique com o botao direito no instalador.
+
+3. Escolha:
+
+   Executar como administrador
+
+4. Siga o assistente de instalacao.
+
+5. Ao terminar, o instalador pode abrir:
+
+   - Configurar Banco de Dados
+   - Sistema Guimma
+   - Licenciador do Sistema Guimma
+
+6. Se o Windows Defender ou SmartScreen perguntar, confirme a execucao se voce
+   tiver certeza que o arquivo veio do seu pacote oficial.
+
+7. Abra o menu Iniciar e procure:
+
+   SISTEMA GUIMMA
+
+Atalhos esperados:
+
+- SISTEMA GUIMMA
+- Configurar Banco de Dados
+- Licenciamento Sistema Guimma
+
+Quando o Windows for servidor:
+
+Instale e configure o PostgreSQL conforme:
+
+- 03_INSTALAR_POSTGRESQL_SERVIDOR.txt
+- 04_CONFIGURAR_BANCO_NO_SERVIDOR.txt
+
+Quando o Windows for estacao da rede:
+
+Configure o banco apontando para o IP do servidor conforme:
+
+- 05_CONFIGURAR_ESTACAO_CLIENTE_REDE.txt
+
+Cuidados:
+
+- Nao envie o app administrativo de licencas para o cliente.
+- Nao envie senha do painel web.
+- Nao envie token do Cloudflare.

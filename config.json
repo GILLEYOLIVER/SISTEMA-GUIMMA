@@ -18,6 +18,6 @@
   "ports": [
     5432
   ],
-  "appname": "OPERA_APP",
+  "appname": "SistemaGuimma",
   "connect_timeout": 8
 }

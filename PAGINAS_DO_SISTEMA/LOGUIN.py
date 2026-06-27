@@ -26,6 +26,55 @@ from PAGINAS_DO_SISTEMA.ui_after_guard import (
 from pathlib import Path
 import sys
 
+try:
+    from licenciamento.runtime import check_application_access, open_license_app
+
+    LICENCIAMENTO_DISPONIVEL = True
+except Exception as erro_licenciamento:
+    check_application_access = None
+    open_license_app = None
+    LICENCIAMENTO_DISPONIVEL = False
+    print(f"⚠️ Licenciamento não disponível: {erro_licenciamento}")
+
+
+def _licenciamento_exigido_por_ambiente() -> bool:
+    valor = os.environ.get("SISTEMA_GUIMMA_LICENSE_ENFORCE", "")
+    return valor.strip().lower() in {"1", "true", "yes", "sim", "on"}
+
+
+def _verificar_licenca_antes_do_login(parent: tk.Misc) -> bool:
+    if not LICENCIAMENTO_DISPONIVEL:
+        if _licenciamento_exigido_por_ambiente():
+            _mostrar_erro_centralizado(
+                parent,
+                "Licenciamento indisponível",
+                "O módulo de licenciamento não foi encontrado.\n"
+                "Reinstale o Sistema Guimma ou abra o aplicativo de licenciamento.",
+            )
+            return False
+        return True
+
+    try:
+        decisao = check_application_access(try_online=True)
+    except Exception as erro:
+        _mostrar_erro_centralizado(
+            parent,
+            "Erro no licenciamento",
+            f"Não foi possível validar a licença:\n{erro}",
+        )
+        return False
+
+    if decisao.allowed:
+        return True
+
+    _mostrar_erro_centralizado(parent, decisao.title, decisao.message)
+    try:
+        if open_license_app is not None:
+            open_license_app()
+    except Exception:
+        pass
+    return False
+
 
 def _abrir_setup_banco() -> bool:
     """Abre o configurador de banco sem reinvocar o app principal em loop."""
@@ -37,7 +86,7 @@ def _abrir_setup_banco() -> bool:
         exe_path.parent / "CONFIGURAR_BANCO.app",
         exe_path.parent.parent / "CONFIGURAR_BANCO.app",
         exe_path.parent.parent.parent / "CONFIGURAR_BANCO.app",
-        Path.cwd() / "dist" / "SistemaOpera" / "CONFIGURAR_BANCO.app",
+        Path.cwd() / "dist" / "SistemaGuimma" / "CONFIGURAR_BANCO.app",
     ]
 
     for app_path in candidatos_apps:
@@ -67,7 +116,7 @@ def _abrir_setup_banco() -> bool:
         if script.is_file():
             try:
                 # Em app empacotado, sys.executable aponta para o próprio app.
-                # Evita abrir o SistemaOpera de novo em loop.
+                # Evita abrir o Sistema Guimma de novo em loop.
                 if getattr(sys, "frozen", False):
                     py_candidates = [
                         os.environ.get("PYTHON_BIN"),
@@ -154,16 +203,14 @@ def _carregar_config_json_e_exportar_ambiente():
     # 1) Local do app (Windows)
     appdata = os.getenv("APPDATA")
     if appdata:
-        candidatos.append(os.path.join(appdata, "SistemaOpera", "config.json"))
-        candidatos.append(os.path.join(appdata, "Opera", "config.json"))
+        candidatos.append(os.path.join(appdata, "SistemaGuimma", "config.json"))
 
     # 2) Local global (macOS / Linux)
-    candidatos.append("/Library/Application Support/SistemaOpera/config.json")
-    candidatos.append(os.path.expanduser("~/Library/Application Support/SistemaOpera/config.json"))
+    candidatos.append("/Library/Application Support/SistemaGuimma/config.json")
+    candidatos.append(os.path.expanduser("~/Library/Application Support/SistemaGuimma/config.json"))
 
     # 3) Local global Windows
-    candidatos.append(r"C:\ProgramData\Opera\config.json")
-    candidatos.append(r"C:\ProgramData\SistemaOpera\config.json")
+    candidatos.append(r"C:\ProgramData\SistemaGuimma\config.json")
 
     # 4) Ao lado do arquivo e raiz do projeto
     aqui = os.path.dirname(os.path.abspath(__file__))
@@ -237,13 +284,18 @@ class SistemaLoginModerno:
         self.fonte_entrada = ("Segoe UI", 11)
         self.fonte_botao = ("Segoe UI", 11, "bold")
 
+        # Licenciamento: quando ativado, bloqueia antes do login.
+        if not _verificar_licenca_antes_do_login(self.root):
+            self.root.after(50, self.root.destroy)
+            return
+
         # Verifica conexão e readiness do banco (sem criar nada)
         if not banco_de_dados.ready_check():
             _mostrar_erro_centralizado(
                 self.root,
                 "Banco não preparado",
                 "Não foi possível conectar ao banco de dados.\n"
-                "Rode os scripts SQL e configure OPERA_PG_DSN/OPERA_PG_SCHEMA.",
+                "Rode os scripts SQL e configure a conexão pelo configurador de banco.",
             )
             abriu_setup = _abrir_setup_banco()
             if abriu_setup:

@@ -1,0 +1,50 @@
+LEIA PRIMEIRO - MANUAIS DO SISTEMA GUIMMA
+
+Esta pasta contem manuais separados para instalar, configurar e operar o
+Sistema Guimma em clientes.
+
+Use estes arquivos como roteiro de atendimento e implantacao.
+
+Arquivos desta pasta:
+
+01_INSTALAR_SISTEMA_MAC.txt
+Instalacao do Sistema Guimma em computadores macOS.
+
+02_INSTALAR_SISTEMA_WINDOWS.txt
+Instalacao do Sistema Guimma em computadores Windows.
+
+03_INSTALAR_POSTGRESQL_SERVIDOR.txt
+Instalacao e preparacao do PostgreSQL no computador servidor.
+
+04_CONFIGURAR_BANCO_NO_SERVIDOR.txt
+Como criar/configurar o banco BANCO_OPERA no servidor.
+
+05_CONFIGURAR_ESTACAO_CLIENTE_REDE.txt
+Como configurar computadores da rede para acessar o banco do servidor.
+
+06_USAR_LICENCIADOR_DO_CLIENTE.txt
+Como o cliente informa o email e valida a licenca.
+
+07_USAR_PAINEL_WEB_DE_LICENCAS.txt
+Como voce administra licencas pelo navegador.
+
+08_BACKUP_E_RESTAURACAO.txt
+Como orientar rotinas basicas de backup e restauracao.
+
+09_GERAR_INSTALADORES.txt
+Como gerar instaladores macOS e Windows.
+
+10_CHECKLIST_ENTREGA_CLIENTE.txt
+Checklist final antes de liberar o sistema ao cliente.
+
+Aviso importante:
+
+Arquivos de administracao de licencas, senhas do painel web e tokens do
+Cloudflare nunca devem ser enviados para clientes.
+
+O cliente deve receber somente:
+
+- Instalador do Sistema Guimma.
+- Licenciador do cliente junto com o sistema.
+- Configurador de banco, quando necessario.
+- Orientacoes de uso, sem senha administrativa.

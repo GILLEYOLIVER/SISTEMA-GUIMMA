@@ -1,0 +1,102 @@
+USAR PAINEL WEB DE LICENCAS
+
+Objetivo:
+
+Administrar licencas de clientes em qualquer computador com internet.
+
+Link:
+
+https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+
+Senha:
+
+A senha esta no arquivo privado:
+
+dist/Sistema Guimma Licencas Admin - Privado/CREDENCIAIS_PAINEL_WEB.txt
+
+Nunca envie essa senha para clientes.
+
+O que o painel faz:
+
+- Consulta licencas.
+- Ativa clientes.
+- Renova validade.
+- Bloqueia clientes.
+- Libera troca de computador.
+
+Como entrar:
+
+1. Abra o navegador.
+
+2. Acesse:
+
+   https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+
+3. Digite a senha administrativa.
+
+4. Clique em Entrar.
+
+Ativar cliente:
+
+1. Informe o email.
+2. Informe nome, se desejar.
+3. Informe dias, normalmente 30.
+4. Clique em Ativar.
+
+Renovar cliente:
+
+1. Informe o email.
+2. Informe dias, normalmente 30.
+3. Clique em Renovar.
+
+Bloquear cliente:
+
+1. Informe o email.
+2. Clique em Desativar/Bloquear.
+3. Confirme.
+
+Liberar computador:
+
+1. Informe o email.
+2. Clique em Liberar computador.
+3. Confirme.
+
+Consultar cliente:
+
+1. Informe o email.
+2. Clique em Consultar.
+
+O painel mostra:
+
+- Email.
+- Nome.
+- Plano.
+- Status.
+- Validade.
+- Computador ativo.
+- Nome do computador.
+- Sistema operacional.
+- Data de ativacao.
+- Ultimo uso.
+
+Diferenca importante:
+
+Desativar/Bloquear:
+
+Corta o acesso por falta de pagamento ou cancelamento.
+
+Liberar computador:
+
+Nao corta o acesso. Apenas permite ativar em outro computador.
+
+Seguranca:
+
+O painel modifica direto o banco online no Cloudflare.
+Use com cuidado.
+
+Nao compartilhe:
+
+- Link com senha.
+- Arquivo de credenciais.
+- Token do Cloudflare.
+- App administrativo nativo.

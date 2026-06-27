@@ -126,7 +126,7 @@ def build_windows() -> bool:
         return False
 
     # Se existir um .spec, usa ele. (mas o esperado é gerar onedir com _internal)
-    spec_file = Path("SistemaOpera.spec")
+    spec_file = Path("SistemaGuimma.spec")
     if spec_file.exists():
         print(f"📄 Usando arquivo .spec existente: {spec_file}")
         cmd = [sys.executable, "-m", "PyInstaller", "--clean", "--noconfirm", str(spec_file)]
@@ -141,7 +141,7 @@ def build_windows() -> bool:
             "--onedir",
             "--windowed",
             "--noconsole",
-            "--name=SistemaOpera",
+            "--name=SistemaGuimma",
             "--distpath=dist",
             "--workpath=build/windows",
             "--specpath=build",
@@ -157,6 +157,7 @@ def build_windows() -> bool:
         pages_src = project_root / "PAGINAS_DO_SISTEMA"
         icons_src = project_root / "icons"
         data_src = project_root / "data"
+        license_src = project_root / "licenciamento"
         cmd.extend([
             "--add-data",
             f"{pages_src};PAGINAS_DO_SISTEMA",
@@ -164,6 +165,8 @@ def build_windows() -> bool:
             f"{icons_src};icons",
             "--add-data",
             f"{data_src};data",
+            "--add-data",
+            f"{license_src};licenciamento",
         ])
 
         # Hidden imports (somente os que existirem)
@@ -180,6 +183,14 @@ def build_windows() -> bool:
             "PIL.ImageTk",
             "tkinter",
             "tkinter.ttk",
+            "certifi",
+            "licenciamento",
+            "licenciamento.runtime",
+            "licenciamento.client",
+            "licenciamento.store",
+            "licenciamento.machine",
+            "licenciamento.agent",
+            "licenciamento.app",
             "fpdf",
             "fpdf.enums",
             "reportlab",
@@ -218,13 +229,13 @@ def build_windows() -> bool:
         print("✅ Build concluído com sucesso!")
 
         # onedir esperado
-        exe_path = Path("dist/SistemaOpera/SistemaOpera.exe")
+        exe_path = Path("dist/SistemaGuimma/SistemaGuimma.exe")
         if not exe_path.exists():
             # fallback caso alguém use outro distpath
-            exe_path = Path("dist/windows/SistemaOpera/SistemaOpera.exe")
+            exe_path = Path("dist/windows/SistemaGuimma/SistemaGuimma.exe")
 
         if not exe_path.exists():
-            print("❌ Executável não foi criado (esperado: dist/SistemaOpera/SistemaOpera.exe)")
+            print("❌ Executável não foi criado (esperado: dist/SistemaGuimma/SistemaGuimma.exe)")
             return False
 
         size_mb = exe_path.stat().st_size / (1024 * 1024)
@@ -286,7 +297,7 @@ def build_macos() -> bool:
         "--clean",
         "--windowed",
         "--noconsole",
-        "--name=SistemaOpera",
+        "--name=SistemaGuimma",
         "--distpath=dist/macos",
         "--workpath=build/macos",
         "--specpath=build",
@@ -312,6 +323,7 @@ def build_macos() -> bool:
     pages_src = project_root / "PAGINAS_DO_SISTEMA"
     icons_src = project_root / "icons"
     data_src = project_root / "data"
+    license_src = project_root / "licenciamento"
     cmd.extend([
         "--add-data",
         f"{pages_src}:PAGINAS_DO_SISTEMA",
@@ -319,6 +331,8 @@ def build_macos() -> bool:
         f"{icons_src}:icons",
         "--add-data",
         f"{data_src}:data",
+        "--add-data",
+        f"{license_src}:licenciamento",
     ])
 
     hidden_imports = [
@@ -334,6 +348,14 @@ def build_macos() -> bool:
         "PIL.ImageTk",
         "tkinter",
         "tkinter.ttk",
+        "certifi",
+        "licenciamento",
+        "licenciamento.runtime",
+        "licenciamento.client",
+        "licenciamento.store",
+        "licenciamento.machine",
+        "licenciamento.agent",
+        "licenciamento.app",
         "fpdf",
         "fpdf.enums",
         "reportlab",
@@ -366,7 +388,7 @@ def build_macos() -> bool:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
         print("✅ Build concluído com sucesso!")
 
-        app_path = Path("dist/macos/SistemaOpera.app")
+        app_path = Path("dist/macos/SistemaGuimma.app")
         if app_path.exists():
             print(f"\n📦 Aplicativo criado: {app_path}")
             return True

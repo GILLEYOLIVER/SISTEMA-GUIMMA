@@ -1,0 +1,16 @@
+name = "sistema-guimma-licencas"
+main = "src/worker.js"
+compatibility_date = "2026-06-27"
+workers_dev = true
+preview_urls = false
+
+# Depois de rodar:
+#   pnpm wrangler d1 create sistema_guimma_licencas
+# copie o database_id gerado pela Cloudflare e substitua abaixo.
+[[d1_databases]]
+binding = "DB"
+database_name = "sistema_guimma_licencas"
+database_id = "70be9b45-c7ca-49b3-971c-b27f56e36612"
+
+[vars]
+LICENSE_VALID_DAYS = "30"

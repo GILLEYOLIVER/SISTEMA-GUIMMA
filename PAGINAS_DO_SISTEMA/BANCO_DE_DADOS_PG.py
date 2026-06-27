@@ -143,15 +143,15 @@ def _is_frozen() -> bool:
 
 
 def _app_name() -> str:
-    return "SistemaOpera"
+    return "SistemaGuimma"
 
 
 def _user_config_dir() -> str:
     """
     Pasta segura para config do app instalado:
-    - Windows: %APPDATA%\\SistemaOpera
-    - macOS: ~/Library/Application Support/SistemaOpera
-    - Linux: ~/.config/SistemaOpera
+    - Windows: %APPDATA%\\SistemaGuimma
+    - macOS: ~/Library/Application Support/SistemaGuimma
+    - Linux: ~/.config/SistemaGuimma
     """
     system = platform.system()
     if system == "Windows":
@@ -181,7 +181,7 @@ def _resource_candidates() -> List[str]:
         if meipass:
             cands.append(os.path.join(meipass, "config.json"))
 
-        # macOS: sys.executable -> .../SistemaOpera.app/Contents/MacOS/SistemaOpera
+        # macOS: sys.executable -> .../Sistema Guimma.app/Contents/MacOS/SistemaGuimma
         try:
             exe_dir = os.path.dirname(sys.executable)
             resources_dir = os.path.normpath(os.path.join(exe_dir, "..", "Resources"))
@@ -232,7 +232,7 @@ def _runtime_pagina_config_candidates() -> List[str]:
 # ==============================================================================
 DEFAULT_CFG: Dict[str, Any] = {
     "schema": "opera",
-    "appname": "OPERA_APP",
+    "appname": "SistemaGuimma",
     "defaults": {
         "dbname": "BANCO_OPERA",
         "user": "postgres",
@@ -397,7 +397,7 @@ def _precheck_env_dsn() -> Optional[str]:
 
 def _apply_session_settings(conn) -> None:
     schema = CONFIG.get("schema", "opera")
-    appname = CONFIG.get("appname", "OPERA_APP")
+    appname = CONFIG.get("appname", "SistemaGuimma")
     client_encoding = str(CONFIG.get("client_encoding", "AUTO") or "AUTO").upper()
     statement_timeout_ms = int(CONFIG.get("statement_timeout_ms", 0) or 0)
     try:
@@ -426,7 +426,7 @@ def _create_connection_simple(host: str, port: int, dbname: str, user: str, pass
         user=user,
         password=password,
         connect_timeout=timeout,
-        application_name=str(CONFIG.get("appname", "OPERA_APP")),
+        application_name=str(CONFIG.get("appname", "SistemaGuimma")),
     )
 
 
@@ -576,7 +576,7 @@ def _get_pool():
                     user=params.get("user") or defaults.get("user", "postgres"),
                     password=pwd,
                     connect_timeout=int(CONFIG.get("connect_timeout", 8)),
-                    application_name=str(CONFIG.get("appname", "OPERA_APP")),
+                    application_name=str(CONFIG.get("appname", "SistemaGuimma")),
                 )
             log_ok(f"Pool de conexões PostgreSQL ativo ({minconn}-{maxconn}).")
         except Exception as e:
@@ -846,7 +846,7 @@ def table_exists(table: str, schema: str | None = None) -> bool:
 
 
 # ==============================================================================
-# SISTEMA DE AUDITORIA AUTOMÁTICO - OPERA AUDIT SYSTEM (mantido)
+# SISTEMA DE AUDITORIA AUTOMÁTICO - Sistema Guimma
 # ==============================================================================
 import functools
 import inspect

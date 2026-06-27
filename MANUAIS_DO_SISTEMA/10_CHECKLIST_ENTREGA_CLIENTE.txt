@@ -1,0 +1,91 @@
+CHECKLIST DE ENTREGA AO CLIENTE
+
+Objetivo:
+
+Conferir todos os pontos antes de liberar o Sistema Guimma para venda ou
+implantacao em um cliente.
+
+1. Licenca
+
+[ ] Email do cliente cadastrado no painel web.
+[ ] Licenca ativada por 30 dias ou prazo combinado.
+[ ] Cliente informado que a licenca vale em 1 computador por vez.
+[ ] Teste de validacao feito no computador do cliente.
+[ ] Licenciador instalado junto com o sistema.
+
+2. Banco de dados
+
+[ ] PostgreSQL instalado no servidor, se aplicavel.
+[ ] Banco BANCO_OPERA criado.
+[ ] Schema opera configurado.
+[ ] Senha do PostgreSQL guardada com o responsavel.
+[ ] Porta 5432 liberada, se houver rede.
+[ ] Conexao local testada no servidor.
+[ ] Conexao de estacao testada, se houver rede.
+
+3. Sistema
+
+[ ] Sistema Guimma instalado.
+[ ] App aparece em Aplicativos/Launchpad no Mac ou Menu Iniciar no Windows.
+[ ] Splash aparece com Sistema Guimma.
+[ ] Login abre sem erro.
+[ ] Tema inicial correto.
+[ ] Menus e submenus carregam.
+[ ] Telas principais abrem.
+
+4. Fluxo minimo de teste
+
+[ ] Abrir Dashboard.
+[ ] Abrir Modelos.
+[ ] Abrir Estoque.
+[ ] Abrir Prestadores.
+[ ] Abrir Ordens de Corte.
+[ ] Criar ou consultar uma ordem de teste.
+[ ] Conferir se telas salvam e recarregam dados.
+[ ] Testar relatorios principais.
+[ ] Testar impressao quando houver impressora/PDF.
+
+5. Rede
+
+[ ] Servidor com IP fixo ou reservado no roteador.
+[ ] Clientes apontando para IP do servidor.
+[ ] Firewall liberado.
+[ ] Mais de uma estacao testada, se aplicavel.
+
+6. Backup
+
+[ ] Rotina de backup explicada ao cliente.
+[ ] Primeiro backup realizado.
+[ ] Local do backup definido.
+[ ] Cliente orientado a guardar copia fora do servidor.
+
+7. Entrega de arquivos
+
+Enviar ao cliente somente:
+
+[ ] Instalador do Sistema Guimma.
+[ ] Orientacao basica de instalacao.
+[ ] Configurador PostgreSQL, se o cliente for servidor.
+
+Nao enviar ao cliente:
+
+[ ] App administrativo de licencas.
+[ ] Senha do painel web.
+[ ] Token do Cloudflare.
+[ ] Arquivos .dev.vars.
+[ ] Pasta privada de administracao.
+
+8. Validacao final
+
+[ ] Sistema abre.
+[ ] Banco conecta.
+[ ] Licenca valida.
+[ ] Cliente consegue entrar.
+[ ] Fluxo principal funciona.
+[ ] Backup combinado.
+[ ] Cliente sabe quem chamar em caso de troca de computador.
+
+Observacao:
+
+Para trocar de computador, use o painel web e clique em Liberar computador
+para o email do cliente. Depois o cliente valida no novo computador.

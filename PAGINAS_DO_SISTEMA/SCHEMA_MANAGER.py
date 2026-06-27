@@ -33,9 +33,9 @@ MODULES = [
 def conectar():
     """
     Usa a conexão oficial do sistema, respeitando:
-    - OPERA_PG_DSN
+    - configuração do banco
     - config.json
-    - fallback/autodetect do BANCO_DE_DADOS_PG
+    - autodetecção do BANCO_DE_DADOS_PG
     """
     conn = get_connection()
     try:

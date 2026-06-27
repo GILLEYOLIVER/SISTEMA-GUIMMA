@@ -1,0 +1,88 @@
+GERAR INSTALADORES DO SISTEMA GUIMMA
+
+Objetivo:
+
+Gerar os instaladores para entregar o Sistema Guimma aos clientes.
+
+macOS:
+
+O instalador macOS pode ser gerado no Mac.
+
+Comando:
+
+PYTHON_BIN=.venv/bin/python ./packaging/macos/build_installer.sh --version 1.0.0 --with-dmg --with-pkg
+
+Saidas esperadas:
+
+- dist/Sistema Guimma.app
+- dist/Sistema Guimma.pkg
+- dist/installers/macos/Sistema Guimma 1.0.0 macOS.pkg
+
+Windows:
+
+O instalador Windows deve ser gerado no Windows.
+
+Motivo:
+
+PyInstaller e Inno Setup precisam gerar executaveis nativos do Windows.
+
+Comando para x64:
+
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_installer.ps1 -Python python -Version 1.0.0 -Architecture x64
+
+Saida esperada:
+
+dist\Sistema_Guimma_Setup_x64.exe
+
+Pacote unificado Windows:
+
+powershell -ExecutionPolicy Bypass -File packaging/windows/build_unified_package.ps1 -Python python -Version 1.0.0 -Architecture x64
+
+Saida esperada:
+
+dist\Sistema_Guimma_1.0.0_x64\
+
+Essa pasta deve conter:
+
+- Sistema_Guimma_Setup_x64.exe
+- CONFIGURAR_POSTGRES.exe
+- CONFIGURAR_BANCO.exe
+- SCRIPTS/
+- icones
+
+Release completo:
+
+No Windows:
+
+powershell -ExecutionPolicy Bypass -File packaging/release/build_release.ps1 -Python python -Version 1.0.0 -Architecture x64
+
+No Mac:
+
+GUIMMA_VERSION=1.0.0 GUIMMA_REQUIRE_WINDOWS=0 ./packaging/release/build_release.sh
+
+Importante:
+
+O app administrativo de licencas nao deve ser colocado no instalador do
+cliente.
+
+Cliente recebe:
+
+- Sistema Guimma.
+- Licenciador do cliente.
+- Configurador de banco.
+- Configurador PostgreSQL, se for servidor.
+
+Cliente nao recebe:
+
+- Sistema Guimma Licencas Admin.
+- Credenciais do painel web.
+- Token Cloudflare.
+
+Checklist antes de gerar:
+
+- Testes principais executados.
+- Licenciador compilado.
+- Nome Sistema Guimma correto.
+- Icones corretos.
+- Banco testado.
+- Instalador testado em maquina limpa, quando possivel.

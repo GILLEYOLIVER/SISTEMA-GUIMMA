@@ -22,8 +22,8 @@ def create_dmg():
     print_header("CRIANDO INSTALADOR DMG")
 
     # Caminhos
-    app_path = Path("dist/SistemaOpera.app")
-    dmg_path = Path("dist/SistemaOpera.dmg")
+    app_path = Path("dist/Sistema Guimma.app")
+    dmg_path = Path("dist/Sistema Guimma.dmg")
 
     if not app_path.exists():
         print(f"❌ Aplicativo não encontrado: {app_path}")
@@ -40,7 +40,7 @@ def create_dmg():
     try:
         # Copiar aplicativo
         print("📋 Copiando aplicativo...")
-        shutil.copytree(app_path, temp_dir / "SistemaOpera.app")
+        shutil.copytree(app_path, temp_dir / "Sistema Guimma.app")
 
         # Criar link para Applications
         print("🔗 Criando link para Applications...")
@@ -50,21 +50,21 @@ def create_dmg():
         welcome_text = """Bem-vindo ao Sistema Guimma!
 
 Para instalar:
-1. Arraste o ícone 'SistemaOpera.app' para a pasta 'Applications'
+1. Arraste o ícone 'Sistema Guimma.app' para a pasta 'Applications'
 2. Execute o aplicativo a partir do Launchpad ou Applications
 
 Requisitos:
 • macOS 10.15 ou superior
 • PostgreSQL (opcional, pode ser configurado após instalação)
 
-Suporte: https://sistemaopera.com/support
+Suporte: Sistema Guimma
 """
 
         welcome_file = temp_dir / "LEIA-ME.txt"
         welcome_file.write_text(welcome_text, encoding="utf-8")
 
         # Configurações do DMG
-        volume_name = "SistemaOpera"
+        volume_name = "Sistema Guimma"
         print(f"📀 Criando DMG: {volume_name}")
 
         # Comando para criar DMG
@@ -108,8 +108,8 @@ Suporte: https://sistemaopera.com/support
 
             if checksum_result.returncode == 0:
                 checksum = checksum_result.stdout.split()[0]
-                checksum_file = Path("dist/SistemaOpera.dmg.sha256")
-                checksum_file.write_text(f"{checksum}  SistemaOpera.dmg\n")
+                checksum_file = Path("dist/Sistema Guimma.dmg.sha256")
+                checksum_file.write_text(f"{checksum}  Sistema Guimma.dmg\n")
                 print(f"✅ Checksum: {checksum}")
                 print(f"📄 Salvo em: {checksum_file}")
 

@@ -1701,8 +1701,8 @@ class OperaMenuApp(ctk.CTk):
         btn_w = btn_frame.winfo_width()
         btn_h = btn_frame.winfo_height()
         frame.update_idletasks()
-        frame_width = frame.winfo_width()
-        frame_height = frame.winfo_reqheight()
+        frame_width = int(getattr(frame, "_submenu_width", 0) or frame.winfo_reqwidth() or frame.winfo_width())
+        frame_height = int(getattr(frame, "_submenu_height", 0) or frame.winfo_reqheight() or frame.winfo_height())
         x = btn_x + btn_w + 4
         y = btn_y
         area_w = self.winfo_width()
@@ -1715,9 +1715,12 @@ class OperaMenuApp(ctk.CTk):
             y = area_h - frame_height - 10
         if y < 10:
             y = 10
+        frame.configure(width=frame_width, height=frame_height)
         frame.place(in_=self, x=x, y=y)
         frame.lift()
         frame.tkraise()
+        if IS_MAC:
+            self.update_idletasks()
 
     def _resolve_theme_color(self, color, fallback: str) -> str:
         if isinstance(color, (tuple, list)) and color:
@@ -1763,6 +1766,23 @@ class OperaMenuApp(ctk.CTk):
         except Exception:
             return get_contraste_texto(cor) or fallback
 
+    def _menu_hover_text_from_theme(self, palette: dict, hover_bg: str, fallback: str) -> str:
+        for key in ("menu_hover_texto", "submenu_hover_texto", "hover_texto", "texto_hover", "text_color_hover"):
+            color = palette.get(key)
+            if isinstance(color, str) and color.strip():
+                return self._resolve_theme_color(color, fallback)
+
+        try:
+            from PAGINAS_DO_SISTEMA.TEMAS import estilo_botao_por_texto
+            button_style = estilo_botao_por_texto(self, "Atualizar")
+            color = button_style.get("text_color_hover")
+            if isinstance(color, str) and color.strip():
+                return self._resolve_theme_color(color, fallback)
+        except Exception:
+            pass
+
+        return self._contrast_text_for_color(hover_bg, fallback=fallback)
+
     def _get_menu_style_tokens(self) -> dict:
         pal = getattr(getattr(self, "theme_manager", None), "current_palette", None) or {}
         cor_secundaria = self._resolve_theme_color(pal.get("secundaria", self.cor_secundaria), self.cor_secundaria)
@@ -1780,15 +1800,14 @@ class OperaMenuApp(ctk.CTk):
             submenu_bg = self._realcar_cor(cor_secundaria, 1.06)
             hover_bg = self._realcar_cor(cor_hover_base, 1.12)
             menu_texto = "#FFFFFF"
-            hover_texto = "#FFFFFF"
             submenu_texto = "#FFFFFF"
         else:
             menu_bg = self._darker(cor_secundaria, 0.95)
             submenu_bg = self._darker(cor_secundaria, 0.95)
             hover_bg = self._darker(cor_hover_base, 0.82)
             menu_texto = self._contrast_text_for_color(menu_bg, fallback="#000000")
-            hover_texto = self._contrast_text_for_color(hover_bg, fallback=menu_texto)
             submenu_texto = self._contrast_text_for_color(submenu_bg, fallback=menu_texto)
+        hover_texto = self._menu_hover_text_from_theme(pal, hover_bg, fallback=menu_texto)
 
         return {
             "menu_bg": menu_bg,
@@ -3119,6 +3138,7 @@ class OperaMenuApp(ctk.CTk):
     def _apply_menu_hover_behavior(self, widget, fg, texto, hover_fg, hover_texto, *, border_width=1,
                                    border_color=None):
         """Aplica no menu o mesmo padrão de hover da página de temas: fundo muda no hover e o texto acompanha."""
+        widget._opera_preservar_tema = True
         try:
             widget.configure(
                 fg_color=fg,
@@ -3127,6 +3147,13 @@ class OperaMenuApp(ctk.CTk):
                 text_color=texto,
                 border_width=border_width,
                 border_color=border_color if border_color is not None else self.cor_borda,
+            )
+        except Exception:
+            pass
+        try:
+            widget.configure(
+                text_color_hover=hover_texto,
+                text_color_disabled=texto,
             )
         except Exception:
             pass
@@ -3179,6 +3206,13 @@ class OperaMenuApp(ctk.CTk):
                 text_color=cfg.get("texto"),
                 border_width=cfg.get("border_width", 1),
                 border_color=cfg.get("border_color", self.cor_borda),
+            )
+        except Exception:
+            pass
+        try:
+            widget.configure(
+                text_color_hover=cfg.get("hover_texto", cfg.get("texto")),
+                text_color_disabled=cfg.get("texto"),
             )
         except Exception:
             pass
@@ -3243,8 +3277,10 @@ class OperaMenuApp(ctk.CTk):
 
                 for inner_frame in submenu_frame.winfo_children():
                     if isinstance(inner_frame, ctk.CTkFrame):
+                        inner_frame.configure(fg_color=style["submenu_painel_bg"])
                         for btn_container in inner_frame.winfo_children():
                             if isinstance(btn_container, ctk.CTkFrame):
+                                btn_container.configure(fg_color=style["submenu_painel_bg"])
                                 for btn in btn_container.winfo_children():
                                     if isinstance(btn, ctk.CTkButton):
                                         self._apply_menu_hover_behavior(
@@ -3307,6 +3343,7 @@ class OperaMenuApp(ctk.CTk):
         )
 
         btn._opera_menu_button = True
+        btn._opera_preservar_tema = True
         btn_frame._menu_button = btn
         btn_frame._menu_categoria = categoria
 
@@ -3359,11 +3396,11 @@ class OperaMenuApp(ctk.CTk):
         self._create_submenu(categoria)
 
     def _create_submenu_item(self, parent, categoria: str, item: str):
-        item_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        style = self._get_menu_style_tokens()
+        item_frame = ctk.CTkFrame(parent, fg_color=style["submenu_painel_bg"])
         item_frame.pack(fill="x", padx=2, pady=1)
 
         icon = self._get_submenu_icon(categoria, item)
-        style = self._get_menu_style_tokens()
 
         btn = ctk.CTkButton(
             item_frame,
@@ -3381,6 +3418,8 @@ class OperaMenuApp(ctk.CTk):
             border_width=0,
             command=lambda i=item: self._on_submenu_click(categoria, i)
         )
+        btn._opera_submenu_button = True
+        btn._opera_preservar_tema = True
 
         self._apply_menu_hover_behavior(
             btn,
@@ -3408,20 +3447,25 @@ class OperaMenuApp(ctk.CTk):
         escala = getattr(self, "ui_scale", 1.0)
         maior_texto = max(len(str(item)) for item in itens_visiveis)
         largura_texto = int(maior_texto * max(8, int(9 * escala)))
+        item_height = max(38, int(42 * escala))
         submenu_width = max(
             300,
             int(self.SIDEBAR_WIDTH * 1.12),
             largura_texto + int(110 * escala)
         )
+        submenu_height = max(48, len(itens_visiveis) * item_height + 16)
         frame = ctk.CTkFrame(
             self,
             width=submenu_width,
+            height=submenu_height,
             fg_color=cor_fundo,
             corner_radius=10,
             border_color=cor_borda,
             border_width=1,
         )
-        inner_container = ctk.CTkFrame(frame, fg_color="transparent")
+        frame._submenu_width = submenu_width
+        frame._submenu_height = submenu_height
+        inner_container = ctk.CTkFrame(frame, fg_color=cor_fundo)
         inner_container.pack(fill="both", expand=True, padx=4, pady=6)
         inner_container._submenu_width = submenu_width
         for item in itens_visiveis:

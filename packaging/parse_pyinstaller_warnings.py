@@ -56,7 +56,7 @@ def main() -> None:
     for name in missing:
         print(f"--hidden-import={name}")
 
-    print("\n# collect_submodules (SistemaOpera.spec)")
+    print("\n# collect_submodules (SistemaGuimma.spec)")
     for name in top_level:
         print(f'hiddenimports += collect_submodules("{name}")')
 

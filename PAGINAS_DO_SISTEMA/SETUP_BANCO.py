@@ -49,7 +49,7 @@ PROJECT_ROOT = CURRENT_DIR.parent
 PAGINAS_DIR = PROJECT_ROOT / "PAGINAS_DO_SISTEMA"
 
 
-def _fallback_app_data_dir(app_name: str = "SistemaOpera") -> Path:
+def _fallback_app_data_dir(app_name: str = "SistemaGuimma") -> Path:
     if sys.platform.startswith("win"):
         base = Path(os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming")))
         return base / app_name
@@ -61,7 +61,7 @@ def _fallback_app_data_dir(app_name: str = "SistemaOpera") -> Path:
 try:
     from OPERA_PATHS import get_app_data_dir  # type: ignore
 except Exception:
-    def get_app_data_dir(app_name: str = "SistemaOpera") -> Path:
+    def get_app_data_dir(app_name: str = "SistemaGuimma") -> Path:
         return _fallback_app_data_dir(app_name)
 
 
@@ -202,7 +202,7 @@ def save_config(cfg: DBConfig) -> Path:
         "defaults": {"dbname": cfg.dbname, "user": cfg.user, "password": cfg.password},
         "hosts": [cfg.host],
         "ports": [int(cfg.port)],
-        "appname": "OPERA_APP",
+        "appname": "SistemaGuimma",
         "connect_timeout": 8,
     }
     payload = json.dumps(payload_dict, ensure_ascii=False, indent=2)

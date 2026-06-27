@@ -3382,7 +3382,7 @@ class UsuariosPage(ctk.CTkFrame):
         class PeriodoDialog(ctk.CTkToplevel):
             def __init__(self, parent):
                 super().__init__(parent)
-                self.title("Período do Relatório - OPERA")
+                self.title("Período do Relatório - Sistema Guimma")
                 self.geometry("400x450")
                 self.resizable(False, False)
                 self.resultado = None
@@ -4487,12 +4487,12 @@ class UsuariosPage(ctk.CTkFrame):
         </div>
 
         <div class="header">
-            <h1>OPERATIONAL TEXTILE MANAGEMENT SYSTEM</h1>
+            <h1>SISTEMA GUIMMA</h1>
             <h2>RELATÓRIO DE ATIVIDADES DO SISTEMA</h2>
             <div class="info">
                 <strong>Período:</strong> {periodo_texto} | 
                 <strong>Data de geração:</strong> {data_geracao} |
-                <strong>Sistema:</strong> OPERA v3.0
+                <strong>Sistema:</strong> Sistema Guimma v3.0
             </div>
         </div>
     """
@@ -4706,7 +4706,7 @@ class UsuariosPage(ctk.CTkFrame):
     def _criar_janela_impressao(self, dados):
         """Cria janela otimizada para impressão"""
         janela_impressao = ctk.CTkToplevel(self)
-        janela_impressao.title("Relatório para Impressão - OPERA")
+        janela_impressao.title("Relatório para Impressão - Sistema Guimma")
         janela_impressao.geometry("900x700")
         janela_impressao.resizable(False, False)
 
@@ -4784,7 +4784,7 @@ class UsuariosPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             titulo_frame,
-            text="OPERATIONAL TEXTILE MANAGEMENT SYSTEM",
+            text="SISTEMA GUIMMA",
             font=ctk.CTkFont(size=16, weight="bold"),
             text_color="#1f2937"
         ).pack(anchor="w")

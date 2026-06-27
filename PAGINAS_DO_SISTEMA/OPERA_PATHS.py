@@ -23,7 +23,7 @@ import platform
 from pathlib import Path
 from typing import Optional, Tuple
 
-APP_NAME = "SistemaOpera"
+APP_NAME = "SistemaGuimma"
 
 
 # =============================================================================
@@ -33,13 +33,13 @@ def get_app_data_dir() -> Path:
     """
     Retorna uma pasta SEMPRE gravável para dados do sistema.
 
-    macOS:   ~/Library/Application Support/SistemaOpera
-    Windows: %APPDATA%\\SistemaOpera
-    Linux:   ~/.config/SistemaOpera
+    macOS:   ~/Library/Application Support/SistemaGuimma
+    Windows: %APPDATA%\\SistemaGuimma
+    Linux:   ~/.config/SistemaGuimma
     """
 
     # Se você quiser sobrescrever manualmente:
-    override = os.environ.get("OPERA_DATA_DIR")
+    override = os.environ.get("GUIMMA_DATA_DIR")
     if override:
         p = Path(override).expanduser()
         p.mkdir(parents=True, exist_ok=True)

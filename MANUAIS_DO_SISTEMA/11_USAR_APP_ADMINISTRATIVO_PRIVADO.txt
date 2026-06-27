@@ -1,0 +1,63 @@
+USAR APP ADMINISTRATIVO PRIVADO
+
+Objetivo:
+
+Explicar o app nativo de administracao de licencas.
+
+Importante:
+
+A forma recomendada e usar o painel web:
+
+https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+
+O app administrativo nativo e opcional e deve ficar apenas com voce.
+
+Onde esta:
+
+dist/Sistema Guimma Licencas Admin - Privado/macOS/Sistema Guimma Licencas Admin.app
+
+Instalador macOS:
+
+dist/Sistema Guimma Licencas Admin - Privado/macOS/Sistema Guimma Licencas Admin.pkg
+
+Pasta Windows:
+
+dist/Sistema Guimma Licencas Admin - Privado/windows
+
+Observacao:
+
+O instalador Windows desse app deve ser gerado em um computador Windows.
+
+O que o app faz:
+
+- Consultar licenca.
+- Ativar email.
+- Renovar dias.
+- Desativar/Bloquear cliente.
+- Liberar computador.
+
+O que ele precisa:
+
+- Internet.
+- URL do servidor Cloudflare.
+- Token administrativo.
+
+No Mac de desenvolvimento, o token pode estar no arquivo privado:
+
+servidor_licencas_cloudflare/.dev.vars
+
+Em outro computador, seria preciso configurar manualmente o token no app.
+
+Por seguranca:
+
+Nao envie esse app para cliente.
+Nao instale esse app no computador do cliente.
+Nao envie token administrativo.
+
+Use esse app apenas em computador seu ou de alguem autorizado a gerenciar
+pagamentos/licencas.
+
+Recomendacao final:
+
+Para venda e suporte, prefira o painel web. Ele evita instalar app
+administrativo e funciona em qualquer computador com navegador.

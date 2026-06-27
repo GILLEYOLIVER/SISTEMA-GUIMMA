@@ -1,0 +1,248 @@
+COMO USAR O GERENCIAMENTO DE LICENCAS EM QUALQUER COMPUTADOR
+Sistema Guimma
+
+============================================================
+1. FORMA RECOMENDADA: PAINEL WEB
+============================================================
+
+A forma mais simples e segura para gerenciar licencas em qualquer computador
+e usar o painel web pelo navegador.
+
+Link do painel:
+
+https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+
+Esse painel funciona em:
+
+- Mac
+- Windows
+- Notebook
+- Computador de escritorio
+- Celular
+- Tablet
+
+O computador precisa apenas de internet e navegador.
+Nao precisa instalar o app administrativo nesse computador.
+
+
+============================================================
+2. O QUE PRECISA PARA ACESSAR
+============================================================
+
+Para usar o painel web, voce precisa de:
+
+1. Internet.
+2. Navegador, como Chrome, Edge, Safari ou Firefox.
+3. Link do painel.
+4. Senha administrativa.
+
+A senha administrativa esta salva no arquivo:
+
+CREDENCIAIS_PAINEL_WEB.txt
+
+Esse arquivo esta dentro da pasta privada:
+
+dist/Sistema Guimma Licencas Admin - Privado
+
+IMPORTANTE:
+
+Nao envie essa senha para clientes.
+Nao envie a pasta privada para clientes.
+Quem tiver essa senha consegue ativar, renovar, bloquear e liberar licencas.
+
+
+============================================================
+3. COMO ENTRAR NO PAINEL
+============================================================
+
+1. Abra o navegador.
+
+2. Acesse:
+
+   https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+
+3. Digite a senha administrativa.
+
+4. Clique em Entrar.
+
+Depois de entrar, o painel mostrara os campos para administrar licencas.
+
+
+============================================================
+4. COMO ATIVAR UM CLIENTE
+============================================================
+
+Use quando o cliente pagou ou quando voce quer liberar o acesso.
+
+1. No campo "Email do cliente", digite o email do cliente.
+
+2. No campo "Nome do cliente", coloque o nome do cliente, se desejar.
+
+3. No campo "Dias", coloque a quantidade de dias da liberacao.
+   Normalmente use 30.
+
+4. Clique em "Ativar".
+
+Resultado:
+
+O email fica ativo no Cloudflare e o cliente podera validar a licenca no
+computador dele.
+
+Observacao:
+
+A licenca so podera ficar ativa em 1 computador por vez.
+
+
+============================================================
+5. COMO RENOVAR UM CLIENTE
+============================================================
+
+Use quando o cliente pagou a mensalidade novamente.
+
+1. Digite o email do cliente.
+
+2. Em "Dias", coloque a quantidade de dias que deseja somar.
+   Normalmente use 30.
+
+3. Clique em "Renovar".
+
+Resultado:
+
+A validade da licenca sera aumentada.
+Se a licenca estava bloqueada, ela volta para ativa.
+
+
+============================================================
+6. COMO BLOQUEAR UM CLIENTE
+============================================================
+
+Use quando o cliente nao pagou, cancelou ou voce quer impedir o acesso.
+
+1. Digite o email do cliente.
+
+2. Clique em "Desativar/Bloquear".
+
+3. Confirme a operacao.
+
+Resultado:
+
+O email fica inativo no Cloudflare.
+Quando o cliente tentar validar novamente, o sistema nao liberara o acesso.
+
+
+============================================================
+7. COMO LIBERAR TROCA DE COMPUTADOR
+============================================================
+
+Use quando o cliente vai trocar de computador, formatou o computador antigo,
+ou perdeu acesso ao computador onde a licenca estava ativa.
+
+1. Digite o email do cliente.
+
+2. Clique em "Liberar computador".
+
+3. Confirme a operacao.
+
+Resultado:
+
+A assinatura continua ativa, mas o computador antigo deixa de ficar preso na
+licenca. O cliente podera abrir o licenciador no novo computador e validar
+novamente.
+
+Importante:
+
+"Liberar computador" nao bloqueia pagamento.
+Ele apenas remove o vinculo com o computador antigo.
+
+
+============================================================
+8. COMO CONSULTAR UM CLIENTE
+============================================================
+
+Use para verificar se a licenca esta ativa, bloqueada, vencida ou presa em
+algum computador.
+
+1. Digite o email do cliente.
+
+2. Clique em "Consultar".
+
+O painel mostrara:
+
+- Email
+- Nome
+- Plano
+- Status
+- Validade
+- Computador ativo, se existir
+- Nome do computador
+- Sistema operacional
+- Data de ativacao
+- Ultimo uso
+
+
+============================================================
+9. DIFERENCA ENTRE BLOQUEAR E LIBERAR COMPUTADOR
+============================================================
+
+Desativar/Bloquear:
+
+- Corta o acesso do cliente.
+- Use por falta de pagamento ou cancelamento.
+- O cliente nao conseguira validar enquanto estiver bloqueado.
+
+Liberar computador:
+
+- Nao corta o acesso.
+- Mantem a assinatura ativa.
+- Serve apenas para permitir ativar em outro computador.
+
+
+============================================================
+10. SEGURANCA
+============================================================
+
+Guarde com cuidado:
+
+- Link do painel
+- Senha administrativa
+- Arquivo CREDENCIAIS_PAINEL_WEB.txt
+- Pasta privada do administrador
+
+Nao mande nada disso para cliente.
+
+O cliente deve receber apenas:
+
+- Sistema Guimma
+- App licenciador do cliente
+- Instalador do banco/cliente conforme o tipo de instalacao
+
+O cliente nunca deve receber:
+
+- Painel administrativo
+- Senha administrativa
+- App "Sistema Guimma Licencas Admin"
+- Token do Cloudflare
+
+
+============================================================
+11. RESUMO RAPIDO
+============================================================
+
+Para gerenciar licencas em qualquer computador:
+
+1. Abra:
+   https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+
+2. Digite a senha do arquivo:
+   CREDENCIAIS_PAINEL_WEB.txt
+
+3. Informe o email do cliente.
+
+4. Escolha:
+   - Ativar
+   - Renovar
+   - Desativar/Bloquear
+   - Liberar computador
+   - Consultar
+
+Pronto. Tudo sera gravado diretamente no Cloudflare.

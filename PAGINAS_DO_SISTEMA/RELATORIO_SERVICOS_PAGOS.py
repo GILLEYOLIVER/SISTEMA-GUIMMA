@@ -934,7 +934,7 @@ class RelatorioServicosPagosPage(ctk.CTkFrame):
             return
 
         logo_data_uri = self._logo_data_uri()
-        logo_img = f"<img class='logo' src='{logo_data_uri}' alt='Logo'>" if logo_data_uri else "<div class='logo-placeholder'>OPERA</div>"
+        logo_img = f"<img class='logo' src='{logo_data_uri}' alt='Logo'>" if logo_data_uri else "<div class='logo-placeholder'>Sistema Guimma</div>"
 
         rows_html = []
         for row in self._rows:

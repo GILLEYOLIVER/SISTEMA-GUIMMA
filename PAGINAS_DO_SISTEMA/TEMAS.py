@@ -1868,6 +1868,7 @@ class TemasPage(ctk.CTkFrame):
     def __init__(self, master=None, *args, **kwargs):
         self.app = self._get_app_reference(kwargs)
         super().__init__(master, *args, **kwargs)
+        self._opera_preservar_tema = True
 
         self.paletas = ModuloPaletas()
         self.vars: Dict[str, tk.StringVar] = {}
@@ -2119,6 +2120,7 @@ class TemasPage(ctk.CTkFrame):
                           mostrar_botoes_acao=False, is_personalizado=False):
         is_active = (nome == self.tema_atual)
         fg_color = self.app.cor_destaque if is_active else self.app.cor_terciaria
+        text_color = get_contraste_texto(fg_color) if is_active else self.app.cor_texto
 
         linha_frame = ctk.CTkFrame(parent, fg_color="transparent")
         linha_frame.pack(fill="x", pady=2)
@@ -2130,7 +2132,7 @@ class TemasPage(ctk.CTkFrame):
             is_active=is_active,
             fg_color=fg_color,
             hover_color=self.app.cor_hover,
-            text_color=self.app.cor_texto,
+            text_color=text_color,
         )
         chip.pack(side="left", fill="x", expand=True, padx=(0, 5))
 

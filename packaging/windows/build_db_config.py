@@ -86,7 +86,7 @@ def main():
     script_path = base_dir / "PAGINAS_DO_SISTEMA" / "SETUP_BANCO.py"
     icons_dir = base_dir / "icons"
     build_dir = base_dir / "build"
-    output_dir = base_dir / "dist" / "SistemaOpera"
+    output_dir = base_dir / "dist" / "SistemaGuimma"
 
     build_dir.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)
