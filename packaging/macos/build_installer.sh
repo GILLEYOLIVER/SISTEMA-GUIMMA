@@ -51,6 +51,7 @@ APP_DISPLAY_NAME="Sistema Guimma"
 APP_INTERNAL_NAME="SistemaGuimma"
 APP_BUNDLE_NAME="Sistema Guimma"
 LICENSE_APP_BUNDLE_NAME="Sistema Guimma Licenca"
+DB_CONFIG_APP_BUNDLE_NAME="CONFIGURAR_BANCO"
 APP_SUPPORT_DIR_NAME="SistemaGuimma"
 
 ensure_macos() {
@@ -410,7 +411,7 @@ build_app() {
 
         # Listar conteúdo
         log_info "Conteúdo do aplicativo:"
-        find "$APP_PATH" -type f -name "*.so" -o -name "*.dylib" | head -10 | while read file; do
+        find "$APP_PATH" -type f \( -name "*.so" -o -name "*.dylib" \) | awk 'NR <= 10 { print }' | while read file; do
             log_info "  - $(basename "$file")"
         done
     else
@@ -447,6 +448,18 @@ build_license_app() {
     log_success "App de licenciamento criado: $LICENSE_APP_PATH ($LICENSE_SIZE)"
 }
 
+# Construir app separado de configuracao de banco
+build_db_config_app() {
+    print_header "CONSTRUINDO CONFIGURADOR DE BANCO"
+
+    if [ ! -x "packaging/macos/build_db_config.sh" ]; then
+        log_warning "Script do configurador de banco não encontrado ou sem permissão de execução"
+        return 0
+    fi
+
+    PYTHON_BIN="$PYTHON_BIN" bash "packaging/macos/build_db_config.sh"
+}
+
 # Criar DMG
 create_dmg() {
     print_header "CRIANDO INSTALADOR DMG"
@@ -471,6 +484,9 @@ create_dmg() {
     cp -R "$APP_PATH" "$TEMP_DIR/"
     if [ -d "dist/${LICENSE_APP_BUNDLE_NAME}.app" ]; then
         cp -R "dist/${LICENSE_APP_BUNDLE_NAME}.app" "$TEMP_DIR/"
+    fi
+    if [ -d "dist/SistemaGuimma/${DB_CONFIG_APP_BUNDLE_NAME}.app" ]; then
+        cp -R "dist/SistemaGuimma/${DB_CONFIG_APP_BUNDLE_NAME}.app" "$TEMP_DIR/"
     fi
 
     # Criar link para Applications
@@ -511,6 +527,7 @@ create_pkg() {
 
     APP_PATH="dist/${APP_BUNDLE_NAME}.app"
     LICENSE_APP_PATH="dist/${LICENSE_APP_BUNDLE_NAME}.app"
+    DB_CONFIG_APP_PATH="dist/SistemaGuimma/${DB_CONFIG_APP_BUNDLE_NAME}.app"
     PKG_PATH="dist/${APP_BUNDLE_NAME}.pkg"
     PKG_SCRIPTS="dist/pkg_scripts"
     PKG_ROOT="dist/pkg_root"
@@ -536,6 +553,11 @@ create_pkg() {
     else
         log_error "App de licenciamento não encontrado: $LICENSE_APP_PATH"
         return 1
+    fi
+    if [ -d "$DB_CONFIG_APP_PATH" ]; then
+        ditto "$DB_CONFIG_APP_PATH" "$PKG_ROOT/Applications/${DB_CONFIG_APP_BUNDLE_NAME}.app"
+    else
+        log_warning "Configurador de banco não encontrado: $DB_CONFIG_APP_PATH"
     fi
 
 cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
@@ -613,6 +635,7 @@ TARGET_LOCATION="${2:-/}"
 TARGET_VOLUME="${3:-/}"
 SYSTEM_APP_PATH="/Applications/Sistema Guimma.app"
 LICENSE_APP_PATH="/Applications/Sistema Guimma Licenca.app"
+DB_CONFIG_APP_PATH="/Applications/CONFIGURAR_BANCO.app"
 
 write_uninstaller "/Applications/Desinstalar Sistema Guimma.command"
 if [[ -n "$USER_HOME" && -d "$USER_HOME" ]]; then
@@ -627,8 +650,10 @@ rm -f "$RESULT_JSON" "$GUI_SCRIPT"
 cat > "$GUI_SCRIPT" <<'PYGUI'
 import json
 import os
+import shutil
 import socket
 import tkinter as tk
+from pathlib import Path
 from tkinter import ttk, messagebox
 
 try:
@@ -640,12 +665,77 @@ result_path = os.environ.get("RESULT_JSON", "/tmp/sistemaguimma_db_setup_result.
 assets_base = os.environ.get("APP_ASSETS_DIR", "")
 
 
+def psql_local_encontrado() -> str:
+    candidatos = [
+        "/Library/PostgreSQL/18/bin/psql",
+        "/Library/PostgreSQL/17/bin/psql",
+        "/opt/homebrew/bin/psql",
+        "/usr/local/bin/psql",
+        shutil.which("psql") or "",
+    ]
+    for caminho in candidatos:
+        if caminho and os.path.exists(caminho):
+            return caminho
+    return ""
+
+
+def postgres_local_instalado() -> bool:
+    if psql_local_encontrado():
+        return True
+    candidatos = [
+        "/Library/PostgreSQL/18/data/postgresql.conf",
+        "/Library/PostgreSQL/17/data/postgresql.conf",
+        "/opt/homebrew/var/postgresql@18/postgresql.conf",
+        "/usr/local/var/postgresql@18/postgresql.conf",
+        "/opt/homebrew/var/postgres/postgresql.conf",
+        "/usr/local/var/postgres/postgresql.conf",
+    ]
+    return any(os.path.exists(caminho) for caminho in candidatos)
+
+
 def porta_aberta(host: str, porta: int, timeout: float = 1.2) -> bool:
     try:
         with socket.create_connection((host, int(porta)), timeout=timeout):
             return True
     except Exception:
         return False
+
+
+def gravar_config_usuario(data: dict) -> None:
+    h = str(data.get("host") or "").strip()
+    p = int(data.get("port") or 5432)
+    db = str(data.get("dbname") or "BANCO_OPERA").strip()
+    u = str(data.get("user") or "postgres").strip()
+    pw = str(data.get("password") or "")
+    sc = str(data.get("schema") or "opera").strip() or "opera"
+    dsn = f"postgresql://{u}:{pw}@{h}:{p}/{db}"
+    payload = {
+        "validated_ok": True,
+        "mode": str(data.get("mode") or "local"),
+        "host": h,
+        "port": p,
+        "dbname": db,
+        "user": u,
+        "password": pw,
+        "schema": sc,
+        "pg_schema": sc,
+        "dsn": dsn,
+        "pg_dsn": dsn,
+        "appname": "SistemaGuimma",
+        "defaults": {"dbname": db, "user": u, "password": pw},
+        "hosts": [h],
+        "ports": [p],
+        "connect_timeout": 8,
+        "auto_detect_ports": True,
+        "fallback_to_postgres": True,
+    }
+    destinos = [
+        Path.home() / "Library" / "Application Support" / "SistemaGuimma" / "config.json",
+        Path.home() / "Library" / "Application Support" / "SistemaGuimma" / "PAGINAS_DO_SISTEMA" / "config.json",
+    ]
+    for destino in destinos:
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 root = tk.Tk()
@@ -665,6 +755,10 @@ win_h = min(620, max(540, screen_h - 140))
 pos_x = max(0, (screen_w - win_w) // 2)
 pos_y = max(0, (screen_h - win_h) // 2)
 root.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
+root.lift()
+root.attributes("-topmost", True)
+root.after(2500, lambda: root.attributes("-topmost", False))
+root.after(300, root.focus_force)
 
 canvas = tk.Canvas(root, width=win_w, height=win_h, highlightthickness=0, bd=0)
 canvas.pack(fill="both", expand=True)
@@ -761,6 +855,7 @@ usuario = tk.StringVar(value="postgres")
 senha = tk.StringVar(value="")
 schema = tk.StringVar(value="opera")
 status = tk.StringVar(value="Aguardando validação.")
+aviso_banco = tk.StringVar(value="")
 validado = {"ok": False}
 
 
@@ -775,13 +870,43 @@ for v in (host, porta, dbname, usuario, senha, schema):
 def set_modo_local():
     if modo.get() == "local":
         host.set("localhost")
+    atualizar_aviso_banco()
+
+
+def set_modo_rede():
+    atualizar_aviso_banco()
+
+
+def atualizar_aviso_banco():
+    if modo.get() == "local":
+        if postgres_local_instalado():
+            aviso_banco.set("Servidor/local: PostgreSQL detectado neste Mac. Teste a porta antes de concluir.")
+        else:
+            aviso_banco.set(
+                "Servidor/local: PostgreSQL não encontrado neste Mac. "
+                "Instale o banco no servidor antes de concluir, ou escolha Cliente/rede."
+            )
+    else:
+        aviso_banco.set(
+            "Cliente/rede: informe o IP do servidor onde o PostgreSQL e o banco do Sistema Guimma já estão prontos."
+        )
 
 linha_modo = tk.Frame(form, bg=panel)
 linha_modo.grid(row=0, column=0, columnspan=4, sticky="w", pady=(2, 10))
 
-tk.Label(linha_modo, text="Tipo de banco:", font=("Segoe UI", 10, "bold"), fg=fg, bg=panel).pack(side="left", padx=(0, 8))
-tk.Radiobutton(linha_modo, text="Local", variable=modo, value="local", command=set_modo_local, fg=fg, bg=panel, selectcolor=panel, activebackground=panel).pack(side="left")
-tk.Radiobutton(linha_modo, text="Rede", variable=modo, value="rede", fg=fg, bg=panel, selectcolor=panel, activebackground=panel).pack(side="left", padx=(12,0))
+tk.Label(linha_modo, text="Tipo de instalação:", font=("Segoe UI", 10, "bold"), fg=fg, bg=panel).pack(side="left", padx=(0, 8))
+tk.Radiobutton(linha_modo, text="Servidor/local", variable=modo, value="local", command=set_modo_local, fg=fg, bg=panel, selectcolor=panel, activebackground=panel).pack(side="left")
+tk.Radiobutton(linha_modo, text="Cliente/rede", variable=modo, value="rede", command=set_modo_rede, fg=fg, bg=panel, selectcolor=panel, activebackground=panel).pack(side="left", padx=(12,0))
+
+tk.Label(
+    form,
+    textvariable=aviso_banco,
+    fg="#FFD08A",
+    bg=panel,
+    font=("Segoe UI", 10),
+    wraplength=820,
+    justify="left",
+).grid(row=1, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 8))
 
 
 def campo(r, c, titulo, var, show=""):
@@ -793,12 +918,12 @@ def campo(r, c, titulo, var, show=""):
 for col in range(4):
     form.grid_columnconfigure(col, weight=1)
 
-campo(1, 0, "Host/IP", host)
-campo(1, 1, "Porta", porta)
-campo(1, 2, "Banco", dbname)
-campo(1, 3, "Schema", schema)
-campo(3, 0, "Usuário", usuario)
-entry_senha = campo(3, 1, "Senha", senha, show="•")
+campo(2, 0, "Host/IP", host)
+campo(2, 1, "Porta", porta)
+campo(2, 2, "Banco", dbname)
+campo(2, 3, "Schema", schema)
+campo(4, 0, "Usuário", usuario)
+entry_senha = campo(4, 1, "Senha", senha, show="•")
 
 mostrar_senha = tk.BooleanVar(value=False)
 
@@ -815,13 +940,25 @@ chk_senha = tk.Checkbutton(
     selectcolor=panel,
     activebackground=panel,
 )
-chk_senha.grid(row=5, column=1, sticky="w", padx=6, pady=(0, 8))
+chk_senha.grid(row=6, column=1, sticky="w", padx=6, pady=(0, 8))
+atualizar_aviso_banco()
 
 
 def detectar_porta():
     h = host.get().strip()
     if not h:
         messagebox.showerror("Erro", "Informe o Host/IP para detectar a porta.", parent=root)
+        return
+    if modo.get() == "local" and not postgres_local_instalado():
+        messagebox.showwarning(
+            "PostgreSQL não encontrado",
+            "Não encontrei PostgreSQL instalado neste Mac.\n\n"
+            "Para usar este Mac como servidor/local, instale o PostgreSQL no servidor e rode a criação do banco.\n"
+            "Para uma estação cliente, escolha Cliente/rede e informe o IP do servidor.",
+            parent=root,
+        )
+        status.set("PostgreSQL local não encontrado.")
+        atualizar_aviso_banco()
         return
     for p in (5432, 5433, 5434, 5435, 5436):
         if porta_aberta(h, p):
@@ -841,6 +978,18 @@ def testar_conexao():
         p = int(ptxt)
     except ValueError:
         messagebox.showerror("Erro", "Porta deve ser numérica.", parent=root)
+        return
+    if modo.get() == "local" and not postgres_local_instalado() and not porta_aberta(h, p):
+        validado["ok"] = False
+        status.set("PostgreSQL local não encontrado.")
+        messagebox.showerror(
+            "PostgreSQL não encontrado",
+            "Não encontrei PostgreSQL ativo neste Mac.\n\n"
+            "Em instalação de servidor/local, primeiro instale o PostgreSQL e crie o banco BANCO_OPERA.\n"
+            "Em instalação de cliente/rede, selecione Cliente/rede e informe o IP do servidor.",
+            parent=root,
+        )
+        atualizar_aviso_banco()
         return
     if porta_aberta(h, p):
         validado["ok"] = True
@@ -883,6 +1032,12 @@ def salvar():
     }
     with open(result_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        gravar_config_usuario(data)
+        messagebox.showinfo("Configuração salva", "Banco configurado para este usuário.", parent=root)
+    except Exception as exc:
+        messagebox.showerror("Erro ao salvar", f"Não foi possível salvar a configuração local.\n\n{exc}", parent=root)
+        return
     root.destroy()
 
 
@@ -906,68 +1061,12 @@ PYGUI
 chmod +x "$GUI_SCRIPT"
 
 if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
-  su -l "$CURRENT_USER" -c "APP_ASSETS_DIR='/Applications/Sistema Guimma.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON='$RESULT_JSON' python3 '$GUI_SCRIPT'" || true
+  su -l "$CURRENT_USER" -c "APP_ASSETS_DIR='/Applications/Sistema Guimma.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON='$RESULT_JSON' nohup python3 '$GUI_SCRIPT' >/tmp/sistemaguimma_db_setup_gui.log 2>&1 &" || true
 else
-  APP_ASSETS_DIR='/Applications/Sistema Guimma.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON="$RESULT_JSON" python3 "$GUI_SCRIPT" || true
+  APP_ASSETS_DIR='/Applications/Sistema Guimma.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON="$RESULT_JSON" nohup python3 "$GUI_SCRIPT" >/tmp/sistemaguimma_db_setup_gui.log 2>&1 &
 fi
 
-if [[ ! -f "$RESULT_JSON" ]]; then
-  echo "Configuração não concluída. Usando configuração padrão local para não interromper a instalação." >&2
-  cat > "$RESULT_JSON" <<'JSON'
-{
-  "host": "localhost",
-  "port": 5432,
-  "dbname": "BANCO_OPERA",
-  "user": "postgres",
-  "password": "",
-  "schema": "opera",
-  "mode": "local"
-}
-JSON
-fi
-
-export CURRENT_USER USER_HOME
-python3 - <<'PYCFG'
-import json, os
-result_path='/tmp/sistemaguimma_db_setup_result.json'
-with open(result_path,'r',encoding='utf-8') as f:
-    data=json.load(f)
-host=(data.get('host') or '').strip()
-port=int(data.get('port') or 5432)
-db=(data.get('dbname') or 'BANCO_OPERA').strip()
-user=(data.get('user') or 'postgres').strip()
-pwd=data.get('password') or ''
-schema=(data.get('schema') or 'opera').strip() or 'opera'
-current_user=(os.environ.get('CURRENT_USER') or '').strip()
-user_home=(os.environ.get('USER_HOME') or '').strip()
-paths=['/Library/Application Support/SistemaGuimma/config.json']
-if user_home:
-    paths.append(os.path.join(user_home,'Library','Application Support','SistemaGuimma','config.json'))
-
-dsn=f'postgresql://{user}:{pwd}@{host}:{port}/{db}'
-obj={
-  'schema': schema,
-  'pg_schema': schema,
-  'appname': 'SistemaGuimma',
-  'pg_dsn': dsn,
-  'defaults': {'dbname': db, 'user': user, 'password': pwd},
-  'hosts': [host],
-  'ports': [port],
-  'connect_timeout': 10,
-  'auto_detect_ports': True,
-  'fallback_to_postgres': True,
-}
-for p in paths:
-    os.makedirs(os.path.dirname(p), exist_ok=True)
-    with open(p,'w',encoding='utf-8') as f:
-        json.dump(obj,f,ensure_ascii=False,indent=2)
-PYCFG
-
-if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
-  chown "$CURRENT_USER":staff "$USER_HOME/Library/Application Support/SistemaGuimma/config.json" 2>/dev/null || true
-fi
-
-rm -f "$RESULT_JSON" "$GUI_SCRIPT"
+echo "Assistente de banco iniciado em segundo plano. A instalação do app seguirá sem aguardar a configuração." >&2
 
 install_license_launch_agent() {
   if [[ -z "$CURRENT_USER" || "$CURRENT_USER" == "root" || ! -d "$USER_HOME" ]]; then
@@ -1016,6 +1115,11 @@ if [[ -d "$SYSTEM_APP_PATH" ]]; then
     touch "$LICENSE_APP_PATH" 2>/dev/null || true
     install_license_launch_agent
   fi
+  if [[ -d "$DB_CONFIG_APP_PATH" ]]; then
+    chown -R root:wheel "$DB_CONFIG_APP_PATH" 2>/dev/null || true
+    chmod -R a+rX "$DB_CONFIG_APP_PATH" 2>/dev/null || true
+    touch "$DB_CONFIG_APP_PATH" 2>/dev/null || true
+  fi
   touch /Applications 2>/dev/null || true
   touch "$SYSTEM_APP_PATH" 2>/dev/null || true
   LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
@@ -1023,6 +1127,9 @@ if [[ -d "$SYSTEM_APP_PATH" ]]; then
     "$LSREGISTER" -f "$SYSTEM_APP_PATH" >/dev/null 2>&1 || true
     if [[ -d "$LICENSE_APP_PATH" ]]; then
       "$LSREGISTER" -f "$LICENSE_APP_PATH" >/dev/null 2>&1 || true
+    fi
+    if [[ -d "$DB_CONFIG_APP_PATH" ]]; then
+      "$LSREGISTER" -f "$DB_CONFIG_APP_PATH" >/dev/null 2>&1 || true
     fi
     "$LSREGISTER" -r -domain local -domain system -domain user >/dev/null 2>&1 || true
   fi
@@ -1039,9 +1146,21 @@ POSTINSTALL
 
     log_info "Gerando PKG com instalação em /Applications + assistente de banco..."
     pkgbuild --analyze --root "$PKG_ROOT" "$PKG_COMPONENTS"
-    if [ -x /usr/libexec/PlistBuddy ]; then
-      /usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" "$PKG_COMPONENTS" >/dev/null 2>&1 || true
-    fi
+    python3 - "$PKG_COMPONENTS" <<'PYPLIST'
+import plistlib
+import sys
+
+path = sys.argv[1]
+with open(path, "rb") as f:
+    components = plistlib.load(f)
+
+for component in components:
+    if isinstance(component, dict):
+        component["BundleIsRelocatable"] = False
+
+with open(path, "wb") as f:
+    plistlib.dump(components, f)
+PYPLIST
     pkgbuild \
       --root "$PKG_ROOT" \
       --component-plist "$PKG_COMPONENTS" \
@@ -1086,6 +1205,7 @@ main() {
     # Construir aplicativo
     build_app
     build_license_app
+    build_db_config_app
 
     # DMG: padrão sempre gera; pergunta apenas se --interactive
     if [[ "$INTERACTIVE_MODE" == "yes" && "$CREATE_DMG" == "" ]]; then
