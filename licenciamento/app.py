@@ -9,7 +9,6 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from licenciamento.agent import main as agent_main
-from licenciamento.autorun import install_autostart
 from licenciamento.client import current_status_text, deactivate_current, load_config, save_config, sync_once
 from licenciamento.machine import machine_id
 from licenciamento.store import validate_state
@@ -174,7 +173,6 @@ class LicenseApp:
         self._button(buttons, "Salvar", self._save, PRIMARY).pack(side="left", padx=4)
         self._button(buttons, "Validar agora", self._sync, SUCCESS).pack(side="left", padx=4)
         self._button(buttons, "Desativar", self._deactivate, DANGER).pack(side="left", padx=4)
-        self._button(buttons, "Iniciar com o computador", self._install_autostart, "#475569").pack(side="left", padx=4)
         self._button(buttons, "Fechar", self.root.destroy, "#6B7280").pack(side="left", padx=4)
 
     def _field(
@@ -271,13 +269,6 @@ class LicenseApp:
         except Exception as exc:
             self._refresh_status()
             messagebox.showerror("Licenciamento", f"Nao foi possivel desativar a licenca:\n{exc}", parent=self.root)
-
-    def _install_autostart(self) -> None:
-        try:
-            result = install_autostart()
-            messagebox.showinfo("Licenciamento", result, parent=self.root)
-        except Exception as exc:
-            messagebox.showerror("Licenciamento", f"Falha ao instalar inicializacao automatica:\n{exc}", parent=self.root)
 
     def _refresh_status(self) -> None:
         validation = validate_state()
