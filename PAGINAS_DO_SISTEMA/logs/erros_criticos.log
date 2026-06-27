@@ -1,7 +1,0 @@
-2026-02-07 21:03:32 | ERROR    | OPERA_SYSTEM | [SISTEMA] [BACKUP] Arquivo config.json não encontrado: /Users/usuario_local/PycharmProjects/SISTEMA-GUIMMA/PAGINAS_DO_SISTEMA/config.json
-NoneType: None
-2026-03-18 13:45:17 | ERROR    | OPERA_SYSTEM | [SISTEMA] Erro durante teste
-Traceback (most recent call last):
-  File "C:\Users\User\PycharmProjects\SISTEMA-GUIMA\PAGINAS_DO_SISTEMA\LOG_SISTEMA.py", line 469, in <module>
-    raise ValueError("Este é um erro de teste")
-ValueError: Este é um erro de teste

@@ -1,0 +1,100 @@
+USAR LICENCIADOR DO CLIENTE
+
+Objetivo:
+
+Validar a licenca do cliente no computador onde o Sistema Guimma sera usado.
+
+App:
+
+Sistema Guimma Licenca
+
+Onde fica no Mac:
+
+dist/Sistema Guimma Licenca.app
+
+No instalador final, o licenciador deve ir junto com o Sistema Guimma.
+
+Como funciona:
+
+1. O cliente informa o email usado na assinatura.
+
+2. O licenciador consulta o servidor online do Cloudflare.
+
+3. Se o email estiver ativo, o computador fica autorizado.
+
+4. A licenca fica gravada localmente e vale ate a data retornada pelo servidor.
+
+5. Enquanto a licenca local estiver valida, o sistema pode abrir sem consultar
+   a internet toda hora.
+
+6. Ao vencer, o licenciador consulta novamente.
+
+Regra de computador:
+
+A mesma licenca so pode ficar ativa em 1 computador por vez.
+
+Para trocar de computador:
+
+1. No computador antigo, abrir o licenciador.
+
+2. Clicar em Desativar.
+
+3. No computador novo, abrir o licenciador.
+
+4. Informar o mesmo email.
+
+5. Clicar em Validar agora.
+
+Se o computador antigo quebrou:
+
+Use o painel web administrativo e clique em:
+
+Liberar computador
+
+Depois o cliente valida no novo computador.
+
+Passo a passo para validar:
+
+1. Abra o app Sistema Guimma Licenca.
+
+2. No campo Email do cliente, digite o email cadastrado.
+
+3. Marque a opcao:
+
+   Exigir licenca valida para abrir o Sistema Guimma
+
+4. Clique em Salvar.
+
+5. Clique em Validar agora.
+
+6. Se aparecer licenca valida, feche o licenciador.
+
+7. Abra o Sistema Guimma.
+
+Mensagens comuns:
+
+Licenca valida:
+
+O cliente pode usar o sistema.
+
+Email nao encontrado:
+
+O email ainda nao foi cadastrado no painel web.
+
+Licenca nao ativa:
+
+O email esta bloqueado/inativo no painel.
+
+Licenca vencida:
+
+Renove a licenca pelo painel web.
+
+Licenca ja ativa em outro computador:
+
+Desative no computador antigo ou libere pelo painel web.
+
+Cuidados:
+
+- O cliente nao deve receber o app administrativo de licencas.
+- O cliente nao deve receber senha do painel web.
+- O cliente usa somente o licenciador normal.

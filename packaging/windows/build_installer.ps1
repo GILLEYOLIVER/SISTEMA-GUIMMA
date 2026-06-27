@@ -81,11 +81,22 @@ Run-Step "[3/4] Construindo configurador do banco..." {
     if ($LASTEXITCODE -ne 0) { throw "Falha no build do configurador do banco." }
 }
 
+# PASSO 3.2: Construir app de licenciamento
+Run-Step "[3.2/4] Construindo app de licenciamento..." {
+    & $Python -m PyInstaller --clean --noconfirm "SistemaGuimmaLicenca.spec"
+    if ($LASTEXITCODE -ne 0) { throw "Falha no build do app de licenciamento." }
+
+    $licenseExe = Join-Path $repoRoot "dist\SistemaGuimmaLicenca.exe"
+    if (-not (Test-Path $licenseExe)) {
+        throw "Executavel de licenciamento nao encontrado: $licenseExe"
+    }
+}
+
 # PASSO 3.5: Verificacao rapida (runtime do PyInstaller)
 Run-Step "[3.5/4] Verificando runtime (_internal\\python312.dll)..." {
     $candidates = @(
-        (Join-Path $repoRoot "dist\SistemaOpera\_internal\python312.dll"),
-        (Join-Path $repoRoot "dist\windows\SistemaOpera\_internal\python312.dll"),
+        (Join-Path $repoRoot "dist\SistemaGuimma\_internal\python312.dll"),
+        (Join-Path $repoRoot "dist\windows\SistemaGuimma\_internal\python312.dll"),
         (Join-Path $repoRoot "dist\windows\_internal\python312.dll")
     )
 
@@ -119,7 +130,7 @@ Run-Step "[4/4] Criando instalador..." {
 
     Write-Host "OK Inno Setup: $innoExe" -ForegroundColor Green
 
-    $issPath = Join-Path $repoRoot "packaging\windows\SISTEMA_OPERA.iss"
+    $issPath = Join-Path $repoRoot "packaging\windows\SISTEMA_GUIMMA.iss"
     if (-not (Test-Path $issPath)) {
         throw "Arquivo .iss nao encontrado: $issPath"
     }
@@ -132,7 +143,7 @@ Run-Step "[4/4] Criando instalador..." {
     }
 
     # Apagar instalador antigo
-    $installerPath = Join-Path $repoRoot ("dist\SistemaOpera_Setup_" + $Architecture + ".exe")
+    $installerPath = Join-Path $repoRoot ("dist\Sistema_Guimma_Setup_" + $Architecture + ".exe")
     Remove-Item $installerPath -ErrorAction SilentlyContinue
 
     & $innoExe "/DARCH=$Architecture" $issPath

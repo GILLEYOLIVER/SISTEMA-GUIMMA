@@ -1,0 +1,63 @@
+INSTALAR SISTEMA GUIMMA NO MAC
+
+Objetivo:
+
+Instalar o Sistema Guimma em um computador macOS.
+
+Arquivos esperados:
+
+- dist/Sistema Guimma.pkg
+- dist/installers/macos/Sistema Guimma 1.0.0 macOS.pkg
+- dist/Sistema Guimma.app
+
+Use preferencialmente o arquivo .pkg, porque ele instala o app na pasta
+Aplicativos do macOS.
+
+Passo a passo:
+
+1. Copie o instalador .pkg para o Mac do cliente.
+
+2. Dê dois cliques no arquivo:
+
+   Sistema Guimma.pkg
+
+3. Siga o assistente de instalacao do macOS.
+
+4. Ao terminar, abra o Launchpad ou a pasta Aplicativos.
+
+5. Procure por:
+
+   Sistema Guimma
+
+6. Abra o sistema.
+
+7. Se o macOS bloquear por seguranca, faca:
+
+   Ajustes do Sistema > Privacidade e Seguranca > Abrir Mesmo Assim
+
+8. Na primeira abertura, confira:
+
+   - O splash aparece com Sistema Guimma.
+   - A tela de login abre.
+   - O sistema chama o configurador de banco se ainda nao existir conexao.
+   - O licenciador abre se a licenca ainda nao estiver validada.
+
+Quando o Mac for a maquina servidora:
+
+Instale tambem o PostgreSQL e configure o banco conforme os arquivos:
+
+- 03_INSTALAR_POSTGRESQL_SERVIDOR.txt
+- 04_CONFIGURAR_BANCO_NO_SERVIDOR.txt
+
+Quando o Mac for apenas uma estacao da rede:
+
+Nao instale banco local se o banco ficar em outro computador.
+Configure a conexao para o IP do servidor conforme:
+
+- 05_CONFIGURAR_ESTACAO_CLIENTE_REDE.txt
+
+Observacoes:
+
+- O app do cliente nao deve receber o app "Sistema Guimma Licencas Admin".
+- O app administrativo e somente seu.
+- O cliente deve usar apenas o licenciador normal para validar o email dele.

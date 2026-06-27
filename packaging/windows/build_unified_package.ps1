@@ -29,10 +29,20 @@ function Get-PythonArch([string]$PyCmd) {
 }
 
 
-$unifiedDir = Join-Path $repoRoot ("dist\SISTEMA_OPERA_" + $Version + "_" + $Architecture)
+$unifiedDir = Join-Path $repoRoot ("dist\Sistema_Guimma_" + $Version + "_" + $Architecture)
 $buildDir = Join-Path $repoRoot "build\pyi_configurar_postgres"
 $configScript = Join-Path $repoRoot "configurar_postgres.py"
-$pgIcon = Join-Path $repoRoot "PG_ICON.ico"
+$pgIconCandidates = @(
+    (Join-Path $repoRoot "icons\PG_ICON.ico"),
+    (Join-Path $repoRoot "PG_ICON.ico")
+)
+$pgIcon = $null
+foreach ($candidate in $pgIconCandidates) {
+    if (Test-Path $candidate) {
+        $pgIcon = $candidate
+        break
+    }
+}
 
 Write-Host ("=" * 70) -ForegroundColor Cyan
 Write-Host "  SISTEMA GUIMMA - UNIFIED BUILD (INSTALLER + CONFIGURAR_POSTGRES)" -ForegroundColor Cyan
@@ -48,8 +58,8 @@ if ($pythonArch -ne $Architecture) {
 if (-not (Test-Path $configScript)) {
     throw "Missing file: $configScript"
 }
-if (-not (Test-Path $pgIcon)) {
-    throw "Missing icon: $pgIcon"
+if (-not $pgIcon) {
+    throw "Missing icon: expected icons\PG_ICON.ico or PG_ICON.ico"
 }
 
 if (-not $SkipInstallerBuild) {
@@ -94,8 +104,8 @@ Write-Host "`n[3/3] Consolidating artifacts into one folder..." -ForegroundColor
 
 $installerCopied = $false
 $installerCandidates = @(
-    (Join-Path $repoRoot ("dist\SistemaOpera_Setup_" + $Architecture + ".exe")),
-    (Join-Path $repoRoot "dist\installers\windows\SISTEMA_OPERA_Setup.exe")
+    (Join-Path $repoRoot ("dist\Sistema_Guimma_Setup_" + $Architecture + ".exe")),
+    (Join-Path $repoRoot "dist\installers\windows\Sistema_Guimma_Setup.exe")
 )
 
 foreach ($installer in $installerCandidates) {
@@ -122,7 +132,7 @@ Copy-Item -Force $pgIcon (Join-Path $unifiedDir "PG_ICON.ico")
 
 # Include CONFIGURAR_BANCO.exe and SCRIPTS in unified root folder
 $configBancoCandidates = @(
-    (Join-Path $repoRoot "dist\SistemaOpera\CONFIGURAR_BANCO.exe"),
+    (Join-Path $repoRoot "dist\SistemaGuimma\CONFIGURAR_BANCO.exe"),
     (Join-Path $repoRoot "dist\windows\CONFIGURAR_BANCO.exe")
 )
 $configBancoExe = $null

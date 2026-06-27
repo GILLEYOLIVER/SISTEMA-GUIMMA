@@ -2,12 +2,25 @@
 build/
 dist/
 installer_root/
+build_atualizado/
+dist_atualizado/
+installer_scripts/
 
 # Python cache
 __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# Runtime/local artifacts
+.DS_Store
+logs/
+OPERA_SYSTEM/
+test_artifacts/
+PAGINAS_DO_SISTEMA/logs/
+arquivos_obsoletos/*
+!arquivos_obsoletos/README.md
+!arquivos_obsoletos/.gitkeep
 
 # Installer binaries
 *.dmg

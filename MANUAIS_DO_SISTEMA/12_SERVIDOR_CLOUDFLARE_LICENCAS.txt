@@ -1,0 +1,92 @@
+SERVIDOR CLOUDFLARE DE LICENCAS
+
+Objetivo:
+
+Explicar o servidor online que controla as licencas do Sistema Guimma.
+
+URL principal:
+
+https://sistema-guimma-licencas.sistemaguimma.workers.dev
+
+Painel administrativo:
+
+https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+
+Banco online:
+
+Cloudflare D1
+
+Nome do banco:
+
+sistema_guimma_licencas
+
+Tabelas principais:
+
+- clientes_licencas
+- consultas_licenca
+- ativacoes_licenca
+
+Regras importantes:
+
+1. Cada email representa uma assinatura/licenca.
+
+2. Cada email pode ficar ativo em apenas 1 computador por vez.
+
+3. O computador fica vinculado pelo ID gerado pelo licenciador.
+
+4. Para trocar computador, deve desativar no computador antigo ou liberar pelo
+   painel web.
+
+5. Se a licenca estiver bloqueada, o licenciador nao libera acesso.
+
+Endpoints usados pelo licenciador:
+
+POST /api/licenses/check
+
+Usado para validar e ativar a licenca no computador.
+
+POST /api/licenses/deactivate
+
+Usado para desativar a licenca naquele computador.
+
+Endpoints administrativos:
+
+POST /api/admin/customers/upsert
+Cria, ativa ou bloqueia cliente.
+
+POST /api/admin/customers/extend
+Renova por mais dias.
+
+GET /api/admin/customers/get
+Consulta cliente.
+
+POST /api/admin/customers/release
+Libera computador vinculado.
+
+Segredos Cloudflare:
+
+- ADMIN_TOKEN
+- ADMIN_PASSWORD
+
+Nunca envie esses segredos para clientes.
+
+Quando publicar alteracoes no servidor:
+
+1. Entrar na pasta:
+
+   cd servidor_licencas_cloudflare
+
+2. Publicar:
+
+   pnpm wrangler deploy
+
+Quando houver migracao nova no banco:
+
+pnpm wrangler d1 migrations apply sistema_guimma_licencas --remote
+
+Cuidados:
+
+- Teste o painel depois de publicar.
+- Teste uma licenca com email temporario.
+- Nunca apague tabelas em producao sem backup/exportacao.
+- Guarde senha administrativa em local seguro.

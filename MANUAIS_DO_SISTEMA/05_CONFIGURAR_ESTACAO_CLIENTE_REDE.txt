@@ -1,0 +1,90 @@
+CONFIGURAR COMPUTADOR CLIENTE NA REDE
+
+Objetivo:
+
+Configurar uma estacao da rede para usar o banco PostgreSQL instalado no
+servidor.
+
+Quando usar:
+
+Use este roteiro em computadores que nao serao o servidor do banco.
+
+Exemplo:
+
+Servidor com banco:
+
+192.168.1.10
+
+Estacao cliente:
+
+192.168.1.20
+
+No cliente, o host do banco deve ser o IP do servidor:
+
+192.168.1.10
+
+Passo a passo:
+
+1. Instale o Sistema Guimma na estacao cliente.
+
+2. Abra:
+
+   Configurar Banco de Dados
+
+3. Escolha modo rede/cliente.
+
+4. Informe:
+
+   Host: IP do servidor
+   Porta: 5432
+   Banco: BANCO_OPERA
+   Usuario: usuario do PostgreSQL
+   Senha: senha do PostgreSQL
+   Schema: opera
+
+5. Clique em testar conexao.
+
+6. Se a conexao for aprovada, salve.
+
+7. Abra o Sistema Guimma.
+
+8. Confirme que a tela de login abre normalmente.
+
+9. Teste telas que consultam banco:
+
+   - Dashboard
+   - Modelos
+   - Estoque
+   - Prestadores
+   - Ordens de Corte
+
+Se der erro de conexao:
+
+1. Confirme se o servidor esta ligado.
+
+2. Confirme se o PostgreSQL esta ativo no servidor.
+
+3. Confirme o IP do servidor.
+
+4. Confirme a senha do PostgreSQL.
+
+5. Confirme se a porta 5432 esta liberada no firewall do servidor.
+
+6. Confirme se o PostgreSQL aceita conexoes de rede.
+
+Erro comum:
+
+Usar localhost na estacao cliente.
+
+Em uma estacao da rede, localhost significa o proprio computador cliente.
+Se o banco esta no servidor, o host deve ser o IP do servidor.
+
+Checklist da estacao:
+
+- Sistema instalado.
+- Configurador abriu.
+- Host aponta para IP do servidor.
+- Teste de conexao aprovado.
+- Login abre.
+- Telas com banco carregam.
+- Licenca do cliente validada.

@@ -20,18 +20,20 @@ from PAGINAS_DO_SISTEMA.UI_COMBOBOX import habilitar_duplo_clique_combobox
 # - Em apps empacotados, o bundle é SOMENTE LEITURA. Use uma pasta gravável.
 # =============================================================================
 def _opera_user_data_dir() -> Path:
-    """Diretório gravável do usuário para dados do SistemaOpera."""
+    """Diretório gravável do usuário para dados do Sistema Guimma."""
     try:
         if sys.platform == "darwin":
-            base = Path.home() / "Library" / "Application Support" / "SistemaOpera"
+            base = Path.home() / "Library" / "Application Support" / "SistemaGuimma"
         elif os.name == "nt":
-            base = Path(os.getenv("APPDATA") or (Path.home() / "AppData" / "Roaming")) / "SistemaOpera"
+            appdata = Path(os.getenv("APPDATA") or (Path.home() / "AppData" / "Roaming"))
+            base = appdata / "SistemaGuimma"
         else:
-            base = Path(os.getenv("XDG_DATA_HOME") or (Path.home() / ".local" / "share")) / "sistemaopera"
+            data_home = Path(os.getenv("XDG_DATA_HOME") or (Path.home() / ".local" / "share"))
+            base = data_home / "sistemaguimma"
         base.mkdir(parents=True, exist_ok=True)
         return base
     except Exception:
-        base = Path.home() / "SistemaOpera"
+        base = Path.home() / "SistemaGuimma"
         base.mkdir(parents=True, exist_ok=True)
         return base
 

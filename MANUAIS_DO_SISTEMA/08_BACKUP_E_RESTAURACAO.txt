@@ -1,0 +1,83 @@
+BACKUP E RESTAURACAO
+
+Objetivo:
+
+Orientar a rotina basica de seguranca dos dados do Sistema Guimma.
+
+Onde ficam os dados principais:
+
+Os dados de producao ficam no PostgreSQL, no banco:
+
+BANCO_OPERA
+
+Por isso, o backup mais importante e o backup do banco PostgreSQL.
+
+Quando fazer backup:
+
+- Todos os dias, se o cliente usa o sistema diariamente.
+- Antes de atualizar o sistema.
+- Antes de mexer em PostgreSQL.
+- Antes de trocar servidor.
+- Antes de restaurar dados antigos.
+
+Backup pelo sistema:
+
+1. Abra o Sistema Guimma.
+
+2. Acesse a area de Backup, se disponivel no menu.
+
+3. Gere o backup.
+
+4. Salve em local seguro.
+
+5. Copie para um armazenamento externo ou nuvem.
+
+Backup manual PostgreSQL:
+
+Use pg_dump quando precisar de backup direto do banco.
+
+Exemplo generico:
+
+pg_dump -h localhost -p 5432 -U postgres -d BANCO_OPERA -F c -f backup_guimma.dump
+
+Observacao:
+
+A senha sera a senha definida no PostgreSQL do cliente.
+
+Restauracao:
+
+Antes de restaurar:
+
+1. Feche o Sistema Guimma em todos os computadores.
+
+2. Faca um backup do estado atual.
+
+3. Confirme que esta usando o backup correto.
+
+4. Restaure em ambiente de teste quando possivel.
+
+Exemplo generico de restauracao:
+
+pg_restore -h localhost -p 5432 -U postgres -d BANCO_OPERA backup_guimma.dump
+
+Cuidados:
+
+- Nunca restaure por cima de banco em uso.
+- Nunca apague banco sem backup validado.
+- Identifique a data e cliente no nome do arquivo.
+
+Padrao recomendado de nome:
+
+backup_sistema_guimma_CLIENTE_YYYY-MM-DD.dump
+
+Exemplo:
+
+backup_sistema_guimma_cliente_teste_2026-06-27.dump
+
+Checklist de backup:
+
+- Backup gerado.
+- Arquivo copiado para fora do servidor.
+- Tamanho do arquivo conferido.
+- Data anotada.
+- Restauracao testada periodicamente.

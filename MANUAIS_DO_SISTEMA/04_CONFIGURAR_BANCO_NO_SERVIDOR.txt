@@ -1,0 +1,102 @@
+CONFIGURAR BANCO NO SERVIDOR
+
+Objetivo:
+
+Criar e validar o banco do Sistema Guimma no computador servidor.
+
+Banco:
+
+BANCO_OPERA
+
+Schema:
+
+opera
+
+Arquivo SQL inicial:
+
+SCRIPTS/1_CRIAR_BANCO.sql
+
+Configurador visual:
+
+Configurar Banco de Dados
+
+Arquivos relacionados no projeto:
+
+- PAGINAS_DO_SISTEMA/SETUP_BANCO.py
+- packaging/SETUP_BANCO.py
+- configurar_postgres.py
+- SCRIPTS/1_CRIAR_BANCO.sql
+
+Passo a passo:
+
+1. Instale o PostgreSQL no servidor.
+
+2. Confirme que o servico esta ligado.
+
+3. Abra o configurador:
+
+   Configurar Banco de Dados
+
+4. Escolha modo local/servidor.
+
+5. Informe:
+
+   Host: localhost
+   Porta: 5432
+   Banco: BANCO_OPERA
+   Usuario: postgres
+   Senha: senha definida no PostgreSQL
+   Schema: opera
+
+6. Clique para testar a conexao.
+
+7. Se o banco ainda nao existir, crie o banco usando o script:
+
+   SCRIPTS/1_CRIAR_BANCO.sql
+
+8. Depois rode a criacao/atualizacao das tabelas pelo sistema ou configurador.
+
+9. Confirme que o configurador salvou a conexao.
+
+Arquivos de configuracao esperados:
+
+- config.json na raiz do projeto/app.
+- PAGINAS_DO_SISTEMA/config.json no ambiente de desenvolvimento.
+
+Campos importantes do config.json:
+
+- validated_ok: true
+- mode: local ou rede
+- host
+- port
+- dbname
+- user
+- password
+- schema
+
+Teste final:
+
+1. Abra o Sistema Guimma.
+
+2. Verifique se a tela de login abre sem erro de banco.
+
+3. Entre com usuario administrador.
+
+4. Abra telas que dependem do banco:
+
+   - Modelos
+   - Estoque
+   - Prestadores
+   - Ordens de Corte
+   - Financeiro
+
+5. Se todas carregarem, a conexao esta correta.
+
+Problemas comuns:
+
+- Senha do postgres incorreta.
+- PostgreSQL desligado.
+- Porta 5432 bloqueada.
+- Banco BANCO_OPERA nao criado.
+- Schema opera nao aplicado.
+- Cliente tentando conectar em localhost quando deveria usar IP do servidor.

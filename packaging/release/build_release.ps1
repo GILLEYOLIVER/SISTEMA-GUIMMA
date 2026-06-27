@@ -1,6 +1,6 @@
 param(
   [string]$Python = "python",
-  [string]$Version = $env:OPERA_VERSION,
+  [string]$Version = $env:GUIMMA_VERSION,
   [ValidateSet("x64", "x86")]
   [string]$Architecture = "x64",
   [switch]$SkipWindowsInstallerBuild
@@ -28,7 +28,7 @@ if (-not $SkipWindowsInstallerBuild) {
 & powershell -ExecutionPolicy Bypass -File "packaging/windows/build_unified_package.ps1" -Python $Python -Version $Version -Architecture $Architecture -SkipInstallerBuild
 if ($LASTEXITCODE -ne 0) { throw "Failed to build CONFIGURAR_POSTGRES.exe via build_unified_package.ps1" }
 
-$relDir = Join-Path $repoRoot "dist\release\SISTEMA_OPERA_$Version"
+$relDir = Join-Path $repoRoot "dist\release\Sistema_Guimma_$Version"
 $macDir = Join-Path $relDir "macos"
 $winDir = Join-Path $relDir "windows"
 $configPy = Join-Path $repoRoot "configurar_postgres.py"
@@ -39,23 +39,23 @@ New-Item -ItemType Directory -Force -Path $winDir | Out-Null
 
 # WINDOWS folder target: official installer + CONFIGURAR_BANCO + CONFIGURAR_POSTGRES + SCRIPTS
 $installerExe = Resolve-FirstExisting @(
-  (Join-Path $repoRoot ("dist\SistemaOpera_Setup_" + $Architecture + ".exe")),
-  (Join-Path $repoRoot "dist\SistemaOpera_Setup.exe")
+  (Join-Path $repoRoot ("dist\Sistema_Guimma_Setup_" + $Architecture + ".exe")),
+  (Join-Path $repoRoot "dist\Sistema_Guimma_Setup.exe")
 )
 if (-not $installerExe) { throw "Official installer not found in dist/." }
 Copy-Item -Force $installerExe $winDir
 
 $configBancoExe = Resolve-FirstExisting @(
-  (Join-Path $repoRoot "dist\SistemaOpera\CONFIGURAR_BANCO.exe"),
+  (Join-Path $repoRoot "dist\SistemaGuimma\CONFIGURAR_BANCO.exe"),
   (Join-Path $repoRoot "dist\windows\CONFIGURAR_BANCO.exe")
 )
 if (-not $configBancoExe) { throw "CONFIGURAR_BANCO.exe not found." }
 Copy-Item -Force $configBancoExe $winDir
 
 $configPostgresExe = Resolve-FirstExisting @(
-  (Join-Path $repoRoot ("dist\SISTEMA_OPERA_" + $Version + "_" + $Architecture + "\CONFIGURAR_POSTGRES.exe")),
-  (Join-Path $repoRoot ("dist\installers\unified\SISTEMA_OPERA_" + $Version + "_" + $Architecture + "\CONFIGURAR_POSTGRES.exe")),
-  (Join-Path $repoRoot "dist\SistemaOpera\CONFIGURAR_POSTGRES.exe")
+  (Join-Path $repoRoot ("dist\Sistema_Guimma_" + $Version + "_" + $Architecture + "\CONFIGURAR_POSTGRES.exe")),
+  (Join-Path $repoRoot ("dist\installers\unified\Sistema_Guimma_" + $Version + "_" + $Architecture + "\CONFIGURAR_POSTGRES.exe")),
+  (Join-Path $repoRoot "dist\SistemaGuimma\CONFIGURAR_POSTGRES.exe")
 )
 if (-not $configPostgresExe) { throw "CONFIGURAR_POSTGRES.exe not found." }
 Copy-Item -Force $configPostgresExe $winDir
@@ -66,7 +66,7 @@ Copy-Item -Recurse -Force $scriptsDir (Join-Path $winDir "SCRIPTS")
 Copy-Item -Recurse -Force $scriptsDir (Join-Path $macDir "SCRIPTS")
 
 # MAC folder target: dmg + launchers similar to windows tools
-$macDmg = Join-Path $repoRoot "dist\installers\macos\SISTEMA_OPERA_${Version}_macOS.dmg"
+$macDmg = Join-Path $repoRoot "dist\installers\macos\Sistema Guimma ${Version} macOS.dmg"
 if (Test-Path $macDmg) { Copy-Item -Force $macDmg $macDir }
 
 $configBancoPy = Join-Path $repoRoot "PAGINAS_DO_SISTEMA\SETUP_BANCO.py"
@@ -87,7 +87,7 @@ $launcherPostgres = @(
 Set-Content -Path (Join-Path $macDir "CONFIGURAR_BANCO.command") -Value $launcherBanco -Encoding UTF8
 Set-Content -Path (Join-Path $macDir "CONFIGURAR_POSTGRES.command") -Value $launcherPostgres -Encoding UTF8
 
-$zipOut = Join-Path $repoRoot "dist\SISTEMA_OPERA_${Version}_INSTALLER.zip"
+$zipOut = Join-Path $repoRoot "dist\Sistema_Guimma_${Version}_INSTALLER.zip"
 if (Test-Path $zipOut) { Remove-Item $zipOut -Force }
 
 # ZIP must mirror exactly the WINDOWS folder contents

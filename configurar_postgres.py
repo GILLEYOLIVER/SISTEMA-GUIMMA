@@ -23,9 +23,9 @@ else:
     winreg = None
 
 
-APP_TITLE = "OPERA • Configurador PostgreSQL"
+APP_TITLE = "Sistema Guimma • Configurador PostgreSQL"
 DEFAULT_PORT = "5432"
-TAG_HBA = "# --- OPERA: acesso rede (adicionado automaticamente) ---"
+TAG_HBA = "# --- Sistema Guimma: acesso rede (adicionado automaticamente) ---"
 DB_NAME_DEFAULT = "BANCO_OPERA"
 MODO_LOCAL = "local"
 MODO_REDE = "rede"
@@ -397,7 +397,7 @@ def set_listen_addresses(conf_path: str, logger) -> None:
 
     if not changed:
         lines.append("")
-        lines.append("# --- OPERA: habilita conexao local e via rede ---")
+        lines.append("# --- Sistema Guimma: habilita conexao local e via rede ---")
         lines.append(target)
 
     with open(conf_path, "w", encoding="utf-8", errors="replace") as f:
@@ -438,7 +438,7 @@ def ensure_firewall_rule(port: str, logger) -> None:
         logger("Firewall: ajuste automático ignorado neste sistema.")
         return
 
-    rule_name = f"PostgreSQL 18 (OPERA) - TCP {port}"
+    rule_name = f"PostgreSQL 18 (Sistema Guimma) - TCP {port}"
     try:
         out = run_powershell(
             f"Get-NetFirewallRule -DisplayName '{rule_name}' -ErrorAction SilentlyContinue | "
@@ -745,7 +745,7 @@ class ConfigurarPostgresApp(ctk.CTk):
         )
         self.btn_drop.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
-        ctk.CTkLabel(right, text="Scripts SQL (deixar pronto para o OPERA)", font=ctk.CTkFont(size=16, weight="bold")).pack(
+        ctk.CTkLabel(right, text="Scripts SQL (deixar pronto para o Sistema Guimma)", font=ctk.CTkFont(size=16, weight="bold")).pack(
             anchor="w", padx=14, pady=(14, 10)
         )
 
@@ -1181,7 +1181,7 @@ class ConfigurarPostgresApp(ctk.CTk):
 
                 if modo == MODO_LOCAL:
                     msg = (
-                        "BANCO LOCAL PRONTO PARA O OPERA ✅\n\n"
+                        "BANCO LOCAL PRONTO PARA O SISTEMA GUIMMA ✅\n\n"
                         f"Host: localhost\n"
                         f"Porta: {port}\n"
                         f"Banco: {dbname}\n"
@@ -1190,14 +1190,14 @@ class ConfigurarPostgresApp(ctk.CTk):
                     )
                 else:
                     msg = (
-                        "BANCO / SERVIDOR PRONTO PARA O OPERA ✅\n\n"
+                        "BANCO / SERVIDOR PRONTO PARA O SISTEMA GUIMMA ✅\n\n"
                         f"IP do servidor: {host_final}\n"
                         f"Porta: {port}\n"
                         f"Banco: {dbname}\n"
                         f"Usuário: {user}\n\n"
                         f"host={host_final} port={port} dbname={dbname}"
                     )
-                messagebox.showinfo("OPERA • Pronto", msg)
+                messagebox.showinfo("Sistema Guimma • Pronto", msg)
             except Exception as e:
                 self.set_status("erro ❌")
                 self.log(f"ERRO: {e}")

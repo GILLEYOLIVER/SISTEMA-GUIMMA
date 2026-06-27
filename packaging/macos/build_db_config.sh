@@ -27,7 +27,7 @@ fi
 
 ICON_PNG="$ROOT_DIR/icons/icon_config.png"
 ICON_ICNS="$ROOT_DIR/build/configurador.icns"
-mkdir -p "$ROOT_DIR/build" "$ROOT_DIR/dist/SistemaOpera"
+mkdir -p "$ROOT_DIR/build" "$ROOT_DIR/dist/SistemaGuimma"
 
 if [ -f "$ICON_PNG" ] && command -v sips >/dev/null 2>&1 && command -v iconutil >/dev/null 2>&1; then
   echo "🖼️ Gerando .icns para o configurador..."
@@ -70,7 +70,7 @@ fi
   --noconfirm \
   --clean \
   --name CONFIGURAR_BANCO \
-  --distpath "$ROOT_DIR/dist/SistemaOpera" \
+  --distpath "$ROOT_DIR/dist/SistemaGuimma" \
   --workpath "$ROOT_DIR/build/pyi_config_mac" \
   --specpath "$ROOT_DIR/build" \
   "${ICON_ARG[@]}" \
@@ -82,8 +82,15 @@ fi
   --collect-all PIL \
   "$ENTRYPOINT"
 
-APP_PATH="dist/SistemaOpera/CONFIGURAR_BANCO.app"
+APP_PATH="dist/SistemaGuimma/CONFIGURAR_BANCO.app"
 if [ -d "$APP_PATH" ]; then
+  if command -v plutil >/dev/null 2>&1; then
+    plutil -replace CFBundleDisplayName -string "Configurar Banco" "$APP_PATH/Contents/Info.plist" >/dev/null 2>&1 || true
+    plutil -replace CFBundleName -string "Configurar Banco" "$APP_PATH/Contents/Info.plist" >/dev/null 2>&1 || true
+  fi
+  if command -v codesign >/dev/null 2>&1; then
+    codesign --force --deep --sign - "$APP_PATH" >/dev/null 2>&1 || true
+  fi
   echo "✅ Configurador criado: $APP_PATH"
 else
   echo "❌ Falha ao gerar configurador no macOS"

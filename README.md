@@ -41,20 +41,16 @@ Levantamento feito a partir dos commits mais recentes da branch `work`:
 SISTEMA-GUIMMA/
 ├── README.md
 ├── requirements.txt
-├── SistemaOpera.spec
-├── OPERA_CONFIG_POSTGRES.spec
+├── SistemaGuimma.spec
 ├── PAGINAS_DO_SISTEMA/          # Código principal da aplicação
 ├── SCRIPTS/                     # Scripts SQL de criação/manutenção do banco
-├── data/                        # Ferramentas e artefatos auxiliares (instalador de banco, recibos etc.)
-├── icons/                       # Ícones usados na interface
+├── icons/                       # Ícones oficiais do app e instaladores
 ├── packaging/                   # Build e instaladores (Windows/macOS)
-├── installer_scripts/           # Scripts auxiliares de instalação
-├── installer_root/              # Estrutura de apoio para instalador
-├── OPERA_SYSTEM/                # Estrutura de runtime/logs
-├── logs/                        # Logs da aplicação
+├── docs/                        # Documentação, roteiros e relatórios
+├── dist/                        # Saída dos builds locais
+├── arquivos_obsoletos/          # Itens antigos/gerados retirados do fluxo ativo
 ├── Versao do Sistema/           # Pacotes de versão/atualização
-├── backup_banco/
-└── backup_versoes/
+└── backup_banco/                # Backups SQL locais preservados
 ```
 
 > Observação: não existe `src/PAGINAS_DO_SISTEMA` neste repositório; a pasta canônica é `PAGINAS_DO_SISTEMA/` na raiz.
@@ -160,8 +156,9 @@ python packaging/build.py --platform macos
 ```
 
 ### Instaladores
-- Windows: `packaging/windows/SISTEMA_OPERA.iss`
+- Windows: `packaging/windows/SISTEMA_GUIMMA.iss`
 - macOS: `packaging/macos/build_installer.sh`
+- Detalhes do fluxo: `packaging/README_INSTALADORES.md`
 
 ---
 
@@ -171,4 +168,5 @@ python packaging/build.py --platform macos
 - Após atualização de arquivos Python, reinicie a aplicação para recarregar módulos em memória.
 - Para mudanças de banco, mantenha sincronizados:
   1. `SCRIPTS/3_CRIAR_TABELAS.sql`
-  2. scripts de instalação em `data/INSTAL_BANCO_APP/scripts/`
+  2. rotinas de instalador em `PAGINAS_DO_SISTEMA/SETUP_BANCO.py`
+  3. empacotamento em `packaging/`

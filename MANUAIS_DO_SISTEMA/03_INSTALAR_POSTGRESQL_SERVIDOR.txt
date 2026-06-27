@@ -1,0 +1,103 @@
+INSTALAR POSTGRESQL NO SERVIDOR
+
+Objetivo:
+
+Preparar o computador servidor onde ficara o banco de dados do Sistema Guimma.
+
+Quando usar:
+
+Use este roteiro apenas no computador que vai guardar o banco de dados.
+Em redes com varios computadores, normalmente apenas um computador recebe o
+PostgreSQL. As outras maquinas recebem apenas o sistema e apontam para o IP
+do servidor.
+
+Banco usado pelo sistema:
+
+BANCO_OPERA
+
+Schema usado pelo sistema:
+
+opera
+
+Porta padrao:
+
+5432
+
+Usuario comum:
+
+postgres
+
+Senha:
+
+Use a senha definida na instalacao do PostgreSQL. Nao escreva senha real em
+manual enviado para cliente.
+
+Windows:
+
+1. Baixe e instale o PostgreSQL.
+
+2. Durante a instalacao:
+
+   - Defina a senha do usuario postgres.
+   - Mantenha a porta 5432, se possivel.
+   - Anote a senha em local seguro.
+
+3. Depois da instalacao, rode o configurador do servidor:
+
+   CONFIGURAR_POSTGRES.exe
+
+4. Execute como administrador.
+
+5. Use a opcao de configuracao local/servidor.
+
+6. Permita acesso de rede quando o banco for usado por outros computadores.
+
+macOS:
+
+1. Instale o PostgreSQL pelo instalador oficial ou Homebrew.
+
+2. Confirme que o servico esta ativo.
+
+3. Confirme que a porta 5432 esta disponivel.
+
+4. Use o configurador do banco do projeto ou rode a configuracao manualmente.
+
+Configuracao de rede:
+
+Para computadores clientes acessarem o servidor, o PostgreSQL precisa aceitar
+conexoes na rede.
+
+Verifique:
+
+- postgresql.conf permitindo listen_addresses adequado.
+- pg_hba.conf permitindo o intervalo de IPs da rede local.
+- Firewall liberando a porta 5432.
+
+Exemplo de rede:
+
+Servidor:
+
+192.168.1.10
+
+Clientes:
+
+192.168.1.20
+192.168.1.21
+192.168.1.22
+
+Nesse caso, os clientes devem apontar para:
+
+host: 192.168.1.10
+porta: 5432
+banco: BANCO_OPERA
+
+Checklist do servidor:
+
+- PostgreSQL instalado.
+- Servico PostgreSQL ativo.
+- Porta 5432 liberada.
+- Banco BANCO_OPERA criado.
+- Schema opera criado/aplicado.
+- Usuario e senha testados.
+- Conexao local funcionando.
+- Conexao de uma estacao da rede testada.

@@ -46,6 +46,12 @@ print_header() {
 CREATE_DMG="yes"
 CREATE_PKG="yes"
 INTERACTIVE_MODE="no"
+APP_VERSION="${GUIMMA_VERSION:-1.0.0}"
+APP_DISPLAY_NAME="Sistema Guimma"
+APP_INTERNAL_NAME="SistemaGuimma"
+APP_BUNDLE_NAME="Sistema Guimma"
+LICENSE_APP_BUNDLE_NAME="Sistema Guimma Licenca"
+APP_SUPPORT_DIR_NAME="SistemaGuimma"
 
 ensure_macos() {
     if [[ "${OSTYPE:-}" != darwin* ]]; then
@@ -59,6 +65,7 @@ print_usage() {
 Uso: ./packaging/macos/build_installer.sh [opções]
 
 Opções:
+  --version <v>    Versão usada nos nomes dos instaladores
   --with-dmg       Gera DMG automaticamente (sem pergunta)
   --no-dmg         Não gera DMG automaticamente (sem pergunta)
   --with-pkg       Gera PKG automaticamente (sem pergunta)
@@ -67,13 +74,21 @@ Opções:
   --help           Exibe esta ajuda
 
 Exemplo (gerar tudo sem interação):
-  ./packaging/macos/build_installer.sh --with-dmg --with-pkg
+  ./packaging/macos/build_installer.sh --version 1.0.0 --with-dmg --with-pkg
 USAGE
 }
 
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --version)
+                shift
+                if [[ $# -eq 0 || -z "${1:-}" ]]; then
+                    log_error "Informe a versão após --version"
+                    exit 1
+                fi
+                APP_VERSION="$1"
+                ;;
             --with-dmg)
                 CREATE_DMG="yes"
                 ;;
@@ -94,6 +109,9 @@ parse_args() {
                 INTERACTIVE_MODE="yes"
                 CREATE_DMG=""
                 CREATE_PKG=""
+                ;;
+            [0-9]*)
+                APP_VERSION="$1"
                 ;;
             *)
                 log_error "Opção inválida: $1"
@@ -286,7 +304,7 @@ build_app() {
     fi
 
     # Verificar ícone
-    ICON_PATH="icons/ICONE_SISTEMA.icns"
+    ICON_PATH="$ROOT_DIR/icons/ICONE_SISTEMA.icns"
     if [ ! -f "$ICON_PATH" ]; then
         log_warning "Ícone ICNS não encontrado, usando padrão"
         ICON_ARG=""
@@ -304,17 +322,28 @@ build_app() {
     if [ -d "build" ]; then
         rm -rf build/*
     fi
+    mkdir -p "build/generated_specs"
 
     cmd=(
       "${PYINSTALLER_BIN[@]}"
       --windowed
       --noconsole
-      --name SistemaOpera
-      --add-data "PAGINAS_DO_SISTEMA:PAGINAS_DO_SISTEMA"
-      --add-data "icons:icons"
-      --add-data "data:data"
+      --name "$APP_INTERNAL_NAME"
+      --specpath "build/generated_specs"
+      --osx-bundle-identifier "com.sistemaguimma.app"
+      --add-data "$ROOT_DIR/PAGINAS_DO_SISTEMA:PAGINAS_DO_SISTEMA"
+      --add-data "$ROOT_DIR/icons:icons"
+      --add-data "$ROOT_DIR/data:data"
+      --add-data "$ROOT_DIR/licenciamento:licenciamento"
       --hidden-import psycopg2
       --hidden-import psycopg2.extras
+      --hidden-import licenciamento
+      --hidden-import licenciamento.runtime
+      --hidden-import licenciamento.client
+      --hidden-import licenciamento.store
+      --hidden-import licenciamento.machine
+      --hidden-import licenciamento.agent
+      --hidden-import licenciamento.app
       --hidden-import PIL
       --hidden-import PIL._imaging
       --hidden-import PIL.Image
@@ -325,6 +354,7 @@ build_app() {
       --hidden-import PIL.ImageTk
       --hidden-import tkinter
       --hidden-import tkinter.ttk
+      --hidden-import certifi
       --hidden-import fpdf
       --hidden-import fpdf.enums
       --hidden-import reportlab
@@ -356,8 +386,22 @@ build_app() {
     "${cmd[@]}"
 
     # Verificar se o app foi criado
-    APP_PATH="dist/SistemaOpera.app"
+    BUILD_APP_PATH="dist/${APP_INTERNAL_NAME}.app"
+    APP_PATH="dist/${APP_BUNDLE_NAME}.app"
+    if [ -d "$BUILD_APP_PATH" ]; then
+        rm -rf "$APP_PATH"
+        mv "$BUILD_APP_PATH" "$APP_PATH"
+    fi
     if [ -d "$APP_PATH" ]; then
+        if command -v plutil >/dev/null 2>&1; then
+            plutil -replace CFBundleDisplayName -string "$APP_DISPLAY_NAME" "$APP_PATH/Contents/Info.plist" >/dev/null 2>&1 || true
+            plutil -replace CFBundleName -string "$APP_DISPLAY_NAME" "$APP_PATH/Contents/Info.plist" >/dev/null 2>&1 || true
+            plutil -replace CFBundleShortVersionString -string "$APP_VERSION" "$APP_PATH/Contents/Info.plist" >/dev/null 2>&1 || true
+            plutil -replace CFBundleVersion -string "$APP_VERSION" "$APP_PATH/Contents/Info.plist" >/dev/null 2>&1 || true
+        fi
+        if command -v codesign >/dev/null 2>&1; then
+            codesign --force --deep --sign - "$APP_PATH" >/dev/null 2>&1 || true
+        fi
         log_success "Aplicativo criado: $APP_PATH"
 
         # Exibir informações
@@ -375,12 +419,42 @@ build_app() {
     fi
 }
 
+# Construir app separado de licenciamento
+build_license_app() {
+    print_header "CONSTRUINDO APP DE LICENCIAMENTO"
+
+    LICENSE_SPEC="SistemaGuimmaLicenca.spec"
+    LICENSE_APP_PATH="dist/${LICENSE_APP_BUNDLE_NAME}.app"
+
+    if [ ! -f "$LICENSE_SPEC" ]; then
+        log_error "Spec do app de licenciamento não encontrado: $LICENSE_SPEC"
+        return 1
+    fi
+
+    log_info "Executando build do app de licenciamento..."
+    "${PYINSTALLER_BIN[@]}" --clean --noconfirm "$LICENSE_SPEC"
+
+    if [ ! -d "$LICENSE_APP_PATH" ]; then
+        log_error "App de licenciamento não foi criado: $LICENSE_APP_PATH"
+        return 1
+    fi
+
+    if command -v codesign >/dev/null 2>&1; then
+        codesign --force --deep --sign - "$LICENSE_APP_PATH" >/dev/null 2>&1 || true
+    fi
+
+    LICENSE_SIZE=$(du -sh "$LICENSE_APP_PATH" | cut -f1)
+    log_success "App de licenciamento criado: $LICENSE_APP_PATH ($LICENSE_SIZE)"
+}
+
 # Criar DMG
 create_dmg() {
     print_header "CRIANDO INSTALADOR DMG"
 
-    APP_PATH="dist/SistemaOpera.app"
-    DMG_PATH="dist/SistemaOpera.dmg"
+    APP_PATH="dist/${APP_BUNDLE_NAME}.app"
+    DMG_PATH="dist/${APP_BUNDLE_NAME}.dmg"
+    INSTALLER_DIR="dist/installers/macos"
+    VERSIONED_DMG_PATH="$INSTALLER_DIR/${APP_BUNDLE_NAME} ${APP_VERSION} macOS.dmg"
 
     if [ ! -d "$APP_PATH" ]; then
         log_error "Aplicativo não encontrado: $APP_PATH"
@@ -395,12 +469,15 @@ create_dmg() {
 
     # Copiar aplicativo
     cp -R "$APP_PATH" "$TEMP_DIR/"
+    if [ -d "dist/${LICENSE_APP_BUNDLE_NAME}.app" ]; then
+        cp -R "dist/${LICENSE_APP_BUNDLE_NAME}.app" "$TEMP_DIR/"
+    fi
 
     # Criar link para Applications
     ln -s /Applications "$TEMP_DIR/Applications"
 
     # Configurações do DMG
-    VOLUME_NAME="SistemaOpera"
+    VOLUME_NAME="$APP_BUNDLE_NAME"
 
     # Criar DMG
     hdiutil create -volname "$VOLUME_NAME" \
@@ -412,8 +489,11 @@ create_dmg() {
     rm -rf "$TEMP_DIR"
 
     if [ -f "$DMG_PATH" ]; then
+        mkdir -p "$INSTALLER_DIR"
+        cp -f "$DMG_PATH" "$VERSIONED_DMG_PATH"
         DMG_SIZE=$(du -sh "$DMG_PATH" | cut -f1)
         log_success "DMG criado: $DMG_PATH ($DMG_SIZE)"
+        log_success "DMG versionado: $VERSIONED_DMG_PATH"
 
         # Verificar DMG
         log_info "Verificando DMG..."
@@ -429,9 +509,14 @@ create_dmg() {
 create_pkg() {
     print_header "CRIANDO INSTALADOR PKG"
 
-    APP_PATH="dist/SistemaOpera.app"
-    PKG_PATH="dist/SistemaOpera.pkg"
+    APP_PATH="dist/${APP_BUNDLE_NAME}.app"
+    LICENSE_APP_PATH="dist/${LICENSE_APP_BUNDLE_NAME}.app"
+    PKG_PATH="dist/${APP_BUNDLE_NAME}.pkg"
     PKG_SCRIPTS="dist/pkg_scripts"
+    PKG_ROOT="dist/pkg_root"
+    PKG_COMPONENTS="dist/pkg_components.plist"
+    INSTALLER_DIR="dist/installers/macos"
+    VERSIONED_PKG_PATH="$INSTALLER_DIR/${APP_BUNDLE_NAME} ${APP_VERSION} macOS.pkg"
 
     if [ ! -d "$APP_PATH" ]; then
         log_error "Aplicativo não encontrado: $APP_PATH"
@@ -443,8 +528,15 @@ create_pkg() {
         return 1
     fi
 
-    rm -rf "$PKG_SCRIPTS"
-    mkdir -p "$PKG_SCRIPTS"
+    rm -rf "$PKG_SCRIPTS" "$PKG_ROOT" "$PKG_COMPONENTS"
+    mkdir -p "$PKG_SCRIPTS" "$PKG_ROOT/Applications"
+    ditto "$APP_PATH" "$PKG_ROOT/Applications/${APP_BUNDLE_NAME}.app"
+    if [ -d "$LICENSE_APP_PATH" ]; then
+        ditto "$LICENSE_APP_PATH" "$PKG_ROOT/Applications/${LICENSE_APP_BUNDLE_NAME}.app"
+    else
+        log_error "App de licenciamento não encontrado: $LICENSE_APP_PATH"
+        return 1
+    fi
 
 cat > "$PKG_SCRIPTS/postinstall" <<'POSTINSTALL'
 #!/bin/bash
@@ -458,19 +550,20 @@ write_uninstaller() {
 set -e
 
 if [[ "$EUID" -ne 0 ]]; then
-  echo "Solicitando permissão de administrador para desinstalar o SistemaOpera..."
+  echo "Solicitando permissão de administrador para desinstalar o Sistema Guimma..."
   exec sudo "$0" "$@"
 fi
 
-echo "Iniciando desinstalação completa do SistemaOpera..."
+echo "Iniciando desinstalação completa do Sistema Guimma..."
 
-pkill -f "SistemaOpera" 2>/dev/null || true
+pkill -f "SistemaGuimma" 2>/dev/null || true
 
-rm -rf "/Applications/SistemaOpera.app"
+rm -rf "/Applications/Sistema Guimma.app"
+rm -rf "/Applications/Sistema Guimma Licenca.app"
 
-rm -rf "/Library/Application Support/SistemaOpera"
-rm -rf "/Library/Logs/SistemaOpera"
-rm -f "/Library/Preferences/com.sistemaguimma.sistemaopera.plist"
+rm -rf "/Library/Application Support/SistemaGuimma"
+rm -rf "/Library/Logs/SistemaGuimma"
+rm -f "/Library/Preferences/com.sistemaguimma.app.plist"
 
 for home in /Users/*; do
   user_name=$(basename "$home")
@@ -478,18 +571,19 @@ for home in /Users/*; do
     continue
   fi
   if [[ -d "$home" ]]; then
-    rm -rf "$home/Library/Application Support/SistemaOpera"
-    rm -rf "$home/Library/Caches/SistemaOpera"
-    rm -rf "$home/Library/Logs/SistemaOpera"
-    rm -f "$home/Library/Preferences/com.sistemaguimma.sistemaopera.plist"
-    rm -rf "$home/Library/Saved Application State/com.sistemaguimma.sistemaopera.savedState"
-    rm -rf "$home/Applications/SistemaOpera.app"
+    rm -rf "$home/Library/Application Support/SistemaGuimma"
+    rm -rf "$home/Library/Caches/SistemaGuimma"
+    rm -rf "$home/Library/Logs/SistemaGuimma"
+    rm -f "$home/Library/Preferences/com.sistemaguimma.app.plist"
+    rm -f "$home/Library/LaunchAgents/com.sistemaguimma.licenca.plist"
+    rm -rf "$home/Library/Saved Application State/com.sistemaguimma.app.savedState"
+    rm -rf "$home/Applications/Sistema Guimma.app"
   fi
 done
 
-rm -f /tmp/sistemaopera_db_setup_result.json /tmp/sistemaopera_db_setup_gui.py 2>/dev/null || true
+rm -f /tmp/sistemaguimma_db_setup_result.json /tmp/sistemaguimma_db_setup_gui.py 2>/dev/null || true
 
-pkgutil --forget com.sistemaguimma.sistemaopera >/dev/null 2>&1 || true
+pkgutil --forget com.sistemaguimma.app >/dev/null 2>&1 || true
 
 SCRIPT_PATH="$0"
 (
@@ -498,7 +592,7 @@ SCRIPT_PATH="$0"
 ) >/dev/null 2>&1 &
 
 echo "Desinstalação concluída."
-osascript -e 'display dialog "SistemaOpera removido com sucesso (app + arquivos de configuração)." buttons {"OK"} default button "OK" with icon note' 2>/dev/null || true
+osascript -e 'display dialog "Sistema Guimma removido com sucesso (app + arquivos de configuração)." buttons {"OK"} default button "OK" with icon note' 2>/dev/null || true
 exit 0
 UNINSTALLER
 
@@ -517,38 +611,17 @@ fi
 
 TARGET_LOCATION="${2:-/}"
 TARGET_VOLUME="${3:-/}"
-SYSTEM_APP_PATH="/Applications/SistemaOpera.app"
-SYSTEM_APP_PATH_TARGET="$TARGET_LOCATION/Applications/SistemaOpera.app"
-SYSTEM_APP_PATH_VOLUME="$TARGET_VOLUME/Applications/SistemaOpera.app"
-USER_APP_PATH="$USER_HOME/Applications/SistemaOpera.app"
+SYSTEM_APP_PATH="/Applications/Sistema Guimma.app"
+LICENSE_APP_PATH="/Applications/Sistema Guimma Licenca.app"
 
-# Corrige instalações legadas que possam cair em /Applications/Applications
-DOUBLE_APPS_PATH="/Applications/Applications/SistemaOpera.app"
-if [[ -d "$DOUBLE_APPS_PATH" ]]; then
-  mkdir -p "/Applications"
-  rm -rf "$SYSTEM_APP_PATH"
-  ditto "$DOUBLE_APPS_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$DOUBLE_APPS_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
-  rm -rf "/Applications/Applications"
-fi
-
-# Se o payload cair em target_location/target_volume, promove para /Applications
-if [[ ! -d "$SYSTEM_APP_PATH" && -d "$SYSTEM_APP_PATH_TARGET" ]]; then
-  mkdir -p "/Applications"
-  ditto "$SYSTEM_APP_PATH_TARGET" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$SYSTEM_APP_PATH_TARGET" "$SYSTEM_APP_PATH" 2>/dev/null
-fi
-if [[ ! -d "$SYSTEM_APP_PATH" && -d "$SYSTEM_APP_PATH_VOLUME" ]]; then
-  mkdir -p "/Applications"
-  ditto "$SYSTEM_APP_PATH_VOLUME" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$SYSTEM_APP_PATH_VOLUME" "$SYSTEM_APP_PATH" 2>/dev/null
-fi
-
-write_uninstaller "/Applications/Desinstalar SistemaOpera.command"
+write_uninstaller "/Applications/Desinstalar Sistema Guimma.command"
 if [[ -n "$USER_HOME" && -d "$USER_HOME" ]]; then
-  write_uninstaller "$USER_HOME/Applications/Desinstalar SistemaOpera.command"
-  chown "$CURRENT_USER":staff "$USER_HOME/Applications/Desinstalar SistemaOpera.command" 2>/dev/null || true
+  write_uninstaller "$USER_HOME/Applications/Desinstalar Sistema Guimma.command"
+  chown "$CURRENT_USER":staff "$USER_HOME/Applications/Desinstalar Sistema Guimma.command" 2>/dev/null || true
 fi
 
-RESULT_JSON="/tmp/sistemaopera_db_setup_result.json"
-GUI_SCRIPT="/tmp/sistemaopera_db_setup_gui.py"
+RESULT_JSON="/tmp/sistemaguimma_db_setup_result.json"
+GUI_SCRIPT="/tmp/sistemaguimma_db_setup_gui.py"
 rm -f "$RESULT_JSON" "$GUI_SCRIPT"
 
 cat > "$GUI_SCRIPT" <<'PYGUI'
@@ -563,7 +636,7 @@ try:
 except Exception:
     Image = ImageTk = None
 
-result_path = os.environ.get("RESULT_JSON", "/tmp/sistemaopera_db_setup_result.json")
+result_path = os.environ.get("RESULT_JSON", "/tmp/sistemaguimma_db_setup_result.json")
 assets_base = os.environ.get("APP_ASSETS_DIR", "")
 
 
@@ -821,7 +894,7 @@ tk.Label(barr, textvariable=status, fg="#B8CCE0", bg=panel, font=("Segoe UI", 10
 btns = tk.Frame(content, bg=panel)
 btns.pack(fill="x", padx=12, pady=(12, 6))
 
-ttk.Style().configure("Opera.TButton", padding=8)
+ttk.Style().configure("Guimma.TButton", padding=8)
 
 ttk.Button(btns, text="Detectar porta", command=detectar_porta).pack(side="left")
 ttk.Button(btns, text="Testar conexão", command=testar_conexao).pack(side="left", padx=(10,0))
@@ -833,9 +906,9 @@ PYGUI
 chmod +x "$GUI_SCRIPT"
 
 if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
-  su -l "$CURRENT_USER" -c "APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON='$RESULT_JSON' python3 '$GUI_SCRIPT'" || true
+  su -l "$CURRENT_USER" -c "APP_ASSETS_DIR='/Applications/Sistema Guimma.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON='$RESULT_JSON' python3 '$GUI_SCRIPT'" || true
 else
-  APP_ASSETS_DIR='/Applications/SistemaOpera.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON="$RESULT_JSON" python3 "$GUI_SCRIPT" || true
+  APP_ASSETS_DIR='/Applications/Sistema Guimma.app/Contents/Resources/PAGINAS_DO_SISTEMA' RESULT_JSON="$RESULT_JSON" python3 "$GUI_SCRIPT" || true
 fi
 
 if [[ ! -f "$RESULT_JSON" ]]; then
@@ -856,7 +929,7 @@ fi
 export CURRENT_USER USER_HOME
 python3 - <<'PYCFG'
 import json, os
-result_path='/tmp/sistemaopera_db_setup_result.json'
+result_path='/tmp/sistemaguimma_db_setup_result.json'
 with open(result_path,'r',encoding='utf-8') as f:
     data=json.load(f)
 host=(data.get('host') or '').strip()
@@ -867,15 +940,15 @@ pwd=data.get('password') or ''
 schema=(data.get('schema') or 'opera').strip() or 'opera'
 current_user=(os.environ.get('CURRENT_USER') or '').strip()
 user_home=(os.environ.get('USER_HOME') or '').strip()
-paths=['/Library/Application Support/SistemaOpera/config.json']
+paths=['/Library/Application Support/SistemaGuimma/config.json']
 if user_home:
-    paths.append(os.path.join(user_home,'Library','Application Support','SistemaOpera','config.json'))
+    paths.append(os.path.join(user_home,'Library','Application Support','SistemaGuimma','config.json'))
 
 dsn=f'postgresql://{user}:{pwd}@{host}:{port}/{db}'
 obj={
   'schema': schema,
   'pg_schema': schema,
-  'appname': 'OPERA_APP',
+  'appname': 'SistemaGuimma',
   'pg_dsn': dsn,
   'defaults': {'dbname': db, 'user': user, 'password': pwd},
   'hosts': [host],
@@ -891,23 +964,72 @@ for p in paths:
 PYCFG
 
 if [[ -n "$CURRENT_USER" && "$CURRENT_USER" != "root" ]]; then
-  chown "$CURRENT_USER":staff "$USER_HOME/Library/Application Support/SistemaOpera/config.json" 2>/dev/null || true
+  chown "$CURRENT_USER":staff "$USER_HOME/Library/Application Support/SistemaGuimma/config.json" 2>/dev/null || true
 fi
 
 rm -f "$RESULT_JSON" "$GUI_SCRIPT"
 
-# Garantia final: se o app não ficou em /Applications, tenta promover da pasta do usuário
-if [[ ! -d "$SYSTEM_APP_PATH" && -d "$USER_APP_PATH" ]]; then
-  mkdir -p "/Applications"
-  ditto "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null || cp -R "$USER_APP_PATH" "$SYSTEM_APP_PATH" 2>/dev/null
-fi
+install_license_launch_agent() {
+  if [[ -z "$CURRENT_USER" || "$CURRENT_USER" == "root" || ! -d "$USER_HOME" ]]; then
+    return 0
+  fi
+  if [[ ! -x "$LICENSE_APP_PATH/Contents/MacOS/SistemaGuimmaLicenca" ]]; then
+    return 0
+  fi
+
+  local launch_dir="$USER_HOME/Library/LaunchAgents"
+  local plist="$launch_dir/com.sistemaguimma.licenca.plist"
+  mkdir -p "$launch_dir"
+  cat > "$plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.sistemaguimma.licenca</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$LICENSE_APP_PATH/Contents/MacOS/SistemaGuimmaLicenca</string>
+    <string>--daemon</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartInterval</key>
+  <integer>3600</integer>
+  <key>KeepAlive</key>
+  <false/>
+</dict>
+</plist>
+PLIST
+  chown "$CURRENT_USER":staff "$plist" 2>/dev/null || true
+  chmod 644 "$plist" 2>/dev/null || true
+  su -l "$CURRENT_USER" -c "launchctl unload '$plist' >/dev/null 2>&1 || true; launchctl load '$plist' >/dev/null 2>&1 || true" 2>/dev/null || true
+}
 
 # Ajusta permissões e força refresh visual do Finder/LaunchServices
 if [[ -d "$SYSTEM_APP_PATH" ]]; then
   chown -R root:wheel "$SYSTEM_APP_PATH" 2>/dev/null || true
   chmod -R a+rX "$SYSTEM_APP_PATH" 2>/dev/null || true
+  if [[ -d "$LICENSE_APP_PATH" ]]; then
+    chown -R root:wheel "$LICENSE_APP_PATH" 2>/dev/null || true
+    chmod -R a+rX "$LICENSE_APP_PATH" 2>/dev/null || true
+    touch "$LICENSE_APP_PATH" 2>/dev/null || true
+    install_license_launch_agent
+  fi
   touch /Applications 2>/dev/null || true
   touch "$SYSTEM_APP_PATH" 2>/dev/null || true
+  LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+  if [[ -x "$LSREGISTER" ]]; then
+    "$LSREGISTER" -f "$SYSTEM_APP_PATH" >/dev/null 2>&1 || true
+    if [[ -d "$LICENSE_APP_PATH" ]]; then
+      "$LSREGISTER" -f "$LICENSE_APP_PATH" >/dev/null 2>&1 || true
+    fi
+    "$LSREGISTER" -r -domain local -domain system -domain user >/dev/null 2>&1 || true
+  fi
+  killall Finder >/dev/null 2>&1 || true
+  killall Dock >/dev/null 2>&1 || true
+else
+  echo "ERRO: Sistema Guimma.app não foi encontrado em /Applications após a instalação." >&2
 fi
 
 # Não abortar instalação por falhas tardias do postinstall
@@ -916,19 +1038,27 @@ POSTINSTALL
     chmod +x "$PKG_SCRIPTS/postinstall"
 
     log_info "Gerando PKG com instalação em /Applications + assistente de banco..."
+    pkgbuild --analyze --root "$PKG_ROOT" "$PKG_COMPONENTS"
+    if [ -x /usr/libexec/PlistBuddy ]; then
+      /usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" "$PKG_COMPONENTS" >/dev/null 2>&1 || true
+    fi
     pkgbuild \
-      --component "$APP_PATH" \
+      --root "$PKG_ROOT" \
+      --component-plist "$PKG_COMPONENTS" \
       --scripts "$PKG_SCRIPTS" \
-      --identifier "com.sistemaguimma.sistemaopera" \
-      --version "1.0.0" \
-      --install-location "/Applications" \
+      --identifier "com.sistemaguimma.app" \
+      --version "$APP_VERSION" \
+      --install-location "/" \
       "$PKG_PATH"
 
-    rm -rf "$PKG_SCRIPTS"
+    rm -rf "$PKG_SCRIPTS" "$PKG_ROOT" "$PKG_COMPONENTS"
 
     if [ -f "$PKG_PATH" ]; then
+        mkdir -p "$INSTALLER_DIR"
+        cp -f "$PKG_PATH" "$VERSIONED_PKG_PATH"
         PKG_SIZE=$(du -sh "$PKG_PATH" | cut -f1)
         log_success "PKG criado: $PKG_PATH ($PKG_SIZE)"
+        log_success "PKG versionado: $VERSIONED_PKG_PATH"
     else
         log_error "Falha ao criar PKG"
         return 1
@@ -943,6 +1073,7 @@ main() {
     print_header "SISTEMA GUIMMA - INSTALADOR macOS"
     log_info "Data: $(date)"
     log_info "Diretório: $(pwd)"
+    log_info "Versão: $APP_VERSION"
 
     # Verificar dependências
     check_dependencies
@@ -954,6 +1085,7 @@ main() {
 
     # Construir aplicativo
     build_app
+    build_license_app
 
     # DMG: padrão sempre gera; pergunta apenas se --interactive
     if [[ "$INTERACTIVE_MODE" == "yes" && "$CREATE_DMG" == "" ]]; then
@@ -986,16 +1118,22 @@ main() {
     print_header "INSTALAÇÃO CONCLUÍDA"
     log_success "Processo finalizado com sucesso!"
     echo ""
-    log_info "📦 Aplicativo criado em: dist/SistemaOpera.app"
-    if [ -f "dist/SistemaOpera.dmg" ]; then
-        log_info "📀 Instalador DMG em: dist/SistemaOpera.dmg"
+    log_info "📦 Aplicativo criado em: dist/${APP_BUNDLE_NAME}.app"
+    if [ -f "dist/${APP_BUNDLE_NAME}.dmg" ]; then
+        log_info "📀 Instalador DMG em: dist/${APP_BUNDLE_NAME}.dmg"
     fi
-    if [ -f "dist/SistemaOpera.pkg" ]; then
-        log_info "📦 Instalador PKG em: dist/SistemaOpera.pkg"
+    if [ -f "dist/${APP_BUNDLE_NAME}.pkg" ]; then
+        log_info "📦 Instalador PKG em: dist/${APP_BUNDLE_NAME}.pkg"
+    fi
+    if [ -f "dist/installers/macos/${APP_BUNDLE_NAME} ${APP_VERSION} macOS.dmg" ]; then
+        log_info "📀 DMG final: dist/installers/macos/${APP_BUNDLE_NAME} ${APP_VERSION} macOS.dmg"
+    fi
+    if [ -f "dist/installers/macos/${APP_BUNDLE_NAME} ${APP_VERSION} macOS.pkg" ]; then
+        log_info "📦 PKG final: dist/installers/macos/${APP_BUNDLE_NAME} ${APP_VERSION} macOS.pkg"
     fi
     echo ""
     log_info "Para testar o aplicativo:"
-    log_info "  open dist/SistemaOpera.app"
+    log_info "  open \"dist/${APP_BUNDLE_NAME}.app\""
     echo ""
 }
 
