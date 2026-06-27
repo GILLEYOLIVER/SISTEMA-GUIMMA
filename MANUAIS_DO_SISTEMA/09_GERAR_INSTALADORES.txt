@@ -17,6 +17,22 @@ Saidas esperadas:
 - dist/Sistema Guimma.app
 - dist/Sistema Guimma.pkg
 - dist/installers/macos/Sistema Guimma 1.0.0 macOS.pkg
+- dist/SistemaGuimma/CONFIGURAR_BANCO.app
+- dist/SistemaGuimma/CONFIGURAR_POSTGRES.app
+
+O PKG macOS instala em /Applications:
+
+- Sistema Guimma.app
+- Sistema Guimma Licenca.app
+- CONFIGURAR_BANCO.app
+- CONFIGURAR_POSTGRES.app
+
+No modo servidor/local, o assistente pos-instalacao oferece:
+
+Instalar PostgreSQL + criar banco
+
+Esse fluxo abre o CONFIGURAR_POSTGRES.app, que baixa o PostgreSQL oficial,
+instala, executa os scripts 1 -> 2 -> 3 e salva a conexao do sistema.
 
 Windows:
 

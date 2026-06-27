@@ -242,7 +242,7 @@ DEFAULT_CFG: Dict[str, Any] = {
     "ports": [5432, 5433],
     "connect_timeout": 8,
     "auto_detect_ports": True,
-    "fallback_to_postgres": True,
+    "fallback_to_postgres": False,
     "use_connection_pool": False,
     "pool_minconn": 1,
     "pool_maxconn": max(2, min((os.cpu_count() or 2) * 2, 16)),
@@ -481,7 +481,7 @@ def _create_connection():
     pwd = (CONFIG.get("defaults") or {}).get("password", "postgres")
     target_db = (CONFIG.get("defaults") or {}).get("dbname", "BANCO_OPERA")
     timeout = int(CONFIG.get("connect_timeout", 8))
-    fallback_to_postgres = bool(CONFIG.get("fallback_to_postgres", True))
+    fallback_to_postgres = bool(CONFIG.get("fallback_to_postgres", False))
 
     ports = CONFIG.get("ports") or [5432]
 

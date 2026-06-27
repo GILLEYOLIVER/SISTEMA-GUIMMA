@@ -54,13 +54,37 @@ Windows:
 
 macOS:
 
-1. Instale o PostgreSQL pelo instalador oficial ou Homebrew.
+1. Instale o pacote:
 
-2. Confirme que o servico esta ativo.
+   Sistema Guimma 1.1.1 macOS.pkg
 
-3. Confirme que a porta 5432 esta disponivel.
+2. Ao final da instalacao, a tela Configuracao do Banco sera aberta.
 
-4. Use o configurador do banco do projeto ou rode a configuracao manualmente.
+3. Se o Mac for o servidor/local e o PostgreSQL nao existir, clique:
+
+   Instalar PostgreSQL + criar banco
+
+4. Na tela Configuracao do PostgreSQL, informe a senha que sera usada no
+   usuario postgres.
+
+5. Clique:
+
+   INSTALAR POSTGRESQL + CRIAR BANCO
+
+6. O configurador baixa o PostgreSQL oficial 18.4 para macOS, instala na
+   porta 5432, detecta o psql, executa os scripts 1 -> 2 -> 3 e salva a
+   conexao do Sistema Guimma.
+
+7. Se for servidor de rede, escolha Servidor/Rede antes da preparacao para
+   liberar o acesso dos computadores clientes.
+
+8. Se BANCO_OPERA ja existir por uma tentativa anterior, o configurador pula
+   a criacao do banco e continua aplicando schema e tabelas.
+
+Observacao importante:
+
+A senha do usuario postgres deve ser definida no momento da preparacao do
+servidor. Nao deixe senha fixa em manual entregue para cliente.
 
 Configuracao de rede:
 

@@ -2,13 +2,19 @@ import os
 import re
 import sys
 import time
+import json
 import queue
+import shlex
 import shutil
 import ctypes
+import tempfile
 import ipaddress
 import threading
 import subprocess
+import urllib.request
+import ssl
 from datetime import datetime
+from pathlib import Path
 
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
@@ -29,6 +35,9 @@ TAG_HBA = "# --- Sistema Guimma: acesso rede (adicionado automaticamente) ---"
 DB_NAME_DEFAULT = "BANCO_OPERA"
 MODO_LOCAL = "local"
 MODO_REDE = "rede"
+PG_MAJOR_VERSION = "18"
+PG_INSTALLER_VERSION = "18.4-1"
+PG_MAC_DMG_URL = f"https://get.enterprisedb.com/postgresql/postgresql-{PG_INSTALLER_VERSION}-osx.dmg"
 
 
 # ------------------ ADMIN ------------------
@@ -85,6 +94,101 @@ def run_cmd(cmd_list, timeout: int = 60, env=None) -> tuple[int, str, str]:
     return p.returncode, (p.stdout or ""), (p.stderr or "")
 
 
+def run_admin_shell_script(script_content: str, args: list[str], logger, timeout: int = 2400) -> tuple[int, str, str]:
+    if not IS_MAC:
+        raise RuntimeError("Execução administrativa automática disponível apenas no macOS nesta etapa.")
+
+    workdir = tempfile.mkdtemp(prefix="sistemaguimma_admin_")
+    script_path = os.path.join(workdir, "run.sh")
+    with open(script_path, "w", encoding="utf-8") as f:
+        f.write(script_content)
+    os.chmod(script_path, 0o700)
+
+    command = " ".join([shlex.quote(script_path), *[shlex.quote(str(a)) for a in args]])
+    osa = ["osascript", "-e", f"do shell script {json.dumps(command)} with administrator privileges"]
+    logger("macOS pedira a senha de administrador para concluir a etapa do servidor.")
+    return run_cmd(osa, timeout=timeout)
+
+
+def download_file(url: str, destination: str, logger) -> None:
+    os.makedirs(os.path.dirname(destination), exist_ok=True)
+    tmp = f"{destination}.part"
+
+    logger(f"Baixando PostgreSQL oficial: {url}")
+    try:
+        import certifi
+        context = ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        context = ssl.create_default_context()
+
+    request = urllib.request.Request(url, headers={"User-Agent": "SistemaGuimmaInstaller/1.0"})
+    last_report = -1
+    downloaded = 0
+    with urllib.request.urlopen(request, context=context, timeout=60) as response, open(tmp, "wb") as out:
+        total_size = int(response.headers.get("Content-Length") or 0)
+        while True:
+            chunk = response.read(1024 * 1024)
+            if not chunk:
+                break
+            out.write(chunk)
+            downloaded += len(chunk)
+            if total_size > 0:
+                pct = int(min(100, downloaded * 100 / total_size))
+                if pct >= last_report + 10:
+                    last_report = pct
+                    logger(f"Download PostgreSQL: {pct}%")
+
+    os.replace(tmp, destination)
+    logger(f"Download concluído: {destination}")
+
+
+def save_system_db_config(host: str, port: str, dbname: str, user: str, password: str, schema: str, logger=None) -> None:
+    host = (host or "localhost").strip()
+    port = str(port or DEFAULT_PORT).strip()
+    dbname = (dbname or DB_NAME_DEFAULT).strip()
+    user = (user or "postgres").strip()
+    schema = (schema or "opera").strip() or "opera"
+    dsn = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+    payload = {
+        "validated_ok": True,
+        "mode": MODO_LOCAL if host in ("localhost", "127.0.0.1") else MODO_REDE,
+        "host": host,
+        "port": int(port),
+        "dbname": dbname,
+        "user": user,
+        "password": password or "",
+        "schema": schema,
+        "pg_schema": schema,
+        "dsn": dsn,
+        "pg_dsn": dsn,
+        "appname": "SistemaGuimma",
+        "defaults": {"dbname": dbname, "user": user, "password": password or ""},
+        "hosts": [host],
+        "ports": [int(port)],
+        "connect_timeout": 8,
+        "auto_detect_ports": True,
+        "fallback_to_postgres": False,
+    }
+
+    if IS_MAC:
+        base = Path.home() / "Library" / "Application Support" / "SistemaGuimma"
+    elif IS_WINDOWS:
+        base = Path(os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming")) / "SistemaGuimma"
+    else:
+        base = Path.home() / ".config" / "SistemaGuimma"
+
+    destinos = [
+        base / "config.json",
+        base / "PAGINAS_DO_SISTEMA" / "config.json",
+    ]
+
+    for destino in destinos:
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        if logger:
+            logger(f"Configuração salva: {destino}")
+
+
 def now_stamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -101,6 +205,57 @@ def which_or_empty(cmd_name: str) -> str:
 
 # ------------------ scripts -> Desktop (blindado) ------------------
 
+SQL_SCRIPT_NAMES = {
+    "1_CRIAR_BANCO.sql": "banco",
+    "2_CRIAR_SCHEMA.sql": "schema",
+    "3_CRIAR_TABELAS.sql": "tabelas",
+    "APAGAR_TUDO.sql": "apagar",
+}
+
+
+def _script_source_candidates(base_exe: str) -> list[str]:
+    meipass = getattr(sys, "_MEIPASS", "")
+    cwd = os.getcwd()
+    candidates = []
+
+    for base in (base_exe, meipass, cwd):
+        if not base:
+            continue
+        candidates.extend([
+            os.path.join(base, "scripts"),
+            os.path.join(base, "SCRIPTS"),
+        ])
+
+    if getattr(sys, "frozen", False) and IS_MAC:
+        # PyInstaller .app keeps --add-data files under Contents/Resources.
+        app_root = os.path.abspath(os.path.join(os.path.dirname(sys.executable), "..", "Resources"))
+        candidates.extend([
+            os.path.join(app_root, "scripts"),
+            os.path.join(app_root, "SCRIPTS"),
+        ])
+
+    repo_scripts = os.path.join(os.path.dirname(os.path.abspath(__file__)), "SCRIPTS")
+    candidates.extend([
+        repo_scripts,
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts"),
+    ])
+
+    seen = set()
+    unique = []
+    for candidate in candidates:
+        norm = os.path.abspath(candidate)
+        if norm not in seen:
+            seen.add(norm)
+            unique.append(candidate)
+    return unique
+
+
+def _folder_has_default_scripts(folder: str) -> bool:
+    return bool(folder and os.path.isdir(folder) and all(
+        os.path.exists(os.path.join(folder, name))
+        for name in ("1_CRIAR_BANCO.sql", "2_CRIAR_SCHEMA.sql", "3_CRIAR_TABELAS.sql")
+    ))
+
 def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
     desktop = os.path.join(os.path.expanduser("~"), "Desktop")
     dst = os.path.join(desktop, "scripts")
@@ -115,21 +270,17 @@ def garantir_scripts_na_area_de_trabalho(logger=None) -> str:
     else:
         base_exe = os.path.dirname(os.path.abspath(__file__))
 
-    src_candidates = [
-        os.path.join(base_exe, "scripts"),
-        os.path.join(getattr(sys, "_MEIPASS", ""), "scripts"),
-        os.path.join(os.getcwd(), "scripts"),
-    ]
+    src_candidates = _script_source_candidates(base_exe)
 
     src = ""
     for c in src_candidates:
-        if os.path.isdir(c):
+        if _folder_has_default_scripts(c):
             src = c
             break
 
     if not src:
         if logger:
-            logger("Não achei a pasta 'scripts' (exe/_MEIPASS/cwd). Sem origem para copiar.")
+            logger("Não achei a pasta SCRIPTS/scripts com 1_CRIAR_BANCO, 2_CRIAR_SCHEMA e 3_CRIAR_TABELAS.")
             logger(f"DEBUG frozen={getattr(sys, 'frozen', False)} exe={sys.executable}")
             logger(f"DEBUG _MEIPASS={getattr(sys, '_MEIPASS', '')}")
             logger(f"DEBUG cwd={os.getcwd()}")
@@ -256,7 +407,7 @@ def _mac_detect_postgres_service_and_datadir() -> tuple[str, str]:
     for p in candidates:
         conf = os.path.join(p, "postgresql.conf")
         hba = os.path.join(p, "pg_hba.conf")
-        if os.path.isdir(p) and (os.path.exists(conf) or os.path.exists(hba)):
+        if os.path.isdir(p):
             return "postgresql-18", p
 
     for brew_name in ("postgresql@18", "postgresql"):
@@ -332,6 +483,206 @@ def find_psql_exe(datadir: str) -> str:
             return p
 
     return ""
+
+
+def postgres_detectado_completo() -> bool:
+    svc, datadir = detectar_postgres_service_and_datadir()
+    psql = find_psql_exe(datadir)
+    return bool(datadir and psql)
+
+
+def install_postgres_macos_if_missing(superpassword: str, port: str, logger) -> None:
+    if not IS_MAC:
+        raise RuntimeError("Instalação automática do PostgreSQL foi implementada para macOS neste pacote.")
+
+    if postgres_detectado_completo():
+        logger("PostgreSQL já detectado. Pulando instalação do motor.")
+        return
+
+    if not superpassword or len(superpassword) < 6:
+        raise RuntimeError("Informe uma senha do PostgreSQL com pelo menos 6 caracteres.")
+
+    download_dir = os.path.join(os.path.expanduser("~"), "Downloads", "SistemaGuimma")
+    dmg_path = os.path.join(download_dir, f"postgresql-{PG_INSTALLER_VERSION}-osx.dmg")
+
+    if not os.path.exists(dmg_path) or os.path.getsize(dmg_path) < 100_000_000:
+        download_file(PG_MAC_DMG_URL, dmg_path, logger)
+    else:
+        logger(f"Instalador PostgreSQL já baixado: {dmg_path}")
+
+    secure_dir = tempfile.mkdtemp(prefix="sistemaguimma_pg_")
+    pw_file = os.path.join(secure_dir, "pg_password.txt")
+    with open(pw_file, "w", encoding="utf-8") as f:
+        f.write(superpassword)
+    os.chmod(pw_file, 0o600)
+
+    log_file = os.path.join(tempfile.gettempdir(), "sistemaguimma_postgres_install.log")
+    script = r'''#!/bin/bash
+set -euo pipefail
+
+DMG_PATH="$1"
+PW_FILE="$2"
+LOG_FILE="$3"
+PORT="${4:-5432}"
+PG_PREFIX="/Library/PostgreSQL/18"
+PG_BIN="$PG_PREFIX/bin"
+PG_DATA="$PG_PREFIX/data"
+
+exec >>"$LOG_FILE" 2>&1
+echo "==== Sistema Guimma PostgreSQL install $(date) ===="
+
+if [[ -x "$PG_BIN/psql" && -f "$PG_DATA/postgresql.conf" ]]; then
+  echo "PostgreSQL 18 já existe em $PG_PREFIX"
+  rm -f "$PW_FILE"
+  exit 0
+fi
+
+SUPERPASSWORD="$(cat "$PW_FILE")"
+rm -f "$PW_FILE"
+
+MOUNT_DIR="$(mktemp -d /tmp/sistemaguimma_pg_mount.XXXXXX)"
+cleanup() {
+  hdiutil detach "$MOUNT_DIR" -quiet >/dev/null 2>&1 || true
+  rm -rf "$MOUNT_DIR" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+echo "Montando DMG: $DMG_PATH"
+hdiutil attach "$DMG_PATH" -nobrowse -quiet -mountpoint "$MOUNT_DIR"
+
+INSTALLER="$(find "$MOUNT_DIR" -path "*/Contents/MacOS/installbuilder.sh" -type f -perm -111 2>/dev/null | head -n 1 || true)"
+if [[ -z "$INSTALLER" ]]; then
+  INSTALLER="$(find "$MOUNT_DIR" -type f -perm -111 -name "postgresql-*osx*" 2>/dev/null | head -n 1 || true)"
+fi
+if [[ -z "$INSTALLER" ]]; then
+  INSTALLER="$(find "$MOUNT_DIR" -type f -perm -111 2>/dev/null | grep -i 'postgresql' | head -n 1 || true)"
+fi
+if [[ -z "$INSTALLER" ]]; then
+  echo "Conteúdo do DMG:"
+  find "$MOUNT_DIR" -maxdepth 4 -print
+  echo "Instalador PostgreSQL não encontrado dentro do DMG."
+  exit 20
+fi
+
+echo "Instalador localizado: $INSTALLER"
+"$INSTALLER" \
+  --mode unattended \
+  --unattendedmodeui minimal \
+  --superaccount postgres \
+  --superpassword "$SUPERPASSWORD" \
+  --serverport "$PORT" \
+  --servicename postgresql-18 \
+  --prefix "$PG_PREFIX" || {
+    rc=$?
+    echo "Primeira tentativa falhou com rc=$rc; tentando sem parâmetros opcionais."
+    "$INSTALLER" \
+      --mode unattended \
+      --superpassword "$SUPERPASSWORD" \
+      --serverport "$PORT" \
+      --prefix "$PG_PREFIX"
+  }
+
+if [[ -x "$PG_BIN/pg_ctl" && -f "$PG_DATA/postgresql.conf" ]]; then
+  "$PG_BIN/pg_ctl" -D "$PG_DATA" -l "$PG_DATA/server.log" start >/dev/null 2>&1 || true
+fi
+
+sleep 4
+if [[ ! -x "$PG_BIN/psql" ]]; then
+  echo "psql não encontrado após instalação em $PG_BIN/psql"
+  exit 21
+fi
+
+echo "PostgreSQL instalado com sucesso."
+'''
+
+    rc, out, err = run_admin_shell_script(script, [dmg_path, pw_file, log_file, str(port or DEFAULT_PORT)], logger)
+    if out.strip():
+        logger(out.strip())
+    if err.strip():
+        logger(err.strip())
+    if rc != 0:
+        raise RuntimeError(f"Falha ao instalar PostgreSQL automaticamente. Veja o log: {log_file}")
+
+    logger(f"PostgreSQL instalado. Log: {log_file}")
+
+
+def configure_postgres_network_macos(datadir: str, cidr: str, port: str, logger) -> None:
+    if not IS_MAC:
+        return
+    if not datadir or datadir.startswith("(") or not os.path.isdir(datadir):
+        raise RuntimeError("DataDir inválido para configurar rede do PostgreSQL.")
+    if not cidr or cidr.startswith("(") or "/" not in cidr:
+        raise RuntimeError("Rede CIDR inválida para configurar acesso em rede.")
+
+    log_file = os.path.join(tempfile.gettempdir(), "sistemaguimma_postgres_network.log")
+    script = r'''#!/bin/bash
+set -euo pipefail
+
+DATADIR="$1"
+CIDR="$2"
+PORT="${3:-5432}"
+LOG_FILE="$4"
+CONF="$DATADIR/postgresql.conf"
+HBA="$DATADIR/pg_hba.conf"
+
+exec >>"$LOG_FILE" 2>&1
+echo "==== Sistema Guimma PostgreSQL network $(date) ===="
+
+if [[ ! -f "$CONF" || ! -f "$HBA" ]]; then
+  echo "Arquivos não encontrados: $CONF / $HBA"
+  exit 30
+fi
+
+cp "$CONF" "$CONF.bak_sistemaguimma_$(date +%Y%m%d_%H%M%S)"
+cp "$HBA" "$HBA.bak_sistemaguimma_$(date +%Y%m%d_%H%M%S)"
+
+python3 - "$CONF" "$HBA" "$CIDR" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+conf = Path(sys.argv[1])
+hba = Path(sys.argv[2])
+cidr = sys.argv[3]
+
+lines = conf.read_text(encoding="utf-8", errors="replace").splitlines()
+target = "listen_addresses = '*'"
+pattern = re.compile(r"^\s*#?\s*listen_addresses\s*=")
+for i, line in enumerate(lines):
+    if pattern.search(line):
+        lines[i] = target
+        break
+else:
+    lines.extend(["", "# --- Sistema Guimma: habilita conexao local e via rede ---", target])
+conf.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+rule = f"host    all             all             {cidr}            scram-sha-256"
+tag = "# --- Sistema Guimma: acesso rede (adicionado automaticamente) ---"
+lines = hba.read_text(encoding="utf-8", errors="replace").splitlines()
+norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
+if not any(norm(line) == norm(rule) for line in lines):
+    if tag not in lines:
+        lines.extend(["", tag])
+    lines.append(rule)
+hba.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
+PG_CTL="/Library/PostgreSQL/18/bin/pg_ctl"
+if [[ -x "$PG_CTL" ]]; then
+  "$PG_CTL" -D "$DATADIR" restart -m fast >/dev/null 2>&1 || "$PG_CTL" -D "$DATADIR" start >/dev/null 2>&1 || true
+fi
+
+echo "Rede configurada para $CIDR na porta $PORT."
+'''
+
+    rc, out, err = run_admin_shell_script(script, [datadir, cidr, str(port or DEFAULT_PORT), log_file], logger)
+    if out.strip():
+        logger(out.strip())
+    if err.strip():
+        logger(err.strip())
+    if rc != 0:
+        raise RuntimeError(f"Falha ao configurar rede do PostgreSQL. Veja o log: {log_file}")
+    logger(f"Rede PostgreSQL configurada. Log: {log_file}")
 
 
 # ------------------ Network detection ------------------
@@ -544,6 +895,46 @@ def run_psql_file(psql_exe: str, host: str, port: str, user: str, password: str,
 
     if rc != 0:
         raise RuntimeError(f"Falha ao executar {os.path.basename(sql_file)} (rc={rc}). Veja o log.")
+
+
+def database_exists(psql_exe: str, host: str, port: str, user: str, password: str,
+                    dbname: str, logger) -> bool:
+    if not psql_exe or not os.path.exists(psql_exe):
+        raise RuntimeError("psql não encontrado (não consigo consultar bancos).")
+
+    env = os.environ.copy()
+    if password:
+        env["PGPASSWORD"] = password
+    env["PGCLIENTENCODING"] = "UTF8"
+
+    safe_dbname = dbname.replace("'", "''")
+    cmd = [
+        psql_exe,
+        "-v", "ON_ERROR_STOP=1",
+        "-h", host,
+        "-p", str(port),
+        "-U", user,
+        "-d", "postgres",
+        "-tAc", f"SELECT 1 FROM pg_database WHERE datname = '{safe_dbname}';",
+    ]
+
+    logger(f"Verificando se o banco {dbname} já existe...")
+    rc, out, err = run_cmd(cmd, timeout=60, env=env)
+    if err.strip():
+        logger(err.strip())
+    if rc != 0:
+        raise RuntimeError(f"Não consegui consultar bancos no PostgreSQL (rc={rc}). Veja o log.")
+
+    return out.strip() == "1"
+
+
+def run_create_database_if_needed(psql_exe: str, host: str, port: str, user: str,
+                                  password: str, dbname: str, sql_file: str, logger) -> None:
+    if database_exists(psql_exe, host, port, user, password, dbname, logger):
+        logger(f"Banco {dbname} já existe. Pulando {os.path.basename(sql_file)}.")
+        return
+
+    run_psql_file(psql_exe, host, port, user, password, "postgres", sql_file, logger)
 
 
 # ------------------ UI helpers ------------------
@@ -807,6 +1198,17 @@ class ConfigurarPostgresApp(ctk.CTk):
         )
         self.btn_run_all.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
+        self.btn_auto_server = ctk.CTkButton(
+            actions,
+            text="INSTALAR POSTGRESQL + CRIAR BANCO",
+            height=44,
+            fg_color="#0f5f9f",
+            hover_color="#0b4b7e",
+            text_color="white",
+            command=self.on_install_postgres_and_create_all,
+        )
+        self.btn_auto_server.grid(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=(10, 0))
+
     def _row_entry(self, parent, row, col, label, var):
         lbl = ctk.CTkLabel(parent, text=label, font=ctk.CTkFont(size=12, weight="bold"))
         lbl.grid(
@@ -858,7 +1260,7 @@ class ConfigurarPostgresApp(ctk.CTk):
 
     def set_busy(self, busy: bool):
         state = "disabled" if busy else "normal"
-        for b in (self.btn_detect, self.btn_config, self.btn_folder, self.btn_run_all, self.btn_copy, self.btn_drop):
+        for b in (self.btn_detect, self.btn_config, self.btn_folder, self.btn_run_all, self.btn_auto_server, self.btn_copy, self.btn_drop):
             b.configure(state=state)
         self.rb_local.configure(state=state)
         self.rb_rede.configure(state=state)
@@ -1037,12 +1439,7 @@ class ConfigurarPostgresApp(ctk.CTk):
     def _load_default_scripts(self):
         try:
             desktop_scripts = garantir_scripts_na_area_de_trabalho(logger=self.log)
-            mapping = {
-                "1_CRIAR_BANCO.sql": self.sql_banco_var,
-                "2_CRIAR_SCHEMA.sql": self.sql_schema_var,
-                "3_CRIAR_TABELAS.sql": self.sql_tabelas_var,
-                "APAGAR_TUDO.sql": self.sql_apagar_var,
-            }
+            mapping = self._script_mapping()
 
             found_any = False
             for fname, var in mapping.items():
@@ -1085,12 +1482,7 @@ class ConfigurarPostgresApp(ctk.CTk):
         if not folder:
             return
 
-        mapping = {
-            "1_CRIAR_BANCO.sql": self.sql_banco_var,
-            "2_CRIAR_SCHEMA.sql": self.sql_schema_var,
-            "3_CRIAR_TABELAS.sql": self.sql_tabelas_var,
-            "APAGAR_TUDO.sql": self.sql_apagar_var,
-        }
+        mapping = self._script_mapping()
 
         found_any = False
         for fname, var in mapping.items():
@@ -1105,6 +1497,14 @@ class ConfigurarPostgresApp(ctk.CTk):
         else:
             messagebox.showwarning("Scripts", "Não encontrei os nomes padrão nessa pasta.\nUse os botões 'Buscar'.")
 
+    def _script_mapping(self):
+        return {
+            "1_CRIAR_BANCO.sql": self.sql_banco_var,
+            "2_CRIAR_SCHEMA.sql": self.sql_schema_var,
+            "3_CRIAR_TABELAS.sql": self.sql_tabelas_var,
+            "APAGAR_TUDO.sql": self.sql_apagar_var,
+        }
+
     def _get_execution_host(self) -> str:
         return "localhost"
 
@@ -1116,6 +1516,143 @@ class ConfigurarPostgresApp(ctk.CTk):
         return f"host={host} port={port} dbname={dbname}"
 
     # ---------- execute scripts ----------
+    def _validate_create_scripts(self):
+        f1 = self.sql_banco_var.get().strip()
+        f2 = self.sql_schema_var.get().strip()
+        f3 = self.sql_tabelas_var.get().strip()
+
+        if not f1 or not os.path.exists(f1):
+            messagebox.showerror("Scripts", "Selecione o 1_CRIAR_BANCO.sql")
+            return None
+        if not f2 or not os.path.exists(f2):
+            messagebox.showerror("Scripts", "Selecione o 2_CRIAR_SCHEMA.sql")
+            return None
+        if not f3 or not os.path.exists(f3):
+            messagebox.showerror("Scripts", "Selecione o 3_CRIAR_TABELAS.sql")
+            return None
+        return f1, f2, f3
+
+    def on_install_postgres_and_create_all(self):
+        if not IS_MAC:
+            messagebox.showinfo(
+                "Instalação automática",
+                "Esta automação completa foi preparada para macOS. No Windows, use o pacote unificado com o instalador PostgreSQL e CONFIGURAR_POSTGRES.exe.",
+            )
+            return
+
+        scripts = self._validate_create_scripts()
+        if not scripts:
+            return
+
+        pwd = self.pass_var.get()
+        if not pwd or len(pwd) < 6:
+            messagebox.showerror("Senha do PostgreSQL", "Informe a senha que será usada no usuário postgres (mínimo 6 caracteres).")
+            return
+
+        port = self.port_var.get().strip() or DEFAULT_PORT
+        user = self.user_var.get().strip() or "postgres"
+        dbname = self.dbname_var.get().strip() or DB_NAME_DEFAULT
+        modo = self.get_modo()
+        texto_modo = "LOCAL (esta máquina)" if modo == MODO_LOCAL else "REDE / SERVIDOR"
+
+        if user.lower() != "postgres":
+            messagebox.showwarning(
+                "Usuário postgres",
+                "A instalação automática do PostgreSQL cria/configura o superusuário postgres. Vou ajustar o usuário para postgres.",
+            )
+            self.user_var.set("postgres")
+            user = "postgres"
+
+        if not messagebox.askyesno(
+            "Confirmar instalação do servidor",
+            "Vou preparar o servidor automaticamente:\n\n"
+            "1. Baixar o PostgreSQL oficial, se ainda não existir.\n"
+            "2. Instalar PostgreSQL 18 na porta informada.\n"
+            "3. Configurar acesso de rede, se o modo for Servidor/Rede.\n"
+            "4. Executar 1_CRIAR_BANCO.sql.\n"
+            "5. Executar 2_CRIAR_SCHEMA.sql.\n"
+            "6. Executar 3_CRIAR_TABELAS.sql.\n"
+            "7. Salvar a conexão do Sistema Guimma.\n\n"
+            f"Modo: {texto_modo}\n"
+            f"Porta: {port}\n"
+            f"Banco: {dbname}\n\n"
+            "O macOS pedirá a senha de administrador do computador.\nContinuar?",
+        ):
+            return
+
+        f1, f2, f3 = scripts
+
+        def worker():
+            self.set_busy(True)
+            self.set_status("instalando PostgreSQL...")
+            try:
+                self.log("")
+                self.log("=== INSTALAÇÃO AUTOMÁTICA SERVIDOR SISTEMA GUIMMA ===")
+                self.log(f"Modo: {texto_modo}")
+                self.log(f"Porta PostgreSQL: {port}")
+                self.log(f"DB alvo: {dbname}")
+                self.log("")
+
+                install_postgres_macos_if_missing(pwd, port, self.log)
+
+                self.set_status("detectando PostgreSQL...")
+                self.detect_all(silent=True)
+                svc = self.svc_var.get().strip()
+                datadir = self.datadir_var.get().strip()
+                psql = self.psql_var.get().strip()
+
+                if not psql or psql.startswith("(") or not os.path.exists(psql):
+                    psql = find_psql_exe(datadir if datadir and not datadir.startswith("(") else "")
+                    if psql:
+                        self.psql_var.set(psql)
+                if not psql or not os.path.exists(psql):
+                    raise RuntimeError("PostgreSQL instalado, mas não consegui localizar o psql.")
+
+                self.log(f"Serviço detectado: {svc}")
+                self.log(f"DataDir detectado: {datadir}")
+                self.log(f"psql detectado: {psql}")
+
+                if modo == MODO_REDE:
+                    cidr = self.net_var.get().strip()
+                    if not cidr or cidr.startswith("(") or "/" not in cidr:
+                        ip = detectar_ip()
+                        cidr = detectar_rede_cidr(ip)
+                        self.net_var.set(cidr or "(não detectado)")
+                    configure_postgres_network_macos(datadir, cidr, port, self.log)
+
+                self.set_status("executando scripts 1→2→3...")
+                self.log("")
+                self.log("=== EXECUÇÃO SCRIPTS (1→2→3) ===")
+                run_create_database_if_needed(psql, "localhost", port, "postgres", pwd, dbname, f1, self.log)
+                self.log("✅ 1_CRIAR_BANCO concluído ou já existia.\n")
+                run_psql_file(psql, "localhost", port, "postgres", pwd, dbname, f2, self.log)
+                self.log("✅ 2_CRIAR_SCHEMA concluído.\n")
+                run_psql_file(psql, "localhost", port, "postgres", pwd, dbname, f3, self.log)
+                self.log("✅ 3_CRIAR_TABELAS concluído.\n")
+
+                host_config = "localhost" if modo == MODO_LOCAL else (self.ip_var.get().strip() or detectar_ip())
+                save_system_db_config(host_config, port, dbname, "postgres", pwd, "opera", self.log)
+                self.set_status("servidor pronto ✅")
+
+                messagebox.showinfo(
+                    "Sistema Guimma • Servidor pronto",
+                    "PostgreSQL instalado/configurado e banco criado com sucesso.\n\n"
+                    f"Host: {host_config}\n"
+                    f"Porta: {port}\n"
+                    f"Banco: {dbname}\n"
+                    "Usuário: postgres\n\n"
+                    "O Sistema Guimma já recebeu a configuração local.",
+                )
+            except Exception as e:
+                self.set_status("erro ❌")
+                self.log(f"ERRO: {e}")
+                messagebox.showerror("Erro na instalação automática", str(e))
+            finally:
+                self.set_busy(False)
+                self._update_mode_ui()
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def on_run_create_all(self):
         self.detect_all(silent=True)
 
@@ -1127,19 +1664,10 @@ class ConfigurarPostgresApp(ctk.CTk):
         dbname = self.dbname_var.get().strip() or DB_NAME_DEFAULT
         modo = self.get_modo()
 
-        f1 = self.sql_banco_var.get().strip()
-        f2 = self.sql_schema_var.get().strip()
-        f3 = self.sql_tabelas_var.get().strip()
-
-        if not f1 or not os.path.exists(f1):
-            messagebox.showerror("Scripts", "Selecione o 1_CRIAR_BANCO.sql")
+        scripts = self._validate_create_scripts()
+        if not scripts:
             return
-        if not f2 or not os.path.exists(f2):
-            messagebox.showerror("Scripts", "Selecione o 2_CRIAR_SCHEMA.sql")
-            return
-        if not f3 or not os.path.exists(f3):
-            messagebox.showerror("Scripts", "Selecione o 3_CRIAR_TABELAS.sql")
-            return
+        f1, f2, f3 = scripts
 
         texto_modo = "LOCAL (esta máquina)" if modo == MODO_LOCAL else "REDE / SERVIDOR"
         host_final = "localhost" if modo == MODO_LOCAL else (self.ip_var.get().strip() or "localhost")
@@ -1168,8 +1696,8 @@ class ConfigurarPostgresApp(ctk.CTk):
                 self.log(f"DB alvo: {dbname}")
                 self.log("")
 
-                run_psql_file(psql, host, port, user, pwd, "postgres", f1, self.log)
-                self.log("✅ 1_CRIAR_BANCO concluído.\n")
+                run_create_database_if_needed(psql, host, port, user, pwd, dbname, f1, self.log)
+                self.log("✅ 1_CRIAR_BANCO concluído ou já existia.\n")
 
                 run_psql_file(psql, host, port, user, pwd, dbname, f2, self.log)
                 self.log("✅ 2_CRIAR_SCHEMA concluído.\n")
@@ -1177,6 +1705,7 @@ class ConfigurarPostgresApp(ctk.CTk):
                 run_psql_file(psql, host, port, user, pwd, dbname, f3, self.log)
                 self.log("✅ 3_CRIAR_TABELAS concluído.\n")
 
+                save_system_db_config(host_final, port, dbname, user, pwd, "opera", self.log)
                 self.set_status("banco pronto ✅")
 
                 if modo == MODO_LOCAL:
