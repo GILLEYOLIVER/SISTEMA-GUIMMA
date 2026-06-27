@@ -46,7 +46,7 @@ if sys.platform == 'darwin':
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
-        icon=['icons/ICONE_SISTEMA.icns'],
+        icon=['icons/ICONE_LICENCA_ADMIN.icns'],
     )
     coll = COLLECT(
         exe,
@@ -61,7 +61,7 @@ if sys.platform == 'darwin':
     app = BUNDLE(
         coll,
         name='Sistema Guimma Licencas Admin.app',
-        icon='icons/ICONE_SISTEMA.icns',
+        icon='icons/ICONE_LICENCA_ADMIN.icns',
         bundle_identifier='com.sistemaguimma.licencasadmin',
         info_plist={
             'CFBundleDisplayName': 'Sistema Guimma Licencas Admin',
@@ -89,5 +89,5 @@ else:
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
-        icon=['icons/ICONE_SISTEMA.ico'],
+        icon=['icons/ICONE_LICENCA_ADMIN.ico'],
     )

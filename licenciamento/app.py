@@ -333,7 +333,7 @@ class LicenseApp:
             pass
 
     def _load_icon(self):
-        icon_path = _asset_path("icons", "ICONE_SISTEMA.png")
+        icon_path = _asset_path("icons", "ICONE_LICENCIADOR.png")
         if icon_path is None:
             return None
         try:
