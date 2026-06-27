@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 
@@ -91,6 +92,86 @@ if getattr(sys, "_MEIPASS", None):
 _ensure_db_config_before_app()
 
 
+def _start_license_monitor(root):
+    """Consulta o servidor periodicamente para aplicar bloqueios remotos."""
+    if getattr(root, "_guimma_license_monitor_started", False):
+        return
+    setattr(root, "_guimma_license_monitor_started", True)
+
+    try:
+        from licenciamento.client import load_config
+        from licenciamento.runtime import check_application_access, open_license_app
+    except Exception as exc:
+        print(f"[LICENCA] Monitor indisponivel: {exc}")
+        return
+
+    try:
+        cfg = load_config()
+        interval_minutes = int(cfg.get("poll_interval_minutes") or 10)
+    except Exception:
+        interval_minutes = 10
+    interval_ms = max(interval_minutes, 5) * 60 * 1000
+    running = {"value": False}
+
+    def schedule_next():
+        try:
+            root.after(interval_ms, run_check)
+        except Exception:
+            pass
+
+    def run_check():
+        if running["value"]:
+            schedule_next()
+            return
+        running["value"] = True
+
+        def worker():
+            try:
+                decision = check_application_access(try_online=True)
+                error_message = ""
+            except Exception as exc:
+                decision = None
+                error_message = str(exc)
+
+            def finish():
+                running["value"] = False
+                if decision is not None and decision.allowed:
+                    schedule_next()
+                    return
+
+                try:
+                    from tkinter import messagebox
+
+                    if decision is None:
+                        messagebox.showerror(
+                            "Licenca nao validada",
+                            "Nao foi possivel validar a licenca:\n" + error_message,
+                            parent=root,
+                        )
+                    else:
+                        messagebox.showerror(decision.title, decision.message, parent=root)
+                except Exception:
+                    pass
+
+                try:
+                    open_license_app()
+                except Exception:
+                    pass
+                try:
+                    root.destroy()
+                except Exception:
+                    pass
+
+            try:
+                root.after(0, finish)
+            except Exception:
+                pass
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    schedule_next()
+
+
 # ==============================================================================
 # APP
 # ==============================================================================
@@ -153,6 +234,7 @@ def main():
             root.deiconify()
             root.lift()
             root.focus_force()
+            _start_license_monitor(root)
         except Exception as e:
             print(f"[BOOT] Erro ao exibir LOGIN: {e}")
             try:

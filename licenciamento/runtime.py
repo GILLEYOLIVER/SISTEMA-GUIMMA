@@ -26,27 +26,32 @@ def _env_enforces_license() -> bool:
 
 def check_application_access(try_online: bool = True) -> LicenseDecision:
     config = load_config()
-    enabled = bool(config.get("enabled")) or _env_enforces_license()
-    if not enabled:
-        return LicenseDecision(True, "Licenciamento", "Licenciamento ainda nao obrigatorio neste ambiente.")
 
-    validation = validate_state()
-    if validation.ok:
-        return LicenseDecision(True, "Licenca valida", validation.message, validation.state)
-
-    if try_online and config.get("server_url") and config.get("license_key"):
+    if try_online and config.get("server_url") and config.get("customer_email"):
         try:
             sync_once(config)
             validation = validate_state()
             if validation.ok:
                 return LicenseDecision(True, "Licenca valida", validation.message, validation.state)
         except Exception as exc:
+            validation = validate_state()
+            if validation.ok:
+                return LicenseDecision(
+                    True,
+                    "Licenca valida",
+                    f"{validation.message}\n\nNao foi possivel consultar o servidor agora:\n{exc}",
+                    validation.state,
+                )
             return LicenseDecision(
                 False,
                 "Licenca nao validada",
                 f"{validation.message}\n\nFalha ao consultar o servidor de licencas:\n{exc}",
                 validation.state,
             )
+
+    validation = validate_state()
+    if validation.ok:
+        return LicenseDecision(True, "Licenca valida", validation.message, validation.state)
 
     return LicenseDecision(
         False,

@@ -54,7 +54,7 @@ def candidate_license_dirs() -> list[Path]:
     dirs: list[Path] = []
     override = os.environ.get("GUIMMA_LICENSE_DIR")
     if override:
-        dirs.append(Path(override).expanduser())
+        return _dedupe([Path(override).expanduser()])
     system_dir = _system_license_dir()
     if system_dir is not None:
         dirs.append(system_dir)

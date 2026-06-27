@@ -84,7 +84,7 @@ def daemon_loop(config: dict[str, Any]) -> int:
     interval = max(int(config.get("poll_interval_minutes") or 360), 5) * 60
     _log(f"Agente iniciado. Intervalo: {interval // 60} minutos.")
     while not _STOP:
-        run_sync(config, force=False)
+        run_sync(config, force=True)
         slept = 0
         while slept < interval and not _STOP:
             time.sleep(min(5, interval - slept))

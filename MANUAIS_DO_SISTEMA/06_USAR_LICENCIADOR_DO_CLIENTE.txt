@@ -24,10 +24,15 @@ Como funciona:
 
 4. A licenca fica gravada localmente e vale ate a data retornada pelo servidor.
 
-5. Enquanto a licenca local estiver valida, o sistema pode abrir sem consultar
-   a internet toda hora.
+5. O Sistema Guimma consulta o servidor ao abrir quando houver email configurado.
 
-6. Ao vencer, o licenciador consulta novamente.
+6. Durante o uso, o Sistema Guimma e o agente de licenciamento consultam
+   novamente a cada 10 minutos.
+
+7. Se o servidor informar bloqueio/inatividade, o acesso local e bloqueado.
+
+8. Se a internet falhar, uma licenca local ainda valida pode liberar o uso ate
+   a data de validade gravada.
 
 Regra de computador:
 
@@ -59,9 +64,8 @@ Passo a passo para validar:
 
 2. No campo Email do cliente, digite o email cadastrado.
 
-3. Marque a opcao:
-
-   Exigir licenca valida para abrir o Sistema Guimma
+3. A opcao de exigir licenca valida ja vem obrigatoria e nao deve ser
+   desativada.
 
 4. Clique em Salvar.
 

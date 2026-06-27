@@ -44,15 +44,13 @@ def _licenciamento_exigido_por_ambiente() -> bool:
 
 def _verificar_licenca_antes_do_login(parent: tk.Misc) -> bool:
     if not LICENCIAMENTO_DISPONIVEL:
-        if _licenciamento_exigido_por_ambiente():
-            _mostrar_erro_centralizado(
-                parent,
-                "Licenciamento indisponível",
-                "O módulo de licenciamento não foi encontrado.\n"
-                "Reinstale o Sistema Guimma ou abra o aplicativo de licenciamento.",
-            )
-            return False
-        return True
+        _mostrar_erro_centralizado(
+            parent,
+            "Licenciamento indisponível",
+            "O módulo de licenciamento não foi encontrado.\n"
+            "Reinstale o Sistema Guimma ou abra o aplicativo de licenciamento.",
+        )
+        return False
 
     try:
         decisao = check_application_access(try_online=True)

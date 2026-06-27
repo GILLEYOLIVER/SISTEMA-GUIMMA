@@ -7,16 +7,19 @@ Fluxo previsto:
 1. O cliente paga a mensalidade.
 2. O gateway de pagamento avisa o seu servidor por webhook.
 3. O seu servidor marca a licenca como ativa e calcula a validade, normalmente 30 dias.
-4. O app `Sistema Guimma Licenca` consulta o servidor quando nao existir licenca local valida ou quando a licenca local vencer.
+4. O app `Sistema Guimma Licenca` consulta o servidor ao validar e o agente consulta novamente a cada 10 minutos.
 5. Na primeira validacao aprovada, o servidor prende a licenca ao ID deste computador.
 6. O agente grava um `license_state.json` local, selado para este computador.
-7. O Sistema Guimma le esse estado antes do login e libera o uso offline ate a data `valid_until`.
+7. O Sistema Guimma le esse estado antes do login e volta a consultar durante o uso a cada 10 minutos.
 
 Comportamento de renovacao:
 
-- Se a licenca local ainda esta valida, o sistema abre sem consultar a internet.
-- Se a licenca local venceu, o licenciador consulta o servidor.
+- Ao abrir o Sistema Guimma, se houver email configurado, ele consulta o servidor antes de liberar.
+- Durante o uso, o Sistema Guimma revisa a licenca a cada 10 minutos.
+- O agente de segundo plano tambem consulta a cada 10 minutos quando instalado na inicializacao.
+- Se a internet falhar, uma licenca local ainda valida pode liberar o uso ate a data `valid_until`.
 - Se o servidor confirmar pagamento ativo, grava uma nova validade de 30 dias.
+- Se o servidor informar bloqueio/inatividade, o acesso local e bloqueado.
 - O botao `Validar agora` força uma consulta imediata ao servidor.
 - A mesma licenca nao pode ficar ativa em dois computadores ao mesmo tempo.
 - Para trocar de computador, clique em `Desativar` no computador atual e depois valide no novo.

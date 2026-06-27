@@ -25,7 +25,7 @@ def install_autostart() -> str:
             "Label": LABEL,
             "ProgramArguments": _program_arguments(),
             "RunAtLoad": True,
-            "StartInterval": 3600,
+            "StartInterval": 600,
             "KeepAlive": False,
         }
         with plist_path.open("wb") as handle:

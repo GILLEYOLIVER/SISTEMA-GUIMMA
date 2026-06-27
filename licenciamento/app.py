@@ -53,7 +53,7 @@ class LicenseApp:
         self.root.configure(bg=BG)
 
         self.config = load_config()
-        self.enabled_var = tk.BooleanVar(value=bool(self.config.get("enabled")))
+        self.enabled_var = tk.BooleanVar(value=True)
         self.server_var = tk.StringVar(value=str(self.config.get("server_url") or ""))
         self.email_var = tk.StringVar(value=str(self.config.get("customer_email") or ""))
         self.status_var = tk.StringVar(value=current_status_text())
@@ -127,6 +127,7 @@ class LicenseApp:
             selectcolor=PANEL,
             font=("Arial", 11),
             anchor="w",
+            state="disabled",
         )
         option.grid(row=2, column=1, sticky="w", padx=(0, 24), pady=(8, 14))
 
@@ -226,7 +227,7 @@ class LicenseApp:
 
     def _collect_config(self) -> dict:
         config = dict(self.config)
-        config["enabled"] = bool(self.enabled_var.get())
+        config["enabled"] = True
         config["server_url"] = self.server_var.get().strip()
         config["customer_email"] = self.email_var.get().strip().lower()
         return config
