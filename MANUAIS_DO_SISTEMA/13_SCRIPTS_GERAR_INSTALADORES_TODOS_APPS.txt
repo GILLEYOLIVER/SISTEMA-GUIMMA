@@ -1,48 +1,132 @@
 SCRIPTS PARA GERAR INSTALADORES DE TODOS OS APPS
 Sistema Guimma
 
+Arquivo de referencia para compilar os apps e gerar instaladores.
+
 IMPORTANTE:
 
-- Comandos macOS devem ser rodados no Mac.
-- Comandos Windows devem ser rodados no Windows.
-- O instalador Windows precisa do Inno Setup instalado.
-- O app administrativo de licencas e privado. Nao enviar para clientes.
+- Comandos de Mac devem ser rodados no macOS.
+- Comandos de Windows devem ser rodados no Windows.
+- O instalador Windows precisa do Inno Setup 6 instalado.
+- Para Windows x86, use Python 32 bits.
+- Para Windows x64, use Python 64 bits.
+- O app "Sistema Guimma Licencas Admin" e privado. Nao enviar para clientes.
+- Altere a versao uma vez no comando, quando for gerar uma nova entrega.
+
+
+============================================================
+VERSAO USADA NOS EXEMPLOS
+============================================================
+
+Versao atual sugerida pelos exemplos:
+
+1.0.1
+
+Se quiser gerar outra versao, troque 1.0.1 por 1.0.2, 1.0.3, etc.
+
+
+============================================================
+CAMINHO RAPIDO - GERAR TUDO NO MAC
+============================================================
+
+ESTE BLOCO E PARA MAC.
+
+O que gera:
+
+- Sistema Guimma.app
+- Sistema Guimma Licenca.app
+- CONFIGURAR_BANCO.app
+- CONFIGURAR_POSTGRES.app
+- Instalador .pkg do Sistema Guimma
+- Instalador .dmg do Sistema Guimma
+- Release final em dist/release/
+
+Rodar no Terminal do Mac:
+
+cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
+
+export VERSION=1.0.1
+
+PYTHON_BIN=.venv/bin/python ./packaging/macos/build_installer.sh --version "$VERSION" --with-dmg --with-pkg
+
+GUIMMA_VERSION="$VERSION" GUIMMA_REQUIRE_WINDOWS=0 ./packaging/release/build_release.sh
+
+Saidas principais:
+
+dist/Sistema Guimma.app
+dist/Sistema Guimma Licenca.app
+dist/SistemaGuimma/CONFIGURAR_BANCO.app
+dist/SistemaGuimma/CONFIGURAR_POSTGRES.app
+dist/installers/macos/Sistema Guimma 1.0.1 macOS.pkg
+dist/installers/macos/Sistema Guimma 1.0.1 macOS.dmg
+dist/release/Sistema_Guimma_1.0.1/
+
+
+============================================================
+CAMINHO RAPIDO - GERAR TUDO NO WINDOWS
+============================================================
+
+ESTE BLOCO E PARA WINDOWS.
+
+O que gera:
+
+- Sistema_Guimma_Setup_x64.exe
+- SistemaGuimmaLicenca.exe
+- CONFIGURAR_BANCO.exe
+- CONFIGURAR_POSTGRES.exe
+- Pasta unificada para entrega ao cliente/servidor
+- Release final em dist\release\
+
+Rodar no PowerShell do Windows, na raiz do projeto:
+
+cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
+
+$env:GUIMMA_VERSION = "1.0.1"
+
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_installer.ps1 -Python python -Version $env:GUIMMA_VERSION -Architecture x64
+
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_unified_package.ps1 -Python python -Version $env:GUIMMA_VERSION -Architecture x64
+
+powershell -ExecutionPolicy Bypass -File packaging\release\build_release.ps1 -Python python -Version $env:GUIMMA_VERSION -Architecture x64
+
+Saidas principais:
+
+dist\Sistema_Guimma_Setup_x64.exe
+dist\SistemaGuimmaLicenca.exe
+dist\SistemaGuimma\CONFIGURAR_BANCO.exe
+dist\Sistema_Guimma_1.0.1_x64\CONFIGURAR_POSTGRES.exe
+dist\Sistema_Guimma_1.0.1_x64\
+dist\release\Sistema_Guimma_1.0.1\
 
 
 ============================================================
 SCRIPT 1 - [MAC] GERAR INSTALADOR DO SISTEMA GUIMMA
 ============================================================
 
-O que faz:
-
-Gera o app e o instalador macOS do Sistema Guimma.
-
 ESTE COMANDO E PARA MAC.
 
-Rodar no Mac, na raiz do projeto:
+Gera o app principal, o licenciador do cliente, os configuradores de banco e
+os instaladores .pkg/.dmg do Sistema Guimma.
 
 cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
 
-PYTHON_BIN=.venv/bin/python ./packaging/macos/build_installer.sh --version 1.0.0 --with-dmg --with-pkg
+PYTHON_BIN=.venv/bin/python ./packaging/macos/build_installer.sh --version 1.0.1 --with-dmg --with-pkg
 
 Saidas esperadas:
 
 dist/Sistema Guimma.app
-dist/Sistema Guimma.pkg
-dist/installers/macos/Sistema Guimma 1.0.0 macOS.pkg
+dist/Sistema Guimma Licenca.app
+dist/SistemaGuimma/CONFIGURAR_BANCO.app
+dist/SistemaGuimma/CONFIGURAR_POSTGRES.app
+dist/installers/macos/Sistema Guimma 1.0.1 macOS.pkg
+dist/installers/macos/Sistema Guimma 1.0.1 macOS.dmg
 
 
 ============================================================
-SCRIPT 2 - [MAC] GERAR CONFIGURADOR DE BANCO
+SCRIPT 2 - [MAC] GERAR SOMENTE CONFIGURADOR DE BANCO
 ============================================================
-
-O que faz:
-
-Gera o app Configurar Banco para macOS.
 
 ESTE COMANDO E PARA MAC.
-
-Rodar no Mac:
 
 cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
 
@@ -54,20 +138,29 @@ dist/SistemaGuimma/CONFIGURAR_BANCO.app
 
 
 ============================================================
-SCRIPT 3 - [MAC] GERAR APP LICENCIADOR DO CLIENTE
+SCRIPT 3 - [MAC] GERAR SOMENTE CONFIGURADOR POSTGRESQL
 ============================================================
-
-O que faz:
-
-Gera o app Sistema Guimma Licenca, usado pelo cliente para validar o email.
 
 ESTE COMANDO E PARA MAC.
 
-Rodar no Mac:
+cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
+
+PYTHON_BIN=.venv/bin/python ./packaging/macos/build_postgres_config.sh
+
+Saida esperada:
+
+dist/SistemaGuimma/CONFIGURAR_POSTGRES.app
+
+
+============================================================
+SCRIPT 4 - [MAC] GERAR SOMENTE LICENCIADOR DO CLIENTE
+============================================================
+
+ESTE COMANDO E PARA MAC.
 
 cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
 
-.venv/bin/python -m PyInstaller SistemaGuimmaLicenca.spec --noconfirm
+.venv/bin/python -m PyInstaller --clean --noconfirm SistemaGuimmaLicenca.spec
 
 Saida esperada:
 
@@ -75,20 +168,16 @@ dist/Sistema Guimma Licenca.app
 
 
 ============================================================
-SCRIPT 4 - [MAC] GERAR INSTALADOR DO LICENCIADOR DO CLIENTE
+SCRIPT 5 - [MAC] GERAR INSTALADOR DO LICENCIADOR DO CLIENTE
 ============================================================
-
-O que faz:
-
-Cria um instalador .pkg separado apenas para o licenciador do cliente.
 
 ESTE COMANDO E PARA MAC.
 
-Rodar no Mac:
+Use depois de gerar o app do licenciador.
 
 cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
 
-pkgbuild --component "dist/Sistema Guimma Licenca.app" --install-location "/Applications" --identifier "com.sistemaguimma.licenca" --version "1.0.0" "dist/Sistema Guimma Licenca.pkg"
+pkgbuild --component "dist/Sistema Guimma Licenca.app" --install-location "/Applications" --identifier "com.sistemaguimma.licenca" --version "1.0.1" "dist/Sistema Guimma Licenca.pkg"
 
 Saida esperada:
 
@@ -96,21 +185,16 @@ dist/Sistema Guimma Licenca.pkg
 
 
 ============================================================
-SCRIPT 5 - [MAC] GERAR APP ADMINISTRATIVO DE LICENCAS
+SCRIPT 6 - [MAC] GERAR APP ADMINISTRATIVO DE LICENCAS
 ============================================================
-
-O que faz:
-
-Gera o app privado Sistema Guimma Licencas Admin.
-Esse app e somente para administracao interna.
 
 ESTE COMANDO E PARA MAC.
 
-Rodar no Mac:
+App privado. Nao enviar para clientes.
 
 cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
 
-.venv/bin/python -m PyInstaller SistemaGuimmaLicencasAdmin.spec --noconfirm
+.venv/bin/python -m PyInstaller --clean --noconfirm SistemaGuimmaLicencasAdmin.spec
 
 Saida esperada:
 
@@ -118,17 +202,12 @@ dist/Sistema Guimma Licencas Admin.app
 
 
 ============================================================
-SCRIPT 6 - [MAC] GERAR INSTALADOR PRIVADO DO ADMIN DE LICENCAS
+SCRIPT 7 - [MAC] GERAR INSTALADOR PRIVADO DO ADMIN DE LICENCAS
 ============================================================
-
-O que faz:
-
-Cria uma pasta privada e um instalador .pkg para o app administrativo.
-Nao enviar esse instalador para clientes.
 
 ESTE COMANDO E PARA MAC.
 
-Rodar no Mac:
+Use depois de gerar o app administrativo.
 
 cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
 
@@ -136,7 +215,7 @@ mkdir -p "dist/Sistema Guimma Licencas Admin - Privado/macOS" "dist/Sistema Guim
 
 ditto "dist/Sistema Guimma Licencas Admin.app" "dist/Sistema Guimma Licencas Admin - Privado/macOS/Sistema Guimma Licencas Admin.app"
 
-pkgbuild --component "dist/Sistema Guimma Licencas Admin - Privado/macOS/Sistema Guimma Licencas Admin.app" --install-location "/Applications" --identifier "com.sistemaguimma.licencasadmin" --version "1.0.0" "dist/Sistema Guimma Licencas Admin - Privado/macOS/Sistema Guimma Licencas Admin.pkg"
+pkgbuild --component "dist/Sistema Guimma Licencas Admin - Privado/macOS/Sistema Guimma Licencas Admin.app" --install-location "/Applications" --identifier "com.sistemaguimma.licencasadmin" --version "1.0.1" "dist/Sistema Guimma Licencas Admin - Privado/macOS/Sistema Guimma Licencas Admin.pkg"
 
 Saidas esperadas:
 
@@ -145,46 +224,54 @@ dist/Sistema Guimma Licencas Admin - Privado/macOS/Sistema Guimma Licencas Admin
 
 
 ============================================================
-SCRIPT 7 - [WINDOWS] GERAR INSTALADOR OFICIAL DO SISTEMA GUIMMA X64
+SCRIPT 8 - [MAC] GERAR RELEASE COMPLETO MAC
 ============================================================
 
-O que faz:
+ESTE COMANDO E PARA MAC.
 
-Gera o instalador oficial Windows 64 bits do Sistema Guimma.
+Gera release pelo Mac sem exigir executaveis Windows.
 
-ESTE COMANDO E PARA WINDOWS.
+cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
 
-Rodar no Windows, na raiz do projeto:
-
-cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
-
-powershell -ExecutionPolicy Bypass -File packaging\windows\build_installer.ps1 -Python python -Version 1.0.0 -Architecture x64
+GUIMMA_VERSION=1.0.1 GUIMMA_REQUIRE_WINDOWS=0 ./packaging/release/build_release.sh
 
 Saida esperada:
 
-dist\Sistema_Guimma_Setup_x64.exe
+dist/release/Sistema_Guimma_1.0.1/
 
 
 ============================================================
-SCRIPT 8 - [WINDOWS] GERAR INSTALADOR OFICIAL DO SISTEMA GUIMMA X86
+SCRIPT 9 - [WINDOWS] GERAR INSTALADOR OFICIAL DO SISTEMA GUIMMA X64
 ============================================================
-
-O que faz:
-
-Gera o instalador oficial Windows 32 bits.
-Use somente se precisar atender computador antigo 32 bits.
-
-Importante:
-
-Para Architecture x86, use Python 32 bits.
 
 ESTE COMANDO E PARA WINDOWS.
 
-Rodar no Windows:
+Gera o instalador oficial Windows 64 bits do Sistema Guimma.
+Este script tambem gera o licenciador do cliente e o CONFIGURAR_BANCO.exe.
 
 cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
 
-powershell -ExecutionPolicy Bypass -File packaging\windows\build_installer.ps1 -Python python -Version 1.0.0 -Architecture x86
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_installer.ps1 -Python python -Version 1.0.1 -Architecture x64
+
+Saidas esperadas:
+
+dist\Sistema_Guimma_Setup_x64.exe
+dist\SistemaGuimmaLicenca.exe
+dist\SistemaGuimma\CONFIGURAR_BANCO.exe
+
+
+============================================================
+SCRIPT 10 - [WINDOWS] GERAR INSTALADOR OFICIAL DO SISTEMA GUIMMA X86
+============================================================
+
+ESTE COMANDO E PARA WINDOWS.
+
+Use somente para computador antigo 32 bits.
+Para Architecture x86, use Python 32 bits.
+
+cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
+
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_installer.ps1 -Python python -Version 1.0.1 -Architecture x86
 
 Saida esperada:
 
@@ -192,25 +279,21 @@ dist\Sistema_Guimma_Setup_x86.exe
 
 
 ============================================================
-SCRIPT 9 - [WINDOWS] GERAR PACOTE UNIFICADO PARA CLIENTE/SERVIDOR
+SCRIPT 11 - [WINDOWS] GERAR PACOTE UNIFICADO CLIENTE/SERVIDOR X64
 ============================================================
-
-O que faz:
-
-Gera uma pasta final com instalador do sistema, configurador de banco,
-CONFIGURAR_POSTGRES.exe e scripts.
 
 ESTE COMANDO E PARA WINDOWS.
 
-Rodar no Windows:
+Gera a pasta final Windows com instalador do sistema, CONFIGURAR_BANCO.exe,
+CONFIGURAR_POSTGRES.exe e SCRIPTS.
 
 cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
 
-powershell -ExecutionPolicy Bypass -File packaging\windows\build_unified_package.ps1 -Python python -Version 1.0.0 -Architecture x64
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_unified_package.ps1 -Python python -Version 1.0.1 -Architecture x64
 
 Saida esperada:
 
-dist\Sistema_Guimma_1.0.0_x64\
+dist\Sistema_Guimma_1.0.1_x64\
 
 Conteudo esperado:
 
@@ -218,20 +301,13 @@ Sistema_Guimma_Setup_x64.exe
 CONFIGURAR_BANCO.exe
 CONFIGURAR_POSTGRES.exe
 SCRIPTS\
-PG_ICON.ico
 
 
 ============================================================
-SCRIPT 10 - [WINDOWS] GERAR APENAS O LICENCIADOR DO CLIENTE
+SCRIPT 12 - [WINDOWS] GERAR SOMENTE LICENCIADOR DO CLIENTE
 ============================================================
-
-O que faz:
-
-Gera o executavel Windows do app Sistema Guimma Licenca.
 
 ESTE COMANDO E PARA WINDOWS.
-
-Rodar no Windows:
 
 cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
 
@@ -243,17 +319,12 @@ dist\SistemaGuimmaLicenca.exe
 
 
 ============================================================
-SCRIPT 11 - [WINDOWS] GERAR APP ADMINISTRATIVO DE LICENCAS
+SCRIPT 13 - [WINDOWS] GERAR APP ADMINISTRATIVO DE LICENCAS
 ============================================================
-
-O que faz:
-
-Gera o executavel Windows do app privado Sistema Guimma Licencas Admin.
-Nao enviar para clientes.
 
 ESTE COMANDO E PARA WINDOWS.
 
-Rodar no Windows:
+App privado. Nao enviar para clientes.
 
 cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
 
@@ -265,80 +336,44 @@ dist\SistemaGuimmaLicencasAdmin.exe
 
 
 ============================================================
-SCRIPT 12 - [WINDOWS] GERAR CONFIGURAR_POSTGRES.EXE
+SCRIPT 14 - [WINDOWS] GERAR SOMENTE CONFIGURAR_POSTGRES.EXE
 ============================================================
-
-O que faz:
-
-Gera somente o app CONFIGURAR_POSTGRES.exe para preparar PostgreSQL no servidor.
 
 ESTE COMANDO E PARA WINDOWS.
 
-Rodar no Windows:
-
 cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
 
-pyinstaller --noconfirm --clean --onefile --windowed --name "CONFIGURAR_POSTGRES" --icon "icons\PG_ICON.ico" "configurar_postgres.py"
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_unified_package.ps1 -Python python -Version 1.0.1 -Architecture x64 -SkipInstallerBuild
 
 Saida esperada:
 
-dist\CONFIGURAR_POSTGRES.exe
+dist\Sistema_Guimma_1.0.1_x64\CONFIGURAR_POSTGRES.exe
 
 
 ============================================================
-SCRIPT 13 - [WINDOWS] GERAR RELEASE COMPLETO
+SCRIPT 15 - [WINDOWS] GERAR RELEASE COMPLETO WINDOWS
 ============================================================
-
-O que faz:
-
-Gera a estrutura final de release para entrega.
 
 ESTE COMANDO E PARA WINDOWS.
 
-Rodar no Windows:
-
 cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
 
-powershell -ExecutionPolicy Bypass -File packaging\release\build_release.ps1 -Python python -Version 1.0.0 -Architecture x64
+powershell -ExecutionPolicy Bypass -File packaging\release\build_release.ps1 -Python python -Version 1.0.1 -Architecture x64
 
 Saida esperada:
 
-dist\release\
+dist\release\Sistema_Guimma_1.0.1\
+dist\Sistema_Guimma_1.0.1_INSTALLER.zip
 
 
 ============================================================
-SCRIPT 14 - [MAC] GERAR RELEASE COMPLETO SEM EXIGIR WINDOWS
+SCRIPT 16 - [MAC OU WINDOWS] PUBLICAR SERVIDOR CLOUDFLARE DE LICENCAS
 ============================================================
-
-O que faz:
-
-Gera release pelo Mac, sem exigir build Windows.
-
-ESTE COMANDO E PARA MAC.
-
-Rodar no Mac:
-
-cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
-
-GUIMMA_VERSION=1.0.0 GUIMMA_REQUIRE_WINDOWS=0 ./packaging/release/build_release.sh
-
-Saida esperada:
-
-dist/release/
-
-
-============================================================
-SCRIPT 15 - [MAC OU WINDOWS] PUBLICAR SERVIDOR CLOUDFLARE DE LICENCAS
-============================================================
-
-O que faz:
-
-Publica o Worker de licencas no Cloudflare.
-Nao e instalador, mas faz parte da entrega do sistema de licenciamento.
 
 ESTE COMANDO PODE SER RODADO NO MAC OU NO WINDOWS.
 
-Rodar no Mac ou Windows com Node/Wrangler configurado:
+Publica o Worker de licencas no Cloudflare.
+Nao e instalador, mas faz parte da entrega do sistema de licenciamento.
 
 cd servidor_licencas_cloudflare
 
@@ -350,17 +385,12 @@ https://sistema-guimma-licencas.sistemaguimma.workers.dev
 
 
 ============================================================
-SCRIPT 16 - [MAC OU WINDOWS] APLICAR MIGRACOES DO BANCO DE LICENCAS
+SCRIPT 17 - [MAC OU WINDOWS] APLICAR MIGRACOES DO BANCO DE LICENCAS
 ============================================================
-
-O que faz:
-
-Aplica alteracoes de tabela no banco D1 do Cloudflare.
-Use somente quando existir migracao nova.
 
 ESTE COMANDO PODE SER RODADO NO MAC OU NO WINDOWS.
 
-Rodar na pasta do servidor Cloudflare:
+Use somente quando existir migracao nova do Cloudflare D1.
 
 cd servidor_licencas_cloudflare
 
@@ -368,34 +398,46 @@ pnpm wrangler d1 migrations apply sistema_guimma_licencas --remote
 
 
 ============================================================
-ORDEM RECOMENDADA PARA VENDA
+ORDEM RECOMENDADA PARA ENTREGA A CLIENTE
 ============================================================
 
-1. Gerar instalador do sistema para o sistema operacional do cliente.
+1. Gerar instalador do sistema no sistema operacional do cliente.
 
-2. Garantir que o licenciador do cliente esteja compilado e incluso.
+2. Confirmar que o licenciador do cliente esta incluso no instalador.
 
-3. Se o cliente tiver servidor local, gerar/configurar CONFIGURAR_POSTGRES.
+3. Se houver servidor local, gerar ou usar CONFIGURAR_POSTGRES.
 
-4. Testar instalacao em uma maquina limpa.
+4. Instalar PostgreSQL e banco no servidor/local pelo configurador.
 
-5. Cadastrar email do cliente no painel web.
+5. Instalar Sistema Guimma nas estacoes.
 
-6. Validar licenca no computador do cliente.
+6. Cadastrar email do cliente no painel web de licencas.
 
-7. Fazer checklist de entrega.
+7. Validar licenca no computador do cliente.
+
+8. Testar abertura do Sistema Guimma, banco, estoque, prestadores e fluxo de corte.
 
 
 ============================================================
-OBSERVACAO SOBRE O APP ADMINISTRATIVO
+RESUMO DO QUE ENVIAR AO CLIENTE
 ============================================================
 
-O app "Sistema Guimma Licencas Admin" e privado.
+Cliente Mac:
 
-Para uso normal, prefira o painel web:
+- Sistema Guimma 1.0.1 macOS.pkg ou .dmg
+- Instrucoes de instalacao
+- Email cadastrado na licenca
 
-https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+Cliente Windows:
 
-Nao coloque o app administrativo no instalador do cliente.
-Nao envie senha do painel web.
-Nao envie token do Cloudflare.
+- Pasta dist\Sistema_Guimma_1.0.1_x64\ ou ZIP final
+- Sistema_Guimma_Setup_x64.exe
+- CONFIGURAR_POSTGRES.exe quando a maquina for servidor
+- SCRIPTS\ quando for configurar banco do zero
+- Email cadastrado na licenca
+
+Privado, nao enviar ao cliente:
+
+- Sistema Guimma Licencas Admin
+- Token do Cloudflare
+- Senha do painel web
