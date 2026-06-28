@@ -58,6 +58,7 @@ from PAGINAS_DO_SISTEMA.UI_COMBOBOX import (
     habilitar_duplo_clique_combobox,
     instalar_duplo_clique_global,
 )
+from PAGINAS_DO_SISTEMA.UI_CALENDARIO import fechar_calendarios
 from PAGINAS_DO_SISTEMA.LOG_SISTEMA import get_logger
 
 instalar_duplo_clique_global()
@@ -1996,6 +1997,10 @@ class OperaMenuApp(ctk.CTk):
         if getattr(self, "_closing", False):
             return
         try:
+            fechar_calendarios(self)
+        except Exception:
+            pass
+        try:
             self._flush_settings_save()
         except Exception:
             pass
@@ -3639,6 +3644,10 @@ class OperaMenuApp(ctk.CTk):
     def open_page(self, page_name: str, categoria: str | None = None):
         if getattr(self, "_page_loading", False) or getattr(self, "_closing", False):
             return
+        try:
+            fechar_calendarios(self)
+        except Exception:
+            pass
         route_action = (self.routes.get(page_name) or {}).get("action")
         if page_name == "Trocar Usuário" or route_action == "trocar_usuario":
             self.trocar_usuario()
