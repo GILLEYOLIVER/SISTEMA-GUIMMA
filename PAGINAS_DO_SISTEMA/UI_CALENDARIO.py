@@ -3,10 +3,85 @@ from __future__ import annotations
 
 import calendar as _cal
 from datetime import date, datetime, timedelta
+import platform
 import re
 from typing import Callable
 
 import customtkinter as ctk
+
+
+IS_MAC = platform.system() == "Darwin"
+_OPEN_CALENDAR_POPUPS = []
+
+
+def _widget_exists(widget) -> bool:
+    try:
+        return bool(widget and widget.winfo_exists())
+    except Exception:
+        return False
+
+
+def _get_root(widget):
+    try:
+        return widget.winfo_toplevel()
+    except Exception:
+        return widget
+
+
+def _popup_owner_root(popup):
+    try:
+        return getattr(popup, "_ui_calendar_owner_root", None)
+    except Exception:
+        return None
+
+
+def _destroy_popup(popup):
+    try:
+        if _widget_exists(popup):
+            popup.destroy()
+    except Exception:
+        pass
+
+
+def _unregister_popup(popup):
+    try:
+        if popup in _OPEN_CALENDAR_POPUPS:
+            _OPEN_CALENDAR_POPUPS.remove(popup)
+    except Exception:
+        pass
+
+
+def _release_topmost(popup):
+    try:
+        if _widget_exists(popup):
+            popup.attributes("-topmost", False)
+    except Exception:
+        pass
+
+
+def fechar_calendarios(owner=None):
+    """Fecha popups de calendario abertos antes de trocar de pagina/janela."""
+    root = _get_root(owner) if owner is not None else None
+    for popup in list(_OPEN_CALENDAR_POPUPS):
+        if not _widget_exists(popup):
+            try:
+                _OPEN_CALENDAR_POPUPS.remove(popup)
+            except ValueError:
+                pass
+            continue
+        popup_root = _popup_owner_root(popup) or _get_root(popup)
+        if root is None or popup_root is root:
+            _destroy_popup(popup)
+            try:
+                _OPEN_CALENDAR_POPUPS.remove(popup)
+            except ValueError:
+                pass
+    if owner is not None:
+        for obj in (owner, root):
+            try:
+                obj._ui_calendar_popup = None
+            except Exception:
+                pass
 
 
 def _read_date(entry) -> date:
@@ -127,10 +202,18 @@ def abrir_calendario(
     on_select: Callable[[date | None], None] | None = None,
     auto_close_ms: int = 3000,
 ):
+    root = _get_root(owner)
     try:
         old = getattr(owner, "_ui_calendar_popup", None)
         if old is not None and old.winfo_exists():
             old.destroy()
+    except Exception:
+        pass
+    try:
+        old_root = getattr(root, "_ui_calendar_popup", None)
+        if old_root is not None and old_root is not getattr(owner, "_ui_calendar_popup", None):
+            if old_root.winfo_exists():
+                old_root.destroy()
     except Exception:
         pass
 
@@ -160,14 +243,34 @@ def abrir_calendario(
         hover = _darken(accent)
     button_text = _text_for(accent, text)
 
-    top = ctk.CTkToplevel(owner)
+    top = ctk.CTkToplevel(root)
     try:
-        owner._ui_calendar_popup = top
+        top.withdraw()
     except Exception:
         pass
+    try:
+        top._ui_calendar_owner_root = root
+        owner._ui_calendar_popup = top
+        root._ui_calendar_popup = top
+    except Exception:
+        pass
+    _OPEN_CALENDAR_POPUPS.append(top)
     top.title("Calendário")
     top.resizable(False, False)
     top.configure(fg_color=bg)
+    try:
+        top.protocol("WM_DELETE_WINDOW", lambda: _destroy_popup(top))
+    except Exception:
+        pass
+    try:
+        top.bind("<Destroy>", lambda _event, popup=top: _unregister_popup(popup), add="+")
+    except Exception:
+        pass
+    if IS_MAC:
+        try:
+            top.overrideredirect(True)
+        except Exception:
+            pass
 
     width, height = 320, 365
     try:
@@ -186,9 +289,12 @@ def abrir_calendario(
         top.geometry(f"{width}x{height}")
 
     try:
-        top.transient(owner)
-        top.lift()
-        top.focus_force()
+        top.transient(root)
+        if IS_MAC:
+            top.attributes("-topmost", True)
+        top.lift(root)
+        if not IS_MAC:
+            top.focus_set()
     except Exception:
         pass
 
@@ -408,6 +514,13 @@ def abrir_calendario(
     ).pack(side="left", expand=True, fill="x", padx=(4, 0))
 
     draw()
+    try:
+        top.deiconify()
+        top.lift(root)
+        if IS_MAC:
+            top.after(250, lambda popup=top: _release_topmost(popup))
+    except Exception:
+        pass
     schedule_auto_close()
     return top
 
