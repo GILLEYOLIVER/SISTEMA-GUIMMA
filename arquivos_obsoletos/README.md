@@ -4,6 +4,10 @@ Esta pasta guarda arquivos retirados da raiz porque eram gerados, antigos, dupli
 
 Nada daqui deve ser usado pelo app em producao. Se algum arquivo precisar voltar, revise primeiro as referencias no codigo e nos scripts de build.
 
+Artefatos gerados localmente, como `build/`, `dist/`, caches e instaladores
+temporarios, devem continuar fora do Git. Eles podem ser apagados para um
+teste limpo e recriados pelos scripts em `packaging/`.
+
 ## Categorias
 
 - `builds_antigos/`: saidas antigas de build e instaladores ja gerados.

@@ -46,7 +46,7 @@ print_header() {
 CREATE_DMG="yes"
 CREATE_PKG="yes"
 INTERACTIVE_MODE="no"
-APP_VERSION="${GUIMMA_VERSION:-1.0.0}"
+APP_VERSION="${GUIMMA_VERSION:-1.1.1}"
 APP_DISPLAY_NAME="Sistema Guimma"
 APP_INTERNAL_NAME="SistemaGuimma"
 APP_BUNDLE_NAME="Sistema Guimma"
@@ -76,7 +76,7 @@ Opções:
   --help           Exibe esta ajuda
 
 Exemplo (gerar tudo sem interação):
-  ./packaging/macos/build_installer.sh --version 1.0.0 --with-dmg --with-pkg
+  ./packaging/macos/build_installer.sh --version 1.1.1 --with-dmg --with-pkg
 USAGE
 }
 

@@ -27,11 +27,15 @@ implantacao em um cliente.
 
 [ ] Sistema Guimma instalado.
 [ ] App aparece em Aplicativos/Launchpad no Mac ou Menu Iniciar no Windows.
+[ ] Sistema Guimma Licenca instalado junto.
+[ ] CONFIGURAR_BANCO instalado junto.
+[ ] CONFIGURAR_POSTGRES instalado junto.
 [ ] Splash aparece com Sistema Guimma.
 [ ] Login abre sem erro.
 [ ] Tema inicial correto.
 [ ] Menus e submenus carregam.
 [ ] Telas principais abrem.
+[ ] Sem licenca ativa, sistema bloqueia o acesso.
 
 4. Fluxo minimo de teste
 
@@ -66,6 +70,7 @@ Enviar ao cliente somente:
 [ ] Instalador do Sistema Guimma.
 [ ] Orientacao basica de instalacao.
 [ ] Configurador PostgreSQL, se o cliente for servidor.
+[ ] Licenciador do cliente incluido no instalador.
 
 Nao enviar ao cliente:
 
@@ -84,6 +89,7 @@ Nao enviar ao cliente:
 [ ] Fluxo principal funciona.
 [ ] Backup combinado.
 [ ] Cliente sabe quem chamar em caso de troca de computador.
+[ ] Quando possivel, instalador testado em maquina limpa.
 
 Observacao:
 

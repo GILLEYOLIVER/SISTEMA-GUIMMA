@@ -34,23 +34,36 @@ manual enviado para cliente.
 
 Windows:
 
-1. Baixe e instale o PostgreSQL.
+1. Instale o Sistema Guimma pelo instalador oficial.
 
-2. Durante a instalacao:
+2. Abra no Menu Iniciar:
+
+   Preparar PostgreSQL e Banco
+
+3. Se a instalacao automatica do PostgreSQL nao estiver disponivel no Windows
+   do cliente, baixe e instale o PostgreSQL oficial manualmente.
+
+4. Durante a instalacao do PostgreSQL:
 
    - Defina a senha do usuario postgres.
    - Mantenha a porta 5432, se possivel.
    - Anote a senha em local seguro.
 
-3. Depois da instalacao, rode o configurador do servidor:
+5. Depois da instalacao, rode o configurador do servidor:
 
    CONFIGURAR_POSTGRES.exe
 
-4. Execute como administrador.
+6. Execute como administrador.
 
-5. Use a opcao de configuracao local/servidor.
+7. Use a opcao de configuracao local/servidor.
 
-6. Permita acesso de rede quando o banco for usado por outros computadores.
+8. Execute os scripts na sequencia:
+
+   1_CRIAR_BANCO.sql
+   2_CRIAR_SCHEMA.sql
+   3_CRIAR_TABELAS.sql
+
+9. Permita acesso de rede quando o banco for usado por outros computadores.
 
 macOS:
 

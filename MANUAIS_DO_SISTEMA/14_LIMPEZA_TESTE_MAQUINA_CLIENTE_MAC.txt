@@ -1,0 +1,134 @@
+LIMPEZA PARA TESTAR COMO MAQUINA DE CLIENTE - MAC
+Sistema Guimma
+
+Objetivo:
+
+Remover instalacoes locais do Sistema Guimma no Mac para testar do zero,
+como se fosse um computador novo de cliente.
+
+IMPORTANTE:
+
+Nao apague a pasta do projeto:
+
+/Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
+
+Este roteiro remove apenas:
+
+- Apps instalados em /Applications.
+- Dados locais do Sistema Guimma em Application Support.
+- Agente de licenca do Sistema Guimma.
+- Pasta de instaladores copiada para a Mesa.
+- PostgreSQL instalado em /Library/PostgreSQL.
+
+Nao remova apps de terceiros que tenham "License" no nome. Remova somente os
+nomes listados neste roteiro.
+
+
+============================================================
+1. FECHAR APPS DO SISTEMA GUIMMA
+============================================================
+
+Feche:
+
+- Sistema Guimma.
+- Sistema Guimma Licenca.
+- CONFIGURAR_BANCO.
+- CONFIGURAR_POSTGRES.
+
+Se algum ficar aberto, rode:
+
+pkill -f "/Applications/Sistema Guimma" 2>/dev/null || true
+pkill -f "SistemaGuimmaLicenca" 2>/dev/null || true
+pkill -f "CONFIGURAR_BANCO" 2>/dev/null || true
+pkill -f "CONFIGURAR_POSTGRES" 2>/dev/null || true
+
+
+============================================================
+2. REMOVER AGENTE E DADOS DO USUARIO
+============================================================
+
+Comando no Terminal:
+
+launchctl bootout gui/$(id -u) "$HOME/Library/LaunchAgents/com.sistemaguimma.licenca.plist" 2>/dev/null || true
+rm -f "$HOME/Library/LaunchAgents/com.sistemaguimma.licenca.plist"
+rm -rf "$HOME/Library/Application Support/SistemaGuimma"
+rm -rf "$HOME/Library/Caches/SistemaGuimma"
+rm -rf "$HOME/Library/Logs/SistemaGuimma"
+rm -rf "$HOME/Library/Saved Application State/com.sistemaguimma.app.savedState"
+
+
+============================================================
+3. REMOVER APPS INSTALADOS
+============================================================
+
+Comando no Terminal:
+
+sudo rm -rf "/Applications/Sistema Guimma.app"
+sudo rm -rf "/Applications/Sistema Guimma Licenca.app"
+sudo rm -rf "/Applications/CONFIGURAR_BANCO.app"
+sudo rm -rf "/Applications/CONFIGURAR_POSTGRES.app"
+sudo rm -f "/Applications/Desinstalar Sistema Guimma.command"
+
+
+============================================================
+4. REMOVER POSTGRESQL LOCAL
+============================================================
+
+Use apenas quando quiser simular cliente sem PostgreSQL instalado.
+
+Comando no Terminal:
+
+sudo launchctl bootout system /Library/LaunchDaemons/postgresql-18.plist 2>/dev/null || true
+sudo pkill -u postgres postgres 2>/dev/null || true
+sudo pkill -f "/Library/PostgreSQL/18/bin/postgres" 2>/dev/null || true
+sudo rm -f /Library/LaunchDaemons/postgresql-18.plist
+sudo rm -rf /Library/PostgreSQL
+sudo rm -f /etc/paths.d/postgresql* /etc/manpaths.d/postgresql* 2>/dev/null || true
+
+
+============================================================
+5. REMOVER PASTA DE INSTALADORES DA MESA
+============================================================
+
+Comando no Terminal:
+
+rm -rf "$HOME/Desktop/Instaladores Sistema Guimma"*
+rm -rf "$HOME/Desktop/prints_sistema_guimma"
+
+
+============================================================
+6. ESQUECER RECIBOS DO PACOTE
+============================================================
+
+Comando no Terminal:
+
+sudo pkgutil --forget com.sistemaguimma.app 2>/dev/null || true
+
+
+============================================================
+7. CONFERIR SE FICOU LIMPO
+============================================================
+
+Comandos para conferir:
+
+find /Applications -maxdepth 1 \( -iname "*Sistema Guimma*.app" -o -iname "*CONFIGURAR_POSTGRES*.app" -o -iname "*CONFIGURAR_BANCO*.app" \) -print
+
+find "$HOME/Library/Application Support" "$HOME/Library/LaunchAgents" -maxdepth 2 \( -iname "*SistemaGuimma*" -o -iname "*sistemaguimma*" \) -print 2>/dev/null
+
+ls -ld /Library/PostgreSQL /Library/LaunchDaemons/postgresql-18.plist 2>/dev/null
+
+ps aux | grep -i "/Library/PostgreSQL" | grep -v grep
+
+Se nao aparecer nada, o Mac esta pronto para testar como maquina limpa.
+
+
+============================================================
+8. RECOMECO DO TESTE
+============================================================
+
+1. Gere ou copie os instaladores atuais para a Mesa.
+2. Instale o PKG do Sistema Guimma.
+3. Abra o Sistema Guimma em Aplicativos/Launchpad.
+4. Verifique se o sistema bloqueia sem licenca ativa.
+5. Abra o licenciador e valide com email ativo no painel.
+6. Se o Mac for servidor/local, rode o configurador PostgreSQL e execute 1 -> 2 -> 3.

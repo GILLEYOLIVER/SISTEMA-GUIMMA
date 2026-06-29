@@ -4,7 +4,7 @@
 
 param(
     [string]$Python = "python",
-    [string]$Version = "1.0.0",
+    [string]$Version = "1.1.1",
     [ValidateSet("x64", "x86")]
     [string]$Architecture = "x64",
     [switch]$SkipInstallerBuild
@@ -32,6 +32,7 @@ function Get-PythonArch([string]$PyCmd) {
 $unifiedDir = Join-Path $repoRoot ("dist\Sistema_Guimma_" + $Version + "_" + $Architecture)
 $buildDir = Join-Path $repoRoot "build\pyi_configurar_postgres"
 $configScript = Join-Path $repoRoot "configurar_postgres.py"
+$scriptsDir = Join-Path $repoRoot "SCRIPTS"
 $pgIconCandidates = @(
     (Join-Path $repoRoot "icons\PG_ICON.ico"),
     (Join-Path $repoRoot "PG_ICON.ico")
@@ -57,6 +58,9 @@ if ($pythonArch -ne $Architecture) {
 
 if (-not (Test-Path $configScript)) {
     throw "Missing file: $configScript"
+}
+if (-not (Test-Path $scriptsDir)) {
+    throw "Missing SCRIPTS folder: $scriptsDir"
 }
 if (-not $pgIcon) {
     throw "Missing icon: expected icons\PG_ICON.ico or PG_ICON.ico"
@@ -85,6 +89,7 @@ New-Item -ItemType Directory -Force -Path $unifiedDir | Out-Null
   --distpath "$unifiedDir" `
   --workpath "$buildDir" `
   --specpath "build" `
+  --add-data "$scriptsDir;SCRIPTS" `
   --hidden-import "tkinter" `
   --hidden-import "customtkinter" `
   --hidden-import "winreg" `
@@ -145,7 +150,6 @@ if ($configBancoExe) {
     Write-Warning "CONFIGURAR_BANCO.exe not found to copy into unified folder."
 }
 
-$scriptsDir = Join-Path $repoRoot "SCRIPTS"
 if (Test-Path $scriptsDir) {
     Copy-Item -Recurse -Force $scriptsDir (Join-Path $unifiedDir "SCRIPTS")
 } else {

@@ -1,172 +1,137 @@
-# SISTEMA GUIMMA
+# Sistema Guimma
 
-Aplicação desktop para gestão de produção (modelos, corte, estoque, pagamentos, relatórios e administração), com interface em CustomTkinter e persistência em PostgreSQL.
+Aplicacao desktop para gestao de producao de moda/confeccao: modelos, estoque, prestadores, ordens de corte, envio/retorno de servicos, pagamentos, relatorios, banco PostgreSQL e licenciamento mensal por cliente.
 
----
-
-## Últimas mudanças identificadas (Git)
-
-Levantamento feito a partir dos commits mais recentes da branch `work`:
-
-### 2026-03-26 — `894c74f` — Sincronização local/GitHub
-- Evolução importante no relatório de estoque com grande refatoração de `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`.
-- Inclusão do novo módulo `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE_IA.py` para recursos de análise assistida por IA no contexto de estoque.
-- Ajustes em `PAGINAS_DO_SISTEMA/ENTRADA_ESTOQUE.py` (fluxos de entrada e consistência de dados).
-- Revisões de setup/conexão em `PAGINAS_DO_SISTEMA/SETUP_BANCO.py` e `configurar_postgres.py`.
-- Sincronização de arquivos de configuração (`config.json` em diferentes pontos do projeto).
-
-### 2026-03-25 — `95a043f` — Sincronização local/GitHub
-- Iterações extensas de protótipos de relatório em:
-  - `PAGINAS_DO_SISTEMA/NOVO RELATORIO.py`
-  - `PAGINAS_DO_SISTEMA/NOVO RELATORIO QUASE BOM.py`
-- Atualização significativa de `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`.
-- Ajustes em `PAGINAS_DO_SISTEMA/ENTRADA_ESTOQUE.py`.
-- Inclusão de memória de contexto IA em `PAGINAS_DO_SISTEMA/ia_memory.json`.
-- Mudanças de estrutura SQL em `SCRIPTS/3_CRIAR_TABELAS.sql`.
-
-### 2026-03-24 — `be2840e` — Melhoria de experiência no assistente
-- Humanização das respostas do assistente na interface principal.
-- Redução de fallback “seco” de banco nas respostas.
-- Arquivos centrais alterados:
-  - `PAGINAS_DO_SISTEMA/MENU_PRINCIPAL.py`
-  - `PAGINAS_DO_SISTEMA/RELATORIO_ESTOQUE.py`
-
-> Nota: os commits de merge de PR entre 2026-03-24 e 2026-03-25 foram excluídos do resumo por serem integrações de branch.
-
----
-
-## Estrutura real do repositório (atualizada)
+## Estrutura Principal
 
 ```text
 SISTEMA-GUIMMA/
-├── README.md
-├── requirements.txt
-├── SistemaGuimma.spec
-├── PAGINAS_DO_SISTEMA/          # Código principal da aplicação
-├── SCRIPTS/                     # Scripts SQL de criação/manutenção do banco
-├── icons/                       # Ícones oficiais do app e instaladores
-├── packaging/                   # Build e instaladores (Windows/macOS)
-├── docs/                        # Documentação, roteiros e relatórios
-├── dist/                        # Saída dos builds locais
-├── arquivos_obsoletos/          # Itens antigos/gerados retirados do fluxo ativo
-├── Versao do Sistema/           # Pacotes de versão/atualização
-└── backup_banco/                # Backups SQL locais preservados
+├── PAGINAS_DO_SISTEMA/          # Telas e regras principais do sistema
+├── SCRIPTS/                     # SQL oficial: 1 banco, 2 schema, 3 tabelas
+├── licenciamento/               # Licenciador do cliente, agente e admin privado
+├── servidor_licencas_cloudflare/# Worker/API/painel web de licencas
+├── packaging/                   # Scripts de build macOS/Windows/release
+├── MANUAIS_DO_SISTEMA/          # Manuais de instalacao, licenca e entrega
+├── icons/                       # Icones oficiais dos apps
+├── data/                        # Dados auxiliares empacotados
+└── arquivos_obsoletos/          # Itens antigos fora do fluxo atual
 ```
 
-> Observação: não existe `src/PAGINAS_DO_SISTEMA` neste repositório; a pasta canônica é `PAGINAS_DO_SISTEMA/` na raiz.
+`build/`, `dist/`, caches, logs e instaladores gerados localmente nao sao versionados.
 
----
+## Apps Gerados
 
-## Pasta principal: `PAGINAS_DO_SISTEMA/`
+- `Sistema Guimma`: app principal.
+- `Sistema Guimma Licenca`: licenciador do cliente, instalado junto com o sistema.
+- `CONFIGURAR_BANCO`: configurador de conexao local/rede.
+- `CONFIGURAR_POSTGRES`: preparador do PostgreSQL e dos scripts `1 -> 2 -> 3`.
+- `Sistema Guimma Licencas Admin`: app privado, somente para administracao interna.
 
-### Núcleo e inicialização
-- `MAIN.py`
-- `MENU_PRINCIPAL.py`
-- `LOGUIN.py`
-- `SPLASH.py`
-- `OPERA_PATHS.py`
-- `ATUALIZAR_SISTEMA.py`
+Icones oficiais:
 
-### Banco e administração
-- `BANCO_DE_DADOS_PG.py`
-- `SCHEMA_MANAGER.py`
-- `USUARIOS.py`
-- `BACKUP.py`
-- `database_logger.py`
+- Sistema: `icons/ICONE_SISTEMA.icns` e `icons/ICONE_SISTEMA.ico`.
+- Licenciador cliente: `icons/ICONE_LICENCIADOR.icns` e `icons/ICONE_LICENCIADOR.ico`.
+- Admin licencas: `icons/ICONE_LICENCA_ADMIN.icns` e `icons/ICONE_LICENCA_ADMIN.ico`.
+- PostgreSQL: `icons/PG_ICON.ico`.
 
-### Produção, ordens e planejamento
-- `NOVA_ORDEM.py`
-- `ORDENS_PLANEJADAS.py`
-- `PLANEJAMENTO_PRODUCAO.py`
-- `CADASTRO_DE_CORTE.py`
-- `CONTROLE_ENVIO_CORTES.py`
-- `CONTROLE_RETORNO_CORTE.py`
-- `FINALIZAR_CORTE_ACABAMENTO.py`
-- `RETRABALHO_DEFEITOS.py`
+## Banco de Dados
 
-### Cadastros, estoque e financeiro
-- `CADASTRAR_MODELO.py`
-- `CADASTRO_CLIENTES.py`
-- `CADASTRO_FACCOES.py`
-- `ENTRADA_ESTOQUE.py`
-- `SAIDA_ESTOQUE.py`
-- `COMPRAS.py`
-- `CONTAS_A_PAGAR.py`
-- `PAGAMENTO_SERVICOS.py`
-- `FOLHA_PAGAMENTO_SERVICOS.py`
-- `FECHAMENTO_MENSAL.py`
-- `PRECIFICACAO_PRODUTO.py`
+Banco padrao:
 
-### Relatórios e utilitários de UI
-- `DASHBOARD.py`
-- `RELATORIO_ESTOQUE.py`
-- `RELATORIO_ESTOQUE_IA.py`  ← cérebro/engine de IA separado da tela
-- `RELATORIO_ACABAMENTO.py`
-- `RELATORIO_ENVIO_DETALHADO.py`
-- `RELATORIO_MODELOS_PRODUZIDOS.py`
-- `RELATORIO_CUSTOS_REAIS.py`
-- `RELATORIO_SERVICOS_EXTERNOS.py`
-- `IMPRIMIR_FICHAS_TECNICAS.py`
-- `RECIBOS_PAGAMENTOS.py`
-- `UI_TREEVIEW_OPERA.py`
-- `TEMAS.py`
-- `I18N_PAGE_ADAPTER.py`
-- `route_map.json`
+```text
+BANCO_OPERA
+```
 
----
+Schema padrao:
 
-## Arquitetura atual do Relatório de Estoque com IA
+```text
+opera
+```
 
-Sim — agora o “cérebro” de IA do relatório de estoque está desacoplado da página principal:
+Scripts oficiais:
 
-- `RELATORIO_ESTOQUE.py`: responsável por UI, filtros, eventos da tela e integração com os componentes visuais.
-- `RELATORIO_ESTOQUE_IA.py`: responsável por lógica de IA, interpretação de perguntas/comandos e geração de respostas/contexto do relatório.
+```text
+SCRIPTS/1_CRIAR_BANCO.sql
+SCRIPTS/2_CRIAR_SCHEMA.sql
+SCRIPTS/3_CRIAR_TABELAS.sql
+SCRIPTS/APAGAR_TUDO.sql
+```
 
-Esse desacoplamento melhora manutenção, testes e evolução do assistente sem poluir o arquivo da tela.
+Em instalacao servidor/local, use o `CONFIGURAR_POSTGRES` para instalar/preparar PostgreSQL e executar os scripts na sequencia `1 -> 2 -> 3`.
 
----
+## Licenciamento
 
-## Banco de dados
+O cliente usa email como identificacao. A licenca fica ativa em apenas 1 computador por vez. Para trocar de maquina, o cliente desativa no computador antigo ou o administrador usa `Liberar computador` no painel web.
 
-Scripts SQL principais na raiz em `SCRIPTS/`:
-- `1_CRIAR_BANCO.sql`
-- `2_CRIAR_SCHEMA.sql`
-- `3_CRIAR_TABELAS.sql`
-- `APAGAR_TUDO.sql`
+Painel administrativo:
 
-`3_CRIAR_TABELAS.sql` contém criação de tabelas, índices e objetos auxiliares do sistema (usuários, produção, estoque, serviços, planejamento e relatórios).
+```text
+https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+```
 
----
+Credenciais/tokens administrativos nunca devem ser enviados para clientes.
 
-## Build e empacotamento
+## Build Rapido
 
-### Pré-requisitos
-- Python 3.x
-- Dependências em `requirements.txt`
-- PyInstaller
+### macOS
 
-### Build Windows
 ```bash
-python packaging/build.py --platform windows
+cd /Users/gilleydeoliveiraguimaraes/PycharmProjects/SISTEMA-GUIMMA
+PYTHON_BIN=.venv/bin/python ./packaging/macos/build_installer.sh --version 1.1.1 --with-dmg --with-pkg
 ```
 
-### Build macOS
-```bash
-python packaging/build.py --platform macos
+Saidas principais:
+
+```text
+dist/Sistema Guimma.app
+dist/Sistema Guimma Licenca.app
+dist/SistemaGuimma/CONFIGURAR_BANCO.app
+dist/SistemaGuimma/CONFIGURAR_POSTGRES.app
+dist/installers/macos/Sistema Guimma 1.1.1 macOS.pkg
+dist/installers/macos/Sistema Guimma 1.1.1 macOS.dmg
 ```
 
-### Instaladores
-- Windows: `packaging/windows/SISTEMA_GUIMMA.iss`
-- macOS: `packaging/macos/build_installer.sh`
-- Detalhes do fluxo: `packaging/README_INSTALADORES.md`
+Para entrega ao cliente, use o `.pkg` ou `.dmg`. Nao entregue `.app` solto
+fora de `/Applications`.
 
----
+### Windows
 
-## Observações de manutenção
+Rodar em um computador Windows com Python da arquitetura desejada e Inno Setup 6 instalado.
 
-- Os nomes dos módulos em rotas seguem padrão canônico `*.py` (sem sufixos legados de localidade).
-- Após atualização de arquivos Python, reinicie a aplicação para recarregar módulos em memória.
-- Para mudanças de banco, mantenha sincronizados:
-  1. `SCRIPTS/3_CRIAR_TABELAS.sql`
-  2. rotinas de instalador em `PAGINAS_DO_SISTEMA/SETUP_BANCO.py`
-  3. empacotamento em `packaging/`
+```powershell
+cd C:\CAMINHO\PARA\SISTEMA-GUIMMA
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_installer.ps1 -Python python -Version 1.1.1 -Architecture x64
+```
+
+Saida principal:
+
+```text
+dist\Sistema_Guimma_Setup_x64.exe
+```
+
+Pacote unificado Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_unified_package.ps1 -Python python -Version 1.1.1 -Architecture x64
+```
+
+## Manuais Importantes
+
+- `MANUAIS_DO_SISTEMA/00_LEIA_PRIMEIRO.txt`
+- `MANUAIS_DO_SISTEMA/01_INSTALAR_SISTEMA_MAC.txt`
+- `MANUAIS_DO_SISTEMA/02_INSTALAR_SISTEMA_WINDOWS.txt`
+- `MANUAIS_DO_SISTEMA/03_INSTALAR_POSTGRESQL_SERVIDOR.txt`
+- `MANUAIS_DO_SISTEMA/06_USAR_LICENCIADOR_DO_CLIENTE.txt`
+- `MANUAIS_DO_SISTEMA/07_USAR_PAINEL_WEB_DE_LICENCAS.txt`
+- `MANUAIS_DO_SISTEMA/09_GERAR_INSTALADORES.txt`
+- `MANUAIS_DO_SISTEMA/13_SCRIPTS_GERAR_INSTALADORES_TODOS_APPS.txt`
+
+## Estado de Maquina Limpa
+
+Para simular computador de cliente no Mac, remova apps, dados locais, agente de licenca, instaladores da Mesa e PostgreSQL local. O projeto em `PycharmProjects/SISTEMA-GUIMMA` nao deve ser apagado.
+
+O roteiro completo fica em:
+
+```text
+MANUAIS_DO_SISTEMA/14_LIMPEZA_TESTE_MAQUINA_CLIENTE_MAC.txt
+```

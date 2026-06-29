@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 Set-Location $repoRoot
 
-if ([string]::IsNullOrWhiteSpace($Version)) { $Version = "1.0.0" }
+if ([string]::IsNullOrWhiteSpace($Version)) { $Version = "1.1.1" }
 
 function Resolve-FirstExisting([string[]]$paths) {
   foreach ($p in $paths) { if ($p -and (Test-Path $p)) { return $p } }

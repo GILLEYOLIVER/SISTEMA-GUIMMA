@@ -8,6 +8,7 @@ Dashboard (PostgreSQL) - VERSÃO COMPLETA CORRIGIDA
 """
 
 import os
+import time
 from datetime import datetime, timedelta, date
 import customtkinter as ctk
 from PAGINAS_DO_SISTEMA.TEMAS import (
@@ -21,6 +22,17 @@ from tkinter import ttk, messagebox
 
 # ==== IMPORT POSTGRESQL COM FALLBACK ====
 POSTGRES_DISPONIVEL = False
+_DB_FAIL_UNTIL = 0.0
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, "") or default)
+    except Exception:
+        return default
+
+
+_DB_COOLDOWN_SECONDS = _env_float("OPERA_DASHBOARD_DB_COOLDOWN", 20.0)
 
 try:
     import sys
@@ -28,39 +40,20 @@ try:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
     from PAGINAS_DO_SISTEMA.BANCO_DE_DADOS_PG import (
-        get_schema, ready_check,
-        fetch_all, fetch_one, execute, get_conn
+        get_schema,
+        fetch_all as _pg_fetch_all,
+        fetch_one as _pg_fetch_one,
+        execute as _pg_execute,
+        get_conn,
     )
 
-    try:
-        if ready_check():
-            POSTGRES_DISPONIVEL = True
-            print("PostgreSQL conectado!")
-
-            try:
-                schema = get_schema() or "opera"
-                execute(f"SET search_path TO {schema}, public")
-            except Exception as se:
-                print(f"Erro search_path: {se}")
-
-            globals()['_fetch_all'] = fetch_all
-            globals()['_fetch_one'] = fetch_one
-            globals()['_exec_write'] = execute
-        else:
-            POSTGRES_DISPONIVEL = False
-    except Exception as e:
-        print(f"Erro PostgreSQL: {e}")
-        POSTGRES_DISPONIVEL = False
+    POSTGRES_DISPONIVEL = True
 
 except Exception as e:
-    print(f"Módulo PostgreSQL não disponível: {e}")
     POSTGRES_DISPONIVEL = False
 
 # ==== FALLBACK ====
 if not POSTGRES_DISPONIVEL:
-    print("Banco de dados indisponível. Funções de fallback ativas.")
-
-
     def _fetch_all(sql, params=None):
         return []
 
@@ -75,6 +68,44 @@ if not POSTGRES_DISPONIVEL:
 
     def get_schema():
         return "opera"
+else:
+    def _mark_db_failure() -> None:
+        global _DB_FAIL_UNTIL
+        _DB_FAIL_UNTIL = time.monotonic() + max(5.0, _DB_COOLDOWN_SECONDS)
+
+
+    def _db_in_cooldown() -> bool:
+        return time.monotonic() < _DB_FAIL_UNTIL
+
+
+    def _fetch_all(sql, params=None):
+        if _db_in_cooldown():
+            return []
+        try:
+            return _pg_fetch_all(sql, params)
+        except Exception:
+            _mark_db_failure()
+            return []
+
+
+    def _fetch_one(sql, params=None):
+        if _db_in_cooldown():
+            return None
+        try:
+            return _pg_fetch_one(sql, params)
+        except Exception:
+            _mark_db_failure()
+            return None
+
+
+    def _exec_write(sql, params=None):
+        if _db_in_cooldown():
+            return 0
+        try:
+            return _pg_execute(sql, params)
+        except Exception:
+            _mark_db_failure()
+            return 0
 
 
 # ==== HELPERS POSTGRESQL ====
@@ -203,6 +234,33 @@ class DashboardPage(ctk.CTkFrame):
     def _title_text(self, chave, default=None):
         return str(self._get_text(chave, default)).upper()
 
+    def _env_ms(self, name: str, default_ms: int, min_ms: int, max_ms: int) -> int:
+        try:
+            value = int(float(os.environ.get(name, "") or default_ms))
+        except Exception:
+            value = default_ms
+        return max(min_ms, min(value, max_ms))
+
+    def _is_low_resource_mode(self) -> bool:
+        try:
+            if bool(getattr(self.sistema, "_low_resource_mode", False)):
+                return True
+        except Exception:
+            pass
+        value = os.environ.get("GUIMMA_LOW_RESOURCE") or os.environ.get("OPERA_LOW_RESOURCE_MODE")
+        return str(value or "").strip().lower() in ("1", "true", "yes", "sim", "on", "leve", "low")
+
+    def _resolve_refresh_timings(self) -> tuple[int, int, int]:
+        if self._low_resource_mode:
+            auto_ms = self._env_ms("OPERA_DASHBOARD_REFRESH_MS", 30000, 10000, 300000)
+            debounce_ms = self._env_ms("OPERA_DASHBOARD_DEBOUNCE_MS", 1200, 500, 10000)
+            min_gap_ms = self._env_ms("OPERA_DASHBOARD_MIN_GAP_MS", 12000, 2000, 120000)
+        else:
+            auto_ms = self._env_ms("OPERA_DASHBOARD_REFRESH_MS", 10000, 5000, 300000)
+            debounce_ms = self._env_ms("OPERA_DASHBOARD_DEBOUNCE_MS", 500, 200, 10000)
+            min_gap_ms = self._env_ms("OPERA_DASHBOARD_MIN_GAP_MS", 2500, 1000, 120000)
+        return auto_ms, debounce_ms, min_gap_ms
+
     def refresh_texts(self):
         try:
             self.tipos_estoque = [self._get_text('fabrics'), self._get_text('supplies'), self._get_text('inputs'), self._get_text('office'), self._get_text('cleaning'), self._get_text('others')]
@@ -244,6 +302,11 @@ class DashboardPage(ctk.CTkFrame):
         super().__init__(master, fg_color=sistema.cor_fundo)
         self.sistema = sistema
         self.POSTGRES_DISPONIVEL = POSTGRES_DISPONIVEL
+        self._low_resource_mode = self._is_low_resource_mode()
+        self._dashboard_refresh_ms, self._dashboard_debounce_ms, self._dashboard_min_gap_ms = self._resolve_refresh_timings()
+        self._dashboard_graph_refresh_ms = self._env_ms("OPERA_DASHBOARD_GRAPH_REFRESH_MS", 60000, 15000, 600000)
+        self._last_dashboard_refresh_ts = 0.0
+        self._last_graph_refresh_ts = 0.0
 
         # Paleta
         self.cor_primaria = sistema.cor_primaria
@@ -314,7 +377,8 @@ class DashboardPage(ctk.CTkFrame):
 
         self._setup_auto_refresh()
         self.bind("<FocusIn>", lambda e: self._refresh_debounced())
-        self.iniciar_atualizacao_automatica(30)
+        if not self._low_resource_mode:
+            self.iniciar_atualizacao_automatica(30)
 
     def _construir(self):
         scale = self.ui_scale
@@ -463,8 +527,6 @@ class DashboardPage(ctk.CTkFrame):
         self.painel_prod_chart = ctk.CTkCanvas(area_extra, bg="#FFFFFF", highlightthickness=0, height=chart_h)
         self.painel_prod_chart.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 6))
 
-        self._atualizar_tabela_estoque()
-
         # GRÁFICO
         frame_gra = ctk.CTkFrame(duplo_section, fg_color=self.cor_secundaria, corner_radius=10)
         frame_gra.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
@@ -486,11 +548,6 @@ class DashboardPage(ctk.CTkFrame):
         self.grafico_container.grid(row=2, column=0, sticky="nsew", padx=10, pady=6)
         self.grafico_container.grid_columnconfigure(0, weight=1)
         self.grafico_container.grid_rowconfigure(0, weight=1)
-
-        self.criar_grafico_inicial()
-
-        # ÚLTIMOS FINALIZADOS
-        self._carregar_ultimos_finalizados(limite=3)
 
         # PRODUÇÃO EM ANDAMENTO
         frame_and = ctk.CTkFrame(self.scroll_body, fg_color=self.cor_fundo)
@@ -607,6 +664,7 @@ class DashboardPage(ctk.CTkFrame):
     def _mostrar_grafico_producao(self):
         """Mostra gráficos de barras + linhas de status de produção."""
         self.tipo_grafico = "producao"
+        self._last_graph_refresh_ts = time.monotonic()
 
         if not hasattr(self, "fig_grafico") or self.fig_grafico is None:
             self.criar_grafico_inicial()
@@ -1472,11 +1530,15 @@ class DashboardPage(ctk.CTkFrame):
 
     def _setup_auto_refresh(self):
         try:
-            self.after(5000, self._poll_refresh_token)
+            self.after(self._dashboard_refresh_ms, self._poll_refresh_token)
         except:
             pass
 
-    def _refresh_debounced(self, ms: int = 500):
+    def _refresh_debounced(self, ms: int | None = None):
+        ms = self._dashboard_debounce_ms if ms is None else ms
+        now = time.monotonic()
+        if (now - getattr(self, "_last_dashboard_refresh_ts", 0.0)) * 1000 < self._dashboard_min_gap_ms:
+            return
         try:
             if getattr(self, "_refresh_after_id", None):
                 self.after_cancel(self._refresh_after_id)
@@ -1492,11 +1554,13 @@ class DashboardPage(ctk.CTkFrame):
             pass
         finally:
             try:
-                self.after(5000, self._poll_refresh_token)
+                self.after(self._dashboard_refresh_ms, self._poll_refresh_token)
             except:
                 pass
 
     def iniciar_atualizacao_automatica(self, intervalo_segundos: int = 60):
+        if getattr(self, "_low_resource_mode", False):
+            return
         try:
             pass
         except:
@@ -1509,11 +1573,17 @@ class DashboardPage(ctk.CTkFrame):
             self._atualizar_painel_producao()
             self._preencher_tabela_andamento()
             self._atualizar_tabela_estoque()
-            if getattr(self, "tipo_grafico", "producao") == "producao":
+            graph_due = True
+            if getattr(self, "_low_resource_mode", False):
+                elapsed_ms = (time.monotonic() - getattr(self, "_last_graph_refresh_ts", 0.0)) * 1000
+                graph_due = elapsed_ms >= self._dashboard_graph_refresh_ms
+            if getattr(self, "tipo_grafico", "producao") == "producao" and graph_due:
                 self._mostrar_grafico_producao()
             self._carregar_ultimos_finalizados(limite=3)
         except Exception as e:
             print(f"Erro dashboard: {e}")
+        finally:
+            self._last_dashboard_refresh_ts = time.monotonic()
 
     def on_show(self):
         self.atualizar_dashboard()

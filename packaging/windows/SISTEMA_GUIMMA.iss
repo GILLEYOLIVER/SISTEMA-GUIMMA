@@ -1,9 +1,13 @@
 ; Script Inno Setup para Sistema Guimma - SEM VERSAO NA LISTA
 #define AppName "SISTEMA GUIMMA"
-#define AppVersion "1.0.0"
+#ifndef APP_VERSION
+  #define APP_VERSION "1.1.1"
+#endif
+#define AppVersion APP_VERSION
 #define AppPublisher "Sistema Guimma"
 #define AppExeName "SistemaGuimma.exe"
 #define ConfiguradorName "CONFIGURAR_BANCO.exe"
+#define PostgresConfiguradorName "CONFIGURAR_POSTGRES.exe"
 #define LicencaName "SistemaGuimmaLicenca.exe"
 
 #ifndef ARCH
@@ -50,6 +54,15 @@
   #define LicencaSource "..\\..\\dist\\SistemaGuimma\\SistemaGuimmaLicenca.exe"
 #else
   #define LicencaSource "..\\..\\dist\\SistemaGuimmaLicenca.exe"
+#endif
+
+; Configurador PostgreSQL / scripts 1->2->3
+#if FileExists("..\\..\\dist\\SistemaGuimma\\CONFIGURAR_POSTGRES.exe")
+  #define PostgresConfigSource "..\\..\\dist\\SistemaGuimma\\CONFIGURAR_POSTGRES.exe"
+#elif FileExists("..\\..\\dist\\windows\\CONFIGURAR_POSTGRES.exe")
+  #define PostgresConfigSource "..\\..\\dist\\windows\\CONFIGURAR_POSTGRES.exe"
+#else
+  #define PostgresConfigSource "..\\..\\dist\\SistemaGuimma\\CONFIGURAR_POSTGRES.exe"
 #endif
 
 ; Icone do configurador: prioriza icon_config.ico, senao usa configurador.ico gerado no build
@@ -120,9 +133,13 @@ Source: "{#DbConfigSource}"; DestDir: "{app}"; DestName: "{#ConfiguradorName}"; 
 ; App de licenciamento
 Source: "{#LicencaSource}"; DestDir: "{app}"; DestName: "{#LicencaName}"; Flags: ignoreversion
 
+; Configurador PostgreSQL
+Source: "{#PostgresConfigSource}"; DestDir: "{app}"; DestName: "{#PostgresConfiguradorName}"; Flags: ignoreversion
+
 ; Icones (copiados direto para {app} para uso no Menu/Atalhos)
 Source: "..\\..\\icons\\ICONE_SISTEMA.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\\..\\icons\\ICONE_LICENCIADOR.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\\..\\icons\\PG_ICON.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#IconConfigSource}"; DestDir: "{app}"; DestName: "icon_config.ico"; Flags: ignoreversion
 
 #if FileExists("..\\..\\icons\\icon_config.png")
@@ -141,6 +158,9 @@ Source: "..\\..\\PAGINAS_DO_SISTEMA\\*"; DestDir: "{app}\\PAGINAS_DO_SISTEMA"; F
 #if DirExists("..\\..\\data")
 Source: "..\\..\\data\\*"; DestDir: "{app}\\data"; Flags: recursesubdirs createallsubdirs
 #endif
+#if DirExists("..\\..\\SCRIPTS")
+Source: "..\\..\\SCRIPTS\\*"; DestDir: "{app}\\SCRIPTS"; Flags: recursesubdirs createallsubdirs
+#endif
 
 [Dirs]
 Name: "{app}"
@@ -151,6 +171,7 @@ Name: "{userappdata}\\SistemaGuimma\\config"
 ; Menu Iniciar
 Name: "{group}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\ICONE_SISTEMA.ico"
 Name: "{group}\\Configurar Banco de Dados"; Filename: "{app}\\{#ConfiguradorName}"; IconFilename: "{app}\\icon_config.ico"
+Name: "{group}\\Preparar PostgreSQL e Banco"; Filename: "{app}\\{#PostgresConfiguradorName}"; IconFilename: "{app}\\PG_ICON.ico"
 Name: "{group}\\Licenciamento Sistema Guimma"; Filename: "{app}\\{#LicencaName}"; IconFilename: "{app}\\ICONE_LICENCIADOR.ico"
 Name: "{group}\\Desinstalar {#AppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\\ICONE_SISTEMA.ico"
 
