@@ -229,9 +229,6 @@ class RetornoCortes(ctk.CTkFrame):
         self.cb_piloto_entregue = None
         self.style = None
 
-        # Logo
-        self.logo_img = None
-
         # Configuração inicial
         self._ui_refs = {}
         self.pack(fill="both", expand=True)
@@ -338,23 +335,10 @@ class RetornoCortes(ctk.CTkFrame):
         self._ui_refs["title"] = ctk.CTkLabel(
             head,
             text=self._get_text("title"),
-            font=("Arial", 16, "bold"),
+            font=("Arial", 18, "bold"),
             text_color=self.cor_texto
         )
         self._ui_refs["title"].pack(side="left", padx=(6, 0))
-
-        # Logo (menor)
-        try:
-            from PIL import Image
-            if os.path.exists(LOGO_PATH):
-                img = Image.open(LOGO_PATH)
-                w, h = img.size
-                tw = 110
-                th = int(h * (tw / w))
-                self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
-                ctk.CTkLabel(head, image=self.logo_img, text="").pack(side="right", padx=6)
-        except Exception:
-            pass
 
         # ================= Linha 1: Busca =================
         busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)

@@ -231,16 +231,8 @@ class EnvioCortes(ctk.CTkFrame):
         header.pack(fill="x", pady=(0, 2))
 
         self._ui_refs["title"] = ctk.CTkLabel(header, text=self._get_text("title"),
-                     font=("Arial", 16, "bold"), text_color=self.cor_texto)
+                     font=("Arial", 18, "bold"), text_color=self.cor_texto)
         self._ui_refs["title"].pack(side="left", padx=(0, 6))
-
-        if PIL_OK and os.path.exists(LOGO_PATH):
-            img = Image.open(LOGO_PATH)
-            w, h = img.size
-            tw = 110
-            th = int(h * (tw / w))
-            self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
-            ctk.CTkLabel(header, image=self.logo_img, text="").pack(side="right")
 
         # Costureira + Serviço + Dados bancários - COM TEMA
         prest = ctk.CTkFrame(main, fg_color=self.cor_fundo)

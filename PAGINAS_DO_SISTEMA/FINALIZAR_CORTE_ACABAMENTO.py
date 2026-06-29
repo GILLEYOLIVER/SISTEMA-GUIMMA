@@ -228,18 +228,6 @@ class FinalizacaoCortes(ctk.CTkFrame):
             text_color=self.cor_texto
         ).pack(side="left")
 
-        try:
-            from PIL import Image
-            if os.path.exists(LOGO_PATH):
-                img = Image.open(LOGO_PATH)
-                w, h = img.size
-                tw = 140
-                th = int(h * (tw / w))
-                self.logo_img = ctk.CTkImage(light_image=img, dark_image=img, size=(tw, th))
-                ctk.CTkLabel(head, image=self.logo_img, text="").pack(side="right")
-        except Exception:
-            pass
-
         # Buscar retorno + filtro
         busca = ctk.CTkFrame(main, fg_color=self.cor_fundo)
         busca.pack(fill="x", pady=6)

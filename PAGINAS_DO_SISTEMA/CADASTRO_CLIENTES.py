@@ -68,16 +68,16 @@ class ClientesPage(ctk.CTkFrame):
             background="#ffffff",
             fieldbackground="#ffffff",
             foreground="#111827",
-            rowheight=28,
+            rowheight=32,
             borderwidth=0,
-            font=("Arial", 10),
+            font=("Arial", 11),
         )
         style.configure(
             f"{tree_style}.Heading",
             background="#eef2f7",
             foreground="#111827",
             relief="flat",
-            font=("Arial", 10, "bold"),
+            font=("Arial", 11, "bold"),
             padding=(8, 6),
         )
         style.map(
@@ -314,13 +314,13 @@ class ClientesPage(ctk.CTkFrame):
 
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color="transparent")
-        header.grid(row=0, column=0, sticky="ew", padx=20, pady=(14, 8))
+        header.grid(row=0, column=0, sticky="ew", padx=20, pady=(16, 10))
         header.grid_columnconfigure(0, weight=1)
 
         self._ui_refs["title_label"] = ctk.CTkLabel(
             header,
             text=self._get_text("page_title"),
-            font=ctk.CTkFont(size=20, weight="bold"),
+            font=ctk.CTkFont(size=24, weight="bold"),
             text_color=self.text_color,
         )
         self._ui_refs["title_label"].grid(row=0, column=0, sticky="w")
@@ -328,10 +328,10 @@ class ClientesPage(ctk.CTkFrame):
         self._ui_refs["subtitle_label"] = ctk.CTkLabel(
             header,
             text=self._get_text("page_subtitle"),
-            font=ctk.CTkFont(size=12),
+            font=ctk.CTkFont(size=14),
             text_color=self.muted_color,
         )
-        self._ui_refs["subtitle_label"].grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self._ui_refs["subtitle_label"].grid(row=1, column=0, sticky="w", pady=(5, 0))
 
         form_header = ctk.CTkFrame(
             header,
@@ -340,7 +340,7 @@ class ClientesPage(ctk.CTkFrame):
             border_color=self.border_color,
             corner_radius=8,
         )
-        form_header.grid(row=2, column=0, sticky="ew", pady=(14, 0))
+        form_header.grid(row=2, column=0, sticky="ew", pady=(16, 0))
         form_header.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
         self._add_entry(form_header, self._get_text("form_name"), "nome", 0, column=0, required=True)
@@ -365,26 +365,30 @@ class ClientesPage(ctk.CTkFrame):
 
         self._ui_refs["btn_new"] = ctk.CTkButton(
             toolbar, text=self._get_text("btn_new"), command=self._limpar_formulario,
-            width=140, height=32, fg_color=self.primary_color, hover_color=self.hover_color,
+            width=150, height=36, fg_color=self.primary_color, hover_color=self.hover_color,
             text_color=self._button_text_color(self.primary_color), corner_radius=6,
+            font=ctk.CTkFont(size=12, weight="bold"),
         )
         self._ui_refs["btn_new"].grid(row=0, column=0, padx=(0, 8))
         self._ui_refs["btn_save"] = ctk.CTkButton(
             toolbar, text=self._get_text("btn_save"), command=self._salvar_cliente,
-            width=140, height=32, fg_color=self.success_color,
+            width=150, height=36, fg_color=self.success_color,
             text_color=self._button_text_color(self.success_color), corner_radius=6,
+            font=ctk.CTkFont(size=12, weight="bold"),
         )
         self._ui_refs["btn_save"].grid(row=0, column=1, padx=(0, 8))
         self._ui_refs["btn_inactivate"] = ctk.CTkButton(
             toolbar, text=self._get_text("btn_inactivate"), command=self._inativar_cliente,
-            width=140, height=32, fg_color=self.danger_color,
+            width=150, height=36, fg_color=self.danger_color,
             text_color=self._button_text_color(self.danger_color), corner_radius=6,
+            font=ctk.CTkFont(size=12, weight="bold"),
         )
         self._ui_refs["btn_inactivate"].grid(row=0, column=2, padx=(0, 8))
         self._ui_refs["btn_export"] = ctk.CTkButton(
             toolbar, text=self._get_text("btn_export"), command=self._exportar_cliente,
-            width=140, height=32, fg_color=self.export_color,
+            width=150, height=36, fg_color=self.export_color,
             text_color=self._button_text_color(self.export_color), corner_radius=6,
+            font=ctk.CTkFont(size=12, weight="bold"),
         )
         self._ui_refs["btn_export"].grid(row=0, column=4)
 
@@ -412,7 +416,7 @@ class ClientesPage(ctk.CTkFrame):
         self._ui_refs["list_title"] = ctk.CTkLabel(
             list_top,
             text=self._get_text("list_title"),
-            font=ctk.CTkFont(size=14, weight="bold"),
+            font=ctk.CTkFont(size=17, weight="bold"),
             text_color=self.text_color,
         )
         self._ui_refs["list_title"].grid(row=0, column=0, sticky="w")
@@ -423,6 +427,7 @@ class ClientesPage(ctk.CTkFrame):
             search_group,
             text=self._get_text("search_label"),
             text_color=self.muted_color,
+            font=ctk.CTkFont(size=12, weight="bold"),
         )
         self._ui_refs["search_label"].grid(row=0, column=0, padx=(0, 8))
         self.filter_search = ctk.CTkEntry(
@@ -432,6 +437,8 @@ class ClientesPage(ctk.CTkFrame):
             fg_color=self.input_bg,
             border_color=self.border_color,
             text_color=self.text_color,
+            height=30,
+            font=ctk.CTkFont(size=12),
         )
         self.filter_search.grid(row=0, column=1)
         self.filter_search.bind("<KeyRelease>", self._filtrar_em_tempo_real)
@@ -469,7 +476,7 @@ class ClientesPage(ctk.CTkFrame):
         self.summary_label = ctk.CTkLabel(
             summary,
             text=self._get_text("summary_empty"),
-            font=ctk.CTkFont(size=12),
+            font=ctk.CTkFont(size=12, weight="bold"),
             text_color=self.text_color,
         )
         self.summary_label.grid(row=0, column=0, sticky="w", padx=12, pady=7)
@@ -479,7 +486,7 @@ class ClientesPage(ctk.CTkFrame):
 
     def _add_entry(self, parent, label, key, row, column=0, columnspan=1, height=None, multiline=False, required=False):
         label_text = f"{label} *" if required else label
-        lbl = ctk.CTkLabel(parent, text=label_text, text_color=self.text_color, font=ctk.CTkFont(size=11))
+        lbl = ctk.CTkLabel(parent, text=label_text, text_color=self.text_color, font=ctk.CTkFont(size=12, weight="bold"))
         lbl.grid(row=row * 2, column=column, columnspan=columnspan, sticky="w", padx=12, pady=(10 if row == 0 else 0, 2))
         self._field_labels[key] = lbl
         if multiline:
@@ -490,6 +497,7 @@ class ClientesPage(ctk.CTkFrame):
                 border_color=self.border_color,
                 border_width=1,
                 text_color=self.text_color,
+                font=ctk.CTkFont(size=12),
             )
         else:
             entry = ctk.CTkEntry(
@@ -497,13 +505,14 @@ class ClientesPage(ctk.CTkFrame):
                 fg_color=self.input_bg,
                 border_color=self.border_color,
                 text_color=self.text_color,
-                height=28,
+                height=31,
+                font=ctk.CTkFont(size=12),
             )
         entry.grid(row=row * 2 + 1, column=column, columnspan=columnspan, sticky="ew", padx=12, pady=(0, 8))
         self.entries[key] = entry
 
     def _add_option(self, parent, label, key, values, row, column=0):
-        lbl = ctk.CTkLabel(parent, text=label, text_color=self.text_color, font=ctk.CTkFont(size=11))
+        lbl = ctk.CTkLabel(parent, text=label, text_color=self.text_color, font=ctk.CTkFont(size=12, weight="bold"))
         lbl.grid(row=row * 2, column=column, sticky="w", padx=12, pady=(10 if row == 0 else 0, 2))
         self._field_labels[key] = lbl
         option = ctk.CTkOptionMenu(
@@ -513,8 +522,9 @@ class ClientesPage(ctk.CTkFrame):
             button_color=self.primary_color,
             button_hover_color=self.hover_color,
             text_color=self._button_text_color(self.primary_color),
-            height=28,
+            height=31,
             width=140,
+            font=ctk.CTkFont(size=12),
         )
         option.set(values[0])
         option.grid(row=row * 2 + 1, column=column, sticky="w", padx=12, pady=(0, 8))

@@ -1589,7 +1589,7 @@ class OperaMenuApp(ctk.CTk):
         self.TOPBAR_HEIGHT = max(36, int(48 * self.ui_scale))
         self.font_sidebar_titulo = ("Arial", max(14, int(22 * self.ui_scale)), "bold")
         self.font_sidebar_subtitulo = ("Arial", max(11, int(16 * self.ui_scale)))
-        self.font_topbar_titulo = ("Arial", max(14, int(26 * self.ui_scale)))
+        self.font_topbar_titulo = ("Arial", max(18, int(30 * self.ui_scale)), "bold")
         self.font_topbar_icone = ("Arial", max(14, int(22 * self.ui_scale)))
         self.icon_size_sidebar = max(28, int(52 * self.ui_scale))
 
@@ -1757,7 +1757,7 @@ class OperaMenuApp(ctk.CTk):
             self.TOPBAR_HEIGHT = max(36, int(48 * self.ui_scale))
             self.font_sidebar_titulo = ("Arial", max(14, int(22 * self.ui_scale)), "bold")
             self.font_sidebar_subtitulo = ("Arial", max(11, int(16 * self.ui_scale)))
-            self.font_topbar_titulo = ("Arial", max(14, int(26 * self.ui_scale)))
+            self.font_topbar_titulo = ("Arial", max(18, int(30 * self.ui_scale)), "bold")
             self.font_topbar_icone = ("Arial", max(14, int(22 * self.ui_scale)))
             self.icon_size_sidebar = max(28, int(52 * self.ui_scale))
             if hasattr(self, "sidebar") and self.sidebar.winfo_exists():

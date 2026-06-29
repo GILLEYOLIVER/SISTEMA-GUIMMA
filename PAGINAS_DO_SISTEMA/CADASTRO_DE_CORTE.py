@@ -527,13 +527,6 @@ class CadastroOrdemCorte(ctk.CTkFrame):
             text_color=self.cor_texto
         ).pack(side="left", padx=10)
 
-        # Logo
-        if hasattr(self, "logo_image") and self.logo_image:
-            ctk.CTkLabel(header_frame, image=self.logo_image, text="").pack(side="right", padx=10)
-        else:
-            self._i18n_refs["logo_missing"] = ctk.CTkLabel(header_frame, text=self._tr("logo_missing"), text_color="red")
-            self._i18n_refs["logo_missing"].pack(side="right", padx=10)
-
         # =========================
         # INFORMAÇÕES BÁSICAS (compacto)
         # =========================
