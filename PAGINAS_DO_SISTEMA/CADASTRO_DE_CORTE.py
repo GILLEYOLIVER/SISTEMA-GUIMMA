@@ -463,7 +463,13 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
     def carregar_logo(self):
         try:
+            try:
+                from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+                configured_logo = get_logo_path()
+            except Exception:
+                configured_logo = ""
             possiveis_logos = [
+                configured_logo,
                 "logo.png", "logo.jpg",
                 os.path.join(os.path.dirname(__file__), "logo.png"),
                 os.path.join(os.path.dirname(__file__), "imgs", "logo.png"),
@@ -2392,7 +2398,13 @@ class CadastroOrdemCorte(ctk.CTkFrame):
 
         if hasattr(self, 'logo_photo'):
             try:
+                try:
+                    from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+                    configured_logo = get_logo_path()
+                except Exception:
+                    configured_logo = ""
                 logo_paths = [
+                    configured_logo,
                     "logo.png", "logo.jpg",
                     os.path.join(os.path.dirname(__file__), "logo.png"),
                     os.path.join(os.path.dirname(__file__), "imgs", "logo.png"),

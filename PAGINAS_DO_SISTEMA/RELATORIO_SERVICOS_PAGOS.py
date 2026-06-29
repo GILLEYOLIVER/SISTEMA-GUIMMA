@@ -893,6 +893,14 @@ class RelatorioServicosPagosPage(ctk.CTkFrame):
             messagebox.showerror("Exportar CSV", f"Falha ao exportar:\n{exc}")
 
     def _logo_data_uri(self) -> str:
+        try:
+            from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_data_uri
+            configured_logo = get_logo_data_uri()
+            if configured_logo:
+                return configured_logo
+        except Exception:
+            pass
+
         base_dir = os.path.dirname(os.path.abspath(__file__))
         candidates = (
             os.path.join(base_dir, "LOGO.jpg"),

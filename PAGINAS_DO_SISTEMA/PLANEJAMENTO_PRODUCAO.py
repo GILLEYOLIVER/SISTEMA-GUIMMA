@@ -1759,6 +1759,13 @@ class PlanejamentoProducaoPage(ctk.CTkFrame):
     @staticmethod
     def _obter_logo_pdf():
         base = os.path.dirname(os.path.abspath(__file__))
+        try:
+            from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+            configured_logo = get_logo_path(os.path.join(base, "LOGO.jpg"))
+            if configured_logo and os.path.exists(configured_logo):
+                return configured_logo
+        except Exception:
+            pass
         # Prioriza a logomarca oficial solicitada
         for nome in ("LOGO.jpg", "ICONE_SISTEMA.png", "OPERA.jpg"):
             p = os.path.join(base, nome)

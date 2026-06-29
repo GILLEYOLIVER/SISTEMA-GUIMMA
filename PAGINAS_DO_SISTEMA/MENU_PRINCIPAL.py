@@ -1238,7 +1238,7 @@ class OperaMenuApp(ctk.CTk):
             "Modelos Produzidos",
             "Acabamento",
         ],
-        "CONFIGURAÇÕES": ["Trocar Usuário", "Usuários", "Temas", "Atualizar Sistema"],
+        "CONFIGURAÇÕES": ["Configurações do Sistema", "Trocar Usuário", "Usuários", "Temas", "Atualizar Sistema"],
         "BANCO DE DADOS": ["Gerenciar", "Backup"],
     }
 
@@ -1272,6 +1272,7 @@ class OperaMenuApp(ctk.CTk):
             "Modelos Produzidos": "MODELOS PRODUZIDOS.png", "Acabamento": "ACABAMENTO.png",
         },
         "CONFIGURAÇÕES": {
+            "Configurações do Sistema": "ENGRENAGEM.png",
             "Trocar Usuário": "TROCAR_USUARIO.png", "Usuários": "USUARIOS.png",
             "Backup": "BACKUP.png", "Temas": "PALETA DE CORES.png", "Atualizar Sistema": "ENGRENAGEM.png"
         },
@@ -1312,6 +1313,7 @@ class OperaMenuApp(ctk.CTk):
         "Modelos Produzidos": "relatorio_modelos_produzidos",
         "Acabamento": "relatorio_acabamento",
         "Logs e Atividades": "config_usuarios",
+        "Configurações do Sistema": "config_sistema",
         "Trocar Usuário": "trocar_usuario",
         "Usuários": "config_usuarios",
         "Backup": "config_backup",
@@ -1523,6 +1525,9 @@ class OperaMenuApp(ctk.CTk):
         self._icon_size_signature = None
         self._active_submenu = None
         self._submenu_timer = None
+        self._submenu_open_timer = None
+        hover_setting = self._env_truthy("GUIMMA_MENU_HOVER_SUBMENU", "OPERA_MENU_HOVER_SUBMENU")
+        self._open_submenu_on_hover = hover_setting is not False
         self._page_cache = {}
         self._page_cache_order = []
         self._low_resource_mode, self._low_resource_reasons = self._detect_low_resource_mode()
@@ -1776,6 +1781,11 @@ class OperaMenuApp(ctk.CTk):
         btn_frame = self.botoes_menu.get(categoria)
         if not frame or not btn_frame:
             return
+        try:
+            if self._active_submenu == categoria and frame.winfo_manager():
+                return
+        except Exception:
+            pass
         self.update_idletasks()
         for nome, outro_frame in self.submenu_frames.items():
             if nome != categoria:
@@ -2448,17 +2458,38 @@ class OperaMenuApp(ctk.CTk):
         self.topbar.grid_columnconfigure(3, weight=0)
         self.topbar.grid_columnconfigure(4, weight=0)
         self.topbar.grid_columnconfigure(5, weight=0)
+        self.title_area = ctk.CTkFrame(self.topbar, fg_color="transparent")
+        self.title_area.grid(row=0, column=0, sticky="w", padx=12, pady=4)
+        self.topbar_logo_label = ctk.CTkLabel(self.title_area, text="")
+        self.topbar_logo_label.pack(side="left", padx=(0, 8))
+        self._refresh_system_logo()
         self.title_label = ctk.CTkLabel(
-            self.topbar,
+            self.title_area,
             text=self._translate_page_name("Dashboard"),
             font=self.font_topbar_titulo,
             text_color=self.cor_texto,
         )
-        self.title_label.grid(row=0, column=0, sticky="w", padx=15, pady=4)
+        self.title_label.pack(side="left")
         self._build_utility_buttons()
         self._add_language_selector_to_topbar()
         self._add_theme_switch_to_topbar()
         self._build_user_widget()
+
+    def _refresh_system_logo(self):
+        if not hasattr(self, "topbar_logo_label"):
+            return
+        try:
+            from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+            logo_path = get_logo_path()
+            if not logo_path or not os.path.exists(logo_path):
+                self.topbar_logo_label.configure(image=None, text="")
+                self._topbar_logo_image = None
+                return
+            img = Image.open(logo_path).convert("RGBA")
+            self._topbar_logo_image = ctk.CTkImage(light_image=img, dark_image=img, size=(34, 34))
+            self.topbar_logo_label.configure(image=self._topbar_logo_image, text="")
+        except Exception as e:
+            _dprint(f"⚠️ Erro ao atualizar logomarca do topo: {e}")
 
     def _build_utility_buttons(self):
         button_frame = ctk.CTkFrame(
@@ -3192,7 +3223,33 @@ class OperaMenuApp(ctk.CTk):
                 pass
             self._submenu_timer = None
 
+    def _cancel_submenu_open_timer(self):
+        if self._submenu_open_timer:
+            try:
+                self.after_cancel(self._submenu_open_timer)
+            except Exception:
+                pass
+            self._submenu_open_timer = None
+
+    def _schedule_submenu_show(self, categoria: str, delay: int = 140):
+        self._cancel_submenu_hide_timer()
+        self._cancel_submenu_open_timer()
+
+        def _show_if_still_available():
+            self._submenu_open_timer = None
+            if getattr(self, "_closing", False):
+                return
+            if categoria not in getattr(self, "submenu_frames", {}):
+                return
+            self._show_submenu(categoria)
+
+        try:
+            self._submenu_open_timer = self.after(delay, _show_if_still_available)
+        except Exception:
+            self._submenu_open_timer = None
+
     def _schedule_submenu_hide(self, delay: int = 220):
+        self._cancel_submenu_open_timer()
         self._cancel_submenu_hide_timer()
 
         def _hide_if_outside():
@@ -3225,6 +3282,7 @@ class OperaMenuApp(ctk.CTk):
             self._submenu_timer = None
 
     def _hide_submenu(self, categoria: str):
+        self._cancel_submenu_open_timer()
         self._cancel_submenu_hide_timer()
         self._reset_menu_hover_states()
         frame = self.submenu_frames.get(categoria)
@@ -3396,6 +3454,7 @@ class OperaMenuApp(ctk.CTk):
             _dprint(f"[Tema] Erro ao atualizar cores do menu: {e}")
 
     def _hide_all_submenus(self):
+        self._cancel_submenu_open_timer()
         self._cancel_submenu_hide_timer()
         self._reset_menu_hover_states()
         for frame in self.submenu_frames.values():
@@ -3476,10 +3535,9 @@ class OperaMenuApp(ctk.CTk):
 
         btn.pack(fill="both", expand=True, padx=max(2, int(4 * self.ui_scale)))
 
-        if categoria != "Dashboard":
+        if categoria != "Dashboard" and getattr(self, "_open_submenu_on_hover", False):
             def _menu_mouse_enter(_event=None, cat=categoria):
-                self._cancel_submenu_hide_timer()
-                self._show_submenu(cat)
+                self._schedule_submenu_show(cat)
 
             def _menu_mouse_leave(_event=None):
                 self._schedule_submenu_hide()
@@ -3576,12 +3634,13 @@ class OperaMenuApp(ctk.CTk):
         def _submenu_mouse_leave(_event=None):
             self._schedule_submenu_hide()
 
-        for widget_alvo in (frame, inner_container):
-            try:
-                widget_alvo.bind("<Enter>", _submenu_mouse_enter, add="+")
-                widget_alvo.bind("<Leave>", _submenu_mouse_leave, add="+")
-            except Exception:
-                pass
+        if getattr(self, "_open_submenu_on_hover", False):
+            for widget_alvo in (frame, inner_container):
+                try:
+                    widget_alvo.bind("<Enter>", _submenu_mouse_enter, add="+")
+                    widget_alvo.bind("<Leave>", _submenu_mouse_leave, add="+")
+                except Exception:
+                    pass
 
         self.submenu_frames[categoria] = frame
 

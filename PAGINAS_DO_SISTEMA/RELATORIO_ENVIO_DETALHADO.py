@@ -1072,26 +1072,31 @@ class RelatorioEnvioDetalhado(ctk.CTkFrame):
         # =========================
         # Logo
         # =========================
-        base_dir = os.path.dirname(__file__)
-        # tenta algumas opções comuns
-        logo_candidates = [
-            os.path.join(base_dir, "logo.jpg"),
-            os.path.join(base_dir, "logo.jpeg"),
-            os.path.join(base_dir, "logo.png"),
-        ]
-
         logo_data_uri = ""
-        for lp in logo_candidates:
-            try:
-                if os.path.isfile(lp):
-                    ext = os.path.splitext(lp)[1].lower()
-                    mime = "image/jpeg" if ext in [".jpg", ".jpeg"] else "image/png"
-                    with open(lp, "rb") as f:
-                        b64 = base64.b64encode(f.read()).decode("ascii")
-                    logo_data_uri = f"data:{mime};base64,{b64}"
-                    break
-            except Exception:
-                continue
+        try:
+            from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_data_uri
+            logo_data_uri = get_logo_data_uri()
+        except Exception:
+            logo_data_uri = ""
+        if not logo_data_uri:
+            base_dir = os.path.dirname(__file__)
+            logo_candidates = [
+                os.path.join(base_dir, "logo.jpg"),
+                os.path.join(base_dir, "logo.jpeg"),
+                os.path.join(base_dir, "logo.png"),
+            ]
+
+            for lp in logo_candidates:
+                try:
+                    if os.path.isfile(lp):
+                        ext = os.path.splitext(lp)[1].lower()
+                        mime = "image/jpeg" if ext in [".jpg", ".jpeg"] else "image/png"
+                        with open(lp, "rb") as f:
+                            b64 = base64.b64encode(f.read()).decode("ascii")
+                        logo_data_uri = f"data:{mime};base64,{b64}"
+                        break
+                except Exception:
+                    continue
 
         # =========================
         # CSS (mantive seu visual)

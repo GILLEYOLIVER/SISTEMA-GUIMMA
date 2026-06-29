@@ -2214,6 +2214,7 @@ class UsuariosPage(ctk.CTkFrame):
                 {
                     "setor": "CONFIGURAÇÕES",
                     "permissoes": [
+                        {"nome": "Configurações do Sistema", "codigo": "config_sistema"},
                         {"nome": "Trocar Usuário", "codigo": "trocar_usuario"},
                         {"nome": "Usuários", "codigo": "config_usuarios"},
                         {"nome": "Temas", "codigo": "config_temas"},

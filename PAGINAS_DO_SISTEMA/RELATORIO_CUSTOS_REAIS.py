@@ -431,7 +431,11 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
         c.setFillColor(colors.HexColor("#1F5FA6"))
         c.rect(0, altura - header_h, largura, header_h, fill=1, stroke=0)
 
-        logo_path = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
+        try:
+            from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+            logo_path = get_logo_path(os.path.join(os.path.dirname(__file__), "LOGO.jpg"))
+        except Exception:
+            logo_path = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
         x_text = 40
         if os.path.exists(logo_path):
             try:
