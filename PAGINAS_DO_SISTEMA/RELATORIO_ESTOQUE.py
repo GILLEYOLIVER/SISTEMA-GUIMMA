@@ -2291,7 +2291,13 @@ class AdvancedStockReport(ctk.CTkFrame):
                 self.logo_image = None
                 return False
 
+            try:
+                from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+                configured_logo = get_logo_path()
+            except Exception:
+                configured_logo = ""
             possiveis_logos = [
+                configured_logo,
                 "logo.png", "logo.jpg", "logo.jpeg", "logo.gif", "logo.bmp",
                 os.path.join(os.path.dirname(__file__), "logo.png"),
                 os.path.join(os.path.dirname(__file__), "logo.jpg"),

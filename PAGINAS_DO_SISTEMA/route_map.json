@@ -155,6 +155,10 @@
     "file": "TEMAS.py",
     "class": "TemasPage"
   },
+  "Configurações do Sistema": {
+    "file": "CONFIGURACOES_SISTEMA.py",
+    "class": "ConfiguracoesSistemaPage"
+  },
   "Atualizar Sistema": {
     "file": "ATUALIZAR_SISTEMA.py",
     "class": "AtualizarSistemaPage"

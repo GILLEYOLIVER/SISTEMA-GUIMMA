@@ -23,7 +23,8 @@ except Exception as e:
     PG_OK = False
 
 # ---------- LOGO (UI e PDF) ----------
-LOGO_PATH = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
+from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+LOGO_PATH = get_logo_path(os.path.join(os.path.dirname(__file__), "LOGO.jpg"))
 try:
     from PIL import Image
 

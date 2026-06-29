@@ -1311,13 +1311,16 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
         # --- carrega logo.jpg (mesmo diretório do arquivo) e embute ---
         base_dir = os.path.dirname(__file__)
-        logo_path = os.path.join(base_dir, "logo.jpg")
         logo_data_uri = ""
         try:
-            if os.path.isfile(logo_path):
-                with open(logo_path, "rb") as f:
-                    b64 = base64.b64encode(f.read()).decode("ascii")
-                logo_data_uri = f"data:image/jpeg;base64,{b64}"
+            from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_data_uri
+            logo_data_uri = get_logo_data_uri(os.path.join(base_dir, "logo.jpg"))
+            if not logo_data_uri:
+                logo_path = os.path.join(base_dir, "logo.jpg")
+                if os.path.isfile(logo_path):
+                    with open(logo_path, "rb") as f:
+                        b64 = base64.b64encode(f.read()).decode("ascii")
+                    logo_data_uri = f"data:image/jpeg;base64,{b64}"
         except Exception:
             logo_data_uri = ""
 

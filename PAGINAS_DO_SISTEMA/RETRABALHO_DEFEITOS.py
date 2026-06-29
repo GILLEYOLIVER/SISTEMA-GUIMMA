@@ -899,6 +899,13 @@ class RetrabalhoDefeitosPage(ctk.CTkFrame):
             c = (candidate or "").strip()
             if c and os.path.exists(c):
                 return c
+            try:
+                from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+                configured_logo = get_logo_path()
+                if configured_logo and os.path.exists(configured_logo):
+                    return configured_logo
+            except Exception:
+                pass
             if os.path.exists("LOGO.jpg"):
                 return "LOGO.jpg"
             try:

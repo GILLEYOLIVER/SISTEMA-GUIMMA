@@ -3666,9 +3666,13 @@ class PagamentoModernUI(ctk.CTkFrame):
             margin = 10 * mm
             header_h = 45
 
-            logo_path = None
+            try:
+                from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+                logo_path = get_logo_path()
+            except Exception:
+                logo_path = None
             for candidate in ("logo.jpg", "logo.png"):
-                if os.path.exists(candidate):
+                if not logo_path and os.path.exists(candidate):
                     logo_path = candidate
                     break
 

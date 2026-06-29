@@ -80,7 +80,8 @@ except Exception as e:
     print(f"AVISO: Módulo de log não carregado: {e}")
 
 # =================== CONSTANTES ===================
-LOGO_PATH = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
+from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
+LOGO_PATH = get_logo_path(os.path.join(os.path.dirname(__file__), "LOGO.jpg"))
 TAMANHOS_DISPONIVEIS = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
 
 
