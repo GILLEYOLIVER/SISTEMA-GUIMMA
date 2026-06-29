@@ -1,13 +1,21 @@
 # Licenciamento do Sistema Guimma
 
-Esta pasta contem o app/agente separado que valida a assinatura do cliente.
+Esta pasta contem o app/agente separado que valida a assinatura mensal do cliente.
+
+Identificacao do cliente:
+
+```text
+email do cliente
+```
+
+O Sistema Guimma deve abrir bloqueado quando nao houver licenca local/online ativa.
 
 Fluxo previsto:
 
 1. O cliente paga a mensalidade.
-2. O gateway de pagamento avisa o seu servidor por webhook.
-3. O seu servidor marca a licenca como ativa e calcula a validade, normalmente 30 dias.
-4. O app `Sistema Guimma Licenca` consulta o servidor ao validar e o agente consulta novamente a cada 10 minutos.
+2. O administrador ativa/renova o email no painel web.
+3. A licenca recebe validade, normalmente 30 dias.
+4. O app `Sistema Guimma Licenca` consulta o servidor ao validar.
 5. Na primeira validacao aprovada, o servidor prende a licenca ao ID deste computador.
 6. O agente grava um `license_state.json` local, selado para este computador.
 7. O Sistema Guimma le esse estado antes do login e volta a consultar durante o uso a cada 10 minutos.
@@ -23,6 +31,13 @@ Comportamento de renovacao:
 - O botao `Validar agora` força uma consulta imediata ao servidor.
 - A mesma licenca nao pode ficar ativa em dois computadores ao mesmo tempo.
 - Para trocar de computador, clique em `Desativar` no computador atual e depois valide no novo.
+- Se o computador antigo nao estiver disponivel, use `Liberar computador` no painel web.
+
+Painel web:
+
+```text
+https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
+```
 
 Arquivos principais:
 

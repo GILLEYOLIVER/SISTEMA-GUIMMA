@@ -8,11 +8,17 @@ Link:
 
 https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
 
+Credenciais administrativas mascaradas:
+
+Email:
+
+mo********il@gmail.com
+
 Senha:
 
-A senha esta no arquivo privado:
+Gil********0*
 
-dist/Sistema Guimma Licencas Admin - Privado/CREDENCIAIS_PAINEL_WEB.txt
+As credenciais completas devem ficar apenas com voce.
 
 Nunca envie essa senha para clientes.
 
@@ -32,9 +38,11 @@ Como entrar:
 
    https://sistema-guimma-licencas.sistemaguimma.workers.dev/admin
 
-3. Digite a senha administrativa.
+3. Digite o email administrativo.
 
-4. Clique em Entrar.
+4. Digite a senha administrativa.
+
+5. Clique em Entrar.
 
 Ativar cliente:
 

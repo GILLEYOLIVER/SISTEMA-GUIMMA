@@ -3,7 +3,7 @@
 
 param(
     [string]$Python = "python",
-    [string]$Version = "1.0.0",
+    [string]$Version = "1.1.1",
     [ValidateSet("x64", "x86")]
     [string]$Architecture = "x64"
 )
@@ -82,7 +82,7 @@ Run-Step "[3/4] Construindo configurador do banco..." {
 }
 
 # PASSO 3.2: Construir app de licenciamento
-Run-Step "[3.2/4] Construindo app de licenciamento..." {
+Run-Step "[3.2/5] Construindo app de licenciamento..." {
     & $Python -m PyInstaller --clean --noconfirm "SistemaGuimmaLicenca.spec"
     if ($LASTEXITCODE -ne 0) { throw "Falha no build do app de licenciamento." }
 
@@ -92,8 +92,64 @@ Run-Step "[3.2/4] Construindo app de licenciamento..." {
     }
 }
 
+# PASSO 3.3: Construir configurador PostgreSQL
+Run-Step "[3.3/5] Construindo configurador PostgreSQL..." {
+    $pgIconCandidates = @(
+        (Join-Path $repoRoot "icons\PG_ICON.ico"),
+        (Join-Path $repoRoot "PG_ICON.ico")
+    )
+    $pgIcon = $null
+    foreach ($candidate in $pgIconCandidates) {
+        if (Test-Path $candidate) {
+            $pgIcon = $candidate
+            break
+        }
+    }
+
+    if (-not $pgIcon) {
+        throw "Icone PG_ICON.ico nao encontrado em icons\PG_ICON.ico."
+    }
+
+    $configPostgresScript = Join-Path $repoRoot "configurar_postgres.py"
+    if (-not (Test-Path $configPostgresScript)) {
+        throw "Arquivo nao encontrado: $configPostgresScript"
+    }
+
+    $scriptsDir = Join-Path $repoRoot "SCRIPTS"
+    if (-not (Test-Path $scriptsDir)) {
+        throw "Pasta SCRIPTS nao encontrada."
+    }
+
+    $configPostgresOut = Join-Path $repoRoot "dist\SistemaGuimma"
+    New-Item -ItemType Directory -Force -Path $configPostgresOut | Out-Null
+
+    & $Python -m PyInstaller `
+        --noconfirm `
+        --clean `
+        --onefile `
+        --windowed `
+        --name "CONFIGURAR_POSTGRES" `
+        --icon "$pgIcon" `
+        --distpath "$configPostgresOut" `
+        --workpath (Join-Path $repoRoot "build\pyi_configurar_postgres") `
+        --specpath (Join-Path $repoRoot "build") `
+        --add-data "$scriptsDir;SCRIPTS" `
+        --hidden-import "tkinter" `
+        --hidden-import "customtkinter" `
+        --hidden-import "winreg" `
+        --hidden-import "ctypes" `
+        "$configPostgresScript"
+
+    if ($LASTEXITCODE -ne 0) { throw "Falha no build do configurador PostgreSQL." }
+
+    $configPostgresExe = Join-Path $configPostgresOut "CONFIGURAR_POSTGRES.exe"
+    if (-not (Test-Path $configPostgresExe)) {
+        throw "CONFIGURAR_POSTGRES.exe nao encontrado: $configPostgresExe"
+    }
+}
+
 # PASSO 3.5: Verificacao rapida (runtime do PyInstaller)
-Run-Step "[3.5/4] Verificando runtime (_internal\\python312.dll)..." {
+Run-Step "[3.5/5] Verificando runtime (_internal\\python312.dll)..." {
     $candidates = @(
         (Join-Path $repoRoot "dist\SistemaGuimma\_internal\python312.dll"),
         (Join-Path $repoRoot "dist\windows\SistemaGuimma\_internal\python312.dll"),
@@ -111,7 +167,7 @@ Run-Step "[3.5/4] Verificando runtime (_internal\\python312.dll)..." {
 }
 
 # PASSO 4: Criar instalador
-Run-Step "[4/4] Criando instalador..." {
+Run-Step "[4/5] Criando instalador..." {
 
     # Encontrar Inno Setup (ISCC)
     $innoPaths = @(
@@ -146,7 +202,7 @@ Run-Step "[4/4] Criando instalador..." {
     $installerPath = Join-Path $repoRoot ("dist\Sistema_Guimma_Setup_" + $Architecture + ".exe")
     Remove-Item $installerPath -ErrorAction SilentlyContinue
 
-    & $innoExe "/DARCH=$Architecture" $issPath
+    & $innoExe "/DARCH=$Architecture" "/DAPP_VERSION=`"$Version`"" $issPath
     if ($LASTEXITCODE -ne 0) {
         throw "ISCC falhou. Veja a mensagem acima (arquivo faltando / caminho errado)."
     }

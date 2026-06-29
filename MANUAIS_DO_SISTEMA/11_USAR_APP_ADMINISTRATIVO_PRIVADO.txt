@@ -41,6 +41,7 @@ O que ele precisa:
 - Internet.
 - URL do servidor Cloudflare.
 - Token administrativo.
+- Acesso administrativo privado.
 
 No Mac de desenvolvimento, o token pode estar no arquivo privado:
 
@@ -53,6 +54,11 @@ Por seguranca:
 Nao envie esse app para cliente.
 Nao instale esse app no computador do cliente.
 Nao envie token administrativo.
+Nao salve credenciais completas em documento entregue ao cliente.
+
+Credenciais do painel web ficam documentadas apenas de forma mascarada em:
+
+COMO_USAR_GERENCIAMENTO_LICENCAS.txt
 
 Use esse app apenas em computador seu ou de alguem autorizado a gerenciar
 pagamentos/licencas.

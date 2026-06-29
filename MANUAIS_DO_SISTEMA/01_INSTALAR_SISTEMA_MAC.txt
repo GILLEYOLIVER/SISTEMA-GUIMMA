@@ -7,8 +7,12 @@ Instalar o Sistema Guimma em um computador macOS.
 Arquivos esperados:
 
 - dist/Sistema Guimma.pkg
-- dist/installers/macos/Sistema Guimma 1.0.0 macOS.pkg
+- dist/installers/macos/Sistema Guimma 1.1.1 macOS.pkg
+- dist/installers/macos/Sistema Guimma 1.1.1 macOS.dmg
 - dist/Sistema Guimma.app
+- dist/Sistema Guimma Licenca.app
+- dist/SistemaGuimma/CONFIGURAR_BANCO.app
+- dist/SistemaGuimma/CONFIGURAR_POSTGRES.app
 
 Use preferencialmente o arquivo .pkg, porque ele instala o app na pasta
 Aplicativos do macOS.
@@ -29,13 +33,19 @@ Passo a passo:
 
    Sistema Guimma
 
-6. Abra o sistema.
+6. Confira se tambem foram instalados:
 
-7. Se o macOS bloquear por seguranca, faca:
+   Sistema Guimma Licenca
+   CONFIGURAR_BANCO
+   CONFIGURAR_POSTGRES
+
+7. Abra o sistema.
+
+8. Se o macOS bloquear por seguranca, faca:
 
    Ajustes do Sistema > Privacidade e Seguranca > Abrir Mesmo Assim
 
-8. Na primeira abertura, confira:
+9. Na primeira abertura, confira:
 
    - O splash aparece com Sistema Guimma.
    - A tela de login abre.
@@ -44,7 +54,8 @@ Passo a passo:
 
 Quando o Mac for a maquina servidora:
 
-Instale tambem o PostgreSQL e configure o banco conforme os arquivos:
+Use o CONFIGURAR_POSTGRES para instalar/preparar PostgreSQL e configurar o
+banco conforme os arquivos:
 
 - 03_INSTALAR_POSTGRESQL_SERVIDOR.txt
 - 04_CONFIGURAR_BANCO_NO_SERVIDOR.txt
@@ -61,3 +72,4 @@ Observacoes:
 - O app do cliente nao deve receber o app "Sistema Guimma Licencas Admin".
 - O app administrativo e somente seu.
 - O cliente deve usar apenas o licenciador normal para validar o email dele.
+- Sem licenca ativa, o Sistema Guimma deve abrir bloqueado.

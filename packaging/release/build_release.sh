@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-VERSION="${GUIMMA_VERSION:-${1:-1.0.0}}"
+VERSION="${GUIMMA_VERSION:-${1:-1.1.1}}"
 ARCHITECTURE="${GUIMMA_ARCH:-${2:-x64}}"
 REQUIRE_WINDOWS="${GUIMMA_REQUIRE_WINDOWS:-0}"
 WINDOWS_EXE_PATH="${GUIMMA_WINDOWS_EXE:-}"

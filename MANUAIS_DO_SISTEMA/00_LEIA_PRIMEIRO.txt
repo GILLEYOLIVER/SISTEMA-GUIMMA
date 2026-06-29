@@ -37,6 +37,18 @@ Como gerar instaladores macOS e Windows.
 10_CHECKLIST_ENTREGA_CLIENTE.txt
 Checklist final antes de liberar o sistema ao cliente.
 
+11_USAR_APP_ADMINISTRATIVO_PRIVADO.txt
+Como usar o app privado de gerenciamento de licencas.
+
+12_SERVIDOR_CLOUDFLARE_LICENCAS.txt
+Como manter o servidor online de licencas.
+
+13_SCRIPTS_GERAR_INSTALADORES_TODOS_APPS.txt
+Comandos separados para compilar todos os apps e instaladores.
+
+14_LIMPEZA_TESTE_MAQUINA_CLIENTE_MAC.txt
+Como limpar o Mac e simular computador novo de cliente antes de testar.
+
 Aviso importante:
 
 Arquivos de administracao de licencas, senhas do painel web e tokens do

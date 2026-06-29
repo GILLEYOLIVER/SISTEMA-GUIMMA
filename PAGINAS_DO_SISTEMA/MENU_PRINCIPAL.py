@@ -1525,6 +1525,7 @@ class OperaMenuApp(ctk.CTk):
         self._submenu_timer = None
         self._page_cache = {}
         self._page_cache_order = []
+        self._low_resource_mode, self._low_resource_reasons = self._detect_low_resource_mode()
         self._page_cache_size = self._resolve_page_cache_size()
         self._current_frame = None
         self._pending_settings_save_job = None
@@ -1552,13 +1553,16 @@ class OperaMenuApp(ctk.CTk):
         self._open_dashboard_agora()
         self._apply_startup_theme_to_built_interface()
         self._schedule_theme_refresh_for_frame(self._current_frame)
-        self._agendar_after(1200, self._smart_preload_pages)
+        if self._should_preload_pages():
+            self._agendar_after(self._preload_start_delay_ms(), self._smart_preload_pages)
         self._agendar_after(100, self._update_user_display)
         self._agendar_after(self._backup_start_delay_ms(), self._ativar_backup_silencioso)
         self._update_menu_buttons_colors()
 
         _dprint(f"✅ Sistema inicializado para: {self.usuario_nome} ({self.usuario_hierarquia})")
         _dprint(f"🎨 Tema aplicado: {self.current_theme_name}")
+        if self._low_resource_mode:
+            _dprint(f"🪶 Modo leve ativo: {', '.join(self._low_resource_reasons) or 'auto'}")
 
     def _calculate_initial_scale_and_fonts(self):
         screen_width = self.winfo_screenwidth()
@@ -1592,11 +1596,97 @@ class OperaMenuApp(ctk.CTk):
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         cpu = max(1, int(os.cpu_count() or 1))
+        if getattr(self, "_low_resource_mode", False):
+            return 1
         if screen_width <= 1366 or screen_height <= 768 or cpu <= 4:
             return 2
         if screen_width >= 1920 and screen_height >= 1080 and cpu >= 8:
             return 4
         return 3
+
+    def _env_truthy(self, *names: str) -> bool | None:
+        for name in names:
+            value = os.environ.get(name)
+            if value is None:
+                continue
+            text = str(value).strip().lower()
+            if text in ("1", "true", "yes", "sim", "on", "leve", "low"):
+                return True
+            if text in ("0", "false", "no", "nao", "não", "off", "normal"):
+                return False
+        return None
+
+    def _system_memory_gb(self) -> float | None:
+        try:
+            if IS_WIN:
+                import ctypes
+
+                class MEMORYSTATUSEX(ctypes.Structure):
+                    _fields_ = [
+                        ("dwLength", ctypes.c_ulong),
+                        ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong),
+                        ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong),
+                        ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong),
+                        ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+                    ]
+
+                status = MEMORYSTATUSEX()
+                status.dwLength = ctypes.sizeof(status)
+                if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                    return status.ullTotalPhys / (1024 ** 3)
+                return None
+            pages = os.sysconf("SC_PHYS_PAGES")
+            page_size = os.sysconf("SC_PAGE_SIZE")
+            return (pages * page_size) / (1024 ** 3)
+        except Exception:
+            return None
+
+    def _detect_low_resource_mode(self) -> tuple[bool, list[str]]:
+        forced = self._env_truthy("GUIMMA_LOW_RESOURCE", "OPERA_LOW_RESOURCE_MODE")
+        if forced is not None:
+            return forced, ["forcado por variavel de ambiente"] if forced else []
+
+        profile = os.environ.get("GUIMMA_PERFORMANCE_PROFILE", "").strip().lower()
+        if profile in ("leve", "low", "fraco", "economico", "economy"):
+            return True, [f"perfil={profile}"]
+        if profile in ("normal", "rapido", "fast", "alto", "high"):
+            return False, []
+
+        reasons: list[str] = []
+        cpu = max(1, int(os.cpu_count() or 1))
+        memory_gb = self._system_memory_gb()
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        if cpu <= 4:
+            reasons.append(f"cpu={cpu}")
+        if memory_gb is not None and memory_gb <= 8.1:
+            reasons.append(f"memoria={memory_gb:.1f}GB")
+        if screen_width <= 1366 or screen_height <= 768:
+            reasons.append(f"tela={screen_width}x{screen_height}")
+
+        return bool(reasons), reasons
+
+    def _should_preload_pages(self) -> bool:
+        forced = self._env_truthy("GUIMMA_PRELOAD_PAGES", "OPERA_PRELOAD_PAGES")
+        if forced is not None:
+            return forced
+        if getattr(self, "_low_resource_mode", False):
+            return False
+        return int(getattr(self, "_page_cache_size", 0) or 0) >= 2
+
+    def _preload_start_delay_ms(self) -> int:
+        try:
+            forced = int(float(os.environ.get("OPERA_PRELOAD_START_DELAY_MS", "") or 0))
+            if forced > 0:
+                return max(500, min(forced, 30000))
+        except Exception:
+            pass
+        return 1200
 
     def _apply_initial_layout(self):
         self._maximize_window()
@@ -1841,6 +1931,8 @@ class OperaMenuApp(ctk.CTk):
     def _smart_preload_pages(self):
         """Pré-carrega a última página usada sem bloquear a abertura inicial."""
         if getattr(self, "_closing", False):
+            return
+        if not self._should_preload_pages():
             return
         last_page = (self.settings or {}).get("last_page")
         if not last_page or last_page == self.current_page:
@@ -2510,16 +2602,18 @@ class OperaMenuApp(ctk.CTk):
             finally:
                 _dprint(f"[Tema] Reforço pós-abertura concluído ({delay_label}ms).")
 
-        for delay_ms in (280, 900):
+        delays = (650,) if getattr(self, "_low_resource_mode", False) else (280, 900)
+        for delay_ms in delays:
             job = self._agendar_after(delay_ms, functools.partial(_refresh_if_current, delay_ms))
             if job:
                 self._pending_theme_refresh_jobs.append(job)
 
     def _backup_start_delay_ms(self):
+        default_delay = "180000" if getattr(self, "_low_resource_mode", False) else "60000"
         try:
-            delay = int(float(os.environ.get("OPERA_BACKUP_START_DELAY_MS", "60000") or "60000"))
+            delay = int(float(os.environ.get("OPERA_BACKUP_START_DELAY_MS", default_delay) or default_delay))
         except Exception:
-            delay = 60000
+            delay = int(default_delay)
         return max(15000, min(delay, 300000))
 
     def _clear_page_cache_except_current(self):

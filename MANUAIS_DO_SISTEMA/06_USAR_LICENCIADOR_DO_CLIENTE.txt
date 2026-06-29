@@ -14,6 +14,16 @@ dist/Sistema Guimma Licenca.app
 
 No instalador final, o licenciador deve ir junto com o Sistema Guimma.
 
+Onde fica depois de instalado:
+
+Mac:
+
+/Applications/Sistema Guimma Licenca.app
+
+Windows:
+
+Menu Iniciar > SISTEMA GUIMMA > Licenciamento Sistema Guimma
+
 Como funciona:
 
 1. O cliente informa o email usado na assinatura.
@@ -74,6 +84,8 @@ Passo a passo para validar:
 6. Se aparecer licenca valida, feche o licenciador.
 
 7. Abra o Sistema Guimma.
+
+Se nao existir licenca ativa, o Sistema Guimma deve bloquear o acesso.
 
 Mensagens comuns:
 

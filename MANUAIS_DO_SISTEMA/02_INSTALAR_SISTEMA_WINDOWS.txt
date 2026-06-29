@@ -17,6 +17,15 @@ Importante:
 O instalador Windows deve ser gerado em um computador Windows, porque depende
 do PyInstaller para Windows e do Inno Setup.
 
+O instalador oficial atual inclui:
+
+- SistemaGuimma.exe
+- SistemaGuimmaLicenca.exe
+- CONFIGURAR_BANCO.exe
+- CONFIGURAR_POSTGRES.exe
+- pasta SCRIPTS
+- icones oficiais
+
 Passo a passo no computador do cliente:
 
 1. Copie o instalador para o computador.
@@ -46,6 +55,7 @@ Atalhos esperados:
 
 - SISTEMA GUIMMA
 - Configurar Banco de Dados
+- Preparar PostgreSQL e Banco
 - Licenciamento Sistema Guimma
 
 Quando o Windows for servidor:
@@ -66,3 +76,4 @@ Cuidados:
 - Nao envie o app administrativo de licencas para o cliente.
 - Nao envie senha do painel web.
 - Nao envie token do Cloudflare.
+- Sem licenca ativa, o Sistema Guimma deve abrir bloqueado.
