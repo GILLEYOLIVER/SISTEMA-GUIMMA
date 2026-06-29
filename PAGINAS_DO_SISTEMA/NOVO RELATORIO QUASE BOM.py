@@ -3292,18 +3292,7 @@ class AdvancedStockReport(ctk.CTkFrame):
                 configured_logo = get_logo_path()
             except Exception:
                 configured_logo = ""
-            possiveis_logos = [
-                configured_logo,
-                "logo.png", "logo.jpg", "logo.jpeg", "logo.gif", "logo.bmp",
-                os.path.join(os.path.dirname(__file__), "logo.png"),
-                os.path.join(os.path.dirname(__file__), "logo.jpg"),
-                os.path.join(os.path.dirname(__file__), "imgs", "logo.png"),
-                os.path.join(os.path.dirname(__file__), "imgs", "logo.jpg"),
-                os.path.join(os.path.dirname(__file__), "assets", "logo.png"),
-                os.path.join(os.path.dirname(__file__), "assets", "logo.jpg"),
-                os.path.join(os.path.dirname(__file__), "..", "logo.png"),
-                os.path.join(os.path.dirname(__file__), "..", "logo.jpg")
-            ]
+            possiveis_logos = [configured_logo] if configured_logo else []
 
             for logo_path in possiveis_logos:
                 try:

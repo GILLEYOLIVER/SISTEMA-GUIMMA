@@ -1475,9 +1475,9 @@ class OrdemCorteFinalizada(ctk.CTkFrame):
         c.rect(0, y - 1.8 * cm, largura, 2.5 * cm, fill=1, stroke=0)
         try:
             from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
-            logo_path = get_logo_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "LOGO.jpg"))
+            logo_path = get_logo_path()
         except Exception:
-            logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "LOGO.jpg")
+            logo_path = ""
         if os.path.exists(logo_path):
             try:
                 from reportlab.lib.utils import ImageReader

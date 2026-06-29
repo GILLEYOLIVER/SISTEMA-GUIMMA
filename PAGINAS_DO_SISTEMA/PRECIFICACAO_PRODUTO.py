@@ -1309,18 +1309,12 @@ class PrecificacaoProdutoPage(ctk.CTkFrame):
 
         total_lote = float(self._as_float(gv('preco_sugerido'))) * max(1, int(self._as_float(gv('lote'))))
 
-        # --- carrega logo.jpg (mesmo diretório do arquivo) e embute ---
+        # --- carrega a logomarca configurada no banco e embute ---
         base_dir = os.path.dirname(__file__)
         logo_data_uri = ""
         try:
             from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_data_uri
-            logo_data_uri = get_logo_data_uri(os.path.join(base_dir, "logo.jpg"))
-            if not logo_data_uri:
-                logo_path = os.path.join(base_dir, "logo.jpg")
-                if os.path.isfile(logo_path):
-                    with open(logo_path, "rb") as f:
-                        b64 = base64.b64encode(f.read()).decode("ascii")
-                    logo_data_uri = f"data:image/jpeg;base64,{b64}"
+            logo_data_uri = get_logo_data_uri()
         except Exception:
             logo_data_uri = ""
 

@@ -81,7 +81,7 @@ except Exception as e:
 
 # =================== CONSTANTES ===================
 from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
-LOGO_PATH = get_logo_path(os.path.join(os.path.dirname(__file__), "LOGO.jpg"))
+LOGO_PATH = get_logo_path()
 TAMANHOS_DISPONIVEIS = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3"]
 
 

@@ -65,25 +65,37 @@ class ConfiguracoesSistemaPage(ctk.CTkFrame):
         panel.grid_columnconfigure(1, weight=1)
 
         preview_box = ctk.CTkFrame(panel, fg_color=self.cor_secundaria, width=210, height=130, corner_radius=8)
-        preview_box.grid(row=0, column=0, rowspan=4, padx=14, pady=14, sticky="n")
+        preview_box.grid(row=0, column=0, rowspan=6, padx=14, pady=14, sticky="n")
         preview_box.grid_propagate(False)
         self.preview_label = ctk.CTkLabel(preview_box, text="", text_color=self.cor_texto)
         self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
 
         ctk.CTkLabel(
             panel,
-            text="Logomarca padrao",
+            text="Logomarca do cliente",
             font=("Arial", 16, "bold"),
             text_color=self.cor_texto,
         ).grid(row=0, column=1, padx=(0, 14), pady=(16, 4), sticky="w")
 
         ctk.CTkLabel(
             panel,
-            text="Esta imagem sera usada nas telas e nas paginas de impressao que consultam a configuracao visual.",
+            text="O sistema sai sem logomarca. Escolha a imagem do cliente para salvar no banco e distribuir para todos os computadores da rede.",
             text_color=self.cor_texto,
             wraplength=680,
             justify="left",
         ).grid(row=1, column=1, padx=(0, 14), pady=(0, 10), sticky="w")
+
+        ctk.CTkLabel(
+            panel,
+            text=(
+                "Formato recomendado: PNG com fundo transparente ou JPG, logo horizontal, "
+                "proporcao entre 3:1 e 4:1, minimo 600x180 px. "
+                "No topo do sistema ela aparece em ate 120x38 px, sempre sem distorcer."
+            ),
+            text_color=self.cor_texto,
+            wraplength=680,
+            justify="left",
+        ).grid(row=2, column=1, padx=(0, 14), pady=(0, 10), sticky="w")
 
         self.path_entry = ctk.CTkEntry(
             panel,
@@ -93,10 +105,18 @@ class ConfiguracoesSistemaPage(ctk.CTkFrame):
             border_color=self.cor_borda,
             text_color=self.cor_texto,
         )
-        self.path_entry.grid(row=2, column=1, padx=(0, 14), pady=(0, 10), sticky="ew")
+        self.path_entry.grid(row=3, column=1, padx=(0, 14), pady=(0, 8), sticky="ew")
+
+        self.logo_info_label = ctk.CTkLabel(
+            panel,
+            text="",
+            text_color=self.cor_texto,
+            justify="left",
+        )
+        self.logo_info_label.grid(row=4, column=1, padx=(0, 14), pady=(0, 10), sticky="w")
 
         actions = ctk.CTkFrame(panel, fg_color="transparent")
-        actions.grid(row=3, column=1, padx=(0, 14), pady=(0, 16), sticky="w")
+        actions.grid(row=5, column=1, padx=(0, 14), pady=(0, 16), sticky="w")
 
         ctk.CTkButton(
             actions,
@@ -109,11 +129,11 @@ class ConfiguracoesSistemaPage(ctk.CTkFrame):
 
         ctk.CTkButton(
             actions,
-            text="Restaurar padrao",
+            text="Remover logomarca",
             fg_color="#6B7280",
             hover_color="#4B5563",
             command=self._restore_default_logo,
-            width=140,
+            width=155,
         ).pack(side="left", padx=(0, 8))
 
         ctk.CTkButton(
@@ -156,7 +176,7 @@ class ConfiguracoesSistemaPage(ctk.CTkFrame):
         clear_custom_logo()
         self.logo_path_var.set(get_logo_path())
         self._refresh_logo_preview()
-        self.status_label.configure(text="Logomarca padrao restaurada.")
+        self.status_label.configure(text="Logomarca removida. O sistema ficara sem logo ate o cliente escolher uma.")
         if self.sistema is not None and hasattr(self.sistema, "_refresh_system_logo"):
             self.sistema._refresh_system_logo()
 
@@ -164,15 +184,26 @@ class ConfiguracoesSistemaPage(ctk.CTkFrame):
         path = self.logo_path_var.get() or get_logo_path()
         if not path or not os.path.isfile(path):
             self.preview_label.configure(image=None, text="Sem logomarca")
+            self.logo_info_label.configure(text="")
             self.logo_preview = None
             return
         try:
             img = Image.open(path)
-            img.thumbnail((180, 100))
-            self.logo_preview = ctk.CTkImage(light_image=img, dark_image=img, size=img.size)
+            original_w, original_h = img.size
+            preview_img = img.copy()
+            preview_img.thumbnail((180, 100))
+            self.logo_preview = ctk.CTkImage(light_image=preview_img, dark_image=preview_img, size=preview_img.size)
             self.preview_label.configure(image=self.logo_preview, text="")
+            ratio = (original_w / original_h) if original_h else 0
+            hint = ""
+            if ratio and (ratio < 3.0 or ratio > 4.0):
+                hint = " | Fora da proporcao recomendada"
+            self.logo_info_label.configure(
+                text=f"Imagem: {original_w}x{original_h} px | proporcao {ratio:.2f}:1{hint}"
+            )
         except Exception:
             self.preview_label.configure(image=None, text="Imagem invalida")
+            self.logo_info_label.configure(text="")
             self.logo_preview = None
 
     def _open_logo_folder(self):

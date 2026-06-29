@@ -21,7 +21,7 @@ def safe_int(v, default=0):
         return default
 
 from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
-LOGO_PATH = get_logo_path(os.path.join(os.path.dirname(__file__), "LOGO.jpg"))
+LOGO_PATH = get_logo_path()
 
 def parse_valor(s):
     try:
