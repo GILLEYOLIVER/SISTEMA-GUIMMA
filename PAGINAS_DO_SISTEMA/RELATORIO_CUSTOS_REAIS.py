@@ -433,9 +433,9 @@ class RelatorioCustosReaisPage(ctk.CTkFrame):
 
         try:
             from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
-            logo_path = get_logo_path(os.path.join(os.path.dirname(__file__), "LOGO.jpg"))
+            logo_path = get_logo_path()
         except Exception:
-            logo_path = os.path.join(os.path.dirname(__file__), "LOGO.jpg")
+            logo_path = ""
         x_text = 40
         if os.path.exists(logo_path):
             try:

@@ -468,13 +468,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                 configured_logo = get_logo_path()
             except Exception:
                 configured_logo = ""
-            possiveis_logos = [
-                configured_logo,
-                "logo.png", "logo.jpg",
-                os.path.join(os.path.dirname(__file__), "logo.png"),
-                os.path.join(os.path.dirname(__file__), "imgs", "logo.png"),
-                os.path.join(os.path.dirname(__file__), "assets", "logo.png")
-            ]
+            possiveis_logos = [configured_logo] if configured_logo else []
 
             for logo_path in possiveis_logos:
                 try:
@@ -2403,13 +2397,7 @@ class CadastroOrdemCorte(ctk.CTkFrame):
                     configured_logo = get_logo_path()
                 except Exception:
                     configured_logo = ""
-                logo_paths = [
-                    configured_logo,
-                    "logo.png", "logo.jpg",
-                    os.path.join(os.path.dirname(__file__), "logo.png"),
-                    os.path.join(os.path.dirname(__file__), "imgs", "logo.png"),
-                    os.path.join(os.path.dirname(__file__), "assets", "logo.png")
-                ]
+                logo_paths = [configured_logo] if configured_logo else []
 
                 for path in logo_paths:
                     if os.path.exists(path):

@@ -17,7 +17,6 @@ from typing import Iterable
 
 from PAGINAS_DO_SISTEMA.OPERA_PATHS import ensure_dir, path_in_data
 
-APP_DIR = Path(__file__).resolve().parent
 CONFIG_DIR_NAME = "CONFIGURACOES"
 LOGO_SETTINGS_FILE = "sistema_visual.json"
 LOGO_FILE_STEM = "logomarca_sistema"
@@ -181,18 +180,6 @@ def _delete_logo_from_db() -> None:
         pass
 
 
-def default_logo_candidates() -> list[str]:
-    return [
-        str(APP_DIR / "LOGO.jpg"),
-        str(APP_DIR / "logo.jpg"),
-        str(APP_DIR / "LOGO.png"),
-        str(APP_DIR / "logo.png"),
-        str(APP_DIR / "OPERA.jpg"),
-        str(APP_DIR / "ICONE_SISTEMA.png"),
-        str(APP_DIR.parent / "icons" / "ICONE_SISTEMA.png"),
-    ]
-
-
 def get_logo_path(default: str | None = None) -> str:
     env_path = os.environ.get("GUIMMA_LOGO_PATH", "").strip()
     if env_path and Path(env_path).expanduser().is_file():
@@ -206,13 +193,6 @@ def get_logo_path(default: str | None = None) -> str:
         if path.is_file():
             return str(path)
 
-    candidates = []
-    if default:
-        candidates.append(default)
-    candidates.extend(default_logo_candidates())
-    for candidate in candidates:
-        if candidate and Path(candidate).is_file():
-            return str(Path(candidate))
     return ""
 
 

@@ -10,7 +10,7 @@ import webbrowser
 
 # ---------- LOGO ----------
 from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
-LOGO_PATH = get_logo_path(os.path.join(os.path.dirname(__file__), "LOGO.jpg"))
+LOGO_PATH = get_logo_path()
 
 # ---------- ACESSO PG ----------
 try:

@@ -900,25 +900,6 @@ class RelatorioServicosPagosPage(ctk.CTkFrame):
                 return configured_logo
         except Exception:
             pass
-
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        candidates = (
-            os.path.join(base_dir, "LOGO.jpg"),
-            os.path.join(base_dir, "logo.jpg"),
-            os.path.join(base_dir, "LOGO.png"),
-            os.path.join(base_dir, "logo.png"),
-            os.path.join(base_dir, "OPERA.jpg"),
-        )
-        for path in candidates:
-            if not os.path.isfile(path):
-                continue
-            try:
-                mime = mimetypes.guess_type(path)[0] or "image/jpeg"
-                with open(path, "rb") as handle:
-                    encoded = base64.b64encode(handle.read()).decode("ascii")
-                return f"data:{mime};base64,{encoded}"
-            except Exception:
-                continue
         return ""
 
     def _html_field(self, key: str, value: Any) -> str:

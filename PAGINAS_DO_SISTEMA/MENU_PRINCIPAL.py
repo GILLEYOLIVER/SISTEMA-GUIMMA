@@ -2486,7 +2486,14 @@ class OperaMenuApp(ctk.CTk):
                 self._topbar_logo_image = None
                 return
             img = Image.open(logo_path).convert("RGBA")
-            self._topbar_logo_image = ctk.CTkImage(light_image=img, dark_image=img, size=(34, 34))
+            w, h = img.size
+            if w <= 0 or h <= 0:
+                return
+            max_w = 120
+            max_h = max(24, min(38, int(getattr(self, "TOPBAR_HEIGHT", 48) or 48) - 10))
+            scale = min(max_w / w, max_h / h)
+            display_size = (max(1, int(w * scale)), max(1, int(h * scale)))
+            self._topbar_logo_image = ctk.CTkImage(light_image=img, dark_image=img, size=display_size)
             self.topbar_logo_label.configure(image=self._topbar_logo_image, text="")
         except Exception as e:
             _dprint(f"⚠️ Erro ao atualizar logomarca do topo: {e}")

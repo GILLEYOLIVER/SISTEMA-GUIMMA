@@ -1467,9 +1467,9 @@ class OrdemCorte(ctk.CTkFrame):
             base_dir = os.path.dirname(os.path.abspath(__file__))
             try:
                 from PAGINAS_DO_SISTEMA.LOGOMARCA import get_logo_path
-                logo_path = get_logo_path(os.path.join(base_dir, "LOGO.JPG"))
+                logo_path = get_logo_path()
             except Exception:
-                logo_path = os.path.join(base_dir, "LOGO.JPG")
+                logo_path = ""
             if os.path.exists(logo_path):
                 img = ImageReader(logo_path)
                 LOGO_H = 35

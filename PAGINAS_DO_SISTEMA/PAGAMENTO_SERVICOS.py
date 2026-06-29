@@ -3671,10 +3671,6 @@ class PagamentoModernUI(ctk.CTkFrame):
                 logo_path = get_logo_path()
             except Exception:
                 logo_path = None
-            for candidate in ("logo.jpg", "logo.png"):
-                if not logo_path and os.path.exists(candidate):
-                    logo_path = candidate
-                    break
 
             def draw_single_receipt(y_top):
                 # Barra de topo
