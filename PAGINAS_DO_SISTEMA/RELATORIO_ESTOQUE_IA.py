@@ -10,7 +10,7 @@ import random
 import unicodedata
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
-from difflib import get_close_matches
+from difflib import SequenceMatcher, get_close_matches
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Any, Optional
 
@@ -108,8 +108,39 @@ class EstoqueIA:
     CORES_BASE = [
         "preto", "branco", "azul", "azul marinho", "vermelho", "verde", "amarelo", "rosa", "roxo",
         "bege", "off white", "cinza", "grafite", "marrom", "caramelo", "nude", "lilás", "lilas",
-        "vinho", "bordo", "bordô", "laranja", "turquesa", "caqui", "areia", "prata", "dourado"
+        "vinho", "bordo", "bordô", "laranja", "turquesa", "caqui", "areia", "prata", "dourado",
+        "kraft", "transparente"
     ]
+
+    CORES_ALIASES = {
+        "preta": "preto",
+        "branca": "branco",
+        "vermelha": "vermelho",
+        "amarela": "amarelo",
+        "roxa": "roxo",
+        "cinzenta": "cinza",
+        "dourada": "dourado",
+        "prateada": "prata",
+        "azuis": "azul",
+        "pretos": "preto",
+        "pretas": "preto",
+        "brancos": "branco",
+        "brancas": "branco",
+        "vermelhos": "vermelho",
+        "vermelhas": "vermelho",
+        "verdes": "verde",
+        "amarelos": "amarelo",
+        "amarelas": "amarelo",
+        "rosas": "rosa",
+        "roxos": "roxo",
+        "roxas": "roxo",
+        "cinzas": "cinza",
+    }
+
+    ITEM_TERMS_CURTOS = {
+        "tag", "linha", "ziper", "zíper", "botao", "botão", "elastico", "elástico",
+        "etiqueta", "cabide", "toner", "resma", "cola", "alcool", "álcool"
+    }
 
     COMPOSICOES_BASE = [
         "algodao", "algodão", "poliester", "poliéster", "viscose", "elastano", "poliamida",
@@ -118,11 +149,11 @@ class EstoqueIA:
 
     PALAVRAS_ACAO = {
         "listar": {"listar", "liste", "mostre", "mostrar", "exiba", "ver", "quais", "quais sao", "quais são"},
-        "contar": {"quantos", "quantas", "contagem", "total", "qtd", "quantidade", "numero", "número"},
+        "contar": {"quantos", "quantas", "contagem", "total", "totais", "qtd", "quantidade", "numero", "número", "soma", "somar", "some"},
         "top": {"top", "maiores", "mais", "principal", "principais", "lider", "líder", "lideres", "líderes"},
         "baixo": {"baixo", "baixa", "baixos", "baixas", "critico", "crítico", "criticos", "críticos", "repor", "faltando", "acabando"},
         "comparar": {"compare", "comparar", "comparativo", "diferença", "diferenca", "versus", "vs"},
-        "detalhar": {"detalhe", "resuma", "resumo", "ficha", "detalhes", "complete", "completo", "perfil"},
+        "detalhar": {"detalhe", "resuma", "resumo", "ficha", "detalhes", "complete", "completo", "perfil", "produto", "item"},
         "onde": {"onde", "local", "localizacao", "localização", "guardado", "guardada", "deposito", "depósito", "setor", "prateleira"},
         "fornecedor": {"fornecedor", "fornecedores", "fornece", "compramos", "comprado", "origem", "marca", "fabricante"},
         "cores": {"cor", "cores", "tons", "coloracao", "coloração", "variação de cor", "variacao de cor"},
@@ -135,7 +166,11 @@ class EstoqueIA:
         "cobertura": {"quanto dura", "dias de estoque", "cobertura", "autonomia", "suficiencia", "suficiência"},
         "consumo": {"consumo", "gasto", "uso", "utilizacao", "utilização", "saida", "saída"},
         "risco": {"risco", "criticidade", "classificacao de risco", "classificação de risco", "saude do estoque", "saúde do estoque"},
-        "sugestao_compra": {"sugestao de compra", "sugestão de compra", "comprar", "repor", "reposicao", "reposição"},
+        "sugestao_compra": {
+            "sugestao de compra", "sugestão de compra", "comprar", "compra", "compras", "repor",
+            "reposicao", "reposição", "preciso comprar", "precisamos comprar", "temos que comprar",
+            "o que preciso", "o que precisamos"
+        },
         "distribuicao": {"distribuicao", "distribuição", "participacao", "participação", "share", "mix"},
         "projecao": {"projecao", "projeção", "previsao", "previsão", "forecast", "simulacao", "simulação"},
         "abc": {"curva abc", "analise abc", "análise abc", "pareto", "classe a", "classe b", "classe c"},
@@ -146,6 +181,27 @@ class EstoqueIA:
         "e quais", "e quais sao", "e quais são", "quais são", "quais sao", "e onde", "e quem fornece",
         "e as cores", "e os fornecedores", "e as localizações", "desse", "dessa", "desse item", "desse tecido",
         "dele", "dela", "deles", "desses", "dessas", "esses", "essas", "esse", "essa", "do mesmo", "da mesma"
+    }
+
+    SEARCH_STOPWORDS = {
+        "a", "as", "o", "os", "um", "uma", "uns", "umas", "de", "da", "do", "das", "dos", "e", "para", "por",
+        "com", "sem", "em", "no", "na", "nos", "nas", "que", "quem", "qual", "quais", "quanto", "quantos",
+        "quantas", "tem", "temos", "tenho", "existe", "existem", "ha", "há", "mostra", "mostre",
+        "mostrar", "listar", "liste", "ver", "quero", "saber", "sobre", "estoque", "item", "itens",
+        "produto", "produtos", "material", "materiais", "saldo", "quantidade", "qtd", "codigo",
+        "código", "cod", "sku", "referencia", "referência", "cor", "cores", "fornecedor",
+        "fornecedores", "fornece", "onde", "local", "localizacao", "localização", "detalhe",
+        "detalhes", "resumo", "esta", "estao", "está", "estão", "fica", "ficam", "guardado",
+        "guardada", "guardados", "guardadas", "zerado", "zerados", "critico", "criticos",
+        "crítico", "críticos", "compra", "compras", "comprar", "compramos", "sugestao", "sugestão",
+        "reposicao", "reposição", "curva", "abc", "analise", "análise", "conversa",
+        "distribuicao", "distribuição", "participacao", "participação", "share", "mix",
+        "geral", "inventario", "inventário", "completo", "completa", "recente", "recentes",
+        "risco", "saude", "saúde", "abaixo", "acima", "entre", "maior", "menor",
+        "total", "totais", "tatal", "soma", "somar", "some", "todos", "todas", "so", "só", "apenas",
+        "setor", "setores",
+        "metro", "metros", "m", "un", "unidade", "unidades", "kg", "quilo", "quilos", "litro", "litros",
+        "gl", "pct", "rolo", "rolos"
     }
 
     INTENTOS_PRIORITARIOS = [
@@ -368,14 +424,15 @@ class EstoqueIA:
             "grupo": self._extract_group(normal),
             "grupos_mencionados": self._extract_multiple_groups(normal),
             "cor": self._extract_color(normal),
-            "fornecedor": self._extract_after_keywords(normal, ["fornecedor", "fornecedores", "marca", "fabricante", "compramos de"]),
-            "localizacao": self._extract_after_keywords(normal, ["depósito", "deposito", "setor", "prateleira", "local", "localização", "localizacao"]),
+            "fornecedor": self._extract_after_keywords(normal, ["marca", "fabricante", "do fornecedor", "da fornecedor", "fornecedor chamado", "compramos de"]),
+            "localizacao": self._extract_after_keywords(normal, ["no depósito", "no deposito", "na prateleira", "no setor"]),
             "composicao": self._extract_composition(normal),
             "codigo": self._extract_code(normal),
             "numero": self._extract_number(normal),
             "faixa": self._extract_range(normal),
             "item_nome": self._extract_item_name(original, normal),
             "continuidade": self._is_continuation(normal),
+            "seguimento_contextual": self._is_contextual_followup(normal),
             "saudacao": self._is_greeting(normal),
             "comparacao": self._has_any(normal, self.PALAVRAS_ACAO["comparar"]),
             "escopo_global": self._is_global_scope_request(normal),
@@ -409,9 +466,12 @@ class EstoqueIA:
         return list(dict.fromkeys(grupos))
 
     def _extract_color(self, normal: str) -> Optional[str]:
-        for cor in sorted(self.CORES_BASE, key=len, reverse=True):
-            if re.search(rf"\b{re.escape(self._normalize(cor))}\b", normal):
-                return cor
+        cores = {self._normalize(c): c for c in self.CORES_BASE}
+        for alias, canonical in self.CORES_ALIASES.items():
+            cores[self._normalize(alias)] = canonical
+        for cor_norm, cor_original in sorted(cores.items(), key=lambda x: len(x[0]), reverse=True):
+            if re.search(rf"\b{re.escape(cor_norm)}\b", normal):
+                return cor_original
         m = re.search(r"\bcor\s+([a-z0-9 _-]{2,40})$", normal)
         if m:
             return m.group(1).strip()
@@ -433,15 +493,18 @@ class EstoqueIA:
             m = re.search(rf"\b{re.escape(kw_n)}\b\s+(?:do|da|de|dos|das)?\s*([a-z0-9 _./-]{{2,60}})", normal)
             if m:
                 trecho = m.group(1).strip()
-                trecho = re.split(r"\b(temos|tem|ha|há|com|que|onde|quem|qual|quais)\b", trecho)[0].strip()
+                trecho = re.split(r"\b(temos|tem|ha|há|com|que|onde|quem|qual|quais|em|por|para)\b", trecho)[0].strip()
                 if trecho:
                     return trecho
         return None
 
     def _extract_code(self, normal: str) -> Optional[str]:
-        m = re.search(r"\b(?:codigo|código|cod|sku|referencia|referência)\b\s*[:#-]?\s*([a-z0-9._/-]{2,40})", normal)
+        m = re.search(r"\b(?:codigo|código|cod|sku|referencia|referência)\b\s*(?:(do|da|de)\s+)?[:#-]?\s*([a-z0-9._/-]{2,40})", normal)
         if m:
-            return m.group(1).strip()
+            preposicao = m.group(1)
+            candidato = m.group(2).strip()
+            if not preposicao and candidato not in {"de", "do", "da", "dos", "das"}:
+                return candidato
         m2 = re.search(r"\b([a-z]{1,5}-?\d{2,})\b", normal)
         if m2:
             return m2.group(1).strip()
@@ -477,31 +540,161 @@ class EstoqueIA:
         return faixa
 
     def _extract_item_name(self, original: str, normal: str) -> Optional[str]:
+        if (self._extract_group(normal) and (self._extract_range(normal).get("tipo") or self._has_any(normal, self.PALAVRAS_ACAO["baixo"]))):
+            return None
+        if self._is_total_quantity_request(normal) and (self._contains_color(normal) or self.contexto.cor):
+            return None
         patterns = [
-            r"(?:tecido|aviamento|insumo|item|produto|material)\s+([a-z0-9 _./-]{2,60})",
+            r"(?:compramos de quem|quem compramos de)\s+([a-z0-9 _./-]{2,80})",
+            r"(?:quem fornece|quem vende|fornecedor(?:es)? de|compramos de)\s+([a-z0-9 _./-]{2,80})",
+            r"(?:onde fica|onde esta|onde está|localizacao de|localização de|local de)\s+([a-z0-9 _./-]{2,80})",
+            r"(?:projecao de consumo de|projeção de consumo de|previsao de consumo de|previsão de consumo de)\s+([a-z0-9 _./-]{2,80})",
+            r"(?:quanto dura|cobertura de|autonomia de|dias de estoque de)\s+([a-z0-9 _./-]{2,80})",
+            r"(?:tem|temos|tenho|existe|existem|ha|há)\s+([a-z0-9 _./-]{2,80})",
+            r"(?:procura|procure|procurar|busca|buscar|pesquisa|pesquisar)\s+(?:por\s+)?([a-z0-9 _./-]{2,80})",
+            r"(?:tecidos?|aviamentos?|insumos?|itens?|produtos?|materiais?)\s+([a-z0-9 _./-]{2,60})",
             r"(?:do|da|de)\s+([a-z0-9 _./-]{2,60})$",
             r"(?:resumo de|detalhes de|saldo de|codigo de|código de|fornecedor de|onde esta|onde está)\s+([a-z0-9 _./-]{2,60})",
         ]
         for pat in patterns:
             m = re.search(pat, normal)
             if m:
-                nome = m.group(1).strip(" .:-")
-                nome = re.split(r"\b(com|do fornecedor|na cor|de cor|no deposito|no depósito|composicao|composição)\b", nome)[0].strip()
-                if nome and len(nome) >= 2:
+                nome = self._clean_item_candidate(m.group(1))
+                if nome:
                     return nome
-        if self._is_continuation(normal) and self.contexto.item_nome:
+        if (self._is_continuation(normal) or self._is_contextual_followup(normal)) and self.contexto.item_nome:
             return self.contexto.item_nome
+        candidato = self._free_search_candidate(normal)
+        if candidato:
+            return candidato
         return None
 
     def _is_continuation(self, normal: str) -> bool:
-        return any(exp in normal for exp in self.CONTINUACOES) or normal in {"e", "continua", "continue"}
+        normal = self._normalize(normal)
+        if normal in {"e", "continua", "continue"} or normal.startswith("e "):
+            return True
+        for exp in self.CONTINUACOES:
+            exp_n = self._normalize(exp)
+            if normal == exp_n or normal.startswith(exp_n + " ") or re.search(rf"\b{re.escape(exp_n)}\b", normal):
+                return True
+        return False
+
+    def _is_contextual_followup(self, normal: str) -> bool:
+        normal = self._normalize(normal)
+        normal_sem_pontuacao = normal.strip(" ?!.:,;")
+        if not (self.contexto.item_nome or self.contexto.item_codigo or self.contexto.grupo or self.contexto.ultimas_linhas):
+            return False
+        if self._is_continuation(normal):
+            return True
+        if self._contains_color(normal) and len(normal.split()) <= 3:
+            return True
+        frases_curtas = {
+            "quem fornece", "onde", "onde fica", "qual o saldo", "qual saldo", "quanto tem", "quantos tem",
+            "no total", "no tatal", "total", "tatal", "soma", "somar", "some",
+            "no total de metros", "no tatal de metros", "total em metros"
+        }
+        if normal_sem_pontuacao in frases_curtas:
+            return True
+        inicio_contextual = (
+            "quais cores", "liste as cores", "listar cores", "lista as cores", "mostre as cores",
+            "mostra as cores", "ver cores", "e as", "e os", "mostra tambem", "mostre tambem", "tambem"
+            , "so em", "só em", "apenas em", "somente em", "no total", "no tatal",
+            "total em", "tatal em", "some todos", "soma todos"
+        )
+        return any(normal.startswith(x) for x in inicio_contextual)
+
+    def _contains_color(self, normal: str) -> bool:
+        cores = [self._normalize(c) for c in self.CORES_BASE]
+        cores.extend(self._normalize(c) for c in self.CORES_ALIASES)
+        return any(re.search(rf"\b{re.escape(c)}\b", normal) for c in sorted(set(cores), key=len, reverse=True))
+
+    def _clean_item_candidate(self, text: str) -> Optional[str]:
+        normal = self._normalize(text)
+        normal = re.split(
+            r"\b(com|do fornecedor|da fornecedor|fornecedor|na cor|de cor|cor|no deposito|no depósito|"
+            r"localizacao|localização|quanto|quantos|quantas|onde|quem|qual|quais|por|para|em)\b",
+            normal,
+        )[0].strip(" .:-")
+        for cor in sorted([*self.CORES_BASE, *self.CORES_ALIASES.keys()], key=len, reverse=True):
+            normal = re.sub(rf"\b{re.escape(self._normalize(cor))}\b", " ", normal)
+        normal = re.sub(r"\s+", " ", normal).strip()
+        if not normal:
+            return None
+        tokens = [t for t in normal.split() if t not in self.SEARCH_STOPWORDS]
+        if not tokens:
+            return None
+        if tokens[0].isdigit():
+            return None
+        if not any(not t.isdigit() for t in tokens):
+            return None
+        if len(tokens) == 1 and self._is_generic_group_word(tokens[0]) and tokens[0] not in self.ITEM_TERMS_CURTOS:
+            return None
+        candidato = " ".join(tokens)
+        return candidato if len(candidato) >= 2 else None
+
+    def _free_search_candidate(self, normal: str) -> Optional[str]:
+        if self._is_help(normal) or self._is_greeting(normal):
+            return None
+        if self._is_contextual_followup(normal):
+            return None
+        if self._is_total_quantity_request(normal):
+            return None
+        if self._extract_group(normal) and any(
+            self._has_any(normal, self.PALAVRAS_ACAO[chave])
+            for chave in (
+                "listar", "contar", "baixo", "zero", "top", "recente", "risco",
+                "sugestao_compra", "abc", "projecao", "consumo", "cobertura", "distribuicao"
+            )
+        ):
+            return None
+        if any(
+            self._has_any(normal, self.PALAVRAS_ACAO[chave])
+            for chave in ("zero", "baixo", "sugestao_compra", "abc", "risco", "distribuicao")
+        ):
+            return None
+        if self._has_any(normal, self.PALAVRAS_ACAO["contar"]) and not any(x in normal for x in ("de ", "do ", "da ")):
+            return None
+        cores = {self._normalize(c) for c in self.CORES_BASE}
+        cores.update(self._normalize(c) for c in self.CORES_ALIASES)
+        tokens = [t for t in re.findall(r"[a-z0-9]+", normal) if t not in self.SEARCH_STOPWORDS and t not in cores]
+        if not tokens:
+            return None
+        if not any(not t.isdigit() for t in tokens):
+            return None
+        if len(tokens) == 1 and (self._is_generic_group_word(tokens[0]) or self._contains_color(tokens[0])):
+            return None
+        candidato = " ".join(tokens[:6])
+        return candidato if len(candidato) >= 2 else None
+
+    def _is_generic_group_word(self, token: str) -> bool:
+        token_n = self._normalize(token)
+        for termos in self.GRUPOS_SINONIMOS.values():
+            for termo in termos:
+                termo_n = self._normalize(termo)
+                if token_n == termo_n:
+                    return True
+        return False
+
+    def _is_total_quantity_request(self, normal: str) -> bool:
+        normal = self._normalize(normal)
+        return bool(
+            re.search(r"\b(total|totais|tatal|soma|somar|some)\b", normal)
+            or re.search(r"\bquantos?\s+(metros?|unidades?|kg|kilos?|litros?)\b", normal)
+            or re.search(r"\bno\s+total\b", normal)
+        )
 
     def _is_greeting(self, normal: str) -> bool:
         return normal in {"oi", "ola", "olá", "bom dia", "boa tarde", "boa noite", "opa", "e ai", "e aí"}
 
     def _has_any(self, normal: str, words: set) -> bool:
         for w in words:
-            if self._normalize(w) in normal:
+            termo = self._normalize(w)
+            if not termo:
+                continue
+            if " " in termo:
+                if termo in normal:
+                    return True
+            elif re.search(rf"\b{re.escape(termo)}\b", normal):
                 return True
         return False
 
@@ -525,14 +718,14 @@ class EstoqueIA:
         if entidades.get("comparacao") and len(entidades.get("grupos_mencionados") or []) >= 2:
             return "comparar_grupos", 0.98
 
+        if self._has_any(normal, self.PALAVRAS_ACAO["projecao"]):
+            return "projecao_consumo", 0.93
+
         if self._has_any(normal, self.PALAVRAS_ACAO["cobertura"]):
             return "consultar_cobertura", 0.94
 
         if self._has_any(normal, self.PALAVRAS_ACAO["consumo"]):
             return "consultar_consumo", 0.93
-
-        if self._has_any(normal, self.PALAVRAS_ACAO["projecao"]):
-            return "projecao_consumo", 0.93
 
         if self._has_any(normal, self.PALAVRAS_ACAO["abc"]):
             return "analise_abc", 0.93
@@ -546,12 +739,24 @@ class EstoqueIA:
         if any(k in normal for k in ("diagnostico completo", "diagnóstico completo", "auditoria de estoque", "plano de reposicao", "plano de reposição")):
             return "workflow_estoque", 0.96
 
+        if item or codigo:
+            if self._has_any(normal, self.PALAVRAS_ACAO["fornecedor"]):
+                return "listar_fornecedores", 0.98
+            if self._has_any(normal, self.PALAVRAS_ACAO["onde"]):
+                return "listar_locais", 0.98
+            if self._has_any(normal, self.PALAVRAS_ACAO["codigo"]):
+                return "codigo_item", 0.98
+            if "saldo" in normal or "quantidade" in normal or "qtd" in normal:
+                return "saldo_item", 0.98
+            if self._has_any(normal, self.PALAVRAS_ACAO["detalhar"]):
+                return "detalhar_item", 0.97
+
         if ("setor" in normal or "localizacao" in normal or "localização" in normal) and (
             "cada setor" in normal or "por setor" in normal or "quantos itens" in normal or "seus nomes" in normal
         ):
             return "itens_por_setor_detalhado", 0.95
 
-        if entidades.get("escopo_global") and (self._has_any(normal, self.PALAVRAS_ACAO["listar"]) or "itens" in normal):
+        if entidades.get("escopo_global"):
             return "listar_todos_itens", 0.95
 
         if self._has_any(normal, self.PALAVRAS_ACAO["recente"]):
@@ -572,21 +777,28 @@ class EstoqueIA:
         if faixa.get("tipo") == "abaixo":
             return "itens_abaixo", 0.96
 
-        if self._has_any(normal, self.PALAVRAS_ACAO["cores"]):
-            if self._has_any(normal, self.PALAVRAS_ACAO["contar"]):
-                return "contar_cores", 0.98
-            return "listar_cores", 0.98
+        if entidades.get("seguimento_contextual") and self.contexto.ultimo_intent == "sugestao_compra":
+            return "sugestao_compra", 0.92
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["sugestao_compra"]):
+            return "sugestao_compra", 0.96
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["distribuicao"]) and self._has_any(normal, self.PALAVRAS_ACAO["cores"]):
+            return "distribuicao_cores", 0.92
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["distribuicao"]) and self._has_any(normal, self.PALAVRAS_ACAO["fornecedor"]):
+            return "distribuicao_fornecedores", 0.92
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["distribuicao"]) and self._has_any(normal, self.PALAVRAS_ACAO["onde"]):
+            return "distribuicao_locais", 0.92
+
+        if item and re.search(r"^(tem|temos|tenho|existe|existem|ha|há|procure|procurar|buscar|busca)\b", normal):
+            return "detalhar_item", 0.94
 
         if self._has_any(normal, self.PALAVRAS_ACAO["fornecedor"]):
             if item or codigo:
                 return "listar_fornecedores", 0.97
             return "distribuicao_fornecedores", 0.90
-
-        if self._has_any(normal, self.PALAVRAS_ACAO["distribuicao"]) and self._has_any(normal, self.PALAVRAS_ACAO["cores"]):
-            return "distribuicao_cores", 0.92
-
-        if self._has_any(normal, self.PALAVRAS_ACAO["distribuicao"]) and self._has_any(normal, self.PALAVRAS_ACAO["onde"]):
-            return "distribuicao_locais", 0.92
 
         if self._has_any(normal, self.PALAVRAS_ACAO["onde"]):
             return "listar_locais", 0.97
@@ -595,6 +807,26 @@ class EstoqueIA:
             if item or codigo:
                 return "codigo_item", 0.97
             return "contar_codigos", 0.91
+
+        if entidades.get("cor") and (
+            self._is_total_quantity_request(normal)
+            or
+            "itens" in normal
+            or self._has_any(normal, self.PALAVRAS_ACAO["listar"])
+            or grupo
+            or item
+            or entidades.get("continuidade")
+            or entidades.get("seguimento_contextual")
+        ):
+            return "itens_por_cor", 0.95
+
+        if entidades.get("seguimento_contextual") and self._is_total_quantity_request(normal) and self.contexto.cor:
+            return "itens_por_cor", 0.94
+
+        if self._has_any(normal, self.PALAVRAS_ACAO["cores"]):
+            if self._has_any(normal, self.PALAVRAS_ACAO["contar"]):
+                return "contar_cores", 0.98
+            return "listar_cores", 0.98
 
         if self._has_any(normal, self.PALAVRAS_ACAO["composicao"]):
             if item or entidades.get("composicao"):
@@ -607,12 +839,6 @@ class EstoqueIA:
             if self._has_any(normal, self.PALAVRAS_ACAO["cores"]) or "variedade" in normal:
                 return "top_variedade", 0.94
             return "top_saldo", 0.95
-
-        if self._has_any(normal, self.PALAVRAS_ACAO["sugestao_compra"]):
-            return "sugestao_compra", 0.93
-
-        if entidades.get("cor") and (grupo or item or entidades.get("continuidade")):
-            return "itens_por_cor", 0.95
 
         if entidades.get("fornecedor"):
             return "itens_por_fornecedor", 0.94
@@ -638,7 +864,7 @@ class EstoqueIA:
         if grupo:
             return "resumo_grupo", 0.82
 
-        if entidades.get("continuidade") and self.contexto.ultimo_intent:
+        if (entidades.get("continuidade") or entidades.get("seguimento_contextual")) and self.contexto.ultimo_intent:
             return "resposta_contextual", 0.80
 
         return "resumo_geral", 0.60
@@ -812,19 +1038,26 @@ class EstoqueIA:
     def _enriquecer_resposta_estruturada(self, intent: Optional[str], entidades: Dict[str, Any], resposta: str) -> str:
         if not resposta:
             return resposta
+        if intent in {"resumo_geral", "resumo_grupo"}:
+            proxima = self.contexto.proxima_acao_sugerida or "listar_criticos"
+            sugestoes = {
+                "listar_criticos": "Posso listar os itens críticos em seguida.",
+                "inventario_completo": "Posso abrir o inventário completo em seguida.",
+                "analise_risco": "Posso montar uma análise de risco em seguida.",
+            }
+            return f"{resposta}\n\n{sugestoes.get(proxima, 'Posso aprofundar esse resumo em seguida.')}"
+
         if intent not in {
             "analise_risco", "sugestao_compra", "projecao_consumo",
-            "analise_abc", "itens_por_setor_detalhado", "listar_todos_itens", "resumo_geral", "resumo_grupo"
+            "analise_abc", "itens_por_setor_detalhado", "listar_todos_itens"
         }:
             return resposta
         objetivo = self.contexto.objetivo_ativo or "consulta_estoque"
         perfil = "detalhado" if entidades.get("perfil_detalhado") else "operacional"
         proxima = self.contexto.proxima_acao_sugerida or "listar_criticos"
         return (
-            f"OBJETIVO: {objetivo} ({perfil})\n"
-            f"STATUS: {self.contexto.objetivo_status}\n\n"
             f"{resposta}\n\n"
-            f"PRÓXIMO PASSO SUGERIDO: {proxima} (responda 'sim' para executar)"
+            f"Próximo passo sugerido: {proxima}."
         )
 
     # =========================================================
@@ -981,39 +1214,115 @@ class EstoqueIA:
         r["consumo_medio"] = self._safe_float(r.get("consumo_medio"))
         return r
 
+    def _tokens_for_match(self, text: str) -> List[str]:
+        return [
+            t for t in re.findall(r"[a-z0-9]+", self._normalize(text))
+            if t and t not in self.SEARCH_STOPWORDS
+        ]
+
+    def _text_match_score(self, valor: str, alvo: Optional[str]) -> float:
+        alvo_n = self._normalize(alvo or "")
+        valor_n = self._normalize(valor or "")
+        if not alvo_n:
+            return 100.0
+        if not valor_n:
+            return 0.0
+        if valor_n == alvo_n:
+            return 100.0
+        if alvo_n in valor_n:
+            return 78.0
+        if valor_n in alvo_n and len(valor_n) >= 3:
+            return 58.0
+
+        alvo_tokens = self._tokens_for_match(alvo_n)
+        valor_tokens = self._tokens_for_match(valor_n)
+        if not alvo_tokens or not valor_tokens:
+            return 0.0
+
+        token_hits = sum(1 for t in alvo_tokens if t in valor_tokens or any(t in vt or vt in t for vt in valor_tokens if len(t) >= 3 and len(vt) >= 3))
+        token_score = (token_hits / max(1, len(alvo_tokens))) * 55.0
+
+        fuzzy_hits = 0
+        for t in alvo_tokens:
+            if get_close_matches(t, valor_tokens, n=1, cutoff=0.82):
+                fuzzy_hits += 1
+        fuzzy_score = (fuzzy_hits / max(1, len(alvo_tokens))) * 45.0
+        ratio_score = SequenceMatcher(None, alvo_n, valor_n).ratio() * 42.0
+        return max(token_score, fuzzy_score, ratio_score)
+
+    def _row_search_score(self, row: Dict[str, Any], item: Optional[str], codigo: Optional[str]) -> float:
+        score = 0.0
+        if codigo:
+            score = max(score, self._text_match_score(row.get("codigo", ""), codigo) * 1.35)
+        if item:
+            score = max(score, self._text_match_score(row.get("descricao", ""), item) * 1.15)
+            score = max(score, self._text_match_score(row.get("subgrupo", ""), item) * 0.85)
+            score = max(score, self._text_match_score(row.get("categoria", ""), item) * 0.75)
+            score = max(score, self._text_match_score(row.get("codigo", ""), item) * 0.95)
+            combined = " ".join(
+                self._safe_text(row.get(c))
+                for c in ("descricao", "subgrupo", "categoria", "cor", "fornecedor", "localizacao", "composicao", "codigo")
+            )
+            score = max(score, self._text_match_score(combined, item) * 0.72)
+        return score
+
+    def _filter_by_text(self, rows: List[Dict[str, Any]], campo: str, alvo: Optional[str], threshold: float = 45.0) -> List[Dict[str, Any]]:
+        if not alvo:
+            return rows
+        scored = [(self._text_match_score(r.get(campo, ""), alvo), r) for r in rows]
+        filtrados = [(s, r) for s, r in scored if s >= threshold]
+        return [r for _, r in sorted(filtrados, key=lambda x: (x[0], self._safe_float(x[1].get("saldo_num"))), reverse=True)]
+
     def _dataset(self, entidades: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         linhas = [self._normalize_row(x) for x in self._base_dataset()]
         if not entidades:
             return linhas
 
-        grupo = entidades.get("grupo") or self.contexto.grupo
-        item = entidades.get("item_nome") or self.contexto.item_nome
-        codigo = entidades.get("codigo") or self.contexto.item_codigo
-        cor = entidades.get("cor") or self.contexto.cor
-        fornecedor = entidades.get("fornecedor") or self.contexto.fornecedor
-        local = entidades.get("localizacao") or self.contexto.localizacao
-        composicao = entidades.get("composicao") or self.contexto.composicao
-
-        def match_text(valor: str, alvo: str) -> bool:
-            vn = self._normalize(valor)
-            an = self._normalize(alvo)
-            return an in vn or vn in an
+        usar_contexto = bool(entidades.get("continuidade") or entidades.get("seguimento_contextual"))
+        grupo = entidades.get("grupo") or (self.contexto.grupo if usar_contexto else None)
+        item = entidades.get("item_nome") or (self.contexto.item_nome if usar_contexto else None)
+        codigo = entidades.get("codigo") or (self.contexto.item_codigo if usar_contexto else None)
+        cor = entidades.get("cor") or (self.contexto.cor if usar_contexto else None)
+        fornecedor = entidades.get("fornecedor") or (self.contexto.fornecedor if usar_contexto else None)
+        local = entidades.get("localizacao") or (self.contexto.localizacao if usar_contexto else None)
+        composicao = entidades.get("composicao") or (self.contexto.composicao if usar_contexto else None)
+        if item and composicao and self._normalize(composicao) in self._normalize(item):
+            composicao = None
+        normal_pergunta = entidades.get("texto_normalizado", "")
+        if self._is_total_quantity_request(normal_pergunta) and (cor or self.contexto.cor):
+            item = None
+            codigo = None
+            if not cor:
+                cor = self.contexto.cor
+        if item and cor and not (
+            " cor " in f" {normal_pergunta} "
+            or "na cor" in normal_pergunta
+            or "de cor" in normal_pergunta
+            or normal_pergunta.startswith("quais itens")
+            or normal_pergunta.startswith("liste itens")
+            or normal_pergunta.startswith("mostre itens")
+            or entidades.get("continuidade")
+        ):
+            cor = None
 
         out = linhas
         if grupo:
             out = [r for r in out if self._normalize(r.get("grupo_principal", "")) == self._normalize(grupo)]
-        if item:
-            out = [r for r in out if match_text(r.get("descricao", ""), item) or match_text(r.get("subgrupo", ""), item) or match_text(r.get("categoria", ""), item)]
-        if codigo:
-            out = [r for r in out if self._normalize(codigo) in self._normalize(r.get("codigo", ""))]
+        if item or codigo:
+            scored_grupo = [(self._row_search_score(r, item, codigo), r) for r in out]
+            scored_geral = [(self._row_search_score(r, item, codigo), r) for r in linhas] if grupo else scored_grupo
+            melhor_grupo = max((s for s, _ in scored_grupo), default=0.0)
+            melhor_geral = max((s for s, _ in scored_geral), default=0.0)
+            scored = scored_geral if grupo and melhor_geral > max(60.0, melhor_grupo + 18.0) else scored_grupo
+            out = [r for score, r in sorted(scored, key=lambda x: (x[0], self._safe_float(x[1].get("saldo_num"))), reverse=True) if score >= 34.0]
         if cor:
-            out = [r for r in out if match_text(r.get("cor", ""), cor)]
+            out = self._filter_by_text(out, "cor", cor, threshold=42.0)
         if fornecedor:
-            out = [r for r in out if match_text(r.get("fornecedor", ""), fornecedor)]
+            out = self._filter_by_text(out, "fornecedor", fornecedor, threshold=42.0)
         if local:
-            out = [r for r in out if match_text(r.get("localizacao", ""), local)]
+            out = self._filter_by_text(out, "localizacao", local, threshold=42.0)
         if composicao:
-            out = [r for r in out if match_text(r.get("composicao", ""), composicao)]
+            out = self._filter_by_text(out, "composicao", composicao, threshold=42.0)
         return out
 
     def _fmt_qtd(self, valor: float) -> str:
@@ -1050,31 +1359,11 @@ class EstoqueIA:
         if not item and not codigo:
             return rows
 
-        def score(r: Dict[str, Any]) -> Tuple[int, float]:
-            s = 0
-            desc = self._normalize(r.get("descricao", ""))
-            sub = self._normalize(r.get("subgrupo", ""))
-            cat = self._normalize(r.get("categoria", ""))
-            cod = self._normalize(r.get("codigo", ""))
-            if item:
-                ni = self._normalize(item)
-                if desc == ni:
-                    s += 100
-                if ni in desc:
-                    s += 60
-                if ni in sub:
-                    s += 35
-                if ni in cat:
-                    s += 25
-            if codigo:
-                nc = self._normalize(codigo)
-                if cod == nc:
-                    s += 120
-                elif nc in cod:
-                    s += 80
-            return (s, r.get("saldo_num", 0.0))
-
-        return sorted(rows, key=score, reverse=True)
+        return sorted(
+            rows,
+            key=lambda r: (self._row_search_score(r, item, codigo), self._safe_float(r.get("saldo_num"))),
+            reverse=True,
+        )
 
     # =========================================================
     # DESPACHO
@@ -1221,19 +1510,25 @@ class EstoqueIA:
         rows = self._rank_item_rows(self._dataset(entidades), entidades.get("item_nome"), entidades.get("codigo"))
         cores = sorted({self._safe_text(r.get("cor")) for r in rows if self._safe_text(r.get("cor"))})
         if not cores:
+            grupo = entidades.get("grupo") or self.contexto.grupo
+            if grupo:
+                return f"Não encontrei cores cadastradas em {grupo}."
             return "Não encontrei cores para esse filtro."
-        item = entidades.get("item_nome") or self.contexto.item_nome or "esse item"
+        item = entidades.get("item_nome") or self.contexto.item_nome
+        alvo = item or (entidades.get("grupo") or self.contexto.grupo)
+        rotulo = f"para {item}" if item else f"em {alvo}" if alvo else "no filtro atual"
         self._save_last_rows(rows, "listar_cores", entidades)
-        return f"Encontrei {len(cores)} cor(es) para {item}:\n- " + "\n- ".join(cores[:50])
+        return f"Encontrei {len(cores)} cor(es) {rotulo}:\n- " + "\n- ".join(cores[:50])
 
     def _resp_contar_cores(self, entidades: Dict[str, Any]) -> str:
         rows = self._rank_item_rows(self._dataset(entidades), entidades.get("item_nome"), entidades.get("codigo"))
         cores = sorted({self._safe_text(r.get("cor")) for r in rows if self._safe_text(r.get("cor"))})
-        item = entidades.get("item_nome") or self.contexto.item_nome or "esse item"
+        item = entidades.get("item_nome") or self.contexto.item_nome
+        alvo = item or (entidades.get("grupo") or self.contexto.grupo) or "esse filtro"
         if not cores:
-            return f"Não encontrei cores cadastradas para {item}."
+            return f"Não encontrei cores cadastradas para {alvo}."
         self._save_last_rows(rows, "contar_cores", entidades)
-        return f"{item} tem {len(cores)} cor(es) cadastrada(s)."
+        return f"{alvo} tem {len(cores)} cor(es) cadastrada(s)."
 
     def _resp_fornecedores(self, entidades: Dict[str, Any]) -> str:
         rows = self._rank_item_rows(self._dataset(entidades), entidades.get("item_nome"), entidades.get("codigo"))
@@ -1381,9 +1676,23 @@ class EstoqueIA:
         if not rows:
             return f"Não encontrei itens com a cor {cor}."
         self._save_last_rows(rows, "itens_por_cor", entidades)
+        totais_por_unidade: Dict[str, float] = {}
+        for r in rows:
+            unidade = self._safe_text(r.get("unidade")) or "un"
+            totais_por_unidade[unidade] = totais_por_unidade.get(unidade, 0.0) + self._safe_float(r.get("saldo_num"))
+        resumo_total = ", ".join(
+            f"{self._fmt_qtd(total)} {unidade}"
+            for unidade, total in sorted(totais_por_unidade.items())
+        )
+        grupo = entidades.get("grupo") or self.contexto.grupo
+        escopo = f" em {grupo}" if grupo else ""
         linhas = [f"Itens encontrados na cor {cor}:"]
+        linhas.append(f"- saldo total{escopo}: {resumo_total}")
         for r in rows[:25]:
-            linhas.append(f"- {self._safe_text(r.get('descricao'))} | grupo {self._safe_text(r.get('grupo_principal'))} | saldo {self._fmt_qtd(self._safe_float(r.get('saldo_num')))}")
+            linhas.append(
+                f"- {self._safe_text(r.get('descricao'))} | grupo {self._safe_text(r.get('grupo_principal'))} | "
+                f"saldo {self._fmt_qtd(self._safe_float(r.get('saldo_num')))} {self._safe_text(r.get('unidade')) or 'un'}"
+            )
         return "\n".join(linhas)
 
     def _resp_por_fornecedor(self, entidades: Dict[str, Any]) -> str:
@@ -1786,19 +2095,24 @@ class EstoqueIA:
 
     def _resp_contextual(self, entidades: Dict[str, Any]) -> str:
         ultimo = self.contexto.ultimo_intent
+        normal = entidades.get("texto_normalizado", "")
+        if ultimo == "sugestao_compra":
+            return self._resp_sugestao_compra(entidades)
+        if (entidades.get("cor") or self.contexto.cor) and self._is_total_quantity_request(normal):
+            return self._resp_por_cor(entidades)
         if ultimo == "listar_grupo":
             if entidades.get("cor"):
                 return self._resp_por_cor(entidades)
-            if self._has_any(entidades.get("texto_normalizado", ""), self.PALAVRAS_ACAO["baixo"]):
+            if self._has_any(normal, self.PALAVRAS_ACAO["baixo"]):
                 return self._resp_criticos(entidades)
-            if self._has_any(entidades.get("texto_normalizado", ""), self.PALAVRAS_ACAO["fornecedor"]):
+            if self._has_any(normal, self.PALAVRAS_ACAO["fornecedor"]):
                 return self._resp_fornecedores(entidades)
         if self.contexto.item_nome or self.contexto.item_codigo:
-            if self._has_any(entidades.get("texto_normalizado", ""), self.PALAVRAS_ACAO["cores"]):
+            if self._has_any(normal, self.PALAVRAS_ACAO["cores"]):
                 return self._resp_listar_cores(entidades)
-            if self._has_any(entidades.get("texto_normalizado", ""), self.PALAVRAS_ACAO["fornecedor"]):
+            if self._has_any(normal, self.PALAVRAS_ACAO["fornecedor"]):
                 return self._resp_fornecedores(entidades)
-            if self._has_any(entidades.get("texto_normalizado", ""), self.PALAVRAS_ACAO["onde"]):
+            if self._has_any(normal, self.PALAVRAS_ACAO["onde"]):
                 return self._resp_locais(entidades)
         return self._resp_resumo_grupo(entidades)
 

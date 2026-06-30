@@ -8,8 +8,13 @@ RELATORIO_ESTOQUE.py — versão COMPLETA com IA MEGA + UI conversacional
 Requisitos opcionais: fpdf, matplotlib
 """
 
-from PAGINAS_DO_SISTEMA import TEMAS
 import os
+import sys
+
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from PAGINAS_DO_SISTEMA import TEMAS
 import csv
 import re
 import threading
@@ -3827,7 +3832,9 @@ class AdvancedStockReport(ctk.CTkFrame):
             return False
         intents_locais_fortes = {
             "listar_grupo", "contar_grupo", "resumo_grupo", "resumo_geral", "listar_todos_itens",
-            "itens_por_setor_detalhado", "itens_criticos", "contar_itens_distintos", "contar_codigos"
+            "itens_por_setor_detalhado", "itens_criticos", "contar_itens_distintos", "contar_codigos",
+            "listar_cores", "contar_cores", "itens_por_cor", "listar_fornecedores", "listar_locais",
+            "codigo_item", "saldo_item", "detalhar_item", "resposta_contextual"
         }
         if intent in intents_locais_fortes and conf >= 0.70:
             return False
@@ -3853,6 +3860,13 @@ class AdvancedStockReport(ctk.CTkFrame):
         banco_txt = self._strip_markdown_tokens(resposta_banco)
         banco_l = banco_txt.lower()
         estado = "ok"
+        if (
+            "diagnóstico:" in banco_l
+            or "diagnostico:" in banco_l
+            or "nenhum resultado para foco" in banco_l
+            or "estoque_unificado" in banco_l
+        ) and local_txt:
+            return local_txt
         if ("linhas: 0" in banco_l or "linhas:0" in banco_l) and local_txt and "não encontrei" not in local_txt.lower():
             return local_txt
 
@@ -4618,6 +4632,14 @@ AdvancedStockReport.adicionar_tecido = _opera_adicionar_tecido
 AdvancedStockReport._open_suggestions_window = _opera_open_suggestions_window
 
 if __name__ == "__main__":
+    import sys
+
+    if "--ia-lab" in sys.argv:
+        from PAGINAS_DO_SISTEMA.ESTOQUE_IA_LAB import main as estoque_ia_lab_main
+
+        lab_args = [arg for arg in sys.argv[1:] if arg != "--ia-lab"]
+        raise SystemExit(estoque_ia_lab_main(lab_args))
+
     ctk.set_appearance_mode("Dark")
     root = ctk.CTk()
     root.title("Relatórios - Sistema Guimma")
